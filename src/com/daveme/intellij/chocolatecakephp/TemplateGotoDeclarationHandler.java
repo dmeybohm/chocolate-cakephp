@@ -18,9 +18,6 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
     @Override
     public PsiElement[] getGotoDeclarationTargets(@Nullable PsiElement psiElement, int i, Editor editor) {
         Project project = psiElement.getProject();
-        if (project == null) {
-            return new PsiElement[0];
-        }
         Collection<VirtualFile> files = new HashSet<>();
         System.out.println("text: "+psiElement.getText());
         if (!psiElement.getText().equals("view")) {
