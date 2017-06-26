@@ -15,14 +15,9 @@ public class PsiUtil {
     public static Collection<PsiFile> convertVirtualFilesToPsiFiles(@NotNull Project project, @NotNull Collection<VirtualFile> files) {
 
         Collection<PsiFile> psiFiles = new HashSet<>();
+        PsiManager psiManager = PsiManager.getInstance(project);
 
-        PsiManager psiManager = null;
         for (VirtualFile file : files) {
-
-            if(psiManager == null) {
-                psiManager = PsiManager.getInstance(project);
-            }
-
             PsiFile psiFile = psiManager.findFile(file);
             if(psiFile != null) {
                 psiFiles.add(psiFile);
