@@ -25,7 +25,6 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
         }
         Project project = psiElement.getProject();
         Collection<VirtualFile> files = new HashSet<>();
-        System.out.println("text: "+psiElement.getText());
         if (!PlatformPatterns
                 .psiElement(StringLiteralExpression.class)
                 .withLanguage(PhpLanguage.INSTANCE)
