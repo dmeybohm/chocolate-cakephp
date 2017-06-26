@@ -6,7 +6,10 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
+import com.jetbrains.php.lang.PhpLanguage;
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -17,20 +20,25 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
     @Nullable
     @Override
     public PsiElement[] getGotoDeclarationTargets(@Nullable PsiElement psiElement, int i, Editor editor) {
+        if (psiElement == null) {
+            return new PsiElement[0];
+        }
         Project project = psiElement.getProject();
         Collection<VirtualFile> files = new HashSet<>();
         System.out.println("text: "+psiElement.getText());
-        if (!psiElement.getText().equals("element")) {
+        if (!PlatformPatterns
+                .psiElement(StringLiteralExpression.class)
+                .withLanguage(PhpLanguage.INSTANCE)
+                .accepts(psiElement.getContext())
+        ) {
             return new PsiElement[0];
         }
-        VirtualFile relativeFile = VfsUtil.findRelativeFile(project.getBaseDir(), "goto-test/element.php".split("/"));
-        System.out.println("baseDir: "+project.getBaseDir().getCanonicalPath());
-        System.out.println("relativeFile: "+relativeFile);
+        String elementPath = String.format("app/View/Elements/%s.ctp", psiElement.getText());
+        VirtualFile relativeFile = VfsUtil.findRelativeFile(project.getBaseDir(), elementPath.split("/"));
         if (relativeFile != null) {
             files.add(relativeFile);
             return PsiUtil.convertVirtualFilesToPsiFiles(project, files).toArray(new PsiElement[files.size()]);
         }
-        System.out.println("ElementGotoDeclarationHandler");
         return new PsiElement[0];
     }
 
