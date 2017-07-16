@@ -5,13 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="514cecca-13e3-41d8-97fa-7a388e3316be" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/OverriddenVirtualFileManager.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/TemplateVarCompletionContributor.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/library/LibraryOrderEntry.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/META-INF/plugin.xml" afterPath="$PROJECT_DIR$/META-INF/plugin.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/PsiUtil.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/PsiUtil.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/TemplateGotoDeclarationHandler.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolatecakephp/TemplateGotoDeclarationHandler.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ElementGotoDeclarationHandler.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ElementGotoDeclarationHandler.java" />
     </list>
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/out/" />
@@ -67,11 +61,11 @@
       <file leaf-file-name="ElementGotoDeclarationHandler.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ElementGotoDeclarationHandler.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.45574635">
-              <caret line="40" column="36" selection-start-line="40" selection-start-column="36" selection-end-line="40" selection-end-column="36" />
+            <state vertical-scroll-proportion="0.51519156">
+              <caret line="43" column="76" selection-start-line="43" selection-start-column="76" selection-end-line="43" selection-end-column="76" />
               <folding>
-                <element signature="e#2594#2595#0" expanded="true" />
-                <element signature="e#2621#2622#0" expanded="true" />
+                <element signature="e#2704#2705#0" expanded="true" />
+                <element signature="e#2731#2732#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -1556,39 +1550,39 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="12" column="41" selection-start-line="12" selection-start-column="41" selection-end-line="12" selection-end-column="41" />
           <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#623#624#0" expanded="true" />
-            <element signature="e#650#651#0" expanded="true" />
-            <element signature="e#702#703#0" expanded="true" />
-            <element signature="e#730#731#0" expanded="true" />
-            <element signature="e#783#784#0" expanded="true" />
-            <element signature="e#810#811#0" expanded="true" />
-            <element signature="e#876#877#0" expanded="true" />
-            <element signature="e#903#904#0" expanded="true" />
-            <element signature="e#952#953#0" expanded="true" />
-            <element signature="e#980#981#0" expanded="true" />
-            <element signature="e#1111#1112#0" expanded="true" />
-            <element signature="e#1138#1139#0" expanded="true" />
-            <element signature="e#1313#1314#0" expanded="true" />
-            <element signature="e#1354#1355#0" expanded="true" />
-            <element signature="e#1432#1433#0" expanded="true" />
-            <element signature="e#1468#1469#0" expanded="true" />
-            <element signature="e#1561#1562#0" expanded="true" />
-            <element signature="e#1602#1603#0" expanded="true" />
-            <element signature="e#1689#1690#0" expanded="true" />
-            <element signature="e#1725#1726#0" expanded="true" />
-            <element signature="e#1794#1795#0" expanded="true" />
-            <element signature="e#1821#1822#0" expanded="true" />
-            <element signature="e#1867#1868#0" expanded="true" />
-            <element signature="e#1895#1896#0" expanded="true" />
-            <element signature="e#1960#1961#0" expanded="true" />
-            <element signature="e#1987#1988#0" expanded="true" />
-            <element signature="e#2069#2070#0" expanded="true" />
-            <element signature="e#2096#2097#0" expanded="true" />
-            <element signature="e#4223#4224#0" expanded="true" />
-            <element signature="e#4247#4248#0" expanded="true" />
-            <element signature="e#4297#4298#0" expanded="true" />
-            <element signature="e#4325#4326#0" expanded="true" />
+            <element signature="imports" expanded="false" />
+            <element signature="e#623#624#0" expanded="false" />
+            <element signature="e#650#651#0" expanded="false" />
+            <element signature="e#702#703#0" expanded="false" />
+            <element signature="e#730#731#0" expanded="false" />
+            <element signature="e#783#784#0" expanded="false" />
+            <element signature="e#810#811#0" expanded="false" />
+            <element signature="e#876#877#0" expanded="false" />
+            <element signature="e#903#904#0" expanded="false" />
+            <element signature="e#952#953#0" expanded="false" />
+            <element signature="e#980#981#0" expanded="false" />
+            <element signature="e#1111#1112#0" expanded="false" />
+            <element signature="e#1138#1139#0" expanded="false" />
+            <element signature="e#1313#1314#0" expanded="false" />
+            <element signature="e#1354#1355#0" expanded="false" />
+            <element signature="e#1432#1433#0" expanded="false" />
+            <element signature="e#1468#1469#0" expanded="false" />
+            <element signature="e#1561#1562#0" expanded="false" />
+            <element signature="e#1602#1603#0" expanded="false" />
+            <element signature="e#1689#1690#0" expanded="false" />
+            <element signature="e#1725#1726#0" expanded="false" />
+            <element signature="e#1794#1795#0" expanded="false" />
+            <element signature="e#1821#1822#0" expanded="false" />
+            <element signature="e#1867#1868#0" expanded="false" />
+            <element signature="e#1895#1896#0" expanded="false" />
+            <element signature="e#1960#1961#0" expanded="false" />
+            <element signature="e#1987#1988#0" expanded="false" />
+            <element signature="e#2069#2070#0" expanded="false" />
+            <element signature="e#2096#2097#0" expanded="false" />
+            <element signature="e#4223#4224#0" expanded="false" />
+            <element signature="e#4247#4248#0" expanded="false" />
+            <element signature="e#4297#4298#0" expanded="false" />
+            <element signature="e#4325#4326#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -1712,11 +1706,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ElementGotoDeclarationHandler.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.45574635">
-          <caret line="40" column="36" selection-start-line="40" selection-start-column="36" selection-end-line="40" selection-end-column="36" />
+        <state vertical-scroll-proportion="0.51519156">
+          <caret line="43" column="76" selection-start-line="43" selection-start-column="76" selection-end-line="43" selection-end-column="76" />
           <folding>
-            <element signature="e#2594#2595#0" expanded="true" />
-            <element signature="e#2621#2622#0" expanded="true" />
+            <element signature="e#2704#2705#0" expanded="true" />
+            <element signature="e#2731#2732#0" expanded="true" />
           </folding>
         </state>
       </provider>

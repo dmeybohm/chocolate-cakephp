@@ -37,7 +37,11 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
         }
         PsiFile containingFile = psiElement.getContainingFile();
         String path = containingFile.getVirtualFile().getCanonicalPath();
-        String elementPath = String.format("%s/View/Elements/%s.ctp", getAppDir(path), psiElement.getText());
+        String appDir = getAppDir(path);
+        if (appDir == null) {
+            return new PsiElement[0];
+        }
+        String elementPath = String.format("%s/View/Elements/%s.ctp", appDir, psiElement.getText());
         VirtualFileManager vfManager = VirtualFileManager.getInstance();
         VirtualFile fileByUrl = vfManager.findFileByUrl(VirtualFileManager.constructUrl("file", elementPath));
         if (fileByUrl != null) {
