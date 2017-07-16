@@ -1,4 +1,4 @@
-package com.daveme.intellij.chocolatecakephp;
+package com.daveme.intellij.chocolateCakePHP;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;

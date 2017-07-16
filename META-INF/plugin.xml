@@ -1,5 +1,5 @@
 <idea-plugin version="2">
-    <id>com.daveme.intellij.chocolatecakephp</id>
+    <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
     <version>1.0</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
@@ -17,8 +17,9 @@
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
   <idea-version since-build="141.1619"/>
     <extensions defaultExtensionNs="com.intellij">
-        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolatecakephp.ElementGotoDeclarationHandler" />
-        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolatecakephp.TemplateGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.ElementGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.TemplateGotoDeclarationHandler" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.TemplateVarCompletionContributor" />
      </extensions>
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
@@ -28,7 +29,9 @@
     -->
 
     <application-components>
-        <!-- Add your application components here -->
+        <component>
+            <implementation-class>com.daveme.intellij.chocolateCakePHP.VirtualIncludesFileSystem</implementation-class>
+        </component>
     </application-components>
 
     <project-components>
