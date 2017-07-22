@@ -6,7 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
     </content>
-    <orderEntry type="jdk" jdkName="PhpStorm PS-171.4424.11" jdkType="IDEA JDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library" scope="PROVIDED">
       <library>
@@ -17,9 +17,6 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" scope="PROVIDED" name="kotlin-runtime-sources" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="kotlin-runtime" level="project" />
-    <orderEntry type="library" scope="TEST" name="junit-4.11" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="php-openapi" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="php" level="project" />
   </component>
 </module>
