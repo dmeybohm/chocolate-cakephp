@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="php">
+    <CLASSES>
+      <root url="jar:///Applications/PhpStorm 2017.2.app/Contents/plugins/php/lib/php.jar!/" />
+      <root url="jar:///Applications/PhpStorm 2017.2.app/Contents/plugins/php/lib/php-openapi.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
