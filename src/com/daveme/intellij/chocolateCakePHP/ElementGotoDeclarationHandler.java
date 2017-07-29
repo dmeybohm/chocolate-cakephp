@@ -37,7 +37,7 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
         }
         PsiFile containingFile = psiElement.getContainingFile();
         String path = containingFile.getVirtualFile().getCanonicalPath();
-        String appDir = getAppDir(path);
+        String appDir = StringUtil.lastOccurrenceOf(path, "app");
         if (appDir == null) {
             return new PsiElement[0];
         }
@@ -50,19 +50,6 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
             return PsiUtil.convertVirtualFilesToPsiFiles(project, files).toArray(new PsiElement[files.size()]);
         }
         return new PsiElement[0];
-    }
-
-    @Nullable
-    private String getAppDir(String path) {
-        StringBuilder result = new StringBuilder();
-        for (String part : path.split("/")) {
-            result.append(part);
-            if (part.equals("app")) {
-                return result.toString();
-            }
-            result.append("/");
-        }
-        return null;
     }
 
     @Nullable
