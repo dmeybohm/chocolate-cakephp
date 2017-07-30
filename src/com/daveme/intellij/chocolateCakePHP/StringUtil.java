@@ -1,10 +1,8 @@
 package com.daveme.intellij.chocolateCakePHP;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Created by dmeybohm on 7/29/17.
- */
 public class StringUtil {
 
     @Nullable
@@ -27,5 +25,20 @@ public class StringUtil {
             return null;
         }
         return controllerClass.substring(0, controllerClass.length() - "Controller".length());
+    }
+
+    @NotNull
+    public static String allInterfaces(Class klass) {
+        Class<?>[] interfaces = klass.getInterfaces();
+        StringBuilder builder = new StringBuilder();
+        builder.append("{");
+        for (Class<?> intface : interfaces) {
+            if (builder.length() > 1) {
+                builder.append(", ");
+            }
+            builder.append(intface.getCanonicalName());
+        }
+        builder.append("}");
+        return builder.toString();
     }
 }

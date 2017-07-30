@@ -26,4 +26,9 @@ public class PsiUtil {
 
         return psiFiles;
     }
+
+    public static PsiFile convertVirtualFileToPsiFile(@NotNull Project project, @NotNull VirtualFile file) {
+        PsiManager psiManager = PsiManager.getInstance(project);
+        return psiManager.findFile(file);
+    }
 }

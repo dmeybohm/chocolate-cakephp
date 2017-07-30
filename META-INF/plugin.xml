@@ -19,8 +19,8 @@
     <extensions defaultExtensionNs="com.intellij">
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.TemplateGotoDeclarationHandler" />
-        <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.TemplateVarCompletionContributor" />
-     </extensions>
+        <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.ControllerMethodLineMarker" />`
+    </extensions>
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
