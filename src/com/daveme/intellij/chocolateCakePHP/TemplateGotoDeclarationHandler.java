@@ -1,5 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP;
 
+import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
+import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;

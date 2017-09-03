@@ -1,6 +1,8 @@
 package com.daveme.intellij.chocolateCakePHP;
 
 import com.daveme.intellij.chocolateCakePHP.icons.CakeIcons;
+import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
+import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.LineMarkerProvider;
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder;

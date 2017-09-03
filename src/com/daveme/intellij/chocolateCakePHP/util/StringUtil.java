@@ -1,4 +1,4 @@
-package com.daveme.intellij.chocolateCakePHP;
+package com.daveme.intellij.chocolateCakePHP.util;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 public class StringUtil {
 
     @Nullable
-    public static String lastOccurrenceOf(String haystack, String needle) {
+    public static String lastOccurrenceOf(@NotNull String haystack, @NotNull String needle) {
         StringBuilder result = new StringBuilder();
         String path = null;
         for (String part : haystack.split("/")) {
@@ -20,7 +20,7 @@ public class StringUtil {
     }
 
     @Nullable
-    public static String controllerBaseNameFromControllerFileName(String controllerClass) {
+    public static String controllerBaseNameFromControllerFileName(@NotNull String controllerClass) {
         if (!controllerClass.endsWith("Controller")) {
             return null;
         }
@@ -28,7 +28,7 @@ public class StringUtil {
     }
 
     @NotNull
-    public static String allInterfaces(Class klass) {
+    public static String allInterfaces(@NotNull Class klass) {
         Class<?>[] interfaces = klass.getInterfaces();
         StringBuilder builder = new StringBuilder();
         builder.append("{");
@@ -41,4 +41,5 @@ public class StringUtil {
         builder.append("}");
         return builder.toString();
     }
+
 }
