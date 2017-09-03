@@ -1,4 +1,4 @@
-package com.daveme.intellij.chocolateCakePHP;
+package com.daveme.intellij.chocolateCakePHP.typeProvider;
 
 import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.openapi.project.Project;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
-public class CakeTypeProvider implements PhpTypeProvider3 {
+public class ControllerTypeProvider implements PhpTypeProvider3 {
 
     @Override
     public char getKey() {

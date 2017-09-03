@@ -22,7 +22,7 @@
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.ControllerMethodLineMarker" />`
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
-        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.CakeTypeProvider" />
+        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerTypeProvider" />
     </extensions>
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
