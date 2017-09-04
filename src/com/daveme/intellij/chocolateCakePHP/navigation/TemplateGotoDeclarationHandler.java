@@ -1,4 +1,4 @@
-package com.daveme.intellij.chocolateCakePHP;
+package com.daveme.intellij.chocolateCakePHP.navigation;
 
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
 import com.daveme.intellij.chocolateCakePHP.util.StringUtil;

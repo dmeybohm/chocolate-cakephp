@@ -18,10 +18,8 @@ public class TemplateVarCompletionContributor extends CompletionContributor {
                     @Override
                     protected void addCompletions(@NotNull CompletionParameters completionParameters, ProcessingContext processingContext, @NotNull CompletionResultSet completionResultSet) {
                         PsiElement psiElement = completionParameters.getOriginalPosition().getOriginalElement();
-                        System.out.println("psiElement: "+psiElement.getClass());
                         PsiFile file = psiElement.getContainingFile();
                         String name = file.getVirtualFile().getName();
-                        System.out.println("name: "+name);
                         if (name.endsWith(".ctp")) {
                             LookupElementBuilder lookupElement = LookupElementBuilder.create("$FooBar").withIcon(PhpIcons.VARIABLE).withTypeText("FooBar").withPresentableText("FooBar");
                             completionResultSet.addElement(lookupElement);

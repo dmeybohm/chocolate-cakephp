@@ -29,35 +29,27 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
     @Override
     public PhpType getType(PsiElement psiElement) {
         if (!PlatformPatterns.psiElement(PhpElementTypes.FIELD_REFERENCE).accepts(psiElement)) {
-            System.out.println("Skipping non field reference: "+psiElement.getClass().getCanonicalName());
             return null;
         }
         PsiFile containingFile = psiElement.getContainingFile();
         if (containingFile == null) {
-            System.out.println("Null containingFile");
             return null;
         }
 
         VirtualFile virtualFile = containingFile.getVirtualFile();
         if (virtualFile == null) {
-            System.out.println("Null virtualfile");
             return null;
         }
         String filename = virtualFile.getNameWithoutExtension();
         if (filename == null) {
-            System.out.println("Null getNameWithoutExtension");
             return null;
         }
-        System.out.println("path: "+filename);
         String controllerBaseName = StringUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerBaseName == null) {
             return null;
         }
-        System.out.println("Controller Name: "+controllerBaseName);
-        System.out.println("Interfaces: "+StringUtil.allInterfaces(psiElement.getClass()));
         FieldReference fieldReference = (FieldReference)psiElement;
         String fieldName = fieldReference.getName();
-        System.out.println("fieldName: "+fieldName);
         if (StringUtils.isEmpty(fieldName)) {
             return null;
         }

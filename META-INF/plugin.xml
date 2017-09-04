@@ -17,9 +17,9 @@
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
   <idea-version since-build="171.3780"/>
     <extensions defaultExtensionNs="com.intellij">
-        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.ElementGotoDeclarationHandler" />
-        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.TemplateGotoDeclarationHandler" />
-        <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.ControllerMethodLineMarker" />`
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.TemplateGotoDeclarationHandler" />
+        <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.navigation.ControllerMethodLineMarker" />`
         <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionProvider" />
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
@@ -32,9 +32,6 @@
     -->
 
     <application-components>
-        <component>
-            <implementation-class>com.daveme.intellij.chocolateCakePHP.VirtualIncludesFileSystem</implementation-class>
-        </component>
     </application-components>
 
     <project-components>
