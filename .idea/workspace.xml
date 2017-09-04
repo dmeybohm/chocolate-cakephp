@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="514cecca-13e3-41d8-97fa-7a388e3316be" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/TemplateVarCompletionContributor.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/icons/cake.icon.png" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/icons/cake.icon.png" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/META-INF/plugin.xml" afterPath="$PROJECT_DIR$/META-INF/plugin.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/typeProvider/ControllerTypeProvider.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/typeProvider/ControllerTypeProvider.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java" />
     </list>
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/out/" />
@@ -34,8 +30,8 @@
       <file leaf-file-name="ControllerCompletionProvider.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="1.5653898">
-              <caret line="79" column="1" selection-start-line="79" selection-start-column="1" selection-end-line="96" selection-end-column="19" />
+            <state vertical-scroll-proportion="0.6036988">
+              <caret line="31" column="0" selection-start-line="31" selection-start-column="0" selection-end-line="31" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -1450,8 +1446,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="1.5653898">
-          <caret line="79" column="1" selection-start-line="79" selection-start-column="1" selection-end-line="96" selection-end-column="19" />
+        <state vertical-scroll-proportion="0.6036988">
+          <caret line="31" column="0" selection-start-line="31" selection-start-column="0" selection-end-line="31" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
