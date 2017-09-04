@@ -1,12 +1,17 @@
 <idea-plugin version="2">
-    <id>com.daveme.intellij.chocolateCakePHP</id>
+    <id>com.daveme.intellij.chocolateCakePhp</id>
     <name>Chocolate CakePHP</name>
-    <version>1.0</version>
+    <version>0.1</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
 
     <description><![CDATA[
-      Enter short description for your plugin here.<br>
-      <em>most HTML tags may be used</em>
+      Framework assistant for CakePHP.<br><br>
+      Current features:
+
+      <ul>
+        <li>Navigate from Controller->Model methods</li>
+        <li>Autocomplete on Controller->Model methods</li>
+      </ul>
     ]]>
     </description>
 

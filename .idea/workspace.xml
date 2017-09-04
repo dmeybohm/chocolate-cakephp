@@ -5,18 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="514cecca-13e3-41d8-97fa-7a388e3316be" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/OverriddenVirtualFileManager.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/VirtualIncludesFileSystem.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/library/LibraryOrderEntry.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/util/PhpElementsUtil.java" afterPath="" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ControllerMethodLineMarker.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/ControllerMethodLineMarker.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/ElementGotoDeclarationHandler.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/ElementGotoDeclarationHandler.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/TemplateGotoDeclarationHandler.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/TemplateGotoDeclarationHandler.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/icons/cake.icon.png" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/icons/cake.icon.png" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/META-INF/plugin.xml" afterPath="$PROJECT_DIR$/META-INF/plugin.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/typeProvider/ControllerTypeProvider.java" afterPath="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/typeProvider/ControllerTypeProvider.java" />
     </list>
     <ignored path=".idea/workspace.xml" />
     <ignored path="$PROJECT_DIR$/out/" />
@@ -79,11 +68,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="TemplateVarCompletionContributor.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="TemplateVarCompletionContributor.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.42">
-              <caret line="22" column="0" selection-start-line="22" selection-start-column="0" selection-end-line="22" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0">
+              <caret line="22" column="19" selection-start-line="22" selection-start-column="19" selection-end-line="22" selection-end-column="19" />
               <folding />
             </state>
           </provider>
@@ -99,11 +88,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="plugin.xml" pinned="false" current-in-tab="false">
+      <file leaf-file-name="plugin.xml" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/META-INF/plugin.xml">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-8.583333">
-              <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.44117647">
+              <caret line="14" column="0" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -184,12 +173,12 @@
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completionContributor/TemplateVarCompletionContributor.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completionContributor/ControllerCompletionProvider.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/ControllerCompletionProvider.java" />
-        <option value="$PROJECT_DIR$/META-INF/plugin.xml" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/ControllerMethodLineMarker.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/ElementGotoDeclarationHandler.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/OverriddenVirtualFileManager.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/typeProvider/ControllerTypeProvider.java" />
         <option value="$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java" />
+        <option value="$PROJECT_DIR$/META-INF/plugin.xml" />
       </list>
     </option>
   </component>
@@ -1061,7 +1050,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="4" y="23" width="1436" height="877" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32920793" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -1073,7 +1062,7 @@
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3522238" sideWeight="0.46369427" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3522238" sideWeight="0.46369427" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32738853" sideWeight="0.43314764" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24964131" sideWeight="0.4955414" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -1435,14 +1424,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/META-INF/plugin.xml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-8.583333">
-          <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/navigation/ControllerMethodLineMarker.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -1487,8 +1468,16 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/daveme/intellij/chocolateCakePHP/completion/TemplateVarCompletionContributor.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.42">
-          <caret line="22" column="0" selection-start-line="22" selection-start-column="0" selection-end-line="22" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.0">
+          <caret line="22" column="19" selection-start-line="22" selection-start-column="19" selection-end-line="22" selection-end-column="19" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/META-INF/plugin.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.44117647">
+          <caret line="14" column="0" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
           <folding />
         </state>
       </provider>
