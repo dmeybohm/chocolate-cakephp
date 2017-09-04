@@ -20,6 +20,7 @@
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.TemplateGotoDeclarationHandler" />
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.ControllerMethodLineMarker" />`
+        <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionProvider" />
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
         <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerTypeProvider" />

@@ -1,8 +1,7 @@
-package com.daveme.intellij.chocolateCakePHP;
+package com.daveme.intellij.chocolateCakePHP.completion;
 
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;

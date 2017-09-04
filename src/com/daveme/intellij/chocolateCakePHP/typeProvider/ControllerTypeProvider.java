@@ -12,6 +12,7 @@ import com.jetbrains.php.lang.psi.elements.FieldReference;
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement;
 import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3;
+import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -56,6 +57,10 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
         System.out.println("Interfaces: "+StringUtil.allInterfaces(psiElement.getClass()));
         FieldReference fieldReference = (FieldReference)psiElement;
         String fieldName = fieldReference.getName();
+        System.out.println("fieldName: "+fieldName);
+        if (StringUtils.isEmpty(fieldName)) {
+            return null;
+        }
         if (!Character.isUpperCase(fieldName.charAt(0))) {
             return null;
         }
