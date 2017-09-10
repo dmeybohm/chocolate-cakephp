@@ -9,12 +9,14 @@ import com.intellij.psi.PsiFile;
 import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.lang.parser.PhpElementTypes;
 import com.jetbrains.php.lang.psi.elements.FieldReference;
+import com.jetbrains.php.lang.psi.elements.PhpClass;
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement;
 import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
@@ -41,9 +43,6 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
             return null;
         }
         String filename = virtualFile.getNameWithoutExtension();
-        if (filename == null) {
-            return null;
-        }
         String controllerBaseName = StringUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerBaseName == null) {
             return null;
@@ -62,6 +61,11 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
 
     @Override
     public Collection<? extends PhpNamedElement> getBySignature(String expression, Set<String> set, int i, Project project) {
-        return PhpIndex.getInstance(project).getClassesByFQN(expression);
+        Collection<PhpClass> result = new ArrayList<>();
+        Collection<PhpClass> modelClasses = PhpIndex.getInstance(project).getClassesByFQN(expression);
+        Collection<PhpClass> componentClasses = PhpIndex.getInstance(project).getClassesByFQN(expression + "Component");
+        result.addAll(modelClasses);
+        result.addAll(componentClasses);
+        return result;
     }
 }

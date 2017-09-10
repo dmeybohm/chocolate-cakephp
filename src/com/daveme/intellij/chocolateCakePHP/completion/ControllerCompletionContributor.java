@@ -16,11 +16,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-public class ControllerCompletionProvider extends CompletionContributor {
+public class ControllerCompletionContributor extends CompletionContributor {
 
     public static PhpType CONTROLLER_TYPE = PhpType.builder().add("\\AppController").build();
 
-    public ControllerCompletionProvider() {
+    public ControllerCompletionContributor() {
         extend(CompletionType.BASIC, PlatformPatterns.psiElement().withParent(FieldReference.class), new CompletionProvider<CompletionParameters>() {
             @Override
             protected void addCompletions(@NotNull CompletionParameters completionParameters, ProcessingContext processingContext, @NotNull CompletionResultSet completionResultSet) {
@@ -42,7 +42,6 @@ public class ControllerCompletionProvider extends CompletionContributor {
                 VirtualFile virtualFile = file.getVirtualFile();
                 if (virtualFile == null) {
                     return;
-
                 }
                 String nameWithoutExtension = virtualFile.getNameWithoutExtension();
                 String controllerName = StringUtil.controllerBaseNameFromControllerFileName(nameWithoutExtension);
