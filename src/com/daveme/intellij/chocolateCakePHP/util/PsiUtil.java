@@ -2,6 +2,7 @@ package com.daveme.intellij.chocolateCakePHP.util;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
@@ -59,5 +60,51 @@ public class PsiUtil {
         result.addAll(modelClasses);
         result.addAll(componentClasses);
         return result;
+    }
+
+    @Nullable
+    public static PsiElement findParent(PsiElement element, Class clazz) {
+        while (true) {
+            PsiElement parent = element.getParent();
+            if (parent == null) {
+                break;
+            }
+            if (PlatformPatterns.psiElement(clazz).accepts(parent)) {
+                return parent;
+            }
+            element = parent;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static PsiElement findFirstChild(PsiElement element, Class clazz) {
+        PsiElement[] children = element.getChildren();
+        System.out.println("children.length: "+children.length);
+        for (int i = 0; i < children.length; i++) {
+            System.out.println("child "+i+":"+StringUtil.allInterfaces(children[i].getClass()));
+            if (PlatformPatterns.psiElement(clazz).accepts(children[i])) {
+               return children[i];
+            }
+            PsiElement grandChild = findFirstChild(children[i], clazz);
+            if (grandChild != null) {
+                return grandChild;
+            }
+        }
+        return null;
+    }
+
+    public static void dumpAllParents(PsiElement element) {
+        System.out.print("element: "+element.getClass()+" {");
+        while (true) {
+            PsiElement parent = element.getParent();
+            if (parent == null) {
+                break;
+            }
+            System.out.print("(" + StringUtil.allInterfaces(parent.getClass()));
+            System.out.print("), ");
+            element = parent;
+        }
+        System.out.println("}");
     }
 }
