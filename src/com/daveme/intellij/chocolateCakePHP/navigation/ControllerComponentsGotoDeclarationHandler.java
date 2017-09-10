@@ -11,9 +11,6 @@ import com.jetbrains.php.lang.psi.elements.Field;
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Created by dmeybohm on 9/10/17.
- */
 public class ControllerComponentsGotoDeclarationHandler implements GotoDeclarationHandler {
     @Nullable
     @Override
