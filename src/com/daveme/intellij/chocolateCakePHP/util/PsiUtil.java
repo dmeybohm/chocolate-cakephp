@@ -62,6 +62,18 @@ public class PsiUtil {
         return result;
     }
 
+    @NotNull
+    public static PsiElement[] getClassesAsArray(@Nullable PsiElement psiElement, String className) {
+        Collection<PhpClass> helperClasses = getClasses(psiElement, className);
+        return helperClasses.toArray(new PsiElement[helperClasses.size()]);
+    }
+
+    @NotNull
+    private static Collection<PhpClass> getClasses(@Nullable PsiElement psiElement, String className) {
+        PhpIndex phpIndex = PhpIndex.getInstance(psiElement.getProject());
+        return phpIndex.getClassesByFQN(className);
+    }
+
     @Nullable
     public static PsiElement findParent(PsiElement element, Class clazz) {
         while (true) {
