@@ -2,10 +2,8 @@ package com.daveme.intellij.chocolateCakePHP.completion;
 
 import com.daveme.intellij.chocolateCakePHP.util.*;
 import com.intellij.codeInsight.completion.*;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
 import com.intellij.util.ProcessingContext;
 import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.lang.psi.elements.FieldReference;
@@ -35,15 +33,8 @@ public class ControllerCompletionContributor extends CompletionContributor {
                     return;
                 }
                 PsiElement originalElement = originalPosition.getOriginalElement();
-                PsiFile file = originalElement.getContainingFile();
-                if (file == null) {
-                    return;
-                }
-                VirtualFile virtualFile = file.getVirtualFile();
-                if (virtualFile == null) {
-                    return;
-                }
-                String nameWithoutExtension = virtualFile.getNameWithoutExtension();
+                String nameWithoutExtension = PsiUtil.getFileNameWithoutExtension(originalElement);
+                if (nameWithoutExtension == null) return;
                 String controllerName = StringUtil.controllerBaseNameFromControllerFileName(nameWithoutExtension);
                 if (controllerName == null) {
                     return;
@@ -67,4 +58,5 @@ public class ControllerCompletionContributor extends CompletionContributor {
             }
         });
     }
+
 }

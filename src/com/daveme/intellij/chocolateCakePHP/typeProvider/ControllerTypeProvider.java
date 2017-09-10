@@ -1,22 +1,20 @@
 package com.daveme.intellij.chocolateCakePHP.typeProvider;
 
+import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
 import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.lang.parser.PhpElementTypes;
 import com.jetbrains.php.lang.psi.elements.FieldReference;
-import com.jetbrains.php.lang.psi.elements.PhpClass;
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement;
 import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
@@ -61,11 +59,7 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
 
     @Override
     public Collection<? extends PhpNamedElement> getBySignature(String expression, Set<String> set, int i, Project project) {
-        Collection<PhpClass> result = new ArrayList<>();
-        Collection<PhpClass> modelClasses = PhpIndex.getInstance(project).getClassesByFQN(expression);
-        Collection<PhpClass> componentClasses = PhpIndex.getInstance(project).getClassesByFQN(expression + "Component");
-        result.addAll(modelClasses);
-        result.addAll(componentClasses);
-        return result;
+        return PsiUtil.getControllerFieldClasses(expression, project);
     }
+
 }

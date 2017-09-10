@@ -1,6 +1,5 @@
 package com.daveme.intellij.chocolateCakePHP.util;
 
-
 import com.intellij.codeInsight.completion.CompletionResultSet;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.jetbrains.php.completion.PhpVariantsUtil;

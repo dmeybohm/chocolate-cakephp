@@ -28,6 +28,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.TemplateGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ControllerGotoDeclarationHandler" />
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.navigation.ControllerMethodLineMarker" />`
         <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />
     </extensions>
