@@ -1,16 +1,20 @@
 <idea-plugin version="2">
-    <id>com.daveme.intellij.chocolateCakePhp</id>
+    <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
     <version>0.1</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
 
     <description><![CDATA[
-      Framework assistant for CakePHP.<br><br>
+      NOTE: This plugin is very pre-release.
+      Autocompletion and navigation for CakePHP (only version 2 of the framework at the moment, but version 3 support will
+      eventually be implemented).<br><br>
+      
       Current features:
 
       <ul>
-        <li>Navigate from Controller->Model methods</li>
-        <li>Autocomplete on Controller->Model methods</li>
+        <li>Navigate to $this->Model->someMethod inside controllers</li>
+        <li>Autocomplete on $this->Model->someMethod inside controllers</li>
+        <li>Navigate from Controller to View file by clicking on Cake Icon in the left gutter</li>
       </ul>
     ]]>
     </description>
