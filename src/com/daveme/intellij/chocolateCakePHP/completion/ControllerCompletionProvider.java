@@ -35,7 +35,11 @@ public class ControllerCompletionProvider extends CompletionContributor {
                 FieldReference fieldReference = (FieldReference)parent;
                 PhpExpression classReference = fieldReference.getClassReference();
 
-                PsiElement originalElement = completionParameters.getOriginalPosition().getOriginalElement();
+                PsiElement originalPosition = completionParameters.getOriginalPosition();
+                if (originalPosition == null) {
+                    return;
+                }
+                PsiElement originalElement = originalPosition.getOriginalElement();
                 PsiFile file = originalElement.getContainingFile();
                 if (file == null) {
                     return;
@@ -50,12 +54,14 @@ public class ControllerCompletionProvider extends CompletionContributor {
                 if (controllerName == null) {
                     return;
                 }
-
+                if (classReference == null) {
+                    return;
+                }
                 String className = classReference.getName();
                 PhpIndex phpIndex = PhpIndex.getInstance(psiElement.getProject());
                 String controllerClassName = controllerName + "Controller";
                 Collection<PhpClass> controllerClasses = phpIndex.getClassesByFQN(controllerClassName);
-                if (controllerClasses == null || controllerClasses.size() == 0) {
+                if (controllerClasses.size() == 0) {
                     return;
                 }
                 Collection<PhpClass> classes = phpIndex.getClassesByFQN(className);
@@ -66,7 +72,7 @@ public class ControllerCompletionProvider extends CompletionContributor {
                         List<LookupElement> lookupItems = PhpVariantsUtil.getLookupItems(klass.getMethods(), false, usageContext);
                         completionResultSet.addAllElements(lookupItems);
                     } catch (Exception e) {
-                        return;
+
                     }
                 }
             }
