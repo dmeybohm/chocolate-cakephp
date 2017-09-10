@@ -80,13 +80,11 @@ public class PsiUtil {
     @Nullable
     public static PsiElement findFirstChild(PsiElement element, Class clazz) {
         PsiElement[] children = element.getChildren();
-        System.out.println("children.length: "+children.length);
-        for (int i = 0; i < children.length; i++) {
-            System.out.println("child "+i+":"+StringUtil.allInterfaces(children[i].getClass()));
-            if (PlatformPatterns.psiElement(clazz).accepts(children[i])) {
-               return children[i];
+        for (PsiElement child : children) {
+            if (PlatformPatterns.psiElement(clazz).accepts(child)) {
+               return child;
             }
-            PsiElement grandChild = findFirstChild(children[i], clazz);
+            PsiElement grandChild = findFirstChild(child, clazz);
             if (grandChild != null) {
                 return grandChild;
             }
