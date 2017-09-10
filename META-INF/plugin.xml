@@ -15,7 +15,7 @@
         <li>Navigate to $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
         <li>Autocomplete on $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
         <li>Navigate from controller to view file by clicking on Cake Icon in the left gutter</li>
-        <li>Navigate to models, components, and views by Control/Cmd-clicking on the variable in the array list in a controller</li>
+        <li>Navigate to models, components, and views by Control/Cmd-clicking inside $uses, $components, and $views variables in a controller</li>
       </ul>
     ]]>
     </description>
