@@ -24,7 +24,7 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
     @Override
     public PsiElement[] getGotoDeclarationTargets(@Nullable PsiElement psiElement, int i, Editor editor) {
         if (psiElement == null) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         Project project = psiElement.getProject();
         if (!PlatformPatterns
@@ -32,13 +32,16 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
                 .withLanguage(PhpLanguage.INSTANCE)
                 .accepts(psiElement.getContext())
         ) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         PsiFile containingFile = psiElement.getContainingFile();
         String path = containingFile.getVirtualFile().getCanonicalPath();
+        if (path == null) {
+            return PsiElement.EMPTY_ARRAY;
+        }
         String appDir = StringUtil.lastOccurrenceOf(path, "app");
         if (appDir == null) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         String elementPath = String.format("%s/View/Elements/%s.ctp", appDir, psiElement.getText());
         VirtualFileManager vfManager = VirtualFileManager.getInstance();
@@ -48,7 +51,7 @@ public class ElementGotoDeclarationHandler implements GotoDeclarationHandler {
             files.add(fileByUrl);
             return PsiUtil.convertVirtualFilesToPsiFiles(project, files).toArray(new PsiElement[files.size()]);
         }
-        return new PsiElement[0];
+        return PsiElement.EMPTY_ARRAY;
     }
 
     @Nullable
