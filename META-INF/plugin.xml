@@ -1,27 +1,32 @@
 <idea-plugin version="2">
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
-    <version>0.1</version>
+    <version>0.2</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
 
     <description><![CDATA[
       NOTE: This plugin is very pre-release.
-      Autocompletion and navigation for CakePHP (only version 2 of the framework at the moment, but version 3 support will
-      eventually be implemented).<br><br>
+      Autocompletion and navigation for CakePHP. Only version 2 of the framework at the moment, but version 3 support will
+      eventually be implemented.<br><br>
       
       Current features:
 
       <ul>
-        <li>Navigate to $this->Model->someMethod inside controllers</li>
-        <li>Autocomplete on $this->Model->someMethod inside controllers</li>
-        <li>Navigate from Controller to View file by clicking on Cake Icon in the left gutter</li>
+        <li>Navigate to $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
+        <li>Autocomplete on $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
+        <li>Navigate from controller to view file by clicking on Cake Icon in the left gutter</li>
+        <li>Navigate to models, components, and views by Control/Cmd-clicking on the variable in the array list in a controller</li>
       </ul>
     ]]>
     </description>
 
-    <change-notes>
-
-    </change-notes>
+    <change-notes><![CDATA[
+        <h2>0.2</h2>
+        <ul>
+            <li>Add ability to go to navigate to components from controllers</li>
+            <li>Add ability to navigate to components and views by Control/Cmd-clicking on the variable in the array
+        </ul>
+    ]]></change-notes>
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
   <idea-version since-build="171.3780"/>
