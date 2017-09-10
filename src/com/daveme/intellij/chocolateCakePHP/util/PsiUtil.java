@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 
 public class PsiUtil {
@@ -63,13 +64,13 @@ public class PsiUtil {
     }
 
     @NotNull
-    public static PsiElement[] getClassesAsArray(@Nullable PsiElement psiElement, String className) {
+    public static PsiElement[] getClassesAsArray(@NotNull PsiElement psiElement, String className) {
         Collection<PhpClass> helperClasses = getClasses(psiElement, className);
         return helperClasses.toArray(new PsiElement[helperClasses.size()]);
     }
 
     @NotNull
-    private static Collection<PhpClass> getClasses(@Nullable PsiElement psiElement, String className) {
+    public static Collection<PhpClass> getClasses(@NotNull PsiElement psiElement, String className) {
         PhpIndex phpIndex = PhpIndex.getInstance(psiElement.getProject());
         return phpIndex.getClassesByFQN(className);
     }
