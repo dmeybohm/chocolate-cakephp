@@ -35,7 +35,7 @@ public class ControllerCompletionContributor extends CompletionContributor {
                 PsiElement originalElement = originalPosition.getOriginalElement();
                 String nameWithoutExtension = PsiUtil.getFileNameWithoutExtension(originalElement);
                 if (nameWithoutExtension == null) return;
-                String controllerName = StringUtil.controllerBaseNameFromControllerFileName(nameWithoutExtension);
+                String controllerName = CakeUtil.controllerBaseNameFromControllerFileName(nameWithoutExtension);
                 if (controllerName == null) {
                     return;
                 }
@@ -52,9 +52,9 @@ public class ControllerCompletionContributor extends CompletionContributor {
 
                 Collection<PhpClass> modelClasses = phpIndex.getClassesByFQN(fieldName);
                 PhpClass controllerClass = controllerClasses.iterator().next();
-                CakeCompletionUtil.complete(modelClasses, controllerClass, completionResultSet);
+                CakeUtil.complete(modelClasses, controllerClass, completionResultSet);
                 Collection<PhpClass> componentClasses = phpIndex.getClassesByFQN(fieldName + "Component");
-                CakeCompletionUtil.complete(componentClasses, controllerClass, completionResultSet);
+                CakeUtil.complete(componentClasses, controllerClass, completionResultSet);
             }
         });
     }

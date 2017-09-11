@@ -1,7 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.navigation;
 
+import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
-import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
@@ -27,7 +27,7 @@ public class ControllerFieldGotoDeclarationHandler implements GotoDeclarationHan
         if (filename == null) {
             return PsiElement.EMPTY_ARRAY;
         }
-        String controllerName = StringUtil.controllerBaseNameFromControllerFileName(filename);
+        String controllerName = CakeUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerName == null) {
             return PsiElement.EMPTY_ARRAY;
         }

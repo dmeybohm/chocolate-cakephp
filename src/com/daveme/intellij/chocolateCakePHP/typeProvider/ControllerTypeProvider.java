@@ -1,7 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.typeProvider;
 
+import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
-import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
@@ -41,7 +41,7 @@ public class ControllerTypeProvider implements PhpTypeProvider3 {
             return null;
         }
         String filename = virtualFile.getNameWithoutExtension();
-        String controllerBaseName = StringUtil.controllerBaseNameFromControllerFileName(filename);
+        String controllerBaseName = CakeUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerBaseName == null) {
             return null;
         }

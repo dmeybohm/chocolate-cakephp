@@ -7,11 +7,12 @@ import com.jetbrains.php.completion.UsageContext;
 import com.jetbrains.php.lang.psi.elements.PhpClass;
 import com.jetbrains.php.lang.psi.elements.PhpModifier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
 
-public class CakeCompletionUtil {
+public class CakeUtil {
 
     public static void complete(
             @NotNull Collection<PhpClass> classes,
@@ -36,5 +37,13 @@ public class CakeCompletionUtil {
 
             }
         }
+    }
+
+    @Nullable
+    public static String controllerBaseNameFromControllerFileName(@NotNull String controllerClass) {
+        if (!controllerClass.endsWith("Controller")) {
+            return null;
+        }
+        return controllerClass.substring(0, controllerClass.length() - "Controller".length());
     }
 }

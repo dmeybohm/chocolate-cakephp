@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation;
 
+import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
 import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
@@ -24,7 +25,7 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
     @Override
     public PsiElement[] getGotoDeclarationTargets(@Nullable PsiElement psiElement, int i, Editor editor) {
         if (psiElement == null) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         Project project = psiElement.getProject();
         if (!PlatformPatterns
@@ -32,18 +33,23 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
                 .withLanguage(PhpLanguage.INSTANCE)
                 .accepts(psiElement.getContext())
         ) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         PsiFile containingFile = psiElement.getContainingFile();
         VirtualFile virtualFile = containingFile.getVirtualFile();
         String filename = virtualFile.getNameWithoutExtension();
-        String controllerName = StringUtil.controllerBaseNameFromControllerFileName(filename);
+        String controllerName = CakeUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerName == null) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
-        String appDir = StringUtil.lastOccurrenceOf(virtualFile.getCanonicalPath(), "app");
+
+        String canonicalPath = virtualFile.getCanonicalPath();
+        if (canonicalPath == null) {
+            return PsiElement.EMPTY_ARRAY;
+        }
+        String appDir = StringUtil.lastOccurrenceOf(canonicalPath, "app");
         if (appDir == null) {
-            return new PsiElement[0];
+            return PsiElement.EMPTY_ARRAY;
         }
         String elementPath = String.format("%s/View/%s/%s.ctp", appDir, controllerName, psiElement.getText());
         VirtualFileManager vfManager = VirtualFileManager.getInstance();
@@ -53,7 +59,7 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
             files.add(fileByUrl);
             return PsiUtil.convertVirtualFilesToPsiFiles(project, files).toArray(new PsiElement[files.size()]);
         }
-        return new PsiElement[0];
+        return PsiElement.EMPTY_ARRAY;
     }
 
     @Nullable

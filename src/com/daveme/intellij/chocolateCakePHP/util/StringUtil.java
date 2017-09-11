@@ -19,14 +19,6 @@ public class StringUtil {
         return path;
     }
 
-    @Nullable
-    public static String controllerBaseNameFromControllerFileName(@NotNull String controllerClass) {
-        if (!controllerClass.endsWith("Controller")) {
-            return null;
-        }
-        return controllerClass.substring(0, controllerClass.length() - "Controller".length());
-    }
-
     @NotNull
     public static String allInterfaces(@NotNull Class klass) {
         Class<?>[] interfaces = klass.getInterfaces();

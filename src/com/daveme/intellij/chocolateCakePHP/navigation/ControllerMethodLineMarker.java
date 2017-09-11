@@ -1,6 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.navigation;
 
 import com.daveme.intellij.chocolateCakePHP.icons.CakeIcons;
+import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
 import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
@@ -36,6 +37,9 @@ public class ControllerMethodLineMarker implements LineMarkerProvider {
         String methodName = method.getName();
 
         String path = file.getCanonicalPath();
+        if (path == null) {
+            return null;
+        }
         String appDir = StringUtil.lastOccurrenceOf(path, "app");
         if (appDir == null) {
             return null;
@@ -73,7 +77,7 @@ public class ControllerMethodLineMarker implements LineMarkerProvider {
     public void collectSlowLineMarkers(@NotNull List<PsiElement> list, @NotNull Collection<LineMarkerInfo> collection) {
         for (PsiElement element : list) {
             VirtualFile file = element.getContainingFile().getVirtualFile();
-            String controllerName = StringUtil.controllerBaseNameFromControllerFileName(file.getNameWithoutExtension());
+            String controllerName = CakeUtil.controllerBaseNameFromControllerFileName(file.getNameWithoutExtension());
             if (controllerName == null) {
                 continue;
             }
