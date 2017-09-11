@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
-public class ControllerTypeProvider implements PhpTypeProvider3 {
+public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
 
     @Override
     public char getKey() {

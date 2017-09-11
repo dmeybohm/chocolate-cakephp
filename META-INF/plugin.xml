@@ -39,7 +39,7 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
-        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerTypeProvider" />
+        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
     </extensions>
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
