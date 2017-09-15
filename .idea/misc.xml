@@ -170,12 +170,12 @@
     <option name="SERVER_TIMEOUT" value="20000" />
   </component>
   <component name="ProjectKey">
-    <option name="state" value="https://github.com/pbyrne84/DynamicReturnTypePlugin.git" />
+    <option name="state" value="https://github.com/dmeybohm/chocolate-cakephp.git" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" assert-keyword="true" jdk-15="true" project-jdk-name="PhpStorm PS-172.3317.83" project-jdk-type="IDEA JDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
-  <component name="RegexUtilComponent" text="#M#C\DynamicReturnTypePluginTestEnvironment\OverriddenReturnType\Phockito:mock:#C\DomDocument" flags="0" regex="((#M)?#C.*):(.*):(.*)" mode="0" />
+  <component name="RegexUtilComponent" text="" flags="0" regex="" mode="0" />
   <component name="ResourceManagerContainer">
     <option name="myResourceBundles">
       <value>
