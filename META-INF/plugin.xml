@@ -25,7 +25,7 @@
         <ul>
             <li>Add ability to go to navigate to components from controllers</li>
             <li>Add ability to navigate to components and views by Control/Cmd-clicking on the variable in the array</li>
-            <li>Fix completion on return types from model methods (somehwa
+            <li>Partially fix some completion on return types from model methods</li>
         </ul>
     ]]></change-notes>
 

@@ -34,6 +34,7 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
     @Nullable
     @Override
     public PhpType getType(PsiElement psiElement) {
+
         if (!PlatformPatterns.psiElement(PhpElementTypes.FIELD_REFERENCE).accepts(psiElement)) {
             return null;
         }
