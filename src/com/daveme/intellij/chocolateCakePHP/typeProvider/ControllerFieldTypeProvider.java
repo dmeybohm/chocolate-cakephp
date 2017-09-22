@@ -37,16 +37,10 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
         if (!PlatformPatterns.psiElement(PhpElementTypes.FIELD_REFERENCE).accepts(psiElement)) {
             return null;
         }
-        PsiFile containingFile = psiElement.getContainingFile();
-        if (containingFile == null) {
+        String filename = PsiUtil.getFileNameWithoutExtension(psiElement);
+        if (filename == null) {
             return null;
         }
-
-        VirtualFile virtualFile = containingFile.getVirtualFile();
-        if (virtualFile == null) {
-            return null;
-        }
-        String filename = virtualFile.getNameWithoutExtension();
         // @todo don't do this based on filename, but on the variable type.
         String controllerBaseName = CakeUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerBaseName == null) {
