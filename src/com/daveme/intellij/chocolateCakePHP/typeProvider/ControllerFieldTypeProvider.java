@@ -34,18 +34,6 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
     @Nullable
     @Override
     public PhpType getType(PsiElement psiElement) {
-//        PsiElementPattern.Capture<PsiElement> fieldReferenceCapture = PlatformPatterns.psiElement(PhpElementTypes.FIELD_REFERENCE);
-//        if (PlatformPatterns.psiElement(PhpElementTypes.METHOD_REFERENCE).withFirstChild(fieldReferenceCapture).accepts(psiElement)) {
-//            FieldReference fieldReference = (FieldReference) psiElement.getFirstChild();
-//            System.out.println("fqn: " + fieldReference.getFQN());
-//            PhpExpression expression = fieldReference.getClassReference();
-//            MethodReference methodReference = (MethodReference)psiElement;
-//            System.out.println("signature: "+methodReference.getSignature());
-//            System.out.println("classReference: " + StringUtil.allInterfaces(expression.getClass()));
-//            System.out.println("has Field Reference: " + psiElement.getText());
-//            System.out.println("interfaces: " + StringUtil.allInterfaces(psiElement.getClass()));
-//            return new PhpType().add("#" + this.getKey() + "$m" + fieldReference.getName());
-//        }
         if (!PlatformPatterns.psiElement(PhpElementTypes.FIELD_REFERENCE).accepts(psiElement)) {
             return null;
         }
@@ -59,6 +47,7 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
             return null;
         }
         String filename = virtualFile.getNameWithoutExtension();
+        // @todo don't do this based on filename, but on the variable type.
         String controllerBaseName = CakeUtil.controllerBaseNameFromControllerFileName(filename);
         if (controllerBaseName == null) {
             return null;
@@ -74,7 +63,6 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
         String className = fieldReference.getName();
         return new PhpType().add("#C\\" + className)
                             .add("#C\\" + className + "Component");
-        //return new PhpType().add("#" + this.getKey() + fieldReference.getName());
     }
 
     @Override
