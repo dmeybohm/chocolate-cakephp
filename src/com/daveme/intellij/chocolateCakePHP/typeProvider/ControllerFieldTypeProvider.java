@@ -61,8 +61,8 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
             return null;
         }
         String className = fieldReference.getName();
-        return new PhpType().add("#C\\" + className)
-                            .add("#C\\" + className + "Component");
+        return new PhpType().add("\\" + className)
+                            .add("\\" + className + "Component");
     }
 
     @Override
