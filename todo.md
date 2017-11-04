@@ -10,3 +10,4 @@ files
 - Add completion contributor for view helpers
 - Add quickfix for undefined controller/view/component methods to add method
 - Add error for undefined controller/view/component methods/fields
+- Add something to add models/components/view helpers automatically on first new use

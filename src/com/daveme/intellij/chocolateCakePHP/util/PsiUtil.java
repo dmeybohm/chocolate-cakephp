@@ -34,6 +34,7 @@ public class PsiUtil {
         return psiFiles;
     }
 
+    @Nullable
     public static PsiFile convertVirtualFileToPsiFile(@NotNull Project project, @NotNull VirtualFile file) {
         PsiManager psiManager = PsiManager.getInstance(project);
         return psiManager.findFile(file);
@@ -64,19 +65,25 @@ public class PsiUtil {
     }
 
     @NotNull
+    public static Collection<PhpClass> getViewHelperClasses(String fieldName, Project project) {
+        PhpIndex phpIndex = PhpIndex.getInstance(project);
+        return phpIndex.getClassesByFQN(fieldName + "Helper");
+    }
+
+    @NotNull
     public static PsiElement[] getClassesAsArray(@NotNull PsiElement psiElement, String className) {
         Collection<PhpClass> helperClasses = getClasses(psiElement, className);
         return helperClasses.toArray(new PsiElement[helperClasses.size()]);
     }
 
     @NotNull
-    public static Collection<PhpClass> getClasses(@NotNull PsiElement psiElement, String className) {
+    private static Collection<PhpClass> getClasses(@NotNull PsiElement psiElement, String className) {
         PhpIndex phpIndex = PhpIndex.getInstance(psiElement.getProject());
         return phpIndex.getClassesByFQN(className);
     }
 
     @Nullable
-    public static PsiElement findParent(PsiElement element, Class clazz) {
+    public static PsiElement findParent(PsiElement element, Class<PsiElement> clazz) {
         while (true) {
             PsiElement parent = element.getParent();
             if (parent == null) {
@@ -91,7 +98,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    public static PsiElement findFirstChild(PsiElement element, Class clazz) {
+    private static PsiElement findFirstChild(PsiElement element, Class<PsiElement> clazz) {
         PsiElement[] children = element.getChildren();
         for (PsiElement child : children) {
             if (PlatformPatterns.psiElement(clazz).accepts(child)) {

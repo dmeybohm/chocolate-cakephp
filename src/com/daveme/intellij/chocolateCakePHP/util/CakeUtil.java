@@ -46,4 +46,5 @@ public class CakeUtil {
         }
         return controllerClass.substring(0, controllerClass.length() - "Controller".length());
     }
+
 }

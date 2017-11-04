@@ -1,4 +1,4 @@
-<idea-plugin version="2">
+<idea-plugin>
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
     <version>0.2</version>
@@ -35,12 +35,14 @@
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.TemplateGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ControllerFieldGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ViewHelperGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ControllerComponentsGotoDeclarationHandler" />
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.navigation.ControllerMethodLineMarker" />`
-        <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />
+        <!--<completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />-->
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
         <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
+        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ViewHelperTypeProvider" />
     </extensions>
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
