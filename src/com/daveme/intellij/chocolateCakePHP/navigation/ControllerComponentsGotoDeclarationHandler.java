@@ -30,6 +30,8 @@ public class ControllerComponentsGotoDeclarationHandler implements GotoDeclarati
             return PsiElement.EMPTY_ARRAY;
         }
         String text = field.getText();
+        // PhpStorm already has completion based on strings that contain class names, so
+        // we only need to check for the components and helpers properties:
         if (text.contains("$components")) {
             return PsiUtil.getClassesAsArray(psiElement, psiElement.getText() + "Component");
         }
