@@ -32,12 +32,17 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
             return null;
         }
         PhpType referenceType = classReference.getType();
-        Set<String> types = referenceType.getTypes();
-        for (String type : types) {
+        String fieldReferenceName = fieldReference.getName();
+        if (fieldReferenceName == null) {
+            return null;
+        }
+        if (!Character.isUpperCase(fieldReferenceName.charAt(0))) {
+            return null;
+        }
+        for (String type : referenceType.getTypes()) {
             if (type.contains("Controller")) {
-                String className = fieldReference.getName();
-                return new PhpType().add("\\" + className)
-                        .add("\\" + className + "Component");
+                return new PhpType().add("\\" + fieldReferenceName)
+                        .add("\\" + fieldReferenceName + "Component");
             }
         }
         return null;
