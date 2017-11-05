@@ -1,10 +1,10 @@
 ## Todo
 
-- [ ] Fix navigation to render method with multiple modules
-- [ ] Fix navigation to element method with multiple modules
-- [ ] Fix line marker method with multiple modules
-- [ ] Make enabling of the projects/modules turned on by finding some cake-specific
-fi[ ] les
+- [x] Fix navigation to render method with multiple modules
+- [x] Fix navigation to element method with multiple modules
+- [x] Fix line marker method with multiple modules
+- [x] Make enabling of the projects/modules turned on by finding some cake-specific
+files
 - [x] Add type provider for view helpers
 - [ ] Add completion contributor for models/components
 - [ ] Add completion contributor for view helpers
