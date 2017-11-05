@@ -2,11 +2,11 @@ package com.daveme.intellij.chocolateCakePHP.navigation;
 
 import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
+import com.daveme.intellij.chocolateCakePHP.util.VfsUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiDirectory;
@@ -44,11 +44,8 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
         }
 
         PsiDirectory appDir = PsiUtil.getAppDirectoryFromFile(containingFile);
-        if (appDir == null) {
-            return PsiElement.EMPTY_ARRAY;
-        }
         String templatePath = String.format("View/%s/%s.ctp", controllerName, psiElement.getText());
-        VirtualFile relativeFile = VfsUtil.findRelativeFile(appDir.getVirtualFile(), templatePath.split("/"));
+        VirtualFile relativeFile = VfsUtil.findRelativeFile(appDir, templatePath);
         if (relativeFile != null) {
             Collection<VirtualFile> files = new HashSet<>();
             files.add(relativeFile);

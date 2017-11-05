@@ -20,7 +20,7 @@ public class StringUtil {
     }
 
     @NotNull
-    static String allInterfaces(@NotNull Class klass) {
+    public static String allInterfaces(@NotNull Class klass) {
         Class<?>[] interfaces = klass.getInterfaces();
         StringBuilder builder = new StringBuilder();
         builder.append("{");
