@@ -3,6 +3,7 @@ package com.daveme.intellij.chocolateCakePHP.util;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
+import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
@@ -13,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 
 public class PsiUtil {
@@ -41,7 +41,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    public static String getFileNameWithoutExtension(PsiElement psiElement) {
+    public static String getFileNameWithoutExtension(@NotNull PsiElement psiElement) {
         PsiFile file = psiElement.getContainingFile();
         if (file == null) {
             return null;
@@ -54,7 +54,7 @@ public class PsiUtil {
     }
 
     @NotNull
-    public static Collection<PhpClass> getControllerFieldClasses(String fieldName, Project project) {
+    public static Collection<PhpClass> getControllerFieldClasses(@NotNull String fieldName, @NotNull Project project) {
         Collection<PhpClass> result = new ArrayList<>();
         PhpIndex phpIndex = PhpIndex.getInstance(project);
         Collection<PhpClass> modelClasses =  phpIndex.getClassesByFQN(fieldName);
@@ -65,7 +65,7 @@ public class PsiUtil {
     }
 
     @NotNull
-    public static Collection<PhpClass> getViewHelperClasses(String fieldName, Project project) {
+    public static Collection<PhpClass> getViewHelperClasses(@NotNull String fieldName, @NotNull Project project) {
         PhpIndex phpIndex = PhpIndex.getInstance(project);
         return phpIndex.getClassesByFQN(fieldName + "Helper");
     }
@@ -83,7 +83,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    public static PsiElement findParent(PsiElement element, Class<? extends PsiElement> clazz) {
+    public static PsiElement findParent(@NotNull PsiElement element, @NotNull Class<? extends PsiElement> clazz) {
         while (true) {
             PsiElement parent = element.getParent();
             if (parent == null) {
@@ -98,7 +98,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    private static PsiElement findFirstChild(PsiElement element, Class<? extends PsiElement> clazz) {
+    private static PsiElement findFirstChild(@NotNull PsiElement element, @NotNull Class<? extends PsiElement> clazz) {
         PsiElement[] children = element.getChildren();
         for (PsiElement child : children) {
             if (PlatformPatterns.psiElement(clazz).accepts(child)) {
@@ -112,7 +112,19 @@ public class PsiUtil {
         return null;
     }
 
-    public static void dumpAllParents(PsiElement element) {
+    @Nullable
+    public static PsiDirectory getAppDirectoryFromFile(@NotNull PsiFile file) {
+        PsiDirectory dir = file.getContainingDirectory();
+        while (dir != null) {
+            if (dir.getName().equals("app")) {
+                return dir;
+            }
+            dir = dir.getParent();
+        }
+        return null;
+    }
+
+    public static void dumpAllParents(@NotNull PsiElement element) {
         System.out.print("element: "+element.getClass()+" {");
         while (true) {
             PsiElement parent = element.getParent();

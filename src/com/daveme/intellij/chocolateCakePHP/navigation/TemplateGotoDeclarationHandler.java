@@ -2,14 +2,14 @@ package com.daveme.intellij.chocolateCakePHP.navigation;
 
 import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
-import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.patterns.PlatformPatterns;
+import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.jetbrains.php.lang.PhpLanguage;
@@ -43,20 +43,15 @@ public class TemplateGotoDeclarationHandler implements GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY;
         }
 
-        String canonicalPath = virtualFile.getCanonicalPath();
-        if (canonicalPath == null) {
-            return PsiElement.EMPTY_ARRAY;
-        }
-        String appDir = StringUtil.lastOccurrenceOf(canonicalPath, "app");
+        PsiDirectory appDir = PsiUtil.getAppDirectoryFromFile(containingFile);
         if (appDir == null) {
             return PsiElement.EMPTY_ARRAY;
         }
-        String elementPath = String.format("%s/View/%s/%s.ctp", appDir, controllerName, psiElement.getText());
-        VirtualFileManager vfManager = VirtualFileManager.getInstance();
-        VirtualFile fileByUrl = vfManager.findFileByUrl(VirtualFileManager.constructUrl("file", elementPath));
-        if (fileByUrl != null) {
+        String templatePath = String.format("View/%s/%s.ctp", controllerName, psiElement.getText());
+        VirtualFile relativeFile = VfsUtil.findRelativeFile(appDir.getVirtualFile(), templatePath.split("/"));
+        if (relativeFile != null) {
             Collection<VirtualFile> files = new HashSet<>();
-            files.add(fileByUrl);
+            files.add(relativeFile);
             return PsiUtil.convertVirtualFilesToPsiFiles(project, files).toArray(new PsiElement[files.size()]);
         }
         return PsiElement.EMPTY_ARRAY;
