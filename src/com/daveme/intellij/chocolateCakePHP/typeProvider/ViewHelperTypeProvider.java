@@ -34,10 +34,7 @@ public class ViewHelperTypeProvider implements PhpTypeProvider3 {
         }
         PhpType types = classReference.getType();
         String fieldReferenceName = fieldReference.getName();
-        if (fieldReferenceName == null) {
-            return null;
-        }
-        if (!Character.isUpperCase(fieldReferenceName.charAt(0))) {
+        if (!StringUtil.startsWithUppercaseCharacter(fieldReferenceName)) {
             return null;
         }
         for (String type : types.getTypes()) {

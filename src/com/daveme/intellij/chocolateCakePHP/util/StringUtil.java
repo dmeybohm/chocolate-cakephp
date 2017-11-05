@@ -20,7 +20,7 @@ public class StringUtil {
     }
 
     @NotNull
-    public static String allInterfaces(@NotNull Class klass) {
+    static String allInterfaces(@NotNull Class klass) {
         Class<?>[] interfaces = klass.getInterfaces();
         StringBuilder builder = new StringBuilder();
         builder.append("{");
@@ -32,6 +32,10 @@ public class StringUtil {
         }
         builder.append("}");
         return builder.toString();
+    }
+
+    public static boolean startsWithUppercaseCharacter(@Nullable String str) {
+        return str != null && str.length() != 0 && Character.isUpperCase(str.charAt(0));
     }
 
 }

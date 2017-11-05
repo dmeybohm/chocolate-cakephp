@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.typeProvider;
 
+import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
 import com.jetbrains.php.lang.psi.elements.FieldReference;
@@ -33,10 +34,7 @@ public class ControllerFieldTypeProvider implements PhpTypeProvider3 {
         }
         PhpType referenceType = classReference.getType();
         String fieldReferenceName = fieldReference.getName();
-        if (fieldReferenceName == null) {
-            return null;
-        }
-        if (!Character.isUpperCase(fieldReferenceName.charAt(0))) {
+        if (!StringUtil.startsWithUppercaseCharacter(fieldReferenceName)) {
             return null;
         }
         for (String type : referenceType.getTypes()) {

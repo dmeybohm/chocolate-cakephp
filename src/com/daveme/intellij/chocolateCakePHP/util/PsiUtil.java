@@ -98,7 +98,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    private static PsiElement findFirstChild(PsiElement element, Class<PsiElement> clazz) {
+    private static PsiElement findFirstChild(PsiElement element, Class<? extends PsiElement> clazz) {
         PsiElement[] children = element.getChildren();
         for (PsiElement child : children) {
             if (PlatformPatterns.psiElement(clazz).accepts(child)) {

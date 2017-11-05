@@ -2,6 +2,7 @@ package com.daveme.intellij.chocolateCakePHP.navigation;
 
 import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
+import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
@@ -40,10 +41,7 @@ public class ViewHelperGotoDeclarationHandler implements GotoDeclarationHandler 
         }
         PhpType types = classReference.getType();
         String fieldReferenceName = fieldReference.getName();
-        if (fieldReferenceName == null) {
-            return null;
-        }
-        if (!Character.isUpperCase(fieldReferenceName.charAt(0))) {
+        if (!StringUtil.startsWithUppercaseCharacter(fieldReferenceName)) {
             return null;
         }
         for (String type : types.getTypes()) {
