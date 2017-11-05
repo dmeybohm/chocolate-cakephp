@@ -83,7 +83,7 @@ public class PsiUtil {
     }
 
     @Nullable
-    public static PsiElement findParent(PsiElement element, Class<PsiElement> clazz) {
+    public static PsiElement findParent(PsiElement element, Class<? extends PsiElement> clazz) {
         while (true) {
             PsiElement parent = element.getParent();
             if (parent == null) {

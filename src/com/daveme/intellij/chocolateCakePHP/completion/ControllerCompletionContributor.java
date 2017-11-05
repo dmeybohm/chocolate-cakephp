@@ -23,6 +23,9 @@ public class ControllerCompletionContributor extends CompletionContributor {
             @Override
             protected void addCompletions(@NotNull CompletionParameters completionParameters, ProcessingContext processingContext, @NotNull CompletionResultSet completionResultSet) {
                 PsiElement psiElement = completionParameters.getPosition().getOriginalElement();
+                if (psiElement == null) {
+                    return;
+                }
                 PsiElement parent = psiElement.getParent();
 
                 FieldReference fieldReference = (FieldReference)parent;
