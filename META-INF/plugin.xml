@@ -6,7 +6,7 @@
 
     <description><![CDATA[
       NOTE: This plugin is very pre-release.
-      Autocompletion and navigation for CakePHP. Only version 2 of the framework at the moment, but eventually version 3 support will
+      Autocompletion and navigation for CakePHP. Only version 2 of the framework at the moment is supported, but eventually version 3 support will
       eventually be implemented.<br><br>
       
       Current features:
