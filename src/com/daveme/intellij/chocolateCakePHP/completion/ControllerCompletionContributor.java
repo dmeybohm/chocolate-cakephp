@@ -72,7 +72,7 @@ public class ControllerCompletionContributor extends CompletionContributor {
                 System.out.println("hasController");
                 CakeUtil.completeFromFilesInDir(completionResultSet, appDir, "Model");
                 if (controllerDir != null) {
-                    CakeUtil.completeFromFilesInDir(completionResultSet, controllerDir, "Component");
+                    CakeUtil.completeFromFilesInDir(completionResultSet, controllerDir, "Component", "Component");
                 }
             }
 

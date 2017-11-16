@@ -53,13 +53,20 @@ public class CakeUtil {
     }
 
     public static void completeFromFilesInDir(@NotNull CompletionResultSet completionResultSet,
+                                              @NotNull PsiDirectory appDir,
+                                              @NotNull String subDir) {
+        completeFromFilesInDir(completionResultSet, appDir, subDir, "");
+    }
+
+    public static void completeFromFilesInDir(@NotNull CompletionResultSet completionResultSet,
                                                @NotNull PsiDirectory appDir,
-                                               @NotNull String subDir) {
-        PsiDirectory modelDir = appDir.findSubdirectory(subDir);
-        if (modelDir == null) {
+                                               @NotNull String subDir,
+                                               @NotNull String replaceName) {
+        PsiDirectory psiSubdirectory = appDir.findSubdirectory(subDir);
+        if (psiSubdirectory == null) {
             return;
         }
-        for (PsiFile file : modelDir.getFiles()) {
+        for (PsiFile file : psiSubdirectory.getFiles()) {
             // psi tree is different when the user has typed something after the arrow ->
             // vs not having typed anything:
             VirtualFile virtualFile = file.getVirtualFile();
@@ -67,10 +74,11 @@ public class CakeUtil {
                 continue;
             }
             String name = virtualFile.getNameWithoutExtension();
-            LookupElementBuilder lookupElement = LookupElementBuilder.create(name)
+            String replaceText = StringUtil.chopFromEnd(name, replaceName);
+            LookupElementBuilder lookupElement = LookupElementBuilder.create(replaceText)
                     .withIcon(PhpIcons.FIELD)
                     .withTypeText(name)
-                    .withPresentableText(name);
+                    .withPresentableText(replaceText);
             completionResultSet.addElement(lookupElement);
         }
     }

@@ -38,4 +38,11 @@ public class StringUtil {
         return str != null && str.length() != 0 && Character.isUpperCase(str.charAt(0));
     }
 
+    @NotNull
+    public static String chopFromEnd(@NotNull String str, @NotNull String end) {
+        if (end.equals("") || !str.endsWith(end)) {
+            return str;
+        }
+        return str.substring(0, str.length() - end.length());
+    }
 }
