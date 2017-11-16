@@ -115,6 +115,7 @@ public class PsiUtil {
     @Nullable
     public static PsiDirectory getAppDirectoryFromFile(@NotNull PsiFile file) {
         PsiDirectory dir = file.getContainingDirectory();
+        // @todo determine what happens here when app directory doesn't exist
         while (dir != null) {
             if (dir.getName().equals("app")) {
                 return dir;
@@ -136,5 +137,17 @@ public class PsiUtil {
             element = parent;
         }
         System.out.println("}");
+    }
+
+    @NotNull
+    public static String dumpAllChildren(@NotNull PsiElement element) {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append("[ ");
+        for (PsiElement child : element.getChildren()) {
+            buffer.append(StringUtil.allInterfaces(child.getClass()));
+            buffer.append(",");
+        }
+        buffer.append("]");
+        return buffer.toString();
     }
 }

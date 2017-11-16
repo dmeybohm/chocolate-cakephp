@@ -27,6 +27,7 @@
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
   <idea-version since-build="171.3780"/>
     <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.TemplateGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ControllerFieldGotoDeclarationHandler" />

@@ -2,6 +2,11 @@ package com.daveme.intellij.chocolateCakePHP.util;
 
 import com.intellij.codeInsight.completion.CompletionResultSet;
 import com.intellij.codeInsight.lookup.LookupElement;
+import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiDirectory;
+import com.intellij.psi.PsiFile;
+import com.jetbrains.php.PhpIcons;
 import com.jetbrains.php.completion.PhpVariantsUtil;
 import com.jetbrains.php.completion.UsageContext;
 import com.jetbrains.php.lang.psi.elements.PhpClass;
@@ -45,6 +50,29 @@ public class CakeUtil {
             return null;
         }
         return controllerClass.substring(0, controllerClass.length() - "Controller".length());
+    }
+
+    public static void completeFromFilesInDir(@NotNull CompletionResultSet completionResultSet,
+                                               @NotNull PsiDirectory appDir,
+                                               @NotNull String subDir) {
+        PsiDirectory modelDir = appDir.findSubdirectory(subDir);
+        if (modelDir == null) {
+            return;
+        }
+        for (PsiFile file : modelDir.getFiles()) {
+            // psi tree is different when the user has typed something after the arrow ->
+            // vs not having typed anything:
+            VirtualFile virtualFile = file.getVirtualFile();
+            if (virtualFile == null) {
+                continue;
+            }
+            String name = virtualFile.getNameWithoutExtension();
+            LookupElementBuilder lookupElement = LookupElementBuilder.create(name)
+                    .withIcon(PhpIcons.FIELD)
+                    .withTypeText(name)
+                    .withPresentableText(name);
+            completionResultSet.addElement(lookupElement);
+        }
     }
 
 }
