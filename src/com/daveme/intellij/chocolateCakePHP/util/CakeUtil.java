@@ -1,16 +1,21 @@
 package com.daveme.intellij.chocolateCakePHP.util;
 
 import com.intellij.codeInsight.completion.CompletionResultSet;
+import com.intellij.codeInsight.completion.InsertHandler;
+import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiFile;
 import com.jetbrains.php.PhpIcons;
+import com.jetbrains.php.PhpIndex;
+import com.jetbrains.php.completion.PhpLookupElement;
 import com.jetbrains.php.completion.PhpVariantsUtil;
 import com.jetbrains.php.completion.UsageContext;
 import com.jetbrains.php.lang.psi.elements.PhpClass;
 import com.jetbrains.php.lang.psi.elements.PhpModifier;
+import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,9 +71,10 @@ public class CakeUtil {
         if (psiSubdirectory == null) {
             return;
         }
+        PhpIndex phpIndex = PhpIndex.getInstance(psiSubdirectory.getProject());
+        // @todo we only need a single instance of these.
+        CakeInsertHandler handler = new CakeInsertHandler(replaceName.isEmpty() ? "model" : "component");
         for (PsiFile file : psiSubdirectory.getFiles()) {
-            // psi tree is different when the user has typed something after the arrow ->
-            // vs not having typed anything:
             VirtualFile virtualFile = file.getVirtualFile();
             if (virtualFile == null) {
                 continue;
@@ -78,9 +84,22 @@ public class CakeUtil {
             LookupElementBuilder lookupElement = LookupElementBuilder.create(replaceText)
                     .withIcon(PhpIcons.FIELD)
                     .withTypeText(name)
-                    .withPresentableText(replaceText);
+                    .withPresentableText(replaceText)
+                    .withInsertHandler(handler);
             completionResultSet.addElement(lookupElement);
         }
     }
 
+    public static class CakeInsertHandler implements InsertHandler<LookupElement> {
+        String type;
+
+        CakeInsertHandler(@NotNull String type) {
+            this.type = type;
+        }
+
+        @Override
+        public void handleInsert(InsertionContext insertionContext, LookupElement lookupElement) {
+            System.out.println("handleInsert: "+lookupElement);
+        }
+    }
 }

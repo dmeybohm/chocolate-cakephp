@@ -2,22 +2,16 @@ package com.daveme.intellij.chocolateCakePHP.completion;
 
 import com.daveme.intellij.chocolateCakePHP.util.CakeUtil;
 import com.daveme.intellij.chocolateCakePHP.util.PsiUtil;
-import com.daveme.intellij.chocolateCakePHP.util.StringUtil;
-import com.daveme.intellij.chocolateCakePHP.util.VfsUtil;
 import com.intellij.codeInsight.completion.*;
-import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.util.ProcessingContext;
-import com.jetbrains.php.PhpIcons;
 import com.jetbrains.php.lang.psi.elements.FieldReference;
 import com.jetbrains.php.lang.psi.elements.PhpExpression;
-import com.jetbrains.php.lang.psi.elements.Variable;
-import com.jetbrains.php.lang.psi.resolve.types.PhpType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ControllerCompletionContributor extends CompletionContributor {
     public ControllerCompletionContributor() {
@@ -41,11 +35,6 @@ public class ControllerCompletionContributor extends CompletionContributor {
                 System.out.println("null original element");
                 return;
             }
-//            if (!(psiElement instanceof PsiWhiteSpace)) {
-//                System.out.println("Non whitespace element");
-//                System.out.println("interfaces: " + StringUtil.allInterfaces(psiElement.getClass()));
-//                return;
-//            }
             PsiFile containingFile = psiElement.getContainingFile();
             PsiDirectory appDir = PsiUtil.getAppDirectoryFromFile(containingFile);
             if (appDir == null) {
@@ -53,11 +42,15 @@ public class ControllerCompletionContributor extends CompletionContributor {
             }
             PsiDirectory controllerDir = appDir.findSubdirectory("Controller");
             PsiElement parent = psiElement.getParent();
+            FieldReference fieldReference;
             if (!(parent instanceof FieldReference)) {
-                System.out.println("Non field reference parent");
-                return;
+                parent = findSiblingFieldReference(psiElement);
+                if (parent == null) {
+                    System.out.println("Couldn't find childFieldReference");
+                    return;
+                }
             }
-            FieldReference fieldReference = (FieldReference)parent;
+            fieldReference = (FieldReference)parent;
             PhpExpression classReference = fieldReference.getClassReference();
             if (classReference == null) {
                 return;
@@ -68,6 +61,7 @@ public class ControllerCompletionContributor extends CompletionContributor {
                     hasController = true;
                 }
             }
+            System.out.println("hasController: "+hasController);
             if (hasController) {
                 System.out.println("hasController");
                 CakeUtil.completeFromFilesInDir(completionResultSet, appDir, "Model");
@@ -75,8 +69,20 @@ public class ControllerCompletionContributor extends CompletionContributor {
                     CakeUtil.completeFromFilesInDir(completionResultSet, controllerDir, "Component", "Component");
                 }
             }
-
         }
     }
 
+    @Nullable
+    private static PsiElement findSiblingFieldReference(PsiElement element) {
+        PsiElement prevSibling = element.getPrevSibling();
+        if (prevSibling == null) {
+            return null;
+        }
+        for (PsiElement child : prevSibling.getChildren()) {
+            if (child instanceof FieldReference) {
+                return child;
+            }
+        }
+        return null;
+    }
 }
