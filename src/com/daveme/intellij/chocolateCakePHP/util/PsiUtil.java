@@ -199,10 +199,10 @@ public class PsiUtil {
             }
         }
         System.out.println("prevSibling: "+prevSibling.getText());
-        PsiElement comma = PhpPsiElementFactory.createComma(project);
         int extraLen = fromText.getText().length();
         try {
             if (!prevSiblingText.equals("(") && !prevSiblingText.equals("[")) {
+                PsiElement comma = PhpPsiElementFactory.createComma(project);
                 prevSibling.addAfter(comma, expr);
                 extraLen += comma.getText().length();
                 prevSibling.addAfter(fromText, expr);
