@@ -6,7 +6,6 @@ import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
@@ -89,9 +88,8 @@ public class CakeUtil {
         }
     }
 
-    public static void addValueToClassProperty(Document document, PhpFile phpFile, String property, String valueToAdd) {
+    public static void addValueToClassProperty(PhpFile phpFile, Document document, String property, String valueToAdd) {
         for (Map.Entry<String, Collection<PhpNamedElement>> entry: phpFile.getTopLevelDefs().entrySet()) {
-            System.out.println("entry: "+entry.getKey());
             for (PhpNamedElement topLevelDef : entry.getValue()) {
                 // todo handle adding to namespaced classes
                 if (topLevelDef instanceof PhpClass) {
@@ -100,35 +98,21 @@ public class CakeUtil {
                     if (field == null) {
                         continue;
                     }
-                    PsiElement[] children = field.getChildren();
-                    if (children.length > 0 && children[0] instanceof ArrayCreationExpression) {
-                        ArrayCreationExpression expr = (ArrayCreationExpression)children[0];
-                        for (PsiElement child : expr.getChildren()) {
-                            PhpPsiElement element = (PhpPsiElement)child;
-                            if (element != null) {
-                                PhpPsiElement firstPsiChild = element.getFirstPsiChild();
-                                if (firstPsiChild instanceof StringLiteralExpression) {
-                                    StringLiteralExpression stringValue = (StringLiteralExpression)firstPsiChild;
-                                    if (stringValue.getContents().equals(valueToAdd)) {
-                                        // already exists:
-                                        System.out.println("Model property already exists");
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                        PsiElement lastChild = expr.getLastChild();
-                        if (lastChild != null) {
-                            PsiElement prevLastChild = lastChild.getPrevSibling();
-                            if (prevLastChild != null) {
-                                TextRange textRange = prevLastChild.getTextRange();
-                                document.insertString(textRange.getEndOffset(), ", '" + valueToAdd + "'");
-                            }
-                        }
+                    if (appendToProperty(phpFile, document, valueToAdd, field)) {
+                        return;
                     }
                 }
             }
         }
+    }
+
+    private static boolean appendToProperty(PhpFile file, Document document, String valueToAdd, Field field) {
+        PsiElement lastChild = field.getLastChild();
+        if (lastChild != null && lastChild instanceof ArrayCreationExpression) {
+            ArrayCreationExpression expr = (ArrayCreationExpression)lastChild;
+            return PsiUtil.appendToArrayCreationExpression(file, document, expr, valueToAdd);
+        }
+        return false;
     }
 
     public static final class CakeInsertHandler implements InsertHandler<LookupElement> {
@@ -146,8 +130,7 @@ public class CakeUtil {
                 return;
             }
             PhpFile phpFile = (PhpFile)file;
-            System.out.println("lookupString: "+lookupElement.getLookupString());
-            CakeUtil.addValueToClassProperty(insertionContext.getDocument(), phpFile, type, lookupElement.getLookupString());
+            CakeUtil.addValueToClassProperty(phpFile, insertionContext.getDocument(), type, lookupElement.getLookupString());
         }
     }
 }
