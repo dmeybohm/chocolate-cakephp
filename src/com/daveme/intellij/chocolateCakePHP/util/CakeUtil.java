@@ -108,7 +108,7 @@ public class CakeUtil {
 
     private static boolean appendToProperty(PhpFile file, Document document, String valueToAdd, Field field) {
         PsiElement lastChild = field.getLastChild();
-        if (lastChild != null && lastChild instanceof ArrayCreationExpression) {
+        if (lastChild instanceof ArrayCreationExpression) {
             ArrayCreationExpression expr = (ArrayCreationExpression)lastChild;
             return PsiUtil.appendToArrayCreationExpression(file, document, valueToAdd, expr);
         }
