@@ -110,7 +110,7 @@ public class CakeUtil {
         PsiElement lastChild = field.getLastChild();
         if (lastChild != null && lastChild instanceof ArrayCreationExpression) {
             ArrayCreationExpression expr = (ArrayCreationExpression)lastChild;
-            return PsiUtil.appendToArrayCreationExpression(file, document, expr, valueToAdd);
+            return PsiUtil.appendToArrayCreationExpression(file, document, valueToAdd, expr);
         }
         return false;
     }

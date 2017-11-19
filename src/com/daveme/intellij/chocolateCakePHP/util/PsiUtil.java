@@ -164,7 +164,7 @@ public class PsiUtil {
                 String.format("'%s'", str));
     }
 
-    public static boolean appendToArrayCreationExpression(PhpFile file, Document document, ArrayCreationExpression expr, String valueToAdd) {
+    public static boolean appendToArrayCreationExpression(PhpFile file, Document document, String valueToAdd, ArrayCreationExpression expr) {
         PsiElement lastElement = expr.getLastChild();
         for (PsiElement child : expr.getChildren()) {
             if (!(child instanceof PhpPsiElement)) {
