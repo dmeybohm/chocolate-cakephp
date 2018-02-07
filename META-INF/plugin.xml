@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
-    <version>0.2</version>
+    <version>0.2.9</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
 
     <description><![CDATA[
