@@ -24,10 +24,8 @@ public class ControllerCompletionContributor extends CompletionContributor {
     private static class ControllerCompletionProvider extends CompletionProvider<CompletionParameters> {
         @Override
         protected void addCompletions(@NotNull CompletionParameters completionParameters, ProcessingContext processingContext, @NotNull CompletionResultSet completionResultSet) {
-            System.out.println("Add Completions");
             PsiElement originalPosition = completionParameters.getOriginalPosition();
             if (originalPosition == null) {
-                System.out.println("null originalPosition");
                 return;
             }
             PsiElement psiElement = originalPosition.getOriginalElement();
@@ -61,9 +59,7 @@ public class ControllerCompletionContributor extends CompletionContributor {
                     hasController = true;
                 }
             }
-            System.out.println("hasController: "+hasController);
             if (hasController) {
-                System.out.println("hasController");
                 CakeUtil.completeFromFilesInDir(completionResultSet, appDir, "Model");
                 if (controllerDir != null) {
                     CakeUtil.completeFromFilesInDir(completionResultSet, controllerDir, "Component", "Component");

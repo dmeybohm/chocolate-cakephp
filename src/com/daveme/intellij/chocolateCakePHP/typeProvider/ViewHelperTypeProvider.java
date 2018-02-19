@@ -32,15 +32,12 @@ public class ViewHelperTypeProvider implements PhpTypeProvider3 {
         if (classReference == null) {
             return null;
         }
-        PhpType types = classReference.getType();
         String fieldReferenceName = fieldReference.getName();
         if (!StringUtil.startsWithUppercaseCharacter(fieldReferenceName)) {
             return null;
         }
-        for (String type : types.getTypes()) {
-            if (type.contains("#Vthis")) {
-                return new PhpType().add("\\" + fieldReferenceName + "Helper");
-            }
+        if (classReference.getText().equals("$this")) {
+            return new PhpType().add("\\" + fieldReferenceName + "Helper");
         }
         return null;
     }
