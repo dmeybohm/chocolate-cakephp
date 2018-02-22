@@ -24,6 +24,9 @@ import java.util.Map;
 
 public class CakeUtil {
 
+    // TODO make this configurable
+    public static final String TEMPLATE_EXT = "ctp";
+
     public static void complete(
             @NotNull Collection<PhpClass> classes,
             @NotNull PhpClass fromClass,
@@ -132,5 +135,14 @@ public class CakeUtil {
             PhpFile phpFile = (PhpFile)file;
             CakeUtil.addValueToClassProperty(phpFile, insertionContext.getDocument(), type, lookupElement.getLookupString());
         }
+    }
+
+    public static boolean isCakeTemplate(@NotNull String filename) {
+        int last = filename.lastIndexOf('.');
+        if (last > 0) {
+            String ext = filename.substring(last + 1);
+            return ext.equals(TEMPLATE_EXT);
+        }
+        return false;
     }
 }

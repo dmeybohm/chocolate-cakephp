@@ -37,7 +37,8 @@
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains.php">
         <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
-        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ViewHelperTypeProvider" />
+        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
+        <typeProvider3 implementation="com.daveme.intellij.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
     </extensions>
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
          on how to target different products -->
