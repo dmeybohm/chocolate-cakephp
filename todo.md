@@ -6,8 +6,8 @@
 - [ ] Make enabling of the projects/modules turned on by finding some cake-specific
 files
 - [x] Add type provider for view helpers
-- [ ] Add completion contributor for models/components
+- [ ] Add completion contributor for models/com.daveme.intellij.chocolateCakePHP.components
 - [ ] Add completion contributor for view helpers
 - [ ] Add quickfix for undefined controller/view/component methods to add method
 - [ ] Add error for undefined controller/view/component methods/fields
-- [ ] Add something to add models/components/view helpers automatically on first new use
+- [ ] Add something to add models/com.daveme.intellij.chocolateCakePHP.components/view helpers automatically on first new use

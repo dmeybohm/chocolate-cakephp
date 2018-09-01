@@ -1,6 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.completion
 
-import com.daveme.intellij.chocolateCakePHP.util.CakeUtil
+import com.daveme.intellij.chocolateCakePHP.cake.isCakeTemplate
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext
@@ -24,12 +24,12 @@ class ViewHelperCompletionContributor : CompletionContributor() {
             val containingFile = psiElement.containingFile
 
             val parent = (psiElement.parent ?: return) as? FieldReference ?: return
-            if (!CakeUtil.isCakeTemplate(containingFile.name)) {
+            if (!isCakeTemplate(containingFile.name)) {
                 return
             }
             val classReference = parent.classReference ?: return
             if (classReference.text == "\$this") {
-                CakeUtil.completeFromSubclasses(completionResultSet, psiElement.project, "\\AppHelper")
+                completeFromSubclasses(completionResultSet, psiElement.project, "\\AppHelper", "Helper")
             }
         }
     }

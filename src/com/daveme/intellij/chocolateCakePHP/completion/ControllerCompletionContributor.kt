@@ -1,17 +1,15 @@
 package com.daveme.intellij.chocolateCakePHP.completion
 
-import com.daveme.intellij.chocolateCakePHP.util.CakeUtil
-import com.daveme.intellij.chocolateCakePHP.util.PsiUtil
+import com.daveme.intellij.chocolateCakePHP.cake.appDirectoryFromFile
+import com.daveme.intellij.chocolateCakePHP.psi.AddValueToPropertyInsertHandler
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
-import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.FieldReference
-import com.jetbrains.php.lang.psi.elements.PhpExpression
 
 class ControllerCompletionContributor : CompletionContributor() {
+
     init {
         extend(CompletionType.BASIC,
                 PlatformPatterns.psiElement().withParent(FieldReference::class.java), ControllerCompletionProvider())
@@ -20,11 +18,12 @@ class ControllerCompletionContributor : CompletionContributor() {
     }
 
     private class ControllerCompletionProvider : CompletionProvider<CompletionParameters>() {
+
         override fun addCompletions(completionParameters: CompletionParameters, processingContext: ProcessingContext, completionResultSet: CompletionResultSet) {
             val originalPosition = completionParameters.originalPosition ?: return
             val psiElement = originalPosition.originalElement ?: return
             val containingFile = psiElement.containingFile
-            val appDir = PsiUtil.getAppDirectoryFromFile(containingFile) ?: return
+            val appDir = appDirectoryFromFile(containingFile) ?: return
             val controllerDir = appDir.findSubdirectory("Controller")
             var parent: PsiElement? = psiElement.parent
             if (parent !is FieldReference) {
@@ -42,15 +41,19 @@ class ControllerCompletionContributor : CompletionContributor() {
                 }
             }
             if (hasController) {
-                CakeUtil.completeFromFilesInDir(completionResultSet, appDir, "Model")
+                completeFromFilesInDir(completionResultSet, appDir, "Model", usesHandler)
                 if (controllerDir != null) {
-                    CakeUtil.completeFromFilesInDir(completionResultSet, controllerDir, "Component", "Component")
+                    completeFromFilesInDir(completionResultSet, controllerDir,
+                            "Component", componentsHandler, "Component")
                 }
             }
         }
+
     }
 
     companion object {
+        private val usesHandler = AddValueToPropertyInsertHandler("uses")
+        private val componentsHandler = AddValueToPropertyInsertHandler("components")
 
         private fun findSiblingFieldReference(element: PsiElement): PsiElement? {
             val prevSibling = element.prevSibling ?: return null
@@ -62,4 +65,5 @@ class ControllerCompletionContributor : CompletionContributor() {
             return null
         }
     }
+
 }
