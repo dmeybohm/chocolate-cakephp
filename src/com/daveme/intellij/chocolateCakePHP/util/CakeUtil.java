@@ -6,11 +6,13 @@ import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.jetbrains.php.PhpIcons;
+import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.completion.PhpVariantsUtil;
 import com.jetbrains.php.completion.UsageContext;
 import com.jetbrains.php.lang.psi.PhpFile;
@@ -118,6 +120,21 @@ public class CakeUtil {
         return false;
     }
 
+    public static void completeFromSubclasses(
+            @NotNull CompletionResultSet completionResultSet,
+            @NotNull Project project,
+            @NotNull String parentClassName
+    ) {
+        PhpIndex index = PhpIndex.getInstance(project);
+        for (PhpClass klass : index.getAllSubclasses(parentClassName)) {
+            String helperNameAsPropertyName = StringUtil.chopFromEnd(klass.getName(), "Helper");
+            LookupElementBuilder lookupElement = LookupElementBuilder.create(helperNameAsPropertyName)
+                    .withIcon(PhpIcons.FIELD)
+                    .withTypeText(klass.getType().toString());
+            completionResultSet.addElement(lookupElement);
+        }
+    }
+
     public static final class CakeInsertHandler implements InsertHandler<LookupElement> {
         String type;
 
@@ -127,7 +144,6 @@ public class CakeUtil {
 
         @Override
         public void handleInsert(InsertionContext insertionContext, LookupElement lookupElement) {
-            System.out.println("handleInsert: "+lookupElement);
             PsiFile file = insertionContext.getFile();
             if (!(file instanceof PhpFile)) {
                 return;

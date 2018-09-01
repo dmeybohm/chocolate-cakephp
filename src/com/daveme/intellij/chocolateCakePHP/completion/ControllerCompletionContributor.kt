@@ -22,11 +22,7 @@ class ControllerCompletionContributor : CompletionContributor() {
     private class ControllerCompletionProvider : CompletionProvider<CompletionParameters>() {
         override fun addCompletions(completionParameters: CompletionParameters, processingContext: ProcessingContext, completionResultSet: CompletionResultSet) {
             val originalPosition = completionParameters.originalPosition ?: return
-            val psiElement = originalPosition.originalElement
-            if (psiElement == null) {
-                println("null original element")
-                return
-            }
+            val psiElement = originalPosition.originalElement ?: return
             val containingFile = psiElement.containingFile
             val appDir = PsiUtil.getAppDirectoryFromFile(containingFile) ?: return
             val controllerDir = appDir.findSubdirectory("Controller")
@@ -34,7 +30,6 @@ class ControllerCompletionContributor : CompletionContributor() {
             if (parent !is FieldReference) {
                 parent = findSiblingFieldReference(psiElement)
                 if (parent == null) {
-                    println("Couldn't find childFieldReference")
                     return
                 }
             }

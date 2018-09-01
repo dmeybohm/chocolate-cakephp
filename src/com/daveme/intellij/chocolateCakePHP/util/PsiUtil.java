@@ -73,7 +73,7 @@ public class PsiUtil {
     @NotNull
     public static Collection<PhpClass> getViewHelperClasses(@NotNull String fieldName, @NotNull Project project) {
         PhpIndex phpIndex = PhpIndex.getInstance(project);
-        return phpIndex.getClassesByFQN(fieldName + "Helper");
+        return phpIndex.getClassesByFQN("\\" + fieldName + "Helper");
     }
 
     @NotNull
