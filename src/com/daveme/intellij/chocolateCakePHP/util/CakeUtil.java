@@ -143,7 +143,7 @@ public class CakeUtil {
         for (PhpClass klass : index.getAllSubclasses(parentClassName)) {
             String helperNameAsPropertyName = StringUtil.chopFromEnd(klass.getName(), "Helper");
 
-            // skip helpers that have "Test" to avoid tests:
+            // Skip some helpers that are in tests:
             if (helperBlacklist.contains(helperNameAsPropertyName)) {
                 continue;
             }
