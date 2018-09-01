@@ -3,8 +3,7 @@ package com.daveme.intellij.chocolateCakePHP.util;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import org.jetbrains.annotations.NotNull;
-
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public class VfsUtil {
 

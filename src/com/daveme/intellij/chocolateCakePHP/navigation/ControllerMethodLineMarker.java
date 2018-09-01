@@ -62,7 +62,8 @@ public class ControllerMethodLineMarker implements LineMarkerProvider {
             if (element == null) {
                 return;
             }
-            if (element.equals(newMarker.getElement())) {
+            PsiElement otherElement = newMarker.getElement();
+            if (element.equals(otherElement)) {
                 return;
             }
         }
@@ -86,11 +87,6 @@ public class ControllerMethodLineMarker implements LineMarkerProvider {
             }
             LineMarkerInfo info = getRelatedFiles(file, controllerName, element);
             addLineMarkerUnique(collection, info);
-            PsiElement[] children = element.getChildren();
-            for (PsiElement child : children) {
-                info = getRelatedFiles(file, controllerName, child);
-                addLineMarkerUnique(collection, info);
-            }
         }
     }
 }
