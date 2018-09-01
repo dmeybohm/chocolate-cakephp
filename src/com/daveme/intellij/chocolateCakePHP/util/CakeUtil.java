@@ -20,14 +20,28 @@ import com.jetbrains.php.lang.psi.elements.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CakeUtil {
 
     // TODO make this configurable
-    public static final String TEMPLATE_EXT = "ctp";
+    private static final String TEMPLATE_EXT = "ctp";
+
+    private static final HashSet<String> helperBlacklist = new HashSet<>();
+
+    static {
+        // These all have the Helper suffix removed (the ones that have it have it twice):
+        helperBlacklist.add("Html5Test");
+        helperBlacklist.add("OtherHelper");
+        helperBlacklist.add("OptionEngine");
+        helperBlacklist.add("PluggedHelper");
+        helperBlacklist.add("HtmlAlias");
+        helperBlacklist.add("TestHtml");
+        helperBlacklist.add("TestPluginApp");
+        helperBlacklist.add("TimeHelperTestObject");
+        helperBlacklist.add("NumberHelperTestObject");
+        helperBlacklist.add("TextHelperTestObject");
+    }
 
     public static void complete(
             @NotNull Collection<PhpClass> classes,
@@ -93,7 +107,7 @@ public class CakeUtil {
         }
     }
 
-    public static void addValueToClassProperty(PhpFile phpFile, Document document, String property, String valueToAdd) {
+    private static void addValueToClassProperty(PhpFile phpFile, Document document, String property, String valueToAdd) {
         for (Map.Entry<String, Collection<PhpNamedElement>> entry: phpFile.getTopLevelDefs().entrySet()) {
             for (PhpNamedElement topLevelDef : entry.getValue()) {
                 // todo handle adding to namespaced classes
@@ -128,6 +142,11 @@ public class CakeUtil {
         PhpIndex index = PhpIndex.getInstance(project);
         for (PhpClass klass : index.getAllSubclasses(parentClassName)) {
             String helperNameAsPropertyName = StringUtil.chopFromEnd(klass.getName(), "Helper");
+
+            // Skip some helpers that are in tests:
+            if (helperBlacklist.contains(helperNameAsPropertyName)) {
+                continue;
+            }
             LookupElementBuilder lookupElement = LookupElementBuilder.create(helperNameAsPropertyName)
                     .withIcon(PhpIcons.FIELD)
                     .withTypeText(klass.getType().toString());
