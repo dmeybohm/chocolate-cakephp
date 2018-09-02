@@ -32,33 +32,30 @@ class ControllerCompletionContributor : CompletionContributor() {
         ) {
             val originalPosition = completionParameters.originalPosition ?: return
             val psiElement = originalPosition.originalElement ?: return
+
             val containingFile = psiElement.containingFile
             val appDir = appDirectoryFromFile(containingFile) ?: return
             val controllerDir = appDir.findSubdirectory("Controller")
-            var parent: PsiElement? = psiElement.parent
+
+            var parent  = psiElement.parent ?: return
             if (parent !is FieldReference) {
-                parent = findSiblingFieldReference(psiElement)
-                if (parent == null) {
-                    return
-                }
+                parent = findSiblingFieldReference(psiElement) ?: return
             }
+
             val fieldReference = parent as FieldReference
             val classReference = fieldReference.classReference ?: return
-            var hasController = false
-            for (type in classReference.type.types) {
-                if (type.contains("Controller")) {
-                    hasController = true
-                }
-            }
+
+            val hasController = classReference.type.types.any { it.contains("Controller") }
             if (hasController) {
-                completeFromFilesInDir(completionResultSet, appDir, "Model", usesHandler)
+                completeFromFilesInDir(completionResultSet, appDir, subDir = "Model", insertHandler = usesHandler)
+
                 if (controllerDir != null) {
                     completeFromFilesInDir(
                         completionResultSet,
                         controllerDir,
-                        "Component",
-                        componentsHandler,
-                        "Component"
+                        subDir = "Component",
+                        replaceName = "Component",
+                        insertHandler = componentsHandler
                     )
                 }
             }
@@ -72,12 +69,7 @@ class ControllerCompletionContributor : CompletionContributor() {
 
         private fun findSiblingFieldReference(element: PsiElement): PsiElement? {
             val prevSibling = element.prevSibling ?: return null
-            for (child in prevSibling.children) {
-                if (child is FieldReference) {
-                    return child
-                }
-            }
-            return null
+            return prevSibling.children.find { it is FieldReference }
         }
     }
 

@@ -24,10 +24,10 @@ fun getClassesForViewHelper(project: Project, fieldName: String): Collection<Php
     return getClasses(project, "\\" + fieldName + "Helper")
 }
 
-fun getAllViewHelperSubclassesFiltered(project: Project): Collection<PhpClass> {
+fun getAllViewHelperSubclasses(project: Project): Collection<PhpClass> {
     val index = PhpIndex.getInstance(project)
     val allSubclasses = index.getAllSubclasses(VIEW_HELPER_PARENT_CLASS)
-    return viewHelperClassesFiltered(allSubclasses)
+    return allSubclasses.filter { !helperBlacklist.contains(it.name) }
 }
 
 fun controllerFieldClasses(project: Project, fieldName: String): Collection<PhpClass> {
@@ -45,13 +45,3 @@ fun getClasses(project: Project, className: String): Collection<PhpClass> {
     return phpIndex.getClassesByFQN(className)
 }
 
-private fun viewHelperClassesFiltered(collection: Collection<PhpClass>): Collection<PhpClass> {
-    val results = ArrayList<PhpClass>()
-    for (klass in collection) {
-        if (helperBlacklist.contains(klass.name)) {
-            continue
-        }
-        results.add(klass)
-    }
-    return results
-}

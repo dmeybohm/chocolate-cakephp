@@ -32,8 +32,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         return when {
             text.contains("\$components") ->
                 getClasses(psiElement.project, psiElement.text + "Component").toTypedArray()
+
             text.contains("\$helpers") ->
                 getClasses(psiElement.project, psiElement.text + "Helper").toTypedArray()
+
             else ->
                 PsiElement.EMPTY_ARRAY
         }

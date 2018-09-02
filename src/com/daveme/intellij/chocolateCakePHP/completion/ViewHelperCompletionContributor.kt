@@ -1,7 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.completion
 
 import com.daveme.intellij.chocolateCakePHP.cake.isCakeTemplate
-import com.daveme.intellij.chocolateCakePHP.cake.getAllViewHelperSubclassesFiltered
+import com.daveme.intellij.chocolateCakePHP.cake.getAllViewHelperSubclasses
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext
@@ -37,7 +37,7 @@ class ViewHelperCompletionContributor : CompletionContributor() {
             }
             val classReference = parent.classReference ?: return
             if (classReference.text == "\$this") {
-                val viewHelperClasses = getAllViewHelperSubclassesFiltered(psiElement.project)
+                val viewHelperClasses = getAllViewHelperSubclasses(psiElement.project)
                 completeFromClasses(completionResultSet, viewHelperClasses, "Helper")
             }
         }
