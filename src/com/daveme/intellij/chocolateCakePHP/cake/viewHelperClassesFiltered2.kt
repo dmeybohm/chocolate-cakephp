@@ -16,7 +16,7 @@ private val helperBlacklist = hashSetOf(
     "TextHelperTestObject"
 )
 
-fun viewHelperClassesFiltered(collection: Collection<PhpClass>): List<PhpClass> {
+fun viewHelperClassesFiltered(collection: Collection<PhpClass>): Collection<PhpClass> {
     val results = ArrayList<PhpClass>()
     for (klass in collection) {
         if (helperBlacklist.contains(klass.name)) {

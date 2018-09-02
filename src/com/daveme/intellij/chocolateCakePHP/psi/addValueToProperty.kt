@@ -6,7 +6,7 @@ import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
-fun addValueToClassProperty(phpFile: PhpFile, document: Document, property: String, valueToAdd: String) {
+fun addValueToProperty(phpFile: PhpFile, document: Document, property: String, valueToAdd: String) {
     for ((_, value) in phpFile.topLevelDefs.entrySet()) {
         for (topLevelDef in value) {
             // todo handle adding to namespaced classes

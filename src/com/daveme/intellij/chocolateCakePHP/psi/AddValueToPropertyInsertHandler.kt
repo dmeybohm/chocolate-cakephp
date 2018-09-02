@@ -9,7 +9,7 @@ class AddValueToPropertyInsertHandler(private val type: String) : InsertHandler<
 
     override fun handleInsert(insertionContext: InsertionContext, lookupElement: LookupElement) {
         val file = insertionContext.file as? PhpFile ?: return
-        addValueToClassProperty(file, insertionContext.document, type, lookupElement.lookupString)
+        addValueToProperty(file, insertionContext.document, type, lookupElement.lookupString)
     }
 
 }
