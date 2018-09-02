@@ -25,15 +25,17 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         if (!element.access.isPublic) {
             return null
         }
-        val methodName = element.name
         val appDir = appDirectoryFromFile(file)
-        val templatePath = String.format("View/%s/%s.ctp", controllerName, methodName)
+        val templatePath = String.format("View/%s/%s.ctp", controllerName, element.name)
         val relativeFile = findRelativeFile(appDir, templatePath) ?: return null
 
         val targetFile = virtualFileToPsiFile(element.project, relativeFile) ?: return null
         val targetElement = targetFile.firstChild
-        val builder = NavigationGutterIconBuilder.create(CakeIcons.LOGO).setTarget(targetElement)
-        return builder.createLineMarkerInfo(element)
+
+        return NavigationGutterIconBuilder
+            .create(CakeIcons.LOGO)
+            .setTarget(targetElement)
+            .createLineMarkerInfo(element)
     }
 
     private fun addLineMarkerUnique(collection: MutableCollection<LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {

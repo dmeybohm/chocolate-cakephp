@@ -18,21 +18,25 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         if (!PlatformPatterns
-                        .psiElement(StringLiteralExpression::class.java)
-                        .withLanguage(PhpLanguage.INSTANCE)
-                        .accepts(psiElement.context)) {
+                .psiElement(StringLiteralExpression::class.java)
+                .withLanguage(PhpLanguage.INSTANCE)
+                .accepts(psiElement.context)
+        ) {
             return PsiElement.EMPTY_ARRAY
         }
         val field = findParentWithClass(psiElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
         val text = field.text
+
         // PhpStorm already has completion based on strings that contain class names, so
         // we only need to check for the components and helpers properties:
-        if (text.contains("\$components")) {
-            return getClasses(psiElement.project, psiElement.text + "Component").toTypedArray()
+        return when {
+            text.contains("\$components") ->
+                getClasses(psiElement.project, psiElement.text + "Component").toTypedArray()
+            text.contains("\$helpers") ->
+                getClasses(psiElement.project, psiElement.text + "Helper").toTypedArray()
+            else ->
+                PsiElement.EMPTY_ARRAY
         }
-        return if (text.contains("\$helpers")) {
-            getClasses(psiElement.project, psiElement.text + "Helper").toTypedArray()
-        } else PsiElement.EMPTY_ARRAY
     }
 
     override fun getActionText(dataContext: DataContext): String? {

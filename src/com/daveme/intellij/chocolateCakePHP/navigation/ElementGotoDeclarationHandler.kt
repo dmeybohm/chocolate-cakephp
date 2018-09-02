@@ -21,21 +21,20 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val project = psiElement.project
         if (!PlatformPatterns
-                        .psiElement(StringLiteralExpression::class.java)
-                        .withLanguage(PhpLanguage.INSTANCE)
-                        .accepts(psiElement.context)) {
+                .psiElement(StringLiteralExpression::class.java)
+                .withLanguage(PhpLanguage.INSTANCE)
+                .accepts(psiElement.context)
+        ) {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
         val appDir = appDirectoryFromFile(containingFile)
         val elementFilename = String.format("View/Elements/%s.ctp", psiElement.text)
-        val relativeFile = findRelativeFile(appDir, elementFilename)
-        if (relativeFile != null) {
-            val files = HashSet<VirtualFile>()
-            files.add(relativeFile)
-            return virtualFilesToPsiFiles(project, files).toTypedArray()
-        }
-        return PsiElement.EMPTY_ARRAY
+        val relativeFile = findRelativeFile(appDir, elementFilename) ?: return PsiElement.EMPTY_ARRAY
+
+        val files = HashSet<VirtualFile>()
+        files.add(relativeFile)
+        return virtualFilesToPsiFiles(project, files).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? {
