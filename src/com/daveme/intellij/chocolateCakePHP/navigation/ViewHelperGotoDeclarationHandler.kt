@@ -1,6 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
-import com.daveme.intellij.chocolateCakePHP.util.getViewHelperClasses
+import com.daveme.intellij.chocolateCakePHP.util.getClassesForViewHelper
 import com.daveme.intellij.chocolateCakePHP.util.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
@@ -26,7 +26,7 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         if (classReference.text == "\$this") {
-            return getViewHelperClasses(psiElement.project, fieldName).toTypedArray()
+            return getClassesForViewHelper(psiElement.project, fieldName).toTypedArray()
         }
         return PsiElement.EMPTY_ARRAY
     }
