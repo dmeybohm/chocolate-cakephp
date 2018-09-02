@@ -47,5 +47,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getActionText(dataContext: DataContext): String? {
         return null
     }
+
 }
 

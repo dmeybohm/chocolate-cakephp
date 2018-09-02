@@ -33,8 +33,14 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
         return null
     }
 
-    override fun getBySignature(expression: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement> {
+    override fun getBySignature(
+            expression: String,
+            set: Set<String>,
+            i: Int,
+            project: Project
+    ): Collection<PhpNamedElement> {
         // We use the default signature processor exclusively:
         return emptyList()
     }
+
 }

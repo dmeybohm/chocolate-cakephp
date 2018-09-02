@@ -11,15 +11,25 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class ControllerCompletionContributor : CompletionContributor() {
 
     init {
-        extend(CompletionType.BASIC,
-                PlatformPatterns.psiElement().withParent(FieldReference::class.java), ControllerCompletionProvider())
-        extend(CompletionType.SMART,
-                PlatformPatterns.psiElement().withParent(FieldReference::class.java), ControllerCompletionProvider())
+        extend(
+            CompletionType.BASIC,
+            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            ControllerCompletionProvider()
+        )
+        extend(
+            CompletionType.SMART,
+            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            ControllerCompletionProvider()
+        )
     }
 
     private class ControllerCompletionProvider : CompletionProvider<CompletionParameters>() {
 
-        override fun addCompletions(completionParameters: CompletionParameters, processingContext: ProcessingContext, completionResultSet: CompletionResultSet) {
+        override fun addCompletions(
+                completionParameters: CompletionParameters,
+                processingContext: ProcessingContext,
+                completionResultSet: CompletionResultSet
+        ) {
             val originalPosition = completionParameters.originalPosition ?: return
             val psiElement = originalPosition.originalElement ?: return
             val containingFile = psiElement.containingFile
@@ -43,8 +53,13 @@ class ControllerCompletionContributor : CompletionContributor() {
             if (hasController) {
                 completeFromFilesInDir(completionResultSet, appDir, "Model", usesHandler)
                 if (controllerDir != null) {
-                    completeFromFilesInDir(completionResultSet, controllerDir,
-                            "Component", componentsHandler, "Component")
+                    completeFromFilesInDir(
+                        completionResultSet,
+                        controllerDir,
+                        "Component",
+                        componentsHandler,
+                        "Component"
+                    )
                 }
             }
         }

@@ -9,10 +9,16 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 
 class ViewHelperCompletionContributor : CompletionContributor() {
     init {
-        extend(CompletionType.BASIC,
-                PlatformPatterns.psiElement().withParent(FieldReference::class.java), ViewHelperCompletionProvider())
-        extend(CompletionType.SMART,
-                PlatformPatterns.psiElement().withParent(FieldReference::class.java), ViewHelperCompletionProvider())
+        extend(
+            CompletionType.BASIC,
+            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            ViewHelperCompletionProvider()
+        )
+        extend(
+            CompletionType.SMART,
+            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            ViewHelperCompletionProvider()
+        )
     }
 
     private class ViewHelperCompletionProvider : CompletionProvider<CompletionParameters>() {

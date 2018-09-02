@@ -9,11 +9,13 @@ import com.intellij.psi.PsiDirectory
 import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
-fun completeFromFilesInDir(completionResultSet: CompletionResultSet,
-                           appDir: PsiDirectory,
-                           subDir: String,
-                           insertHandler: InsertHandler<LookupElement>,
-                           replaceName: String = "") {
+fun completeFromFilesInDir(
+        completionResultSet: CompletionResultSet,
+        appDir: PsiDirectory,
+        subDir: String,
+        insertHandler: InsertHandler<LookupElement>,
+        replaceName: String = ""
+) {
     val psiSubdirectory = appDir.findSubdirectory(subDir) ?: return
     for (file in psiSubdirectory.files) {
         val virtualFile = file.virtualFile ?: continue

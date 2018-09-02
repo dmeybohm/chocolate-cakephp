@@ -12,6 +12,7 @@ import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
+
     override fun getGotoDeclarationTargets(psiElement: PsiElement?, i: Int, editor: Editor): Array<PsiElement>? {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY

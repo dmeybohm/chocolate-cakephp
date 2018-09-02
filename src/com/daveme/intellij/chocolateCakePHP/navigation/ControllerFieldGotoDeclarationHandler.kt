@@ -9,6 +9,7 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
 
 class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
+
     override fun getGotoDeclarationTargets(psiElement: PsiElement?, i: Int, editor: Editor): Array<PsiElement>? {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
@@ -26,4 +27,5 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getActionText(dataContext: DataContext): String? {
         return null
     }
+
 }

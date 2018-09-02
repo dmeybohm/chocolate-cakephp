@@ -9,6 +9,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3
 
 class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
+
     override fun getKey(): Char {
         return 0.toChar()
     }
