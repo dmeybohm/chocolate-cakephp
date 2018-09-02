@@ -19,12 +19,14 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val parent = psiElement.parent ?: return PsiElement.EMPTY_ARRAY
         val fieldReference = parent as FieldReference
+
         val fieldName = fieldReference.name ?: return PsiElement.EMPTY_ARRAY
         val classReference = fieldReference.classReference ?: return PsiElement.EMPTY_ARRAY
-        val fieldReferenceName = fieldReference.name
-        if (!fieldReferenceName.startsWithUppercaseCharacter()) {
+
+        if (!fieldName.startsWithUppercaseCharacter()) {
             return PsiElement.EMPTY_ARRAY
         }
+
         if (classReference.text == "\$this") {
             return getClassesForViewHelper(psiElement.project, fieldName).toTypedArray()
         }

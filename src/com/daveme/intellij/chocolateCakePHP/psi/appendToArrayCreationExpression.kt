@@ -12,16 +12,23 @@ import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
-fun appendToArrayCreationExpression(file: PhpFile, document: Document, valueToAdd: String, expr: ArrayCreationExpression): Boolean {
+fun appendToArrayCreationExpression(
+        file: PhpFile,
+        document: Document,
+        valueToAdd: String,
+        expr: ArrayCreationExpression
+): Boolean {
     if (checkIfArrayHasValue(expr, valueToAdd)) {
         return true
     }
-    val fromText = createLiteralString(expr.project, valueToAdd) ?: return false
-    val (prevSibling, prevSiblingText) = getLastElementOfArrayAndText(expr.lastChild) ?: return false
+    val project = expr.project
+    val newText = createLiteralString(project, valueToAdd) ?: return false
+    val (lastArrayElement, nodeText) = lastArrayElementAndNodeText(expr.lastChild) ?: return false
 
     return try {
-        val addingLen = appendToExpression(expr, prevSiblingText, prevSibling, fromText, document)
-        reformat(expr, addingLen, file)
+        val addingLen = appendToExpression(expr, lastArrayElement, nodeText, newText, document)
+        val codeStyleManager = CodeStyleManager.getInstance(project)
+        reformat(codeStyleManager, file, expr, addingLen)
         true
     } catch (e: IncorrectOperationException) {
         println("IncorrectOperationException")
@@ -29,14 +36,13 @@ fun appendToArrayCreationExpression(file: PhpFile, document: Document, valueToAd
     }
 }
 
-private fun reformat(expr: ArrayCreationExpression, extraLen: Int, file: PhpFile) {
+private fun reformat(codeStyleManager: CodeStyleManager, file: PhpFile, expr: ArrayCreationExpression, addedLen: Int) {
     val exprTextRange = expr.textRange
-    val end = exprTextRange.endOffset + extraLen
-    val codeStyleManager = CodeStyleManager.getInstance(expr.project)
+    val end = exprTextRange.endOffset + addedLen
     codeStyleManager.reformatText(file, exprTextRange.startOffset, end)
 }
 
-private fun getLastElementOfArrayAndText(lastElement: PsiElement): Pair<PsiElement, String>? {
+private fun lastArrayElementAndNodeText(lastElement: PsiElement): Pair<PsiElement, String>? {
     var prevSibling = getPrevSiblingSkippingWhitespaceAndComments(lastElement)
             ?: return null
     val prevSiblingText = prevSibling.text
@@ -46,23 +52,24 @@ private fun getLastElementOfArrayAndText(lastElement: PsiElement): Pair<PsiEleme
     return Pair(prevSibling, prevSiblingText)
 }
 
-private fun appendToExpression(expr: ArrayCreationExpression,
-                               prevSiblingText: String,
-                               prevSibling: PsiElement,
-                               fromText: StringLiteralExpression,
-                               document: Document
+private fun appendToExpression(
+        expr: ArrayCreationExpression,
+        lastArrayElement: PsiElement,
+        lastNodeText: String,
+        newText: StringLiteralExpression,
+        document: Document
 ): Int {
     var moreLen = 0
-    if (prevSiblingText != "(" && prevSiblingText != "[") {
+    if (lastNodeText != "(" && lastNodeText != "[") {
         val comma = PhpPsiElementFactory.createComma(expr.project)
-        prevSibling.addAfter(comma, expr)
+        lastArrayElement.addAfter(comma, expr)
         moreLen += comma.text.length
-        prevSibling.addAfter(fromText, expr)
+        lastArrayElement.addAfter(newText, expr)
     } else {
-        val prevSiblingTextRange = prevSibling.textRange
-        document.insertString(prevSiblingTextRange.endOffset, fromText.text)
+        val lastElementTextRange = lastArrayElement.textRange
+        document.insertString(lastElementTextRange.endOffset, newText.text)
     }
-    return fromText.text.length + moreLen
+    return newText.text.length + moreLen
 }
 
 private fun checkIfArrayHasValue(expr: ArrayCreationExpression, value: String): Boolean {
