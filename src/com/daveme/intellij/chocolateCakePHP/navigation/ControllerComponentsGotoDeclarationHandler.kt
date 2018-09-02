@@ -25,8 +25,8 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         val field = findParentWithClass(psiElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
         val text = field.text
         // PhpStorm already has completion based on strings that contain class names, so
-        // we only need to check for the com.daveme.intellij.chocolateCakePHP.components and helpers properties:
-        if (text.contains("\$com.daveme.intellij.chocolateCakePHP.components")) {
+        // we only need to check for the components and helpers properties:
+        if (text.contains("\$components")) {
             return getClassesAsArray(psiElement.project, psiElement.text + "Component")
         }
         return if (text.contains("\$helpers")) {

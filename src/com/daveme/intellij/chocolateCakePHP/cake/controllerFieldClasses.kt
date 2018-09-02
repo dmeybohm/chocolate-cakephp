@@ -5,7 +5,7 @@ import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import java.util.ArrayList
 
-fun controllerFieldClasses(fieldName: String, project: Project): Collection<PhpClass> {
+fun controllerFieldClasses(project: Project, fieldName: String): Collection<PhpClass> {
     val result = ArrayList<PhpClass>()
     val phpIndex = PhpIndex.getInstance(project)
     val modelClasses = phpIndex.getClassesByFQN(fieldName)

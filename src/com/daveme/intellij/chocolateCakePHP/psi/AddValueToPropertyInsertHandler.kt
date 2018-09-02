@@ -1,6 +1,5 @@
 package com.daveme.intellij.chocolateCakePHP.psi
 
-import com.daveme.intellij.chocolateCakePHP.psi.addValueToClassProperty
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
