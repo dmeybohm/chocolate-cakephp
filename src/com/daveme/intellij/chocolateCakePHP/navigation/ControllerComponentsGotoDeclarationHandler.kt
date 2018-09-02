@@ -1,7 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
 import com.daveme.intellij.chocolateCakePHP.psi.findParentWithClass
-import com.daveme.intellij.chocolateCakePHP.util.getClassesAsArray
+import com.daveme.intellij.chocolateCakePHP.cake.getClassesAsArray
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
