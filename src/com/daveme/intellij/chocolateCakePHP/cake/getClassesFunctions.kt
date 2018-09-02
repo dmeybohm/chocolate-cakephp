@@ -1,10 +1,9 @@
 package com.daveme.intellij.chocolateCakePHP.cake
 
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
-import java.util.ArrayList
+import java.util.*
 
 private const val VIEW_HELPER_PARENT_CLASS = "\\AppHelper"
 
