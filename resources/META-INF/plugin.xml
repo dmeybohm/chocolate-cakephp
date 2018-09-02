@@ -18,7 +18,7 @@
         <li>Navigate to $this->ViewHelper in view files when clicking on "ViewHelper"</li>
         <li>Navigate to $this->{Model,Component} in controller files when clicking on $this->{Model,Component}</li>
         <li>Navigate from controller to view file by clicking on Cake Icon in the left gutter</li>
-        <li>Navigate to models, com.daveme.intellij.chocolateCakePHP.components, and views by Control/Cmd-clicking inside $uses, $com.daveme.intellij.chocolateCakePHP.components, and $views variables in a controller</li>
+        <li>Navigate to models, components, and views by Control/Cmd-clicking inside $uses, $components, and $views variables in a controller</li>
       </ul>
     ]]>
     </description>
