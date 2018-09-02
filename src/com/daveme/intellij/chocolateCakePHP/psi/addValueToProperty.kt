@@ -12,6 +12,7 @@ fun addValueToProperty(phpFile: PhpFile, document: Document, property: String, v
             // todo handle adding to namespaced classes
             if (topLevelDef is PhpClass) {
                 val field = topLevelDef.findOwnFieldByName(property, false) ?: continue
+
                 if (appendToProperty(phpFile, document, valueToAdd, field)) {
                     return
                 }
@@ -22,7 +23,8 @@ fun addValueToProperty(phpFile: PhpFile, document: Document, property: String, v
 
 private fun appendToProperty(file: PhpFile, document: Document, valueToAdd: String, field: Field): Boolean {
     val lastChild = field.lastChild
-    return if (lastChild is ArrayCreationExpression) {
+    return if (lastChild is ArrayCreationExpression)
         appendToArrayCreationExpression(file, document, valueToAdd, lastChild)
-    } else false
+    else
+        false
 }

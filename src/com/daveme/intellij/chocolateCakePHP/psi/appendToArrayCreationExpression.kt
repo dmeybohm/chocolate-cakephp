@@ -82,7 +82,6 @@ private fun checkIfArrayHasValue(expr: ArrayCreationExpression, value: String): 
         val firstPsiChild = child.firstPsiChild
         if (firstPsiChild is StringLiteralExpression) {
             if (value == firstPsiChild.contents) {
-                // already exists:
                 return true
             }
         }
