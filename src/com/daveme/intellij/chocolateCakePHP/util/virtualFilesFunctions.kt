@@ -6,7 +6,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import java.util.HashSet
 
-
 fun virtualFileToPsiFile(project: Project, file: VirtualFile): PsiFile? {
     val psiManager = PsiManager.getInstance(project)
     return psiManager.findFile(file)

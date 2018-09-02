@@ -1,6 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.completion
 
-import com.daveme.intellij.chocolateCakePHP.cake.ViewHelperClassesFiltered
+import com.daveme.intellij.chocolateCakePHP.cake.viewHelperClassesFiltered
 import com.daveme.intellij.chocolateCakePHP.util.chopFromEnd
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -16,7 +16,8 @@ fun completeFromSubclasses(
 ) {
     val index = PhpIndex.getInstance(project)
     val allSubclasses = index.getAllSubclasses(parentClassName)
-    for (klass in ViewHelperClassesFiltered(allSubclasses).filtered()) {
+
+    for (klass in viewHelperClassesFiltered(allSubclasses)) {
         val helperNameAsPropertyName = klass.name.chopFromEnd(replaceName)
         val lookupElement = LookupElementBuilder.create(helperNameAsPropertyName)
                 .withIcon(PhpIcons.FIELD)
