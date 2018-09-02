@@ -36,37 +36,10 @@ fun completeFromClasses(
         replaceName: String = ""
 ) {
     for (klass in classes) {
-        val helperNameAsPropertyName = klass.name.chopFromEnd(replaceName)
-        val lookupElement = LookupElementBuilder.create(helperNameAsPropertyName)
+        val replacedName = klass.name.chopFromEnd(replaceName)
+        val lookupElement = LookupElementBuilder.create(replacedName)
                 .withIcon(PhpIcons.FIELD)
                 .withTypeText(klass.type.toString())
         completionResultSet.addElement(lookupElement)
-    }
-}
-
-fun complete(
-        classes: Collection<PhpClass>,
-        fromClass: PhpClass,
-        completionResultSet: CompletionResultSet) {
-    if (classes.isEmpty()) {
-        return
-    }
-    val usageContext = UsageContext(PhpModifier.State.DYNAMIC)
-    usageContext.targetObjectClass = fromClass
-    for (klass in classes) {
-        try {
-            val lookupItems = PhpVariantsUtil.getLookupItems(klass.methods, false, usageContext)
-            completionResultSet.addAllElements(lookupItems)
-        } catch (e: Exception) {
-
-        }
-
-        try {
-            val lookupElements = PhpVariantsUtil.getLookupItems(klass.fields, false, usageContext)
-            completionResultSet.addAllElements(lookupElements)
-        } catch (e: Exception) {
-
-        }
-
     }
 }
