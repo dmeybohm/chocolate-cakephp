@@ -46,8 +46,8 @@ fun appendToArrayCreationExpression(file: PhpFile, document: Document, valueToAd
             extraLen += comma.text.length
             prevSibling.addAfter(fromText, expr)
         } else {
-            val prevSiblingTextRange = prevSibling.getTextRange()
-            document.insertString(prevSiblingTextRange.getEndOffset(), fromText.text)
+            val prevSiblingTextRange = prevSibling.textRange
+            document.insertString(prevSiblingTextRange.endOffset, fromText.text)
         }
     } catch (e: IncorrectOperationException) {
         println("IncorrectOperationException")
