@@ -27,10 +27,10 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider3 {
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
-        return if (classReference.text == "\$this") {
-            PhpType().add("\\" + fieldReferenceName + "Helper")
+        if (classReference.text == "\$this") {
+            return PhpType().add("\\" + fieldReferenceName + "Helper")
         }
-        else null
+        return null
     }
 
     override fun getBySignature(s: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement>? {
