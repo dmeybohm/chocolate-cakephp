@@ -20,8 +20,8 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
         val parent = psiElement.parent ?: return PsiElement.EMPTY_ARRAY
         val fieldReference = parent as FieldReference
         val fieldName = fieldReference.name ?: return PsiElement.EMPTY_ARRAY
-        val classes = controllerFieldClasses(psiElement.project, fieldName)
-        return classes.toTypedArray()
+
+        return controllerFieldClasses(psiElement.project, fieldName).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? {
