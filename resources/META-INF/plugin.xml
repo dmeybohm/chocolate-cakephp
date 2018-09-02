@@ -54,7 +54,9 @@
     </application-components>
 
     <project-components>
-        <!-- Add your project components here -->
+        <component>
+            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>
+        </component>
     </project-components>
 
     <actions>
