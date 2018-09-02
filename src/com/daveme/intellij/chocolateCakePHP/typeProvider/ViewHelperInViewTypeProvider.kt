@@ -10,6 +10,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3
 
 class ViewHelperInViewTypeProvider : PhpTypeProvider3 {
+
     override fun getKey(): Char {
         return 0.toChar()
     }
@@ -28,7 +29,8 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider3 {
         }
         return if (classReference.text == "\$this") {
             PhpType().add("\\" + fieldReferenceName + "Helper")
-        } else null
+        }
+        else null
     }
 
     override fun getBySignature(s: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement>? {

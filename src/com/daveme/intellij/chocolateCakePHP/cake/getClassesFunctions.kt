@@ -8,16 +8,16 @@ import java.util.*
 private const val VIEW_HELPER_PARENT_CLASS = "\\AppHelper"
 
 private val helperBlacklist = hashSetOf(
-        "Html5TestHelper",
-        "OtherHelperHelper",
-        "OptionEngineHelper",
-        "PluggedHelperHelper",
-        "HtmlAliasHelper",
-        "TestHtmlHelper",
-        "TestPluginAppHelper",
-        "TimeHelperTestObject",
-        "NumberHelperTestObject",
-        "TextHelperTestObject"
+    "Html5TestHelper",
+    "OtherHelperHelper",
+    "OptionEngineHelper",
+    "PluggedHelperHelper",
+    "HtmlAliasHelper",
+    "TestHtmlHelper",
+    "TestPluginAppHelper",
+    "TimeHelperTestObject",
+    "NumberHelperTestObject",
+    "TextHelperTestObject"
 )
 
 fun getClassesForViewHelper(project: Project, fieldName: String): Collection<PhpClass> {

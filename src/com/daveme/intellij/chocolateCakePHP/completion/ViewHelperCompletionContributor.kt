@@ -22,10 +22,11 @@ class ViewHelperCompletionContributor : CompletionContributor() {
     }
 
     private class ViewHelperCompletionProvider : CompletionProvider<CompletionParameters>() {
+
         override fun addCompletions(
-                completionParameters: CompletionParameters,
-                processingContext: ProcessingContext,
-                completionResultSet: CompletionResultSet
+            completionParameters: CompletionParameters,
+            processingContext: ProcessingContext,
+            completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
             val containingFile = psiElement.containingFile

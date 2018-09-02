@@ -26,18 +26,19 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
         }
         for (type in referenceType.types) {
             if (type.contains("Controller")) {
-                return PhpType().add("\\" + fieldReferenceName)
-                        .add("\\" + fieldReferenceName + "Component")
+                return PhpType()
+                    .add("\\" + fieldReferenceName)
+                    .add("\\" + fieldReferenceName + "Component")
             }
         }
         return null
     }
 
     override fun getBySignature(
-            expression: String,
-            set: Set<String>,
-            i: Int,
-            project: Project
+        expression: String,
+        set: Set<String>,
+        i: Int,
+        project: Project
     ): Collection<PhpNamedElement> {
         // We use the default signature processor exclusively:
         return emptyList()

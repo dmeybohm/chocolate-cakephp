@@ -13,10 +13,10 @@ import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 fun appendToArrayCreationExpression(
-        file: PhpFile,
-        document: Document,
-        valueToAdd: String,
-        expr: ArrayCreationExpression
+    file: PhpFile,
+    document: Document,
+    valueToAdd: String,
+    expr: ArrayCreationExpression
 ): Boolean {
     if (checkIfArrayHasValue(expr, valueToAdd)) {
         return true
@@ -30,7 +30,8 @@ fun appendToArrayCreationExpression(
         val codeStyleManager = CodeStyleManager.getInstance(project)
         reformat(codeStyleManager, file, expr, addingLen)
         true
-    } catch (e: IncorrectOperationException) {
+    }
+    catch (e: IncorrectOperationException) {
         println("IncorrectOperationException")
         false
     }
@@ -53,11 +54,11 @@ private fun lastArrayElementAndNodeText(lastElement: PsiElement): Pair<PsiElemen
 }
 
 private fun appendToExpression(
-        expr: ArrayCreationExpression,
-        lastArrayElement: PsiElement,
-        lastNodeText: String,
-        newText: StringLiteralExpression,
-        document: Document
+    expr: ArrayCreationExpression,
+    lastArrayElement: PsiElement,
+    lastNodeText: String,
+    newText: StringLiteralExpression,
+    document: Document
 ): Int {
     var moreLen = 0
     if (lastNodeText != "(" && lastNodeText != "[") {
@@ -65,7 +66,8 @@ private fun appendToExpression(
         lastArrayElement.addAfter(comma, expr)
         moreLen += comma.text.length
         lastArrayElement.addAfter(newText, expr)
-    } else {
+    }
+    else {
         val lastElementTextRange = lastArrayElement.textRange
         document.insertString(lastElementTextRange.endOffset, newText.text)
     }

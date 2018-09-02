@@ -26,9 +26,9 @@ class ControllerCompletionContributor : CompletionContributor() {
     private class ControllerCompletionProvider : CompletionProvider<CompletionParameters>() {
 
         override fun addCompletions(
-                completionParameters: CompletionParameters,
-                processingContext: ProcessingContext,
-                completionResultSet: CompletionResultSet
+            completionParameters: CompletionParameters,
+            processingContext: ProcessingContext,
+            completionResultSet: CompletionResultSet
         ) {
             val originalPosition = completionParameters.originalPosition ?: return
             val psiElement = originalPosition.originalElement ?: return

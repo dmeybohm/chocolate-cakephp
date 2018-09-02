@@ -4,8 +4,8 @@ fun String?.startsWithUppercaseCharacter(): Boolean {
     return this != null && this.isNotEmpty() && Character.isUpperCase(this[0])
 }
 
-fun String.chopFromEnd(end: String): String {
-    return if (end == "" || !this.endsWith(end)) {
+fun String.chopFromEnd(end: String): String =
+    if (end == "" || !this.endsWith(end))
         this
-    } else this.substring(0, this.length - end.length)
-}
+    else
+        this.substring(0, this.length - end.length)
