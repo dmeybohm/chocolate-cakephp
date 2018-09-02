@@ -11,3 +11,11 @@ fun isCakeTemplate(filename: String): Boolean {
     }
     return false
 }
+
+fun viewRelativeTemplatePath(controllerName: String, controllerAction: String): String {
+    return String.format("View/%s/%s.ctp", controllerName, controllerAction)
+}
+
+fun viewElementRelativePath(elementPath: String): String {
+    return String.format("View/Elements/%s.ctp", elementPath)
+}

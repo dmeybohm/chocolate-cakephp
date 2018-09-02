@@ -12,6 +12,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import java.util.HashSet
 
 import com.daveme.intellij.chocolateCakePHP.cake.controllerBaseName
+import com.daveme.intellij.chocolateCakePHP.cake.viewRelativeTemplatePath
 import com.daveme.intellij.chocolateCakePHP.util.findRelativeFile
 import com.daveme.intellij.chocolateCakePHP.util.virtualFilesToPsiFiles
 
@@ -35,7 +36,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val controllerName = controllerBaseName(filename) ?: return PsiElement.EMPTY_ARRAY
 
         val appDir = appDirectoryFromFile(containingFile)
-        val templatePath = String.format("View/%s/%s.ctp", controllerName, psiElement.text)
+        val templatePath = viewRelativeTemplatePath(controllerName, psiElement.text)
         val relativeFile = findRelativeFile(appDir, templatePath) ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
