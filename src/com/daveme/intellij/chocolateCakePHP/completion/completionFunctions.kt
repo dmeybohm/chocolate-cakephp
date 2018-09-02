@@ -7,10 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.psi.PsiDirectory
 import com.jetbrains.php.PhpIcons
-import com.jetbrains.php.completion.PhpVariantsUtil
-import com.jetbrains.php.completion.UsageContext
 import com.jetbrains.php.lang.psi.elements.PhpClass
-import com.jetbrains.php.lang.psi.elements.PhpModifier
 
 fun completeFromFilesInDir(completionResultSet: CompletionResultSet,
                            appDir: PsiDirectory,
