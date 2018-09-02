@@ -31,10 +31,6 @@ fun getAllViewHelperSubclassesFiltered(project: Project): Collection<PhpClass> {
     return viewHelperClassesFiltered(allSubclasses)
 }
 
-fun getClassesAsArray(project: Project, className: String): Array<PsiElement> {
-    return getClasses(project, className).toTypedArray()
-}
-
 fun controllerFieldClasses(project: Project, fieldName: String): Collection<PhpClass> {
     val result = ArrayList<PhpClass>()
     val phpIndex = PhpIndex.getInstance(project)
@@ -45,7 +41,7 @@ fun controllerFieldClasses(project: Project, fieldName: String): Collection<PhpC
     return result
 }
 
-private fun getClasses(project: Project, className: String): Collection<PhpClass> {
+fun getClasses(project: Project, className: String): Collection<PhpClass> {
     val phpIndex = PhpIndex.getInstance(project)
     return phpIndex.getClassesByFQN(className)
 }

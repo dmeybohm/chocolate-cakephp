@@ -1,7 +1,7 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
+import com.daveme.intellij.chocolateCakePHP.cake.getClasses
 import com.daveme.intellij.chocolateCakePHP.psi.findParentWithClass
-import com.daveme.intellij.chocolateCakePHP.cake.getClassesAsArray
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -27,10 +27,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         // PhpStorm already has completion based on strings that contain class names, so
         // we only need to check for the components and helpers properties:
         if (text.contains("\$components")) {
-            return getClassesAsArray(psiElement.project, psiElement.text + "Component")
+            return getClasses(psiElement.project, psiElement.text + "Component").toTypedArray()
         }
         return if (text.contains("\$helpers")) {
-            getClassesAsArray(psiElement.project, psiElement.text + "Helper")
+            getClasses(psiElement.project, psiElement.text + "Helper").toTypedArray()
         } else PsiElement.EMPTY_ARRAY
     }
 
