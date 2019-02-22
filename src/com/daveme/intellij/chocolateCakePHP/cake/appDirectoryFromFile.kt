@@ -7,7 +7,7 @@ fun appDirectoryFromFile(file: PsiFile): PsiDirectory? {
     var dir: PsiDirectory? = file.containingDirectory
     // @todo determine what happens here when app directory doesn't exist
     while (dir != null) {
-        if (dir.name == "app") {
+        if (dir.name == "app" || dir.name == "src") {
             return dir
         }
         dir = dir.parent

@@ -26,7 +26,10 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
         }
         for (type in referenceType.types) {
             if (type.contains("Helper")) {
+                // @todo make this configurable
                 return PhpType().add("\\" + fieldReferenceName + "Helper")
+                    .add("\\App\\View\\Helper\\" + fieldReferenceName + "Helper")
+                    .add("\\DebugKit\\View\\Helper\\" + fieldReferenceName + "Helper")
             }
         }
         return null
