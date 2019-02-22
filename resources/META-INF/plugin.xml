@@ -1,14 +1,13 @@
 <idea-plugin>
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
-    <version>0.3.0</version>
+    <version>0.3.9</version>
     <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
 
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      Only version 2 of the framework at the moment is supported, but eventually version 3 support will
-      be implemented.<br><br>
+      Most of the features support Cake 2, but some have been implemented for Cake 3. Work on this is ongoing.<br><br>
       
       Current features:
 
