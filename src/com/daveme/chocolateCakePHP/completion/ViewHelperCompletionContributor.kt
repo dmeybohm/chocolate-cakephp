@@ -1,8 +1,8 @@
 package com.daveme.chocolateCakePHP.completion
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.isCakeTemplate
-import com.daveme.chocolateCakePHP.cake.getAllViewHelperSubclasses
+import com.daveme.chocolateCakePHP.isCakeTemplate
+import com.daveme.chocolateCakePHP.getAllViewHelperSubclasses
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext

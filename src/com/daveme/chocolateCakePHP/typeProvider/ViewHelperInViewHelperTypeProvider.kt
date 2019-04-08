@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.typeProvider
 
-import com.daveme.chocolateCakePHP.cake.viewHelperTypeFromFieldReference
+import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldReference
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.openapi.project.Project

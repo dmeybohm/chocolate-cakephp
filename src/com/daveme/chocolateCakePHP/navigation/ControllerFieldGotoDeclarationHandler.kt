@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.controllerFieldClasses
+import com.daveme.chocolateCakePHP.controllerFieldClasses
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor

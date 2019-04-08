@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.completion
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.appDirectoryFromFile
 import com.daveme.chocolateCakePHP.psi.AddValueToPropertyInsertHandler
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns

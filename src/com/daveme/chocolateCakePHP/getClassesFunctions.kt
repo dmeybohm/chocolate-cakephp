@@ -1,6 +1,5 @@
-package com.daveme.chocolateCakePHP.cake
+package com.daveme.chocolateCakePHP
 
-import com.daveme.chocolateCakePHP.Settings
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -45,7 +44,8 @@ fun controllerFieldClasses(phpIndex: PhpIndex, settings: Settings, fieldName: St
     val cake2ComponentClasses = phpIndex.getClassesByFQN("\\${fieldName}Component")
 
     val cake3ModelClasses = phpIndex.getClassesByFQN(
-        "${settings.appNamespace}\\Model\\Table\\$fieldName")
+        "${settings.appNamespace}\\Model\\Table\\$fieldName"
+    )
     val cake3BuiltinComponentClasses = phpIndex.getClassesByFQN(
         "\\Cake\\Controller\\Component\\${fieldName}Component"
     )

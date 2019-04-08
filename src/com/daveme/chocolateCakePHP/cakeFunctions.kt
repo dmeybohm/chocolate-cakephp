@@ -1,6 +1,5 @@
-package com.daveme.chocolateCakePHP.cake
+package com.daveme.chocolateCakePHP
 
-import com.daveme.chocolateCakePHP.Settings
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
 
@@ -15,3 +14,9 @@ fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     }
     return null
 }
+
+fun controllerBaseName(controllerClass: String): String? =
+    if (!controllerClass.endsWith("Controller"))
+        null
+    else
+        controllerClass.substring(0, controllerClass.length - "Controller".length)

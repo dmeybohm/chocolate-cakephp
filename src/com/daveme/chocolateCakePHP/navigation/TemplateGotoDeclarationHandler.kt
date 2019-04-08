@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.appDirectoryFromFile
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -12,8 +12,8 @@ import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import java.util.HashSet
 
-import com.daveme.chocolateCakePHP.cake.controllerBaseName
-import com.daveme.chocolateCakePHP.cake.viewRelativeTemplatePath
+import com.daveme.chocolateCakePHP.controllerBaseName
+import com.daveme.chocolateCakePHP.viewRelativeTemplatePath
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 

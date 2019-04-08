@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.getClassesForViewHelper
+import com.daveme.chocolateCakePHP.getClassesForViewHelper
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext

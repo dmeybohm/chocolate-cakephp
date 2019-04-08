@@ -1,6 +1,4 @@
-package com.daveme.chocolateCakePHP.cake
-
-import com.daveme.chocolateCakePHP.Settings
+package com.daveme.chocolateCakePHP
 
 fun isCakeTemplate(settings: Settings, filename: String): Boolean {
     val last = filename.lastIndexOf('.')

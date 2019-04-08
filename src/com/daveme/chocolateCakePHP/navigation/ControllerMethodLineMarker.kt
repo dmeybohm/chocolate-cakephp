@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.appDirectoryFromFile
 import com.daveme.chocolateCakePHP.icons.CakeIcons
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
@@ -10,7 +10,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
 
-import com.daveme.chocolateCakePHP.cake.controllerBaseName
+import com.daveme.chocolateCakePHP.controllerBaseName
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFileToPsiFile
 

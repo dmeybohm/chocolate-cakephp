@@ -1,8 +1,8 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.appDirectoryFromFile
-import com.daveme.chocolateCakePHP.cake.viewElementRelativePath
+import com.daveme.chocolateCakePHP.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.viewElementRelativePath
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
