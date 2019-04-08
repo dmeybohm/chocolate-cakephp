@@ -27,8 +27,15 @@
     </change-notes>
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-  <idea-version since-build="182.4129"/>
+  <idea-version since-build="183.5429"/>
     <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.daveme.intellij.chocolateCakePHP.Settings" />
+
+        <projectConfigurable parentId="reference.webide.settings.project.settings.php"
+                             displayName="Chocolate CakePHP"
+                             id="chocolatecakephp.Settings"
+                             instance="com.daveme.intellij.chocolateCakePHP.ConfigForm" />
+
         <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ControllerCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.intellij.chocolateCakePHP.completion.ViewHelperCompletionContributor" />
         <gotoDeclarationHandler implementation="com.daveme.intellij.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
@@ -53,9 +60,10 @@
     </application-components>
 
     <project-components>
-        <component>
-            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>
-        </component>
+<!--        <component>-->
+<!--            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>-->
+<!--        </component>-->
+
     </project-components>
 
     <actions>

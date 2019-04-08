@@ -20,7 +20,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
         }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
-        val fieldReferenceName = psiElement.name
+        val fieldReferenceName = psiElement.name ?: return null
 
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null

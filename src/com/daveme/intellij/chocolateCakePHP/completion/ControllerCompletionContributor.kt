@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.completion
 
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.daveme.intellij.chocolateCakePHP.cake.appDirectoryFromFile
 import com.daveme.intellij.chocolateCakePHP.psi.AddValueToPropertyInsertHandler
 import com.intellij.codeInsight.completion.*
@@ -34,7 +35,8 @@ class ControllerCompletionContributor : CompletionContributor() {
             val psiElement = originalPosition.originalElement ?: return
 
             val containingFile = psiElement.containingFile
-            val appDir = appDirectoryFromFile(containingFile) ?: return
+            val settings = Settings.getInstance(psiElement.project)
+            val appDir = appDirectoryFromFile(settings, containingFile) ?: return
             val controllerDir = appDir.findSubdirectory("Controller")
 
             var parent  = psiElement.parent ?: return

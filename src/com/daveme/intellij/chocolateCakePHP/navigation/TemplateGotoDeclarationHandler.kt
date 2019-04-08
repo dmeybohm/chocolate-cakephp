@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.daveme.intellij.chocolateCakePHP.cake.appDirectoryFromFile
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
@@ -33,10 +34,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val containingFile = psiElement.containingFile
         val virtualFile = containingFile.virtualFile
         val filename = virtualFile.nameWithoutExtension
-        val controllerName = controllerBaseName(filename) ?: return PsiElement.EMPTY_ARRAY
 
-        val appDir = appDirectoryFromFile(containingFile)
-        val templatePath = viewRelativeTemplatePath(controllerName, psiElement.text)
+        val controllerName = controllerBaseName(filename) ?: return PsiElement.EMPTY_ARRAY
+        val settings = Settings.getInstance(project)
+
+        val appDir = appDirectoryFromFile(settings, containingFile)
+        val templatePath = viewRelativeTemplatePath(settings, controllerName, psiElement.text)
         val relativeFile = findRelativeFile(appDir, templatePath) ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
