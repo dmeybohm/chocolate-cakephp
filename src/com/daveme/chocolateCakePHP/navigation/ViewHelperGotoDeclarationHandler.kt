@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.getClassesForViewHelper
-import com.daveme.chocolateCakePHP.util.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -39,8 +39,5 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         return PsiElement.EMPTY_ARRAY
     }
 
-    override fun getActionText(dataContext: DataContext): String? {
-        return null
-    }
-
+    override fun getActionText(dataContext: DataContext): String? = null
 }

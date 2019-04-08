@@ -11,13 +11,12 @@ import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
 
 import com.daveme.chocolateCakePHP.cake.controllerBaseName
-import com.daveme.chocolateCakePHP.util.findRelativeFile
-import com.daveme.chocolateCakePHP.util.virtualFileToPsiFile
+import com.daveme.chocolateCakePHP.findRelativeFile
+import com.daveme.chocolateCakePHP.virtualFileToPsiFile
 
 class ControllerMethodLineMarker : LineMarkerProvider {
-    override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? {
-        return null
-    }
+
+    override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? = null
 
     private fun getRelatedFiles(file: PsiFile, controllerName: String, element: PsiElement): LineMarkerInfo<*>? {
         if (element !is Method) {

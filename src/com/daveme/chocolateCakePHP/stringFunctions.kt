@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.util
+package com.daveme.chocolateCakePHP
 
 fun String.startsWithUppercaseCharacter(): Boolean {
     return this.isNotEmpty() && Character.isUpperCase(this[0])

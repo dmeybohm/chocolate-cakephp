@@ -14,8 +14,8 @@ import java.util.HashSet
 
 import com.daveme.chocolateCakePHP.cake.controllerBaseName
 import com.daveme.chocolateCakePHP.cake.viewRelativeTemplatePath
-import com.daveme.chocolateCakePHP.util.findRelativeFile
-import com.daveme.chocolateCakePHP.util.virtualFilesToPsiFiles
+import com.daveme.chocolateCakePHP.findRelativeFile
+import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -47,9 +47,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         return virtualFilesToPsiFiles(project, files).toTypedArray()
     }
 
-    override fun getActionText(dataContext: DataContext): String? {
-        return null
-    }
-
+    override fun getActionText(dataContext: DataContext): String? = null
 }
 

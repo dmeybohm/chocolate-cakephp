@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.completion
 
-import com.daveme.chocolateCakePHP.util.chopFromEnd
+import com.daveme.chocolateCakePHP.chopFromEnd
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.lookup.LookupElement

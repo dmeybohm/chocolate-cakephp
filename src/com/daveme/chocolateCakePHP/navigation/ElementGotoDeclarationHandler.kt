@@ -3,8 +3,8 @@ package com.daveme.chocolateCakePHP.navigation
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.appDirectoryFromFile
 import com.daveme.chocolateCakePHP.cake.viewElementRelativePath
-import com.daveme.chocolateCakePHP.util.findRelativeFile
-import com.daveme.chocolateCakePHP.util.virtualFilesToPsiFiles
+import com.daveme.chocolateCakePHP.findRelativeFile
+import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -40,8 +40,5 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         return virtualFilesToPsiFiles(project, files).toTypedArray()
     }
 
-    override fun getActionText(dataContext: DataContext): String? {
-        return null
-    }
-
+    override fun getActionText(dataContext: DataContext): String? = null
 }

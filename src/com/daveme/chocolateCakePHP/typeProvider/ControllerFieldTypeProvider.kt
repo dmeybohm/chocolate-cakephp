@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.typeProvider
 
-import com.daveme.chocolateCakePHP.util.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference

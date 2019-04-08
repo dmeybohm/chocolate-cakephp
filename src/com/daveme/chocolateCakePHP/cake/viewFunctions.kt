@@ -11,10 +11,8 @@ fun isCakeTemplate(settings: Settings, filename: String): Boolean {
     return false
 }
 
-fun viewRelativeTemplatePath(settings: Settings, controllerName: String, controllerAction: String): String {
-    return "View/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
-}
+fun viewRelativeTemplatePath(settings: Settings, controllerName: String, controllerAction: String) =
+    "View/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
 
-fun viewElementRelativePath(settings: Settings, elementPath: String): String {
-    return "View/Elements/$elementPath.${settings.cakeTemplateExtension}"
-}
+fun viewElementRelativePath(settings: Settings, elementPath: String) =
+    "View/Elements/$elementPath.${settings.cakeTemplateExtension}"

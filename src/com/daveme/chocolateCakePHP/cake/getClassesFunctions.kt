@@ -60,7 +60,7 @@ fun controllerFieldClasses(phpIndex: PhpIndex, settings: Settings, fieldName: St
             cake3UserComponentClasses
 }
 
-fun viewHelperFromFieldReference(settings: Settings, fieldReferenceName: String): PhpType {
+fun viewHelperTypeFromFieldReference(settings: Settings, fieldReferenceName: String): PhpType {
     return PhpType().add("\\${fieldReferenceName}Helper")
         .add("\\Cake\\View\\Helper\\${fieldReferenceName}Helper")
         .add("${settings.appNamespace}\\View\\Helper\\${fieldReferenceName}Helper")

@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.util
+package com.daveme.chocolateCakePHP
 
 fun Class<*>.allInterfaces(): String {
     val interfaces = this.interfaces
