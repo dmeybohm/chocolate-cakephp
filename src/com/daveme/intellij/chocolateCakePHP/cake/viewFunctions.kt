@@ -1,21 +1,20 @@
 package com.daveme.intellij.chocolateCakePHP.cake
 
-// TODO make this configurable
-private const val TEMPLATE_EXT = "ctp"
+import com.daveme.intellij.chocolateCakePHP.Settings
 
-fun isCakeTemplate(filename: String): Boolean {
+fun isCakeTemplate(settings: Settings, filename: String): Boolean {
     val last = filename.lastIndexOf('.')
     if (last > 0) {
         val ext = filename.substring(last + 1)
-        return ext == TEMPLATE_EXT
+        return ext == settings.cakeTemplateExtension
     }
     return false
 }
 
-fun viewRelativeTemplatePath(controllerName: String, controllerAction: String): String {
-    return String.format("View/%s/%s.ctp", controllerName, controllerAction)
+fun viewRelativeTemplatePath(settings: Settings, controllerName: String, controllerAction: String): String {
+    return "View/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
 }
 
-fun viewElementRelativePath(elementPath: String): String {
-    return String.format("View/Elements/%s.ctp", elementPath)
+fun viewElementRelativePath(settings: Settings, elementPath: String): String {
+    return "View/Elements/$elementPath.${settings.cakeTemplateExtension}"
 }

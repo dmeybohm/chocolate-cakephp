@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.daveme.intellij.chocolateCakePHP.cake.appDirectoryFromFile
 import com.daveme.intellij.chocolateCakePHP.cake.viewElementRelativePath
 import com.daveme.intellij.chocolateCakePHP.util.findRelativeFile
@@ -29,8 +30,9 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
-        val appDir = appDirectoryFromFile(containingFile)
-        val elementFilename = viewElementRelativePath(psiElement.text)
+        val settings = Settings.getInstance(project)
+        val appDir = appDirectoryFromFile(settings, containingFile)
+        val elementFilename = viewElementRelativePath(settings, psiElement.text)
         val relativeFile = findRelativeFile(appDir, elementFilename) ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()

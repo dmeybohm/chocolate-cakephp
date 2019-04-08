@@ -1,6 +1,8 @@
 package com.daveme.intellij.chocolateCakePHP.typeProvider
 
+import com.daveme.intellij.chocolateCakePHP.cake.viewHelperFromFieldReference
 import com.daveme.intellij.chocolateCakePHP.util.startsWithUppercaseCharacter
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
@@ -20,13 +22,14 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
         }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
-        val fieldReferenceName = psiElement.name
+        val fieldReferenceName = psiElement.name ?: return null
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
         for (type in referenceType.types) {
             if (type.contains("Helper")) {
-                return PhpType().add("\\" + fieldReferenceName + "Helper")
+                val settings = Settings.getInstance(psiElement.project)
+                return viewHelperFromFieldReference(settings, fieldReferenceName)
             }
         }
         return null

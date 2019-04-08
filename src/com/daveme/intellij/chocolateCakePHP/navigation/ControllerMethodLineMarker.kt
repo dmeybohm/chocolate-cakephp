@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.daveme.intellij.chocolateCakePHP.cake.appDirectoryFromFile
 import com.daveme.intellij.chocolateCakePHP.icons.CakeIcons
 import com.intellij.codeInsight.daemon.LineMarkerInfo
@@ -25,11 +26,13 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         if (!element.access.isPublic) {
             return null
         }
-        val appDir = appDirectoryFromFile(file)
-        val templatePath = String.format("View/%s/%s.ctp", controllerName, element.name)
+        val project = file.project
+        val settings = Settings.getInstance(project)
+        val appDir = appDirectoryFromFile(settings, file)
+        val templatePath = "View/$controllerName/${element.name}.ctp"
         val relativeFile = findRelativeFile(appDir, templatePath) ?: return null
 
-        val targetFile = virtualFileToPsiFile(element.project, relativeFile) ?: return null
+        val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null
         val targetElement = targetFile.firstChild
 
         return NavigationGutterIconBuilder

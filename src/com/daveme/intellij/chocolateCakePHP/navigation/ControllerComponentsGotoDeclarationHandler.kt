@@ -1,12 +1,12 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
-import com.daveme.intellij.chocolateCakePHP.cake.getClasses
 import com.daveme.intellij.chocolateCakePHP.psi.findParentWithClass
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -27,14 +27,16 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         val field = findParentWithClass(psiElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
         val text = field.text
 
+        val phpIndex = PhpIndex.getInstance(psiElement.project)
+
         // PhpStorm already has completion based on strings that contain class names, so
         // we only need to check for the components and helpers properties:
         return when {
             text.contains("\$components") ->
-                getClasses(psiElement.project, psiElement.text + "Component").toTypedArray()
+                phpIndex.getClassesByFQN(psiElement.text + "Component").toTypedArray()
 
             text.contains("\$helpers") ->
-                getClasses(psiElement.project, psiElement.text + "Helper").toTypedArray()
+                phpIndex.getClassesByFQN(psiElement.text + "Helper").toTypedArray()
 
             else ->
                 PsiElement.EMPTY_ARRAY

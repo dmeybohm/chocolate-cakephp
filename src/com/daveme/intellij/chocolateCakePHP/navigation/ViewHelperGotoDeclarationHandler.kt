@@ -1,5 +1,6 @@
 package com.daveme.intellij.chocolateCakePHP.navigation
 
+import com.daveme.intellij.chocolateCakePHP.Settings
 import com.daveme.intellij.chocolateCakePHP.cake.getClassesForViewHelper
 import com.daveme.intellij.chocolateCakePHP.util.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -7,6 +8,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 
 class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
@@ -29,7 +31,10 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         }
 
         if (classReference.text == "\$this") {
-            return getClassesForViewHelper(psiElement.project, fieldName).toTypedArray()
+            val project = psiElement.project
+            val phpIndex = PhpIndex.getInstance(project)
+            val settings = Settings.getInstance(project)
+            return getClassesForViewHelper(phpIndex, settings, fieldName).toTypedArray()
         }
         return PsiElement.EMPTY_ARRAY
     }
