@@ -9,16 +9,14 @@
     <border type="none"/>
     <children>
       <grid id="432b0" layout-manager="FormLayout">
-        <rowspec value="center:d:grow"/>
-        <rowspec value="top:3dlu:noGrow"/>
         <rowspec value="center:max(d;4px):noGrow"/>
         <rowspec value="top:3dlu:noGrow"/>
         <rowspec value="center:max(d;4px):noGrow"/>
-        <colspec value="fill:d:noGrow"/>
-        <colspec value="left:4dlu:noGrow"/>
         <colspec value="fill:max(d;4px):noGrow"/>
         <colspec value="left:4dlu:noGrow"/>
         <colspec value="fill:d:grow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
@@ -34,23 +32,25 @@
               <text value="App Directory"/>
             </properties>
           </component>
+          <component id="b25dd" class="com.intellij.openapi.ui.TextFieldWithBrowseButton" binding="appDirectoryTextField">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <preferredSize width="150" height="30"/>
+            </properties>
+          </component>
           <component id="c50cf" class="javax.swing.JButton" binding="appDirectoryDefaultButton">
             <constraints>
               <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-              <forms/>
+              <forms defaultalign-horz="false"/>
             </constraints>
             <properties>
               <text value="Default"/>
             </properties>
           </component>
-          <component id="b25dd" class="com.intellij.openapi.ui.TextFieldWithBrowseButton" binding="appDirectoryTextField">
-            <constraints>
-              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
-              <forms/>
-            </constraints>
-            <properties/>
-          </component>
-          <component id="1f986" class="javax.swing.JLabel" binding="appNamespaceLabel">
+          <component id="5fff8" class="javax.swing.JLabel" binding="appNamespaceLabel">
             <constraints>
               <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
               <forms/>
@@ -59,49 +59,20 @@
               <text value="App Namespace"/>
             </properties>
           </component>
-          <component id="81b2" class="javax.swing.JButton" binding="appNamespaceDefaultButton">
+          <component id="452b9" class="com.intellij.ui.TextFieldWithAutoCompletion" binding="appNamespaceTextField" custom-create="true">
+            <constraints>
+              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="baed" class="javax.swing.JButton" binding="appNamespaceDefault">
             <constraints>
               <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
               <forms/>
             </constraints>
             <properties>
-              <text value="Default"/>
-            </properties>
-          </component>
-          <component id="6b21c" class="javax.swing.JTextField" binding="appNamespaceTextField">
-            <constraints>
-              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
-              </grid>
-              <forms defaultalign-horz="false"/>
-            </constraints>
-            <properties/>
-          </component>
-          <component id="b82fd" class="javax.swing.JLabel" binding="cakeTemplateExtensionLabel">
-            <constraints>
-              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-              <forms/>
-            </constraints>
-            <properties>
-              <text value="Cake Template Extension"/>
-            </properties>
-          </component>
-          <component id="b99cc" class="javax.swing.JTextField" binding="cakeTemplateExtensionTextField">
-            <constraints>
-              <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
-              </grid>
-              <forms defaultalign-horz="false"/>
-            </constraints>
-            <properties/>
-          </component>
-          <component id="5db05" class="javax.swing.JButton" binding="cakeTemplateExtensionDefaultButton">
-            <constraints>
-              <grid row="4" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-              <forms/>
-            </constraints>
-            <properties>
-              <text value="Default"/>
+              <text value="Button"/>
             </properties>
           </component>
         </children>
