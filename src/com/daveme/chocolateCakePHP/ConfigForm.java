@@ -83,7 +83,7 @@ class ConfigForm implements SearchableConfigurable {
     private void createUIComponents() {
         ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
         PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                new CompletionProvider(project, insertHandler);
+                new NamespaceCompletionProvider(project, insertHandler);
         appNamespaceTextField = new TextFieldWithCompletion(
                 project,
                 completionProvider,
@@ -98,14 +98,15 @@ class ConfigForm implements SearchableConfigurable {
     //
     // Completion provider for the class text fields.
     //
-    static class CompletionProvider extends PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider {
+    static class NamespaceCompletionProvider extends PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider {
         private Project project;
         private ConfigFormInsertHandler handler;
 
-        CompletionProvider(Project project, ConfigFormInsertHandler handler) {
+        NamespaceCompletionProvider(Project project, ConfigFormInsertHandler handler) {
             this.project = project;
             this.handler = handler;
         }
+
         @Override
         protected void addCompletionVariants(@NotNull String namespaceName, @NotNull String prefix, @NotNull CompletionResultSet completionResultSet) {
             PhpIndex phpIndex = PhpIndex.getInstance(project);
