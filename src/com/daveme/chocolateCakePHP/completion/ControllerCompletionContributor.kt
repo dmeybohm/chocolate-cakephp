@@ -37,6 +37,8 @@ class ControllerCompletionContributor : CompletionContributor() {
             val containingFile = psiElement.containingFile
             val settings = Settings.getInstance(psiElement.project)
             val appDir = appDirectoryFromFile(settings, containingFile) ?: return
+
+            // TODO fix this for cake3
             val controllerDir = appDir.findSubdirectory("Controller")
 
             var parent  = psiElement.parent ?: return
