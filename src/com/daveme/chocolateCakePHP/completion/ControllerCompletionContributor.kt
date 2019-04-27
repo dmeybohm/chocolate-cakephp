@@ -45,6 +45,12 @@ class ControllerCompletionContributor : CompletionContributor() {
             }
 
             val fieldReference = parent as FieldReference
+
+            // Don't add completion for nested classes: (e.g. $this->FooBar->FooBar):
+            if (fieldReference.firstChild is FieldReference) {
+                return
+            }
+
             val classReference = fieldReference.classReference ?: return
 
             val hasController = classReference.type.types.any { it.contains("Controller") }
