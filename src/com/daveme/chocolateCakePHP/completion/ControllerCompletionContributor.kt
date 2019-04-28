@@ -51,7 +51,7 @@ class ControllerCompletionContributor : CompletionContributor() {
             if (controllerClassNames.isNotEmpty()) {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
                 val modelClasses = getAllModelSubclasses(phpIndex)
-                val containingClasses = controllerClassesFromFQNs(phpIndex, controllerClassNames)
+                val containingClasses = getAllAncestorTypesFromFQNs(phpIndex, controllerClassNames)
                 completionResultSet.completeFromClasses(
                     modelClasses,
                     insertHandler = usesHandler,

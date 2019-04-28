@@ -46,7 +46,7 @@ fun getAllComponentSubclasses(phpIndex: PhpIndex): Collection<PhpClass> {
     return cake2Subclasses + cake3Subclasses
 }
 
-fun controllerClassesFromFQNs(phpIndex: PhpIndex, classes: List<String>): List<PhpClass> {
+fun getAllAncestorTypesFromFQNs(phpIndex: PhpIndex, classes: List<String>): List<PhpClass> {
     val result = ArrayList<PhpClass>()
     classes.map {
         val directClasses = phpIndex.getClassesByFQN(it)
