@@ -1,12 +1,12 @@
 package com.daveme.chocolateCakePHP.completion
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.psi.AddValueToPropertyInsertHandler
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.intellij.util.ProcessingContext
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 
 class ControllerCompletionContributor : CompletionContributor() {
@@ -31,15 +31,7 @@ class ControllerCompletionContributor : CompletionContributor() {
             processingContext: ProcessingContext,
             completionResultSet: CompletionResultSet
         ) {
-            val originalPosition = completionParameters.originalPosition ?: return
-            val psiElement = originalPosition.originalElement ?: return
-
-            val containingFile = psiElement.containingFile
-            val settings = Settings.getInstance(psiElement.project)
-            val appDir = appDirectoryFromFile(settings, containingFile) ?: return
-
-            // TODO fix this for cake3
-            val controllerDir = appDir.findSubdirectory("Controller")
+            val psiElement = completionParameters.position
 
             var parent  = psiElement.parent ?: return
             if (parent !is FieldReference) {
@@ -55,22 +47,26 @@ class ControllerCompletionContributor : CompletionContributor() {
 
             val classReference = fieldReference.classReference ?: return
 
-            val hasController = classReference.type.types.any { it.contains("Controller") }
-            if (hasController) {
-                completeFromFilesInDir(completionResultSet, appDir, subDir = "Model", insertHandler = usesHandler)
+            val controllerClassNames = classReference.type.types.filter { it.isControllerClass() }
+            if (controllerClassNames.isNotEmpty()) {
+                val phpIndex = PhpIndex.getInstance(psiElement.project)
+                val modelClasses = getAllModelSubclasses(phpIndex)
+                val containingClasses = controllerClassesFromFQNs(phpIndex, controllerClassNames)
+                completionResultSet.completeFromClasses(
+                    modelClasses,
+                    insertHandler = usesHandler,
+                    containingClasses = containingClasses
+                )
 
-                if (controllerDir != null) {
-                    completeFromFilesInDir(
-                        completionResultSet,
-                        controllerDir,
-                        subDir = "Component",
-                        replaceName = "Component",
-                        insertHandler = componentsHandler
-                    )
-                }
+                val componentClasses = getAllComponentSubclasses(phpIndex)
+                completionResultSet.completeFromClasses(
+                    componentClasses,
+                    replaceName = "Component",
+                    insertHandler = componentsHandler,
+                    containingClasses = containingClasses
+                )
             }
         }
-
     }
 
     companion object {
