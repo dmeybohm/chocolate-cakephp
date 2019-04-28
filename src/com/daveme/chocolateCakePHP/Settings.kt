@@ -7,7 +7,10 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
 
-@State(name = "ChocolateCakePHPSettings", storages = [Storage(file = "ChocolateCakePHP.xml")])
+@State(
+    name = "ChocolateCakePHPSettings",
+    storages = [Storage(file = "ChocolateCakePHP.xml")]
+)
 data class Settings(
     var cakeTemplateExtension: String = DefaultCakeTemplateExtension,
     var appDirectory: String = DefaultAppDirectory,
@@ -33,6 +36,7 @@ data class Settings(
         const val DefaultAppDirectory = "src"
         const val DefaultAppNamespace = "\\App"
 
+        @JvmStatic
         fun getInstance(project: Project): Settings {
             return ServiceManager.getService<Settings>(project, Settings::class.java)
         }
