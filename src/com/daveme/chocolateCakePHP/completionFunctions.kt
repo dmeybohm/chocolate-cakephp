@@ -33,8 +33,7 @@ private fun hasFieldAlready(containingClasses: List<PhpClass>, propertyName: Str
         val hasField = it.findFieldByName(propertyName, true) != null
         if (hasField) { return@any true }
         val docComment= it.docComment ?: return@any false
-        val hasDocCommentProperty = docComment.propertyTags.any {
+        return@any docComment.propertyTags.any {
             it.property?.name == propertyName
         }
-        return@any hasDocCommentProperty
     }
