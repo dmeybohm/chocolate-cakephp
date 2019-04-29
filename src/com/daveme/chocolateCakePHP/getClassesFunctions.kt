@@ -122,3 +122,9 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
         .add("\\Cake\\Controller\\Component\\${fieldName}Component")
         .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
 }
+
+fun viewType(settings: Settings): PhpType {
+    return PhpType()
+        .add("\\AppView")
+        .add("${settings.appNamespace}\\View\\AppView")
+}
