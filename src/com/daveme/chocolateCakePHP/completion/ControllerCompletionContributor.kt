@@ -50,17 +50,16 @@ class ControllerCompletionContributor : CompletionContributor() {
             val controllerClassNames = classReference.type.types.filter { it.isControllerClass() }
             if (controllerClassNames.isNotEmpty()) {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
-                val modelClasses = getAllModelSubclasses(phpIndex)
-                val containingClasses = getAllAncestorTypesFromFQNs(phpIndex, controllerClassNames)
+                val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
+
                 completionResultSet.completeFromClasses(
-                    modelClasses,
+                    phpIndex.getAllModelSubclasses(),
                     insertHandler = usesHandler,
                     containingClasses = containingClasses
                 )
 
-                val componentClasses = getAllComponentSubclasses(phpIndex)
                 completionResultSet.completeFromClasses(
-                    componentClasses,
+                    phpIndex.getAllComponentSubclasses(),
                     replaceName = "Component",
                     insertHandler = componentsHandler,
                     containingClasses = containingClasses

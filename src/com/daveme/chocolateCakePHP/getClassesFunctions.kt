@@ -25,31 +25,28 @@ private val helperBlacklist = hashSetOf(
     "TextHelperTestObject"
 )
 
-fun getAllViewHelperSubclasses(phpIndex: PhpIndex): Collection<PhpClass> {
-    val cake2Subclasses = phpIndex.getAllSubclasses(VIEW_HELPER_CAKE2_PARENT_CLASS)
-    val cake3Subclasses = phpIndex.getAllSubclasses(VIEW_HELPER_CAKE3_PARENT_CLASS)
-
+fun PhpIndex.getAllViewHelperSubclasses(): Collection<PhpClass> {
+    val cake2Subclasses = getAllSubclasses(VIEW_HELPER_CAKE2_PARENT_CLASS)
+    val cake3Subclasses = getAllSubclasses(VIEW_HELPER_CAKE3_PARENT_CLASS)
     return cake2Subclasses.filter { !helperBlacklist.contains(it.name) } + cake3Subclasses
 }
 
-fun getAllModelSubclasses(phpIndex: PhpIndex): Collection<PhpClass> {
-    val cake2Subclasses = phpIndex.getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
+fun PhpIndex.getAllModelSubclasses(): Collection<PhpClass> {
+    val cake2Subclasses = getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
 //    val cake3Subclasses = phpIndex.getAllSubclasses(MODEL_CAKE3_PARENT_CLASS)
-    
     return cake2Subclasses //+ cake3Subclasses
 }
 
-fun getAllComponentSubclasses(phpIndex: PhpIndex): Collection<PhpClass> {
-    val cake2Subclasses = phpIndex.getAllSubclasses(COMPONENT_CAKE2_PARENT_CLASS)
-    val cake3Subclasses = phpIndex.getAllSubclasses(COMPONENT_CAKE3_PARENT_CLASS)
-    
+fun PhpIndex.getAllComponentSubclasses(): Collection<PhpClass> {
+    val cake2Subclasses = getAllSubclasses(COMPONENT_CAKE2_PARENT_CLASS)
+    val cake3Subclasses = getAllSubclasses(COMPONENT_CAKE3_PARENT_CLASS)
     return cake2Subclasses + cake3Subclasses
 }
 
-fun getAllAncestorTypesFromFQNs(phpIndex: PhpIndex, classes: List<String>): List<PhpClass> {
+fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> {
     val result = ArrayList<PhpClass>()
     classes.map {
-        val directClasses = phpIndex.getClassesByFQN(it)
+        val directClasses = getClassesByFQN(it)
 
         //
         // Add parent classes, traits, and interfaces:
@@ -76,41 +73,38 @@ fun getAllAncestorTypesFromFQNs(phpIndex: PhpIndex, classes: List<String>): List
     return result
 }
 
-fun viewHelperClassesFromFieldName(phpIndex: PhpIndex, settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2Helpers = phpIndex.getClassesByFQN("\\${fieldName}Helper")
-    val cake3BuiltInHelpers = phpIndex.getClassesByFQN(
+fun PhpIndex.viewHelperClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
+    val cake2Helpers = getClassesByFQN("\\${fieldName}Helper")
+    val cake3BuiltInHelpers = getClassesByFQN(
         "\\Cake\\View\\Helper\\${fieldName}Helper"
     )
-    val cake3UserHelpers = phpIndex.getClassesByFQN(
+    val cake3UserHelpers = getClassesByFQN(
         "${settings.appNamespace}\\View\\Helper\\${fieldName}Helper"
     )
-
     return cake2Helpers + cake3BuiltInHelpers + cake3UserHelpers
 }
 
-fun componentAndModelClassesFromFieldName(phpIndex: PhpIndex, settings: Settings, fieldName: String): Collection<PhpClass> =
-    componentFieldClassesFromFieldName(phpIndex, settings, fieldName) +
-            modelFieldClassesFromFieldName(phpIndex, settings, fieldName)
+fun PhpIndex.componentAndModelClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> =
+    this.componentFieldClassesFromFieldName(settings, fieldName) +
+            this.modelFieldClassesFromFieldName(settings, fieldName)
 
-fun componentFieldClassesFromFieldName(phpIndex: PhpIndex, settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2ComponentClasses = phpIndex.getClassesByFQN("\\${fieldName}Component")
+fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
+    val cake2ComponentClasses = getClassesByFQN("\\${fieldName}Component")
 
-    val cake3BuiltinComponentClasses = phpIndex.getClassesByFQN(
+    val cake3BuiltinComponentClasses = getClassesByFQN(
         "\\Cake\\Controller\\Component\\${fieldName}Component"
     )
-    val cake3UserComponentClasses = phpIndex.getClassesByFQN(
+    val cake3UserComponentClasses = getClassesByFQN(
         "${settings.appNamespace}\\Controller\\Component\\${fieldName}Component"
     )
-
     return cake2ComponentClasses + cake3BuiltinComponentClasses + cake3UserComponentClasses
 }
 
-fun modelFieldClassesFromFieldName(phpIndex: PhpIndex, settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2ModelClasses = phpIndex.getClassesByFQN("\\$fieldName")
-    val cake3ModelClasses = phpIndex.getClassesByFQN(
+fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
+    val cake2ModelClasses = getClassesByFQN("\\$fieldName")
+    val cake3ModelClasses = getClassesByFQN(
         "${settings.appNamespace}\\Model\\Table\\$fieldName"
     )
-
     return cake2ModelClasses + cake3ModelClasses
 }
 

@@ -22,7 +22,7 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider3 {
             return null
         }
         val settings = Settings.getInstance(psiElement.project)
-        if (!isCakeTemplate(settings, psiElement.containingFile.name)) {
+        if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
             return null
         }
         val classReference = psiElement.classReference ?: return null

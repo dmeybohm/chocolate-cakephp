@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.navigation
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.icons.CakeIcons
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
@@ -9,10 +8,6 @@ import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
-
-import com.daveme.chocolateCakePHP.controllerBaseName
-import com.daveme.chocolateCakePHP.findRelativeFile
-import com.daveme.chocolateCakePHP.virtualFileToPsiFile
 
 class ControllerMethodLineMarker : LineMarkerProvider {
 
@@ -28,8 +23,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val project = file.project
         val settings = Settings.getInstance(project)
         val appDir = appDirectoryFromFile(settings, file)
-        val templatePath = "View/$controllerName/${element.name}.ctp"
-        val relativeFile = findRelativeFile(appDir, templatePath) ?: return null
+        val relativeFile = templatePathToVirtualFile(settings, appDir, controllerName, element.name)
+                ?: return null
 
         val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null
         val targetElement = targetFile.firstChild
@@ -58,7 +53,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         for (element in list) {
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
-            val controllerName = controllerBaseName(virtualFile.nameWithoutExtension) ?: continue
+            val controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue
             val info = getRelatedFiles(file, controllerName, element)
             addLineMarkerUnique(collection, info)
         }

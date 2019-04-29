@@ -36,3 +36,32 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
     val pathPartsArray = pathPartsList.dropLastWhile { it.isEmpty() }.toTypedArray()
     return VfsUtil.findRelativeFile(dir.virtualFile, *pathPartsArray)
 }
+
+fun templatePathToVirtualFile(
+    settings: Settings,
+    appDir: PsiDirectory?,
+    controllerName: String,
+    controllerAction: String
+): VirtualFile? {
+    val templatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
+    var relativeFile = findRelativeFile(appDir, templatePath)
+    if (relativeFile == null) {
+        val cakeTwoTemplatePath = CakeTwo.templatePath(settings, controllerName, controllerAction)
+        relativeFile = findRelativeFile(appDir, cakeTwoTemplatePath)
+    }
+    return relativeFile
+}
+
+fun elementPathToVirtualFile(
+    settings: Settings,
+    appDir: PsiDirectory?,
+    elementPath: String
+): VirtualFile? {
+    val cakeThreeElementFilename = CakeThree.elementPath(settings, elementPath)
+    var relativeFile = findRelativeFile(appDir, cakeThreeElementFilename)
+    if (relativeFile == null) {
+        val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
+        relativeFile = findRelativeFile(appDir, cakeTwoElementFilename)
+    }
+    return relativeFile
+}

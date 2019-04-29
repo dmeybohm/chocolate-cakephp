@@ -25,7 +25,7 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
         val fieldName = fieldReference.name ?: return PsiElement.EMPTY_ARRAY
         val phpIndex = PhpIndex.getInstance(psiElement.project)
         val settings = Settings.getInstance(psiElement.project)
-        return componentAndModelClassesFromFieldName(phpIndex, settings, fieldName).toTypedArray()
+        return phpIndex.componentAndModelClassesFromFieldName(settings, fieldName).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? {

@@ -36,13 +36,13 @@ class ViewHelperCompletionContributor : CompletionContributor() {
 
             val settings = Settings.getInstance(psiElement.project)
             val parent = (psiElement.parent ?: return) as? FieldReference ?: return
-            if (!isCakeTemplate(settings, containingFile.name)) {
+            if (!containingFile.name.isCakeTemplate(settings)) {
                 return
             }
             val classReference = parent.classReference ?: return
             if (classReference.text == "\$this") {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
-                val viewHelperClasses = getAllViewHelperSubclasses(phpIndex)
+                val viewHelperClasses = phpIndex.getAllViewHelperSubclasses()
                 completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
             }
         }

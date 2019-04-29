@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.navigation
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.appDirectoryFromFile
+import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -11,11 +10,6 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import java.util.HashSet
-
-import com.daveme.chocolateCakePHP.controllerBaseName
-import com.daveme.chocolateCakePHP.viewRelativeTemplatePath
-import com.daveme.chocolateCakePHP.findRelativeFile
-import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -35,12 +29,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val virtualFile = containingFile.virtualFile
         val filename = virtualFile.nameWithoutExtension
 
-        val controllerName = controllerBaseName(filename) ?: return PsiElement.EMPTY_ARRAY
+        val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
         val settings = Settings.getInstance(project)
 
         val appDir = appDirectoryFromFile(settings, containingFile)
-        val templatePath = viewRelativeTemplatePath(settings, controllerName, psiElement.text)
-        val relativeFile = findRelativeFile(appDir, templatePath) ?: return PsiElement.EMPTY_ARRAY
+        val relativeFile = templatePathToVirtualFile(settings, appDir, controllerName, psiElement.text)
+                ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
         files.add(relativeFile)
