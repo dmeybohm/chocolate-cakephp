@@ -16,9 +16,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.lang.reflect.InvocationTargetException;
 
 class ConfigForm implements SearchableConfigurable {
-    private boolean modified;
     private Project project;
     private JPanel topPanel;
     private JLabel appDirectoryLabel;
@@ -27,6 +27,7 @@ class ConfigForm implements SearchableConfigurable {
     private JLabel appNamespaceLabel;
     private TextFieldWithCompletion appNamespaceTextField;
     private JButton appNamespaceDefault;
+    private JButton cakeTemplateExtensionDefaultButton;
     private JTextField cakeTemplateExtensionTextField;
     private Settings originalSettings;
 
@@ -35,13 +36,13 @@ class ConfigForm implements SearchableConfigurable {
     private void loadSettingsToUI(Settings settings) {
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
-//        cakeTemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
+        cakeTemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
     }
 
     private void copySettingsFromUI(Settings settings) {
         settings.setAppDirectory(appDirectoryTextField.getText());
         settings.setAppNamespace(appNamespaceTextField.getText());
-//        settings.setCakeTemplateExtension(cakeTemplateExtensionTextField.getText());
+        settings.setCakeTemplateExtension(cakeTemplateExtensionTextField.getText());
     }
 
     @Override
@@ -63,6 +64,14 @@ class ConfigForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
         loadSettingsToUI(settings);
         originalSettings = new Settings(settings);
+
+        final TextFieldWithBrowseButton appDirectoryTextField = this.appDirectoryTextField;
+        appDirectoryDefaultButton.addActionListener(e -> appDirectoryTextField.setText("src"));
+        final TextFieldWithCompletion appNamespaceTextField = this.appNamespaceTextField;
+        appNamespaceDefault.addActionListener(e -> appNamespaceTextField.setText("\\App"));
+        final JTextField cakeTemplateExtensionTextField = this.cakeTemplateExtensionTextField;
+        cakeTemplateExtensionDefaultButton.addActionListener(e -> cakeTemplateExtensionTextField.setText("ctp"));
+
         return topPanel;
     }
 
@@ -75,24 +84,31 @@ class ConfigForm implements SearchableConfigurable {
 
     public void apply() {
         Settings settings = Settings.getInstance(project);
-        copySettingsFromUI(settings);
-        modified = false;
+        copySettingsFromUI(settings);;
         this.originalSettings = new Settings(settings);
     }
 
     private void createUIComponents() {
         ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
-        PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                new NamespaceCompletionProvider(project, insertHandler);
-        appNamespaceTextField = new TextFieldWithCompletion(
-                project,
-                completionProvider,
-                "",
-                true,
-                true,
-                true,
-                true
-        );
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
+                        new NamespaceCompletionProvider(project, insertHandler);
+                appNamespaceTextField = new TextFieldWithCompletion(
+                        project,
+                        completionProvider,
+                        "",
+                        true,
+                        true,
+                        true,
+                        true
+                );
+            });
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 
     //
