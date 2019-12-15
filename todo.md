@@ -11,4 +11,3 @@ files
 - [ ] Add quickfix for undefined controller/view/component methods to add method
 - [ ] Add error for undefined controller/view/component methods/fields
 - [ ] Add something to add models/components/view helpers automatically on first new use
-- [ ] Convert to PhpTypeProvider4 to do dynamic clas lookups'
