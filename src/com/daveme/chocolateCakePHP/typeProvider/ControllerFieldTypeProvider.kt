@@ -1,5 +1,7 @@
 package com.daveme.chocolateCakePHP.typeProvider
 
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.controllerPropertyTypeFromFieldReference
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -21,16 +23,14 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
         val fieldReferenceName = psiElement.name ?: return null
-
+        val settings = Settings.getInstance(psiElement.project)
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
 
         for (type in referenceType.types) {
             if (type.contains("Controller")) {
-                return PhpType()
-                    .add("\\" + fieldReferenceName)
-                    .add("\\" + fieldReferenceName + "Component")
+                return controllerPropertyTypeFromFieldReference(settings, fieldReferenceName)
             }
         }
         return null

@@ -66,3 +66,10 @@ fun viewHelperTypeFromFieldReference(settings: Settings, fieldReferenceName: Str
         .add("${settings.appNamespace}\\View\\Helper\\${fieldReferenceName}Helper")
         .add("\\DebugKit\\View\\Helper\\${fieldReferenceName}Helper")
 }
+
+fun controllerPropertyTypeFromFieldReference(settings: Settings, fieldReferenceName: String): PhpType {
+    return PhpType().add("\\${fieldReferenceName}")
+            .add("\\${fieldReferenceName}Component")
+            .add("\\Cake\\Controller\\Component\\${fieldReferenceName}Component")
+            .add("${settings.appNamespace}\\Controller\\Component\\${fieldReferenceName}Component")
+}
