@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.typeProvider
 
-import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldReference
+import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldName
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.openapi.project.Project
@@ -29,7 +29,7 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
         for (type in referenceType.types) {
             if (type.contains("Helper")) {
                 val settings = Settings.getInstance(psiElement.project)
-                return viewHelperTypeFromFieldReference(settings, fieldReferenceName)
+                return viewHelperTypeFromFieldName(settings, fieldReferenceName)
             }
         }
         return null

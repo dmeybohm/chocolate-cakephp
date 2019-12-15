@@ -1,10 +1,6 @@
 package com.daveme.chocolateCakePHP.navigation
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.appDirectoryFromFile
-import com.daveme.chocolateCakePHP.viewElementRelativePath
-import com.daveme.chocolateCakePHP.findRelativeFile
-import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
+import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -32,8 +28,8 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         val containingFile = psiElement.containingFile
         val settings = Settings.getInstance(project)
         val appDir = appDirectoryFromFile(settings, containingFile)
-        val elementFilename = viewElementRelativePath(settings, psiElement.text)
-        val relativeFile = findRelativeFile(appDir, elementFilename) ?: return PsiElement.EMPTY_ARRAY
+        val relativeFile = elementPathToVirtualFile(settings, appDir, psiElement.text)
+                ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
         files.add(relativeFile)

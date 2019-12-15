@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.completion
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.completeFromClasses
 import com.daveme.chocolateCakePHP.isCakeTemplate
 import com.daveme.chocolateCakePHP.getAllViewHelperSubclasses
 import com.intellij.codeInsight.completion.*
@@ -35,14 +36,14 @@ class ViewHelperCompletionContributor : CompletionContributor() {
 
             val settings = Settings.getInstance(psiElement.project)
             val parent = (psiElement.parent ?: return) as? FieldReference ?: return
-            if (!isCakeTemplate(settings, containingFile.name)) {
+            if (!containingFile.name.isCakeTemplate(settings)) {
                 return
             }
             val classReference = parent.classReference ?: return
             if (classReference.text == "\$this") {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
-                val viewHelperClasses = getAllViewHelperSubclasses(phpIndex)
-                completeFromClasses(completionResultSet, viewHelperClasses, "Helper")
+                val viewHelperClasses = phpIndex.getAllViewHelperSubclasses()
+                completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
             }
         }
     }

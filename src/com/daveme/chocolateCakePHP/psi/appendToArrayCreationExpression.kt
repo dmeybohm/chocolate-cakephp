@@ -9,6 +9,7 @@ import com.intellij.util.IncorrectOperationException
 import com.jetbrains.php.lang.psi.PhpFile
 import com.jetbrains.php.lang.psi.PhpPsiElementFactory
 import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
+import com.jetbrains.php.lang.psi.elements.ArrayHashElement
 import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
@@ -19,6 +20,9 @@ fun appendToArrayCreationExpression(
     expr: ArrayCreationExpression
 ): Boolean {
     if (checkIfArrayHasValue(expr, valueToAdd)) {
+        return true
+    }
+    if (checkIfArrayHasKey(expr, valueToAdd)) {
         return true
     }
     val project = expr.project
@@ -36,6 +40,7 @@ fun appendToArrayCreationExpression(
         false
     }
 }
+
 
 private fun reformat(codeStyleManager: CodeStyleManager, file: PhpFile, expr: ArrayCreationExpression, addedLen: Int) {
     val exprTextRange = expr.textRange
@@ -83,6 +88,23 @@ private fun checkIfArrayHasValue(expr: ArrayCreationExpression, value: String): 
         if (firstPsiChild is StringLiteralExpression) {
             if (value == firstPsiChild.contents) {
                 return true
+            }
+        }
+    }
+    return false
+}
+
+private fun checkIfArrayHasKey(expr: ArrayCreationExpression, value: String): Boolean {
+    for (child in expr.children) {
+        if (child !is PhpPsiElement) {
+            continue
+        }
+        if (child is ArrayHashElement) {
+            val key = child.key ?: continue
+            if (key is StringLiteralExpression) {
+                if (value == key.contents) {
+                    return true
+                }
             }
         }
     }

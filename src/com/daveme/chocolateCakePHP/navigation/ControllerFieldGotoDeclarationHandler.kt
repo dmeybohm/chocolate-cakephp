@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.controllerFieldClasses
+import com.daveme.chocolateCakePHP.componentAndModelClassesFromFieldName
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -25,7 +25,7 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
         val fieldName = fieldReference.name ?: return PsiElement.EMPTY_ARRAY
         val phpIndex = PhpIndex.getInstance(psiElement.project)
         val settings = Settings.getInstance(psiElement.project)
-        return controllerFieldClasses(phpIndex, settings, fieldName).toTypedArray()
+        return phpIndex.componentAndModelClassesFromFieldName(settings, fieldName).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? {
