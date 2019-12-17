@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.completion
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.psi.AddValueToPropertyInsertHandler
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
@@ -32,7 +31,6 @@ class ControllerCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
-
             var parent  = psiElement.parent ?: return
             if (parent !is FieldReference) {
                 parent = findSiblingFieldReference(psiElement) ?: return
@@ -54,23 +52,20 @@ class ControllerCompletionContributor : CompletionContributor() {
 
                 completionResultSet.completeFromClasses(
                     phpIndex.getAllModelSubclasses(),
-                    insertHandler = usesHandler,
                     containingClasses = containingClasses
                 )
 
                 completionResultSet.completeFromClasses(
                     phpIndex.getAllComponentSubclasses(),
                     replaceName = "Component",
-                    insertHandler = componentsHandler,
                     containingClasses = containingClasses
                 )
             }
         }
+
     }
 
     companion object {
-        private val usesHandler = AddValueToPropertyInsertHandler("uses")
-        private val componentsHandler = AddValueToPropertyInsertHandler("components")
 
         private fun findSiblingFieldReference(element: PsiElement): PsiElement? {
             val prevSibling = element.prevSibling ?: return null

@@ -10,7 +10,6 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 fun CompletionResultSet.completeFromClasses(
     classes: Collection<PhpClass>,
     replaceName: String = "",
-    insertHandler: InsertHandler<LookupElement>? = null,
     containingClasses: List<PhpClass> = ArrayList()
 ) {
     classes.map { klass ->
@@ -21,9 +20,6 @@ fun CompletionResultSet.completeFromClasses(
         var lookupElement = LookupElementBuilder.create(replacedName)
             .withIcon(PhpIcons.FIELD)
             .withTypeText(klass.type.toString().substring(1))
-        if (insertHandler != null) {
-            lookupElement = lookupElement.withInsertHandler(insertHandler)
-        }
         this.addElement(lookupElement)
     }
 }

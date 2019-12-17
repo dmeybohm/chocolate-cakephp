@@ -22,10 +22,6 @@
     ]]>
     </description>
 
-    <change-notes>
-
-    </change-notes>
-
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
   <idea-version since-build="183.5429"/>
     <extensions defaultExtensionNs="com.intellij">
@@ -38,24 +34,24 @@
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ControllerCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ViewHelperCompletionContributor" />
+
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.navigation.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.navigation.TemplateGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.navigation.ControllerFieldGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.navigation.ViewHelperGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.navigation.ControllerComponentsGotoDeclarationHandler" />
-        <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.navigation.ControllerMethodLineMarker" />`
+
+        <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.navigation.ControllerMethodLineMarker" />
+
     </extensions>
+
     <extensions defaultExtensionNs="com.jetbrains.php">
         <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
         <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
         <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
         <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
     </extensions>
-    <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
-         on how to target different products -->
-    <!-- uncomment to enable plugin in all products
-    <depends>com.intellij.modules.lang</depends>
-    -->
+
 
     <application-components>
     </application-components>

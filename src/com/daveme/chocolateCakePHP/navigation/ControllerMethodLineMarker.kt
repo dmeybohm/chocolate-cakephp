@@ -20,6 +20,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         if (!element.access.isPublic) {
             return null
         }
+        val nameIdentifier = element.nameIdentifier ?: return null
         val project = file.project
         val settings = Settings.getInstance(project)
         val appDir = appDirectoryFromFile(settings, file)
@@ -32,7 +33,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         return NavigationGutterIconBuilder
             .create(CakeIcons.LOGO)
             .setTarget(targetElement)
-            .createLineMarkerInfo(element)
+            .createLineMarkerInfo(nameIdentifier)
     }
 
     private fun addLineMarkerUnique(collection: MutableCollection<LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {
