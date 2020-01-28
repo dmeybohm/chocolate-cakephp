@@ -21,10 +21,20 @@ import java.lang.reflect.InvocationTargetException;
 class ConfigForm implements SearchableConfigurable {
     private Project project;
     private JPanel topPanel;
-    private JLabel appDirectoryLabel;
+    private JTextField textField3;
+    private JCheckBox enableCake3SupportCheckBox;
+    private JButton defaultButton;
+    private JTextField textField1;
+    private JButton defaultButton1;
+    private JCheckBox enableCake2SupportCheckBox;
+    private JTextField textField2;
+    private JButton defaultButton2;
+    private JTextField textField4;
+    private JButton defaultButton3;
+    private JTextField textField5;
+    private JButton defaultButton4;
     private JButton appDirectoryDefaultButton;
     private TextFieldWithBrowseButton appDirectoryTextField;
-    private JLabel appNamespaceLabel;
     private TextFieldWithCompletion appNamespaceTextField;
     private JButton appNamespaceDefault;
     private JButton cakeTemplateExtensionDefaultButton;
@@ -34,15 +44,15 @@ class ConfigForm implements SearchableConfigurable {
     public ConfigForm(Project project) { this.project = project; }
 
     private void loadSettingsToUI(Settings settings) {
-        appDirectoryTextField.setText(settings.getAppDirectory());
-        appNamespaceTextField.setText(settings.getAppNamespace());
-        cakeTemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
+//        appDirectoryTextField.setText(settings.getAppDirectory());
+//        appNamespaceTextField.setText(settings.getAppNamespace());
+//        cakeTemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
     }
 
     private void copySettingsFromUI(Settings settings) {
-        settings.setAppDirectory(appDirectoryTextField.getText());
-        settings.setAppNamespace(appNamespaceTextField.getText());
-        settings.setCakeTemplateExtension(cakeTemplateExtensionTextField.getText());
+//        settings.setAppDirectory(appDirectoryTextField.getText());
+//        settings.setAppNamespace(appNamespaceTextField.getText());
+//        settings.setCakeTemplateExtension(cakeTemplateExtensionTextField.getText());
     }
 
     @Override
@@ -61,16 +71,16 @@ class ConfigForm implements SearchableConfigurable {
     @Override
     @Nullable
     public JComponent createComponent() {
-        Settings settings = Settings.getInstance(project);
-        loadSettingsToUI(settings);
-        originalSettings = new Settings(settings);
-
-        final TextFieldWithBrowseButton appDirectoryTextField = this.appDirectoryTextField;
-        appDirectoryDefaultButton.addActionListener(e -> appDirectoryTextField.setText("src"));
-        final TextFieldWithCompletion appNamespaceTextField = this.appNamespaceTextField;
-        appNamespaceDefault.addActionListener(e -> appNamespaceTextField.setText("\\App"));
-        final JTextField cakeTemplateExtensionTextField = this.cakeTemplateExtensionTextField;
-        cakeTemplateExtensionDefaultButton.addActionListener(e -> cakeTemplateExtensionTextField.setText("ctp"));
+//        Settings settings = Settings.getInstance(project);
+//        loadSettingsToUI(settings);
+//        originalSettings = new Settings(settings);
+//
+//        final TextFieldWithBrowseButton appDirectoryTextField = this.appDirectoryTextField;
+//        appDirectoryDefaultButton.addActionListener(e -> appDirectoryTextField.setText("src"));
+//        final TextFieldWithCompletion appNamespaceTextField = this.appNamespaceTextField;
+//        appNamespaceDefault.addActionListener(e -> appNamespaceTextField.setText("\\App"));
+//        final JTextField cakeTemplateExtensionTextField = this.cakeTemplateExtensionTextField;
+//        cakeTemplateExtensionDefaultButton.addActionListener(e -> cakeTemplateExtensionTextField.setText("ctp"));
 
         return topPanel;
     }
@@ -89,26 +99,26 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void createUIComponents() {
-        ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
-        try {
-            SwingUtilities.invokeAndWait(() -> {
-                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                        new NamespaceCompletionProvider(project, insertHandler);
-                appNamespaceTextField = new TextFieldWithCompletion(
-                        project,
-                        completionProvider,
-                        "",
-                        true,
-                        true,
-                        true,
-                        true
-                );
-            });
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+//        ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
+//        try {
+//            SwingUtilities.invokeAndWait(() -> {
+//                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
+//                        new NamespaceCompletionProvider(project, insertHandler);
+//                appNamespaceTextField = new TextFieldWithCompletion(
+//                        project,
+//                        completionProvider,
+//                        "",
+//                        true,
+//                        true,
+//                        true,
+//                        true
+//                );
+//            });
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        } catch (InvocationTargetException e) {
+//            e.printStackTrace();
+//        }
     }
 
     //
