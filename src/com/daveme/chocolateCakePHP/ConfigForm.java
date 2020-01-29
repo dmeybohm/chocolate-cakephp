@@ -21,38 +21,46 @@ import java.lang.reflect.InvocationTargetException;
 class ConfigForm implements SearchableConfigurable {
     private Project project;
     private JPanel topPanel;
-    private JTextField textField3;
     private JCheckBox enableCake3SupportCheckBox;
-    private JButton defaultButton;
-    private JTextField textField1;
-    private JButton defaultButton1;
+    private JButton appNamespaceDefaultButton;
+    private JTextField templateExtensionTextField;
+    private JButton templateExtensionDefaultButton;
     private JCheckBox enableCake2SupportCheckBox;
-    private JTextField textField2;
-    private JButton defaultButton2;
-    private JTextField textField4;
-    private JButton defaultButton3;
-    private JTextField textField5;
-    private JButton defaultButton4;
-    private JButton appDirectoryDefaultButton;
-    private TextFieldWithBrowseButton appDirectoryTextField;
+    private TextFieldWithBrowseButton cake2AppDirectoryTextField;
+    private JButton cake2AppDirectoryDefaultButton;
+    private JTextField cake2TemplateExtensionTextField;
+    private JButton cake2TemplateExtensionDefaultButton;
+    private TextFieldWithBrowseButton cake2PluginPathTextField;
+    private JButton cake2PluginPathDefaultButton;
+    private TextFieldWithBrowseButton pluginPathTextField;
+    private JButton pluginPathDefaultButton;
     private TextFieldWithCompletion appNamespaceTextField;
-    private JButton appNamespaceDefault;
-    private JButton cakeTemplateExtensionDefaultButton;
-    private JTextField cakeTemplateExtensionTextField;
+    private JTextField appDirectoryTextField;
+    private JButton appDirectoryDefaultButton;
+    private JPanel cake3Panel;
+    private JPanel cake2Panel;
     private Settings originalSettings;
 
     public ConfigForm(Project project) { this.project = project; }
 
     private void loadSettingsToUI(Settings settings) {
-//        appDirectoryTextField.setText(settings.getAppDirectory());
-//        appNamespaceTextField.setText(settings.getAppNamespace());
-//        cakeTemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
+        appDirectoryTextField.setText(settings.getAppDirectory());
+        appNamespaceTextField.setText(settings.getAppNamespace());
+        templateExtensionTextField.setText(settings.getCakeTemplateExtension());
+        pluginPathTextField.setText(settings.getPluginPath());
+        cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
+        cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
+        cake2PluginPathTextField.setText(settings.getCake2PluginPath());
     }
 
     private void copySettingsFromUI(Settings settings) {
-//        settings.setAppDirectory(appDirectoryTextField.getText());
-//        settings.setAppNamespace(appNamespaceTextField.getText());
-//        settings.setCakeTemplateExtension(cakeTemplateExtensionTextField.getText());
+        settings.setAppDirectory(appDirectoryTextField.getText());
+        settings.setCakeTemplateExtension(templateExtensionTextField.getText());
+        settings.setPluginPath(pluginPathTextField.getText());
+        settings.setAppNamespace(appNamespaceTextField.getText());
+        settings.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
+        settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+        settings.setCake2PluginPath(cake2PluginPathTextField.getText());
     }
 
     @Override
@@ -71,18 +79,51 @@ class ConfigForm implements SearchableConfigurable {
     @Override
     @Nullable
     public JComponent createComponent() {
-//        Settings settings = Settings.getInstance(project);
-//        loadSettingsToUI(settings);
-//        originalSettings = new Settings(settings);
-//
-//        final TextFieldWithBrowseButton appDirectoryTextField = this.appDirectoryTextField;
-//        appDirectoryDefaultButton.addActionListener(e -> appDirectoryTextField.setText("src"));
-//        final TextFieldWithCompletion appNamespaceTextField = this.appNamespaceTextField;
-//        appNamespaceDefault.addActionListener(e -> appNamespaceTextField.setText("\\App"));
-//        final JTextField cakeTemplateExtensionTextField = this.cakeTemplateExtensionTextField;
-//        cakeTemplateExtensionDefaultButton.addActionListener(e -> cakeTemplateExtensionTextField.setText("ctp"));
+        Settings settings = Settings.getInstance(project);
+        loadSettingsToUI(settings);
+        originalSettings = new Settings(settings);
+
+        appNamespaceDefaultButton.addActionListener(e ->
+                this.appNamespaceTextField.setText(Settings.DefaultAppNamespace)
+        );
+        appDirectoryDefaultButton.addActionListener(e ->
+                this.cake2AppDirectoryTextField.setText(Settings.DefaultAppDirectory)
+        );
+        templateExtensionDefaultButton.addActionListener(e ->
+                this.templateExtensionTextField.setText(Settings.DefaultCakeTemplateExtension)
+        );
+        pluginPathDefaultButton.addActionListener(e ->
+                this.pluginPathTextField.setText(Settings.DefaultPluginPath)
+        );
+        cake2AppDirectoryDefaultButton.addActionListener(e ->
+                this.cake2AppDirectoryTextField.setText(Settings.DefaultCake2AppDirectory)
+        );
+        cake2TemplateExtensionDefaultButton.addActionListener(e ->
+                this.cake2TemplateExtensionTextField.setText(Settings.DefaultCake2TemplateExtension)
+        );
+        cake2PluginPathDefaultButton.addActionListener(e ->
+                this.cake2PluginPathTextField.setText(Settings.DefaultCake2PluginPath)
+        );
+
+        // Toggle enabled/disabled for panels based on checkboxes:
+        enableCake2SupportCheckBox.addActionListener(e ->
+                this.toggleCake2State(enableCake2SupportCheckBox.isEnabled())
+        );
+        enableCake3SupportCheckBox.addActionListener(e ->
+                this.toggleCake3State(enableCake3SupportCheckBox.isEnabled())
+        );
+        toggleCake3State(settings.getCake3Enabled());
+        toggleCake2State(settings.getCake2Enabled());
 
         return topPanel;
+    }
+
+    private void toggleCake2State(boolean enabled) {
+        cake2Panel.setEnabled(enabled);
+    }
+
+    private void toggleCake3State(boolean enabled) {
+        cake3Panel.setEnabled(enabled);
     }
 
     @Override
@@ -99,26 +140,26 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void createUIComponents() {
-//        ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
-//        try {
-//            SwingUtilities.invokeAndWait(() -> {
-//                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-//                        new NamespaceCompletionProvider(project, insertHandler);
-//                appNamespaceTextField = new TextFieldWithCompletion(
-//                        project,
-//                        completionProvider,
-//                        "",
-//                        true,
-//                        true,
-//                        true,
-//                        true
-//                );
-//            });
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        } catch (InvocationTargetException e) {
-//            e.printStackTrace();
-//        }
+        ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
+                        new NamespaceCompletionProvider(project, insertHandler);
+                appNamespaceTextField = new TextFieldWithCompletion(
+                        project,
+                        completionProvider,
+                        "",
+                        true,
+                        true,
+                        true,
+                        true
+                );
+            });
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 
     //
