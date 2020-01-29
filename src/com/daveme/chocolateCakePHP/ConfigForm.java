@@ -44,20 +44,26 @@ class ConfigForm implements SearchableConfigurable {
     public ConfigForm(Project project) { this.project = project; }
 
     private void loadSettingsToUI(Settings settings) {
+        toggleCake3State(settings.getCake2Enabled());
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
         pluginPathTextField.setText(settings.getPluginPath());
+
+        toggleCake2State(settings.getCake2Enabled());
         cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
         cake2PluginPathTextField.setText(settings.getCake2PluginPath());
     }
 
     private void copySettingsFromUI(Settings settings) {
+        settings.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
         settings.setAppDirectory(appDirectoryTextField.getText());
         settings.setCakeTemplateExtension(templateExtensionTextField.getText());
         settings.setPluginPath(pluginPathTextField.getText());
         settings.setAppNamespace(appNamespaceTextField.getText());
+
+        settings.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         settings.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
         settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
         settings.setCake2PluginPath(cake2PluginPathTextField.getText());
@@ -106,24 +112,25 @@ class ConfigForm implements SearchableConfigurable {
         );
 
         // Toggle enabled/disabled for panels based on checkboxes:
-        enableCake2SupportCheckBox.addActionListener(e ->
-                this.toggleCake2State(enableCake2SupportCheckBox.isEnabled())
-        );
         enableCake3SupportCheckBox.addActionListener(e ->
-                this.toggleCake3State(enableCake3SupportCheckBox.isEnabled())
+            this.toggleCake3State(enableCake3SupportCheckBox.isSelected())
         );
-        toggleCake3State(settings.getCake3Enabled());
-        toggleCake2State(settings.getCake2Enabled());
+
+        enableCake2SupportCheckBox.addActionListener(e ->
+            this.toggleCake2State(enableCake2SupportCheckBox.isSelected())
+        );
 
         return topPanel;
     }
 
-    private void toggleCake2State(boolean enabled) {
-        cake2Panel.setEnabled(enabled);
+    private void toggleCake3State(boolean enabled) {
+        cake3Panel.setVisible(enabled);
+        enableCake3SupportCheckBox.setSelected(enabled);
     }
 
-    private void toggleCake3State(boolean enabled) {
-        cake3Panel.setEnabled(enabled);
+    private void toggleCake2State(boolean enabled) {
+        cake2Panel.setVisible(enabled);
+        enableCake2SupportCheckBox.setSelected(enabled);
     }
 
     @Override
@@ -135,7 +142,7 @@ class ConfigForm implements SearchableConfigurable {
 
     public void apply() {
         Settings settings = Settings.getInstance(project);
-        copySettingsFromUI(settings);;
+        copySettingsFromUI(settings);
         this.originalSettings = new Settings(settings);
     }
 
@@ -155,9 +162,7 @@ class ConfigForm implements SearchableConfigurable {
                         true
                 );
             });
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (InterruptedException | InvocationTargetException e) {
             e.printStackTrace();
         }
     }
