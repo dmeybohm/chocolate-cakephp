@@ -44,7 +44,7 @@ class ConfigForm implements SearchableConfigurable {
     public ConfigForm(Project project) { this.project = project; }
 
     private void loadSettingsToUI(Settings settings) {
-        toggleCake3State(settings.getCake2Enabled());
+        toggleCake3State(settings.getCake3Enabled());
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
@@ -93,7 +93,7 @@ class ConfigForm implements SearchableConfigurable {
                 this.appNamespaceTextField.setText(Settings.DefaultAppNamespace)
         );
         appDirectoryDefaultButton.addActionListener(e ->
-                this.cake2AppDirectoryTextField.setText(Settings.DefaultAppDirectory)
+                this.appDirectoryTextField.setText(Settings.DefaultAppDirectory)
         );
         templateExtensionDefaultButton.addActionListener(e ->
                 this.templateExtensionTextField.setText(Settings.DefaultCakeTemplateExtension)

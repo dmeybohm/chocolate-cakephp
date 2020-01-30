@@ -32,9 +32,13 @@ class ViewHelperCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
+            val settings = Settings.getInstance(psiElement.project)
+            if (!settings.enabled) {
+                return
+            }
+
             val containingFile = psiElement.containingFile
 
-            val settings = Settings.getInstance(psiElement.project)
             val parent = (psiElement.parent ?: return) as? FieldReference ?: return
             if (!containingFile.name.isCakeTemplate(settings)) {
                 return
@@ -42,7 +46,7 @@ class ViewHelperCompletionContributor : CompletionContributor() {
             val classReference = parent.classReference ?: return
             if (classReference.text == "\$this") {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
-                val viewHelperClasses = phpIndex.getAllViewHelperSubclasses()
+                val viewHelperClasses = phpIndex.getAllViewHelperSubclasses(settings)
                 completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
             }
         }

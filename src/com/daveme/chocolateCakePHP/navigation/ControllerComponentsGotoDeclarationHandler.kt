@@ -1,6 +1,9 @@
 package com.daveme.chocolateCakePHP.navigation
 
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.psi.findParentWithClass
+import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -15,6 +18,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
 
     override fun getGotoDeclarationTargets(psiElement: PsiElement?, i: Int, editor: Editor): Array<PsiElement>? {
         if (psiElement == null) {
+            return PsiElement.EMPTY_ARRAY
+        }
+        val settings = Settings.getInstance(psiElement.project)
+        if (!settings.enabled) {
             return PsiElement.EMPTY_ARRAY
         }
         if (!PlatformPatterns
@@ -33,10 +40,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         // we only need to check for the components and helpers properties:
         return when {
             text.contains("\$components") ->
-                phpIndex.getClassesByFQN(psiElement.text + "Component").toTypedArray()
+                phpIndex.componentFieldClassesFromFieldName(settings, psiElement.text).toTypedArray()
 
             text.contains("\$helpers") ->
-                phpIndex.getClassesByFQN(psiElement.text + "Helper").toTypedArray()
+                phpIndex.viewHelperClassesFromFieldName(settings, psiElement.text).toTypedArray()
 
             else ->
                 PsiElement.EMPTY_ARRAY

@@ -18,6 +18,11 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val project = psiElement.project
+        val settings = Settings.getInstance(project)
+        if (!settings.enabled) {
+            return PsiElement.EMPTY_ARRAY
+        }
+
         if (!PlatformPatterns
                 .psiElement(StringLiteralExpression::class.java)
                 .withLanguage(PhpLanguage.INSTANCE)
@@ -26,7 +31,6 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
-        val settings = Settings.getInstance(project)
         val appDir = appDirectoryFromFile(settings, containingFile)
         val relativeFile = elementPathToVirtualFile(settings, appDir, psiElement.text)
                 ?: return PsiElement.EMPTY_ARRAY

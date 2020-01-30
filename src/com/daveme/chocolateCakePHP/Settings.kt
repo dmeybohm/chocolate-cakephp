@@ -24,6 +24,11 @@ data class Settings(
     var cake3Enabled: Boolean = DefaultCake3Enabled
 ): PersistentStateComponent<Settings> {
 
+    val enabled: Boolean
+        get() {
+            return cake2Enabled || cake3Enabled
+        }
+
     @NonInjectable
     constructor(other: Settings): this(
             cakeTemplateExtension = other.cakeTemplateExtension,

@@ -17,7 +17,14 @@ fun String.isCakeTemplate(settings: Settings): Boolean {
     val last = lastIndexOf('.')
     if (last > 0) {
         val ext = substring(last + 1)
-        return ext == settings.cakeTemplateExtension
+        var result = false
+        if (settings.cake3Enabled) {
+            result = ext == settings.cakeTemplateExtension
+        }
+        if (!result && settings.cake2Enabled) {
+            result = ext == settings.cake2TemplateExtension
+        }
+        return result
     }
     return false
 }

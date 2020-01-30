@@ -13,10 +13,16 @@ sealed class Cake(val viewDirectory: String, val elementTop: String) {
 
 fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     var dir: PsiDirectory? = file.containingDirectory
-    // @todo determine what happens here when app directory doesn't exist
     while (dir != null) {
-        if (dir.name == settings.appDirectory || dir.name == "app") {
-            return dir
+        if (settings.cake3Enabled) {
+            if (dir.name == settings.appDirectory) {
+                return dir
+            }
+        }
+        if (settings.cake2Enabled) {
+            if (dir.name == settings.cake2AppDirectory) {
+                return dir
+            }
         }
         dir = dir.parent
     }

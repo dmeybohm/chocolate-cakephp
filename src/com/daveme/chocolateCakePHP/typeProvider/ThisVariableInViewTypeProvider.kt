@@ -21,6 +21,9 @@ class ThisVariableInViewTypeProvider : PhpTypeProvider3 {
             return null
         }
         val settings = Settings.getInstance(psiElement.project)
+        if (!settings.enabled) {
+            return null
+        }
         if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
             return null
         }

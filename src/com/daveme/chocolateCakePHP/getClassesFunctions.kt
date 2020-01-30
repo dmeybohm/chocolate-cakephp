@@ -12,7 +12,7 @@ private const val MODEL_CAKE2_PARENT_CLASS = "\\AppModel"
 private const val COMPONENT_CAKE2_PARENT_CLASS = "\\AppComponent"
 private const val COMPONENT_CAKE3_PARENT_CLASS = "\\Cake\\Controller\\Component"
 
-private val helperBlacklist = hashSetOf(
+private val cake2HelperBlackList = hashSetOf(
     "Html5TestHelper",
     "OtherHelperHelper",
     "OptionEngineHelper",
@@ -25,22 +25,37 @@ private val helperBlacklist = hashSetOf(
     "TextHelperTestObject"
 )
 
-fun PhpIndex.getAllViewHelperSubclasses(): Collection<PhpClass> {
-    val cake2Subclasses = getAllSubclasses(VIEW_HELPER_CAKE2_PARENT_CLASS)
-    val cake3Subclasses = getAllSubclasses(VIEW_HELPER_CAKE3_PARENT_CLASS)
-    return cake2Subclasses.filter { !helperBlacklist.contains(it.name) } + cake3Subclasses
+fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getAllSubclasses(VIEW_HELPER_CAKE2_PARENT_CLASS).filter {
+            !cake2HelperBlackList.contains(it.name)
+        }
+    }
+    if (settings.cake3Enabled) {
+        result += getAllSubclasses(VIEW_HELPER_CAKE3_PARENT_CLASS)
+    }
+    return result
 }
 
-fun PhpIndex.getAllModelSubclasses(): Collection<PhpClass> {
-    val cake2Subclasses = getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
+fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
+    }
 //    val cake3Subclasses = phpIndex.getAllSubclasses(MODEL_CAKE3_PARENT_CLASS)
-    return cake2Subclasses //+ cake3Subclasses
+    return result
 }
 
-fun PhpIndex.getAllComponentSubclasses(): Collection<PhpClass> {
-    val cake2Subclasses = getAllSubclasses(COMPONENT_CAKE2_PARENT_CLASS)
-    val cake3Subclasses = getAllSubclasses(COMPONENT_CAKE3_PARENT_CLASS)
-    return cake2Subclasses + cake3Subclasses
+fun PhpIndex.getAllComponentSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getAllSubclasses(COMPONENT_CAKE2_PARENT_CLASS)
+    }
+    if (settings.cake3Enabled) {
+        result += getAllSubclasses(COMPONENT_CAKE3_PARENT_CLASS)
+    }
+    return result
 }
 
 fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> {
@@ -74,14 +89,19 @@ fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> 
 }
 
 fun PhpIndex.viewHelperClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2Helpers = getClassesByFQN("\\${fieldName}Helper")
-    val cake3BuiltInHelpers = getClassesByFQN(
-        "\\Cake\\View\\Helper\\${fieldName}Helper"
-    )
-    val cake3UserHelpers = getClassesByFQN(
-        "${settings.appNamespace}\\View\\Helper\\${fieldName}Helper"
-    )
-    return cake2Helpers + cake3BuiltInHelpers + cake3UserHelpers
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getClassesByFQN("\\${fieldName}Helper")
+    }
+    if (settings.cake3Enabled) {
+        result += getClassesByFQN(
+            "\\Cake\\View\\Helper\\${fieldName}Helper"
+        )
+        result += getClassesByFQN(
+            "${settings.appNamespace}\\View\\Helper\\${fieldName}Helper"
+        )
+    }
+    return result
 }
 
 fun PhpIndex.componentAndModelClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> =
@@ -89,42 +109,68 @@ fun PhpIndex.componentAndModelClassesFromFieldName(settings: Settings, fieldName
             this.modelFieldClassesFromFieldName(settings, fieldName)
 
 fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2ComponentClasses = getClassesByFQN("\\${fieldName}Component")
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getClassesByFQN("\\${fieldName}Component")
+    }
 
-    val cake3BuiltinComponentClasses = getClassesByFQN(
-        "\\Cake\\Controller\\Component\\${fieldName}Component"
-    )
-    val cake3UserComponentClasses = getClassesByFQN(
-        "${settings.appNamespace}\\Controller\\Component\\${fieldName}Component"
-    )
-    return cake2ComponentClasses + cake3BuiltinComponentClasses + cake3UserComponentClasses
+    if (settings.cake3Enabled) {
+        result += getClassesByFQN(
+                "\\Cake\\Controller\\Component\\${fieldName}Component"
+        )
+        result += getClassesByFQN(
+                "${settings.appNamespace}\\Controller\\Component\\${fieldName}Component"
+        )
+    }
+    return result
 }
 
 fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
-    val cake2ModelClasses = getClassesByFQN("\\$fieldName")
-    val cake3ModelClasses = getClassesByFQN(
-        "${settings.appNamespace}\\Model\\Table\\$fieldName"
-    )
-    return cake2ModelClasses + cake3ModelClasses
+    val result = arrayListOf<PhpClass>()
+    if (settings.cake2Enabled) {
+        result += getClassesByFQN("\\$fieldName")
+    }
+    if (settings.cake3Enabled) {
+        result += getClassesByFQN(
+                "${settings.appNamespace}\\Model\\Table\\$fieldName"
+        )
+    }
+    return result
 }
 
 fun viewHelperTypeFromFieldName(settings: Settings, fieldName: String): PhpType {
-    return PhpType().add("\\${fieldName}Helper")
-        .add("\\Cake\\View\\Helper\\${fieldName}Helper")
-        .add("${settings.appNamespace}\\View\\Helper\\${fieldName}Helper")
-        .add("\\DebugKit\\View\\Helper\\${fieldName}Helper")
+    var result = PhpType()
+    if (settings.cake2Enabled) {
+        result = result.add("\\${fieldName}Helper")
+    }
+    if (settings.cake3Enabled) {
+        result = result.add("\\Cake\\View\\Helper\\${fieldName}Helper")
+            .add("${settings.appNamespace}\\View\\Helper\\${fieldName}Helper")
+            .add("\\DebugKit\\View\\Helper\\${fieldName}Helper")
+    }
+    return result
 }
 
 fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): PhpType {
-    return PhpType()
-        .add("\\" + fieldName)
-        .add("\\" + fieldName + "Component")
-        .add("\\Cake\\Controller\\Component\\${fieldName}Component")
-        .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
+    var result = PhpType()
+    if (settings.cake2Enabled) {
+       result = result .add("\\" + fieldName)
+            .add("\\" + fieldName + "Component")
+    }
+    if (settings.cake3Enabled) {
+        result = result.add("\\Cake\\Controller\\Component\\${fieldName}Component")
+            .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
+    }
+    return result
 }
 
 fun viewType(settings: Settings): PhpType {
-    return PhpType()
-        .add("\\AppView")
-        .add("${settings.appNamespace}\\View\\AppView")
+    var result = PhpType()
+    if (settings.cake2Enabled) {
+        result = result.add("\\AppView")
+    }
+    if (settings.cake3Enabled) {
+        result = result.add("${settings.appNamespace}\\View\\AppView")
+    }
+    return result
 }

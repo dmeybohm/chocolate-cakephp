@@ -17,6 +17,10 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
+        val settings = Settings.getInstance(psiElement.project)
+        if (!settings.enabled) {
+            return PsiElement.EMPTY_ARRAY
+        }
         if (!PlatformPatterns.psiElement().withParent(FieldReference::class.java).accepts(psiElement)) {
             return PsiElement.EMPTY_ARRAY
         }
@@ -33,7 +37,6 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         if (classReference.text == "\$this") {
             val project = psiElement.project
             val phpIndex = PhpIndex.getInstance(project)
-            val settings = Settings.getInstance(project)
             return phpIndex.viewHelperClassesFromFieldName(settings, fieldName).toTypedArray()
         }
         return PsiElement.EMPTY_ARRAY

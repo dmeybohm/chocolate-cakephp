@@ -52,6 +52,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
     override fun collectSlowLineMarkers(list: List<PsiElement>, collection: MutableCollection<LineMarkerInfo<*>>) {
         for (element in list) {
+            val settings = Settings.getInstance(element.project)
+            if (!settings.enabled) {
+                return
+            }
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
             val controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue

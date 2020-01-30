@@ -18,6 +18,10 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val project = psiElement.project
+        val settings = Settings.getInstance(project)
+        if (!settings.enabled) {
+            return PsiElement.EMPTY_ARRAY
+        }
         if (!PlatformPatterns
                 .psiElement(StringLiteralExpression::class.java)
                 .withLanguage(PhpLanguage.INSTANCE)
@@ -30,7 +34,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val filename = virtualFile.nameWithoutExtension
 
         val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
-        val settings = Settings.getInstance(project)
 
         val appDir = appDirectoryFromFile(settings, containingFile)
         val relativeFile = templatePathToVirtualFile(settings, appDir, controllerName, psiElement.text)

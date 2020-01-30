@@ -37,6 +37,10 @@ class ControllerCompletionContributor : CompletionContributor() {
             }
 
             val fieldReference = parent as FieldReference
+            val settings = Settings.getInstance(psiElement.project)
+            if (!settings.enabled) {
+                return
+            }
 
             // Don't add completion for nested classes: (e.g. $this->FooBar->FooBar):
             if (fieldReference.firstChild is FieldReference) {
@@ -51,12 +55,12 @@ class ControllerCompletionContributor : CompletionContributor() {
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
 
                 completionResultSet.completeFromClasses(
-                    phpIndex.getAllModelSubclasses(),
+                    phpIndex.getAllModelSubclasses(settings),
                     containingClasses = containingClasses
                 )
 
                 completionResultSet.completeFromClasses(
-                    phpIndex.getAllComponentSubclasses(),
+                    phpIndex.getAllComponentSubclasses(settings),
                     replaceName = "Component",
                     containingClasses = containingClasses
                 )

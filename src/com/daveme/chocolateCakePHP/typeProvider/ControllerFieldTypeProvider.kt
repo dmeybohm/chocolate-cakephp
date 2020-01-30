@@ -21,6 +21,10 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
         if (psiElement !is FieldReference) {
             return null
         }
+        val settings = Settings.getInstance(psiElement.project)
+        if (!settings.enabled) {
+            return null
+        }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
         val fieldReferenceName = psiElement.name ?: return null
@@ -34,7 +38,6 @@ class ControllerFieldTypeProvider : PhpTypeProvider3 {
             return null
         }
 
-        val settings = Settings.getInstance(psiElement.project)
         for (type in referenceType.types) {
             if (type.isControllerClass()) {
                 return componentOrModelTypeFromFieldName(settings, fieldReferenceName)

@@ -20,6 +20,10 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
         if (psiElement !is FieldReference) {
             return null
         }
+        val settings = Settings.getInstance(psiElement.project)
+        if (!settings.enabled) {
+            return null
+        }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
         val fieldReferenceName = psiElement.name ?: return null
@@ -28,7 +32,6 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider3 {
         }
         for (type in referenceType.types) {
             if (type.contains("Helper")) {
-                val settings = Settings.getInstance(psiElement.project)
                 return viewHelperTypeFromFieldName(settings, fieldReferenceName)
             }
         }
