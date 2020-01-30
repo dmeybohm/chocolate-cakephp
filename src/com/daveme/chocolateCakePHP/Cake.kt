@@ -4,11 +4,8 @@ import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
 
 sealed class Cake(val viewDirectory: String, val elementTop: String) {
-    fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-        "$viewDirectory/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
-
-    fun elementPath(settings: Settings, elementPath: String): String =
-        "$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
+    abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
+    abstract fun elementPath(settings: Settings, elementPath: String): String
 }
 
 fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
@@ -29,5 +26,18 @@ fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     return null
 }
 
-object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element")
-object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements")
+object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element") {
+    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
+        "$viewDirectory/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
+
+    override fun elementPath(settings: Settings, elementPath: String): String =
+        "$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
+}
+
+object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements") {
+    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
+            "${CakeThree.viewDirectory}/$controllerName/$controllerAction.${settings.cake2TemplateExtension}"
+
+    override fun elementPath(settings: Settings, elementPath: String): String =
+            "${CakeThree.viewDirectory}/${CakeThree.elementTop}/$elementPath.${settings.cake2TemplateExtension}"
+}
