@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
-import com.daveme.chocolateCakePHP.psi.findParentWithClass
+import com.daveme.chocolateCakePHP.findParentWithClass
 import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext

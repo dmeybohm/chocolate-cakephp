@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.psi
+package com.daveme.chocolateCakePHP
 
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
