@@ -21,8 +21,8 @@ fun String.isCakeTemplate(settings: Settings): Boolean {
         if (settings.cake3Enabled) {
             result = ext == settings.cakeTemplateExtension
         }
-        if (!result && settings.cake2Enabled) {
-            result = ext == settings.cake2TemplateExtension
+        if (settings.cake2Enabled) {
+            result = result || ext == settings.cake2TemplateExtension
         }
         return result
     }

@@ -36,8 +36,8 @@ object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element") {
 
 object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-            "${CakeThree.viewDirectory}/$controllerName/$controllerAction.${settings.cake2TemplateExtension}"
+            "${viewDirectory}/$controllerName/$controllerAction.${settings.cake2TemplateExtension}"
 
     override fun elementPath(settings: Settings, elementPath: String): String =
-            "${CakeThree.viewDirectory}/${CakeThree.elementTop}/$elementPath.${settings.cake2TemplateExtension}"
+            "${viewDirectory}/${elementTop}/$elementPath.${settings.cake2TemplateExtension}"
 }

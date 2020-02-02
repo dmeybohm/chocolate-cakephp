@@ -54,10 +54,12 @@ data class Settings(
         const val DefaultCakeTemplateExtension = "ctp"
         const val DefaultAppDirectory = "src"
         const val DefaultAppNamespace = "\\App"
-        const val DefaultPluginPath = "src/Plugin"
+        const val DefaultPluginPath = "plugins"
+
         const val DefaultCake2AppDirectory = "app"
         const val DefaultCake2TemplateExtension = "ctp"
         const val DefaultCake2PluginPath = "app/Plugin"
+
         const val DefaultCake2Enabled = true   // todo calculate these dynamically
         const val DefaultCake3Enabled = true   // todo calculate these dynamically
 
