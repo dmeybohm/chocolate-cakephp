@@ -10,7 +10,7 @@ import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 
-class ViewHelperCompletionContributor : CompletionContributor() {
+class ViewHelperInViewCompletionContributor : CompletionContributor() {
     init {
         extend(
             CompletionType.BASIC,
