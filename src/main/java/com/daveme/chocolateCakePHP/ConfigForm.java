@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
+import com.daveme.chocolateCakePHP.Settings;
 import com.intellij.codeInsight.completion.CompletionResultSet;
 import com.intellij.codeInsight.completion.InsertHandler;
 import com.intellij.codeInsight.completion.InsertionContext;

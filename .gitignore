@@ -1,5 +1,8 @@
 atlassian-ide-plugin.xml
 ChocolateCakePHP.jar
-.idea/workspace.xml
 lib/
 out/
+build/
+gradle/
+.gradle/
+.idea

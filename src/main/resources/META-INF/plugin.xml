@@ -8,7 +8,7 @@
       Autocompletion and navigation for CakePHP.<br><br>
 
       Most of the features support Cake 2, but some have been implemented for Cake 3. Work on this is ongoing.<br><br>
-      
+
       Current features:
 
       <ul>
@@ -23,7 +23,7 @@
     </description>
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-  <idea-version since-build="193.3519.25"/>
+    <idea-version since-build="193.3519.25"/>
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="com.daveme.chocolateCakePHP.Settings" />
 
@@ -57,9 +57,9 @@
     </application-components>
 
     <project-components>
-<!--        <component>-->
-<!--            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>-->
-<!--        </component>-->
+        <!--        <component>-->
+        <!--            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>-->
+        <!--        </component>-->
 
     </project-components>
 
