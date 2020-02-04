@@ -68,7 +68,7 @@ fun elementPathToVirtualFile(
         relativeFile = findRelativeFile(appDir, cakeThreeElementFilename)
     }
     if (relativeFile == null) {
-        if (settings.cake3Enabled) {
+        if (settings.cake2Enabled) {
             val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
             relativeFile = findRelativeFile(appDir, cakeTwoElementFilename)
         }
