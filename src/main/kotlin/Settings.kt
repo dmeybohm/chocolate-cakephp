@@ -21,7 +21,8 @@ data class Settings(
     var cake2TemplateExtension: String = DefaultCake2TemplateExtension,
     var cake2PluginPath: String = DefaultCake2PluginPath,
     var cake2Enabled: Boolean = DefaultCake2Enabled,
-    var cake3Enabled: Boolean = DefaultCake3Enabled
+    var cake3Enabled: Boolean = DefaultCake3Enabled,
+    var pluginEntries: List<PluginEntry> = DefaultPluginEntries
 ): PersistentStateComponent<Settings> {
 
     val enabled: Boolean
@@ -62,6 +63,11 @@ data class Settings(
 
         const val DefaultCake2Enabled = true   // todo calculate these dynamically
         const val DefaultCake3Enabled = true   // todo calculate these dynamically
+
+        val DefaultPluginEntries = listOf(
+            PluginEntry("\\DebugKit"),
+            PluginEntry("\\OtherTest")
+        )
 
         @JvmStatic
         fun getInstance(project: Project): Settings {
