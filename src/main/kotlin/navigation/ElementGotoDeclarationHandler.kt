@@ -31,8 +31,8 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
-        val appDir = appDirectoryFromFile(settings, containingFile)
-        val relativeFile = elementPathToVirtualFile(settings, appDir, psiElement.text)
+        val pluginOrAppDir = pluginOrAppDirectoryFromFile(settings, containingFile)
+        val relativeFile = elementPathToVirtualFile(settings, pluginOrAppDir, psiElement.text)
                 ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()

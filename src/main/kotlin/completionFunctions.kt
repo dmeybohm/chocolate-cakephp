@@ -8,7 +8,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 fun CompletionResultSet.completeFromClasses(
     classes: Collection<PhpClass>,
     replaceName: String = "",
-    containingClasses: List<PhpClass> = ArrayList()
+    containingClasses: List<PhpClass> = arrayListOf()
 ) {
     classes.map { klass ->
         val replacedName = klass.name.chopFromEnd(replaceName)
@@ -26,7 +26,7 @@ private fun hasFieldAlready(containingClasses: List<PhpClass>, propertyName: Str
     containingClasses.any {
         val hasField = it.findFieldByName(propertyName, true) != null
         if (hasField) { return@any true }
-        val docComment= it.docComment ?: return@any false
+        val docComment = it.docComment ?: return@any false
         // todo: filter private properties
         return@any docComment.propertyTags.any {
             it.property?.name == propertyName

@@ -39,19 +39,19 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
 
 fun templatePathToVirtualFile(
     settings: Settings,
-    appDir: PsiDirectory?,
+    appOrPluginDir: PsiDirectory?,
     controllerName: String,
     controllerAction: String
 ): VirtualFile? {
     var relativeFile: VirtualFile? = null
     if (settings.cake3Enabled) {
         val templatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
-        relativeFile = findRelativeFile(appDir, templatePath)
+        relativeFile = findRelativeFile(appOrPluginDir, templatePath)
     }
     if (relativeFile == null) {
         if (settings.cake2Enabled) {
             val cakeTwoTemplatePath = CakeTwo.templatePath(settings, controllerName, controllerAction)
-            relativeFile = findRelativeFile(appDir, cakeTwoTemplatePath)
+            relativeFile = findRelativeFile(appOrPluginDir, cakeTwoTemplatePath)
         }
     }
     return relativeFile
