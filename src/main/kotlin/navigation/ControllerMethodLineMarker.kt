@@ -23,8 +23,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val nameIdentifier = element.nameIdentifier ?: return null
         val project = file.project
         val settings = Settings.getInstance(project)
-        val appDir = appDirectoryFromFile(settings, file)
-        val relativeFile = templatePathToVirtualFile(settings, appDir, controllerName, element.name)
+        val pluginOrAppDir = pluginOrAppDirectoryFromFile(settings, file)
+        val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, element.name)
                 ?: return null
 
         val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null

@@ -8,6 +8,26 @@ sealed class Cake(val viewDirectory: String, val elementTop: String) {
     abstract fun elementPath(settings: Settings, elementPath: String): String
 }
 
+fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+    val pluginDir = pluginDirectoryFromFile(settings, file) ?: return appDirectoryFromFile(settings, file)
+    return pluginDir
+}
+
+fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+    var first: PsiDirectory? = file.containingDirectory
+    var second = first?.parent
+    var third = second?.parent
+    while (third != null && third.name != settings.pluginPath) {
+        first = second
+        second = third
+        third = third.parent
+    }
+    if (third?.name == settings.pluginPath) {
+        return first
+    }
+    return null
+}
+
 fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     var dir: PsiDirectory? = file.containingDirectory
     while (dir != null) {

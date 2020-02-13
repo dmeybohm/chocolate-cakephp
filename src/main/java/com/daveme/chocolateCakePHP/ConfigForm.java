@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.Settings;
 import com.intellij.codeInsight.completion.CompletionResultSet;
 import com.intellij.codeInsight.completion.InsertHandler;
 import com.intellij.codeInsight.completion.InsertionContext;
@@ -31,8 +30,6 @@ class ConfigForm implements SearchableConfigurable {
     private JButton cake2AppDirectoryDefaultButton;
     private JTextField cake2TemplateExtensionTextField;
     private JButton cake2TemplateExtensionDefaultButton;
-    private TextFieldWithBrowseButton cake2PluginPathTextField;
-    private JButton cake2PluginPathDefaultButton;
     private TextFieldWithBrowseButton pluginPathTextField;
     private JButton pluginPathDefaultButton;
     private TextFieldWithCompletion appNamespaceTextField;
@@ -54,7 +51,6 @@ class ConfigForm implements SearchableConfigurable {
         toggleCake2State(settings.getCake2Enabled());
         cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
-        cake2PluginPathTextField.setText(settings.getCake2PluginPath());
     }
 
     private void copySettingsFromUI(Settings settings) {
@@ -67,7 +63,6 @@ class ConfigForm implements SearchableConfigurable {
         settings.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         settings.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
         settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
-        settings.setCake2PluginPath(cake2PluginPathTextField.getText());
     }
 
     @Override
@@ -107,9 +102,6 @@ class ConfigForm implements SearchableConfigurable {
         );
         cake2TemplateExtensionDefaultButton.addActionListener(e ->
                 this.cake2TemplateExtensionTextField.setText(Settings.DefaultCake2TemplateExtension)
-        );
-        cake2PluginPathDefaultButton.addActionListener(e ->
-                this.cake2PluginPathTextField.setText(Settings.DefaultCake2PluginPath)
         );
 
         // Toggle enabled/disabled for panels based on checkboxes:
