@@ -9,13 +9,15 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
-import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3
+import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
-class ControllerFieldTypeProvider : PhpTypeProvider3 {
+class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
         return 0.toChar()
     }
+
+    override fun complete(str: String?, project: Project?): PhpType? = null
 
     override fun getType(psiElement: PsiElement): PhpType? {
         if (psiElement !is FieldReference) {

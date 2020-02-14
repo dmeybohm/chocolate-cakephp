@@ -46,10 +46,10 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains.php">
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
     </extensions>
 
 
