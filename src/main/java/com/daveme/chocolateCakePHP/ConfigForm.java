@@ -7,6 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
+import com.intellij.ui.table.TableView;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.completion.PhpCompletionUtil;
@@ -17,10 +18,13 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 
 class ConfigForm implements SearchableConfigurable {
     private Project project;
     private JPanel topPanel;
+    private TableView<PluginEntry> pluginTableView;
     private JCheckBox enableCake3SupportCheckBox;
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
@@ -37,9 +41,14 @@ class ConfigForm implements SearchableConfigurable {
     private JButton appDirectoryDefaultButton;
     private JPanel cake3Panel;
     private JPanel cake2Panel;
+    private JPanel pluginsPanel;
+    private JTable pluginsEnabledTable;
+    private PluginTableModel pluginTableModel;
     private Settings originalSettings;
-
-    public ConfigForm(Project project) { this.project = project; }
+     
+    public ConfigForm(Project project) {
+        this.project = project;
+    }
 
     private void loadSettingsToUI(Settings settings) {
         toggleCake3State(settings.getCake3Enabled());
@@ -51,6 +60,14 @@ class ConfigForm implements SearchableConfigurable {
         toggleCake2State(settings.getCake2Enabled());
         cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
+        pluginsEnabledTable.setModel(pluginTableModel);
+    }
+
+    private ListModel<PluginEntry> listModelFromPluginEntries(List<PluginEntry> pluginEntries) {
+        DefaultListModel<PluginEntry> listModel = new DefaultListModel<>();
+        listModel.clear();
+        listModel.addAll(pluginEntries);
+        return listModel;
     }
 
     private void copySettingsFromUI(Settings settings) {
@@ -63,6 +80,14 @@ class ConfigForm implements SearchableConfigurable {
         settings.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         settings.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
         settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+    }
+
+    private List<PluginEntry> pluginEntryListFromListModel(ListModel<PluginEntry> listModel) {
+        List<PluginEntry> pluginEntries = new ArrayList<>();
+        for (int i = 0; i < listModel.getSize(); i++) {
+            pluginEntries.add(listModel.getElementAt(i));
+        }
+        return pluginEntries;
     }
 
     @Override
@@ -82,6 +107,7 @@ class ConfigForm implements SearchableConfigurable {
     @Nullable
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
+        pluginTableModel = PluginTableModel.fromSettings(settings);
         loadSettingsToUI(settings);
         originalSettings = new Settings(settings);
 
