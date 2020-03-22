@@ -41,9 +41,6 @@ class ConfigForm implements SearchableConfigurable {
     private JButton appDirectoryDefaultButton;
     private JPanel cake3Panel;
     private JPanel cake2Panel;
-    private JPanel pluginsPanel;
-    private JTable pluginsEnabledTable;
-    private PluginTableModel pluginTableModel;
     private Settings originalSettings;
      
     public ConfigForm(Project project) {
@@ -60,14 +57,6 @@ class ConfigForm implements SearchableConfigurable {
         toggleCake2State(settings.getCake2Enabled());
         cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
-        pluginsEnabledTable.setModel(pluginTableModel);
-    }
-
-    private ListModel<PluginEntry> listModelFromPluginEntries(List<PluginEntry> pluginEntries) {
-        DefaultListModel<PluginEntry> listModel = new DefaultListModel<>();
-        listModel.clear();
-        listModel.addAll(pluginEntries);
-        return listModel;
     }
 
     private void copySettingsFromUI(Settings settings) {
@@ -82,14 +71,6 @@ class ConfigForm implements SearchableConfigurable {
         settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
     }
 
-    private List<PluginEntry> pluginEntryListFromListModel(ListModel<PluginEntry> listModel) {
-        List<PluginEntry> pluginEntries = new ArrayList<>();
-        for (int i = 0; i < listModel.getSize(); i++) {
-            pluginEntries.add(listModel.getElementAt(i));
-        }
-        return pluginEntries;
-    }
-
     @Override
     @NotNull
     @Nls
@@ -100,14 +81,19 @@ class ConfigForm implements SearchableConfigurable {
     @Nls
     @Nullable
     public String getDisplayName() {
-        return null;
+        return "Chocolate CakePHP";
+    }
+
+    @Override
+    public void disposeUIResources() {
+
     }
 
     @Override
     @Nullable
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
-        pluginTableModel = PluginTableModel.fromSettings(settings);
+
         loadSettingsToUI(settings);
         originalSettings = new Settings(settings);
 

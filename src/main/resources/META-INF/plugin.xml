@@ -29,8 +29,12 @@
 
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
-                             id="chocolatecakephp.Settings"
+                             id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
+        <projectConfigurable parentId="chocolatecakephp.ConfigForm"
+                             displayName="CakePHP Plugins"
+                             id="chocolatecakephp.PluginForm"
+                             instance="com.daveme.chocolateCakePHP.PluginForm" />
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ControllerCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ViewHelperInViewCompletionContributor" />
