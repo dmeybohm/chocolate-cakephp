@@ -1,25 +1,19 @@
 package com.daveme.chocolateCakePHP;
 
-import com.intellij.codeInsight.completion.CompletionResultSet;
-import com.intellij.codeInsight.completion.InsertHandler;
-import com.intellij.codeInsight.completion.InsertionContext;
-import com.intellij.codeInsight.lookup.LookupElement;
+import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
+import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.table.TableView;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
-import com.jetbrains.php.PhpIndex;
 import com.jetbrains.php.completion.PhpCompletionUtil;
-import com.jetbrains.php.completion.insert.PhpInsertHandlerUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
 
 class ConfigForm implements SearchableConfigurable {
     private Project project;
@@ -152,11 +146,11 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void createUIComponents() {
-        ConfigFormInsertHandler insertHandler = new ConfigFormInsertHandler();
+        FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
         try {
             SwingUtilities.invokeAndWait(() -> {
                 PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                        new NamespaceCompletionProvider(project, insertHandler);
+                        new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
                 appNamespaceTextField = new TextFieldWithCompletion(
                         project,
                         completionProvider,
@@ -172,36 +166,4 @@ class ConfigForm implements SearchableConfigurable {
         }
     }
 
-    //
-    // Completion provider for the class text fields.
-    //
-    static class NamespaceCompletionProvider extends PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider {
-        private Project project;
-        private ConfigFormInsertHandler handler;
-
-        NamespaceCompletionProvider(Project project, ConfigFormInsertHandler handler) {
-            this.project = project;
-            this.handler = handler;
-        }
-
-        @Override
-        protected void addCompletionVariants(@NotNull String namespaceName, @NotNull String prefix, @NotNull CompletionResultSet completionResultSet) {
-            PhpIndex phpIndex = PhpIndex.getInstance(project);
-            PhpCompletionUtil.addSubNamespaces(namespaceName + "\\", completionResultSet, phpIndex, handler);
-            completionResultSet.stopHere();
-        }
-    }
-
-    //
-    // Insertion handler for the class text fields.
-    //
-    static class ConfigFormInsertHandler implements InsertHandler<LookupElement> {
-        @Override
-        public void handleInsert(@NotNull InsertionContext insertionContext, @NotNull LookupElement lookupElement) {
-            Object object = lookupElement.getObject();
-            if (object instanceof String) {
-                PhpInsertHandlerUtil.insertQualifier(insertionContext, (String) object);
-            }
-        }
-    }
 }

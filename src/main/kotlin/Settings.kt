@@ -65,8 +65,7 @@ data class Settings(
         const val DefaultCake3Enabled = true   // todo calculate these dynamically
 
         val DefaultPluginEntries = listOf(
-            PluginEntry("\\DebugKit"),
-            PluginEntry("\\OtherTest")
+            PluginEntry("\\DebugKit")
         )
 
         @JvmStatic
