@@ -41,6 +41,7 @@ compileTestKotlin {
 
 patchPluginXml {
     changeNotes """
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>"""
+     <li>Added plugin support for CakePHP 3</li>
+     <li>Made Cake 2 and Cake 3 support individually toggleable per project.
+     """
 }

@@ -8,13 +8,15 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
-import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider3
+import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
-class ThisVariableInViewTypeProvider : PhpTypeProvider3 {
+class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
         return 0.toChar()
     }
+
+    override fun complete(p0: String?, p1: Project?): PhpType? = null
 
     override fun getType(psiElement: PsiElement): PhpType? {
         if (psiElement !is Variable) {

@@ -2,12 +2,12 @@
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
     <version>0.6.0</version>
-    <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
+    <vendor email="dmeybohm@gmail.com" url="https://github.com/dmeybohm">David Meybohm</vendor>
 
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      Most of the features support Cake 2, but some have been implemented for Cake 3. Work on this is ongoing.<br><br>
+      This supports Cake 3 and Cake 2. <br><br>
 
       Current features:
 
@@ -29,8 +29,12 @@
 
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
-                             id="chocolatecakephp.Settings"
+                             id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
+        <projectConfigurable parentId="chocolatecakephp.ConfigForm"
+                             displayName="CakePHP 3 Plugins"
+                             id="chocolatecakephp.PluginForm"
+                             instance="com.daveme.chocolateCakePHP.PluginForm" />
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ControllerCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.completion.ViewHelperInViewCompletionContributor" />
@@ -46,22 +50,11 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains.php">
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
-        <typeProvider3 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ControllerFieldTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
     </extensions>
-
-
-    <application-components>
-    </application-components>
-
-    <project-components>
-        <!--        <component>-->
-        <!--            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>-->
-        <!--        </component>-->
-
-    </project-components>
 
     <actions>
         <!-- Add your actions here -->

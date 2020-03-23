@@ -35,3 +35,5 @@ fun String.controllerBaseName(): String? =
     else
         substring(0, length - "Controller".length)
 
+fun String.withStartingBackslash(): String =
+    if (startsWith("\\")) this else "\\" + this
