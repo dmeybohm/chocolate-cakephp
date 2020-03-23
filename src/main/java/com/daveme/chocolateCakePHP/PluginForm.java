@@ -11,6 +11,7 @@ import com.intellij.util.ui.ElementProducer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
+import java.awt.*;
 import java.util.Collection;
 
 public class PluginForm implements SearchableConfigurable {
@@ -22,7 +23,7 @@ public class PluginForm implements SearchableConfigurable {
     private JPanel tableViewPanel;
     private JButton pluginPathDefaultButton;
     private JTextField pluginPathTextField;
-    private JLabel pluginPathLabel;
+    private JPanel headlinePanelForPlugins;
 
     public PluginForm(Project project) {
         this.project = project;
@@ -46,8 +47,7 @@ public class PluginForm implements SearchableConfigurable {
         pluginTableModel = PluginTableModel.fromSettings(settings);
         pluginPathTextField.setText(settings.getPluginPath());
 
-        this.tableView = new TableView<>();
-        tableView.setModel(pluginTableModel);
+        this.tableView = new TableView<>(pluginTableModel);
         ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<PluginEntry>() {
             @Override
             public PluginEntry createElement() {
@@ -89,7 +89,11 @@ public class PluginForm implements SearchableConfigurable {
         decorator.disableUpAction();
         decorator.disableDownAction();
 
-        tableViewPanel.add(decorator.createPanel());
+        tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
+
+        pluginPathDefaultButton.addActionListener(e ->
+                this.pluginPathTextField.setText(Settings.DefaultPluginPath)
+        );
 
         return topPanel;
     }

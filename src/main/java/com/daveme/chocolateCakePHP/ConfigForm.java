@@ -5,7 +5,6 @@ import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvi
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
-import com.intellij.ui.table.TableView;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import com.jetbrains.php.completion.PhpCompletionUtil;
 import org.jetbrains.annotations.Nls;
@@ -18,18 +17,15 @@ import java.lang.reflect.InvocationTargetException;
 class ConfigForm implements SearchableConfigurable {
     private Project project;
     private JPanel topPanel;
-    private TableView<PluginEntry> pluginTableView;
     private JCheckBox enableCake3SupportCheckBox;
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
     private JButton templateExtensionDefaultButton;
     private JCheckBox enableCake2SupportCheckBox;
-    private TextFieldWithBrowseButton cake2AppDirectoryTextField;
+    private JTextField cake2AppDirectoryTextField;
     private JButton cake2AppDirectoryDefaultButton;
     private JTextField cake2TemplateExtensionTextField;
     private JButton cake2TemplateExtensionDefaultButton;
-    private TextFieldWithBrowseButton pluginPathTextField;
-    private JButton pluginPathDefaultButton;
     private TextFieldWithCompletion appNamespaceTextField;
     private JTextField appDirectoryTextField;
     private JButton appDirectoryDefaultButton;
@@ -46,7 +42,6 @@ class ConfigForm implements SearchableConfigurable {
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
-        pluginPathTextField.setText(settings.getPluginPath());
 
         toggleCake2State(settings.getCake2Enabled());
         cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
@@ -57,7 +52,6 @@ class ConfigForm implements SearchableConfigurable {
         settings.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
         settings.setAppDirectory(appDirectoryTextField.getText());
         settings.setCakeTemplateExtension(templateExtensionTextField.getText());
-        settings.setPluginPath(pluginPathTextField.getText());
         settings.setAppNamespace(appNamespaceTextField.getText());
 
         settings.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
@@ -99,9 +93,6 @@ class ConfigForm implements SearchableConfigurable {
         );
         templateExtensionDefaultButton.addActionListener(e ->
                 this.templateExtensionTextField.setText(Settings.DefaultCakeTemplateExtension)
-        );
-        pluginPathDefaultButton.addActionListener(e ->
-                this.pluginPathTextField.setText(Settings.DefaultPluginPath)
         );
         cake2AppDirectoryDefaultButton.addActionListener(e ->
                 this.cake2AppDirectoryTextField.setText(Settings.DefaultCake2AppDirectory)
