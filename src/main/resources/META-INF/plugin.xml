@@ -2,12 +2,12 @@
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
     <version>0.6.0</version>
-    <vendor email="dmeybohm@gmail.com" url="">David Meybohm</vendor>
+    <vendor email="dmeybohm@gmail.com" url="https://github.com/dmeybohm">David Meybohm</vendor>
 
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      Most of the features support Cake 2, but some have been implemented for Cake 3. Work on this is ongoing.<br><br>
+      This supports Cake 3 and Cake 2. <br><br>
 
       Current features:
 
@@ -55,17 +55,6 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ViewHelperInViewHelperTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.typeProvider.ThisVariableInViewTypeProvider" />
     </extensions>
-
-
-    <application-components>
-    </application-components>
-
-    <project-components>
-        <!--        <component>-->
-        <!--            <implementation-class>com.daveme.intellij.chocolateCakePHP.components.ChocolateCakeProjectComponent</implementation-class>-->
-        <!--        </component>-->
-
-    </project-components>
 
     <actions>
         <!-- Add your actions here -->
