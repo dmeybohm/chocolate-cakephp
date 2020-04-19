@@ -63,20 +63,25 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setEditAction(action -> {
             PluginEntry selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected.getNamespace());
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected);
+            dialog.addTextFieldListener(newEntry -> {
+                String namespace = newEntry.getNamespace();
+                String withBackslash = namespace.startsWith("\\") ? namespace : "\\" + namespace;
+                PluginEntry newPluginEntry = new PluginEntry(withBackslash, newEntry.getPath());
                 pluginTableModel.setValueAt(newPluginEntry, selectedRow, 0);
             });
             dialog.setVisible(true);
         });
 
         decorator.setAddAction(action -> {
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, "");
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
+                    project,
+                    new PluginEntry("", "")
+            );
+            dialog.addTextFieldListener(newEntry -> {
+                String namespace = newEntry.getNamespace();
+                String withBackslash = namespace.startsWith("\\") ? namespace : "\\" + namespace;
+                PluginEntry newPluginEntry = new PluginEntry(withBackslash, newEntry.getPath());
                 pluginTableModel.addRow(newPluginEntry);
             });
             dialog.setVisible(true);

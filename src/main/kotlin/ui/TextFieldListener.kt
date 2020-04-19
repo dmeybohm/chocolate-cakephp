@@ -1,5 +1,5 @@
 package com.daveme.chocolateCakePHP.ui
 
-interface TextFieldListener {
-    fun actionPerformed(fieldText: String)
+interface TextFieldListener<Type> {
+    fun actionPerformed(listenerType: Type)
 }
