@@ -24,7 +24,7 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version 'IU-2019.3.1'
+    version 'IU-2019.3.2'
     plugins = [
         "com.jetbrains.php:193.5662.63",
         "java"

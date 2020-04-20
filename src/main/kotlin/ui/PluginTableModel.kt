@@ -35,7 +35,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnCount(): Int {
-        return 2
+        return myColumns.size
     }
 
     override fun getColumnName(i: Int): String {
@@ -82,7 +82,7 @@ class PluginTableModel private constructor(
             )
 
         @JvmStatic
-        fun fromSettings(settings: Settings): PluginTableModel {
+        fun createFromSettings(settings: Settings): PluginTableModel {
             return PluginTableModel(settings.pluginEntries.toMutableList(), myColumns)
         }
     }

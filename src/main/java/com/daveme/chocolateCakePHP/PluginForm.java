@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.PluginTableModel;
-import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
@@ -12,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collection;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -44,7 +42,7 @@ public class PluginForm implements SearchableConfigurable {
     @Override
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
-        pluginTableModel = PluginTableModel.fromSettings(settings);
+        pluginTableModel = PluginTableModel.createFromSettings(settings);
         pluginPathTextField.setText(settings.getPluginPath());
 
         this.tableView = new TableView<>(pluginTableModel);
