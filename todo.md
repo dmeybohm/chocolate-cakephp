@@ -1,21 +1,17 @@
-### Planned for 0.6.0
-
-- [ ] Make enabling of the projects/modules turned on by finding some cake-specific files
-    - Make Cake 2 and Cake 3 support individually toggleable
-    - use ProjectComponent to find some trigger files and set whether each is enabled by default,
-      but only if user hasn't changed the default
-- [ ] Add configurable navigation to components/models/views inside Cake plugins for 
-      Cake 2 and Cake 3
-
 ### Planned for 0.7.0
 
+- [ ] Add ability to add more paths to view navigation for Cake3 plugins
+    - Use separate config sheet in preferences
 - [ ] Add completion contributor for view helpers inside view helpers
-- [ ] Add `->find` model autocompletion
+- [ ] Add support for navigating to view from `->render` methods
+- [ ] Investigate LineMarker performance
 
 ### Planned for 0.8.0
 
+- [ ] Make enabling of the projects/modules turned on by finding some cake-specific files
 - [ ] Convert to PhpTypeProvider4 to do dynamic class lookups
-- [ ] Add support for navigating to view from `->render` methods
+- [ ] Add `->find` model autocompletion
+- [ ] Add menu to LineMarker to create view file
 
 ### Planned for 0.9.0
 
