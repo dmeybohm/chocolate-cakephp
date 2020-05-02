@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.daveme.chocolateCakePHP'
-version '0.6.0'
+version '0.6.1'
 
 sourceCompatibility = 1.8
 
@@ -24,7 +24,8 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version 'IU-2019.3.1'
+    version 'IU-2019.3.2'
+    updateSinceUntilBuild false
     plugins = [
         "com.jetbrains.php:193.5662.63",
         "java"
@@ -40,8 +41,10 @@ compileTestKotlin {
 }
 
 patchPluginXml {
+    sinceBuild '193'
     changeNotes """
-     <li>Added plugin support for CakePHP 3</li>
-     <li>Made Cake 2 and Cake 3 support individually toggleable per project.
+    <ul>
+      <li>Change plugin.xml configuration to support 2020.x releases.</li>
+    </ul>        
      """
 }

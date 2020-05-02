@@ -8,7 +8,6 @@ import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import com.jetbrains.php.completion.PhpCompletionUtil;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.*;
 
 public class EditPluginEntryDialog extends JDialog {
@@ -16,12 +15,13 @@ public class EditPluginEntryDialog extends JDialog {
     private JButton buttonOK;
     private JButton buttonCancel;
     private TextFieldWithCompletion appNamespaceTextField;
+    private JTextField pluginPathTextField;
 
     final private Project project;
 
-    private TextFieldListener listener;
+    private TextFieldListener<PluginEntry> listener;
 
-    public EditPluginEntryDialog(Project project, String initialValue) {
+    public EditPluginEntryDialog(Project project, PluginEntry entry) {
         this.project = project;
 
         setContentPane(contentPane);
@@ -47,12 +47,14 @@ public class EditPluginEntryDialog extends JDialog {
         );
 
         appNamespaceTextField.requestFocus();
-        appNamespaceTextField.setText(initialValue);
+        appNamespaceTextField.setText(entry.getNamespace());
+        pluginPathTextField.setText(entry.getPath());
     }
 
     private void onOK() {
         if (listener != null) {
-            listener.actionPerformed(appNamespaceTextField.getText());
+            PluginEntry newEntry = new PluginEntry(appNamespaceTextField.getText(), pluginPathTextField.getText());
+            listener.actionPerformed(newEntry);
         }
         dispose();
     }
@@ -77,14 +79,14 @@ public class EditPluginEntryDialog extends JDialog {
         );
     }
 
-    public void addTextFieldListener(TextFieldListener listener) {
+    public void addTextFieldListener(TextFieldListener<PluginEntry> listener) {
         this.listener = listener;
     }
 
-    public static EditPluginEntryDialog createDialog(Project project, String initialValue) {
-        EditPluginEntryDialog dialog = new EditPluginEntryDialog(project, initialValue);
+    public static EditPluginEntryDialog createDialog(Project project, PluginEntry entry) {
+        EditPluginEntryDialog dialog = new EditPluginEntryDialog(project, entry);
         dialog.setLocationRelativeTo(null);
-        dialog.setTitle("Edit Plugin Namespace");
+        dialog.setTitle("Edit CakePHP 3 Plugin Configuration");
         dialog.pack();
         return dialog;
     }

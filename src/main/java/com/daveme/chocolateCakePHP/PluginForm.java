@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.PluginTableModel;
-import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
@@ -12,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collection;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -44,7 +42,7 @@ public class PluginForm implements SearchableConfigurable {
     @Override
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
-        pluginTableModel = PluginTableModel.fromSettings(settings);
+        pluginTableModel = PluginTableModel.createFromSettings(settings);
         pluginPathTextField.setText(settings.getPluginPath());
 
         this.tableView = new TableView<>(pluginTableModel);
@@ -63,20 +61,25 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setEditAction(action -> {
             PluginEntry selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected.getNamespace());
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected);
+            dialog.addTextFieldListener(newEntry -> {
+                String namespace = newEntry.getNamespace();
+                String withBackslash = namespace.startsWith("\\") ? namespace : "\\" + namespace;
+                PluginEntry newPluginEntry = new PluginEntry(withBackslash, newEntry.getPath());
                 pluginTableModel.setValueAt(newPluginEntry, selectedRow, 0);
             });
             dialog.setVisible(true);
         });
 
         decorator.setAddAction(action -> {
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, "");
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
+                    project,
+                    new PluginEntry("", "")
+            );
+            dialog.addTextFieldListener(newEntry -> {
+                String namespace = newEntry.getNamespace();
+                String withBackslash = namespace.startsWith("\\") ? namespace : "\\" + namespace;
+                PluginEntry newPluginEntry = new PluginEntry(withBackslash, newEntry.getPath());
                 pluginTableModel.addRow(newPluginEntry);
             });
             dialog.setVisible(true);

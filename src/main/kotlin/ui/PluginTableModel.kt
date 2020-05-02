@@ -35,7 +35,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnCount(): Int {
-        return 1
+        return myColumns.size
     }
 
     override fun getColumnName(i: Int): String {
@@ -51,7 +51,11 @@ class PluginTableModel private constructor(
     }
 
     override fun getValueAt(i: Int, i1: Int): Any {
-        return pluginEntries[i].namespace
+        if (i1 == 0) {
+            return pluginEntries[i].namespace
+        } else {
+            return pluginEntries[i].path
+        }
     }
 
     override fun setValueAt(o: Any, i: Int, i1: Int) {
@@ -72,12 +76,13 @@ class PluginTableModel private constructor(
 
     companion object {
         private val myColumns =
-            arrayOf<ColumnInfo<PluginEntry, String>>(
-                NamespaceColumn("Namespace")
+            arrayOf(
+                PluginNamespaceColumn("Namespace"),
+                PluginPathColumn("Path")
             )
 
         @JvmStatic
-        fun fromSettings(settings: Settings): PluginTableModel {
+        fun createFromSettings(settings: Settings): PluginTableModel {
             return PluginTableModel(settings.pluginEntries.toMutableList(), myColumns)
         }
     }
