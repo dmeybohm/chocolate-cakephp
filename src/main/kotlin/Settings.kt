@@ -63,7 +63,6 @@ class Settings : PersistentStateComponent<SettingsState> {
     }
 
     override fun loadState(state: SettingsState) {
-        System.err.println("Loading state: $state")
         this.state = state
     }
 
