@@ -53,7 +53,7 @@ patchPluginXml {
     <p>0.6.2</p>
     <ul>
         <li>Revert change to plugin UI that isn't ready yet</li>
-        <li>Fix saving of CakePHP plugin configuration that would throw an exceptoin</li>
+        <li>Fix saving of CakePHP plugin configuration that would throw an exception</li>
     </ul>
     <p>0.6.1</p>
     <ul>
