@@ -31,13 +31,12 @@ class ConfigForm implements SearchableConfigurable {
     private JButton appDirectoryDefaultButton;
     private JPanel cake3Panel;
     private JPanel cake2Panel;
-    private Settings originalSettings;
      
     public ConfigForm(Project project) {
         this.project = project;
     }
 
-    private void loadSettingsToUI(Settings settings) {
+    private void loadSettingsToUI(@NotNull Settings settings) {
         toggleCake3State(settings.getCake3Enabled());
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
@@ -48,15 +47,19 @@ class ConfigForm implements SearchableConfigurable {
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
 
-    private void copySettingsFromUI(Settings settings) {
-        settings.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
-        settings.setAppDirectory(appDirectoryTextField.getText());
-        settings.setCakeTemplateExtension(templateExtensionTextField.getText());
-        settings.setAppNamespace(appNamespaceTextField.getText());
+    private void copySettingsFromUI(@NotNull Settings settings) {
+        SettingsState state = settings.getState();
 
-        settings.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
-        settings.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
-        settings.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+        state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
+        state.setAppDirectory(appDirectoryTextField.getText());
+        state.setCakeTemplateExtension(templateExtensionTextField.getText());
+        state.setAppNamespace(appNamespaceTextField.getText());
+
+        state.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
+        state.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
+        state.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+
+        settings.loadState(state);
     }
 
     @Override
@@ -74,7 +77,6 @@ class ConfigForm implements SearchableConfigurable {
 
     @Override
     public void disposeUIResources() {
-
     }
 
     @Override
@@ -83,22 +85,22 @@ class ConfigForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
 
         loadSettingsToUI(settings);
-        originalSettings = new Settings(settings);
+        final Settings defaults = Settings.getDefaults();
 
         appNamespaceDefaultButton.addActionListener(e ->
-                this.appNamespaceTextField.setText(Settings.DefaultAppNamespace)
+                this.appNamespaceTextField.setText(defaults.getAppNamespace())
         );
         appDirectoryDefaultButton.addActionListener(e ->
-                this.appDirectoryTextField.setText(Settings.DefaultAppDirectory)
+                this.appDirectoryTextField.setText(defaults.getAppDirectory())
         );
         templateExtensionDefaultButton.addActionListener(e ->
-                this.templateExtensionTextField.setText(Settings.DefaultCakeTemplateExtension)
+                this.templateExtensionTextField.setText(defaults.getCakeTemplateExtension())
         );
         cake2AppDirectoryDefaultButton.addActionListener(e ->
-                this.cake2AppDirectoryTextField.setText(Settings.DefaultCake2AppDirectory)
+                this.cake2AppDirectoryTextField.setText(defaults.getCake2AppDirectory())
         );
         cake2TemplateExtensionDefaultButton.addActionListener(e ->
-                this.cake2TemplateExtensionTextField.setText(Settings.DefaultCake2TemplateExtension)
+                this.cake2TemplateExtensionTextField.setText(defaults.getCake2TemplateExtension())
         );
 
         // Toggle enabled/disabled for panels based on checkboxes:
@@ -125,7 +127,8 @@ class ConfigForm implements SearchableConfigurable {
 
     @Override
     public boolean isModified() {
-        Settings newSettings = new Settings();
+        Settings originalSettings = Settings.getInstance(project);
+        Settings newSettings = Settings.fromSettings(originalSettings);
         copySettingsFromUI(newSettings);
         return !newSettings.equals(originalSettings);
     }
@@ -133,7 +136,6 @@ class ConfigForm implements SearchableConfigurable {
     public void apply() {
         Settings settings = Settings.getInstance(project);
         copySettingsFromUI(settings);
-        this.originalSettings = new Settings(settings);
     }
 
     private void createUIComponents() {
