@@ -85,7 +85,7 @@ class ConfigForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
 
         loadSettingsToUI(settings);
-        final SettingsState defaults = new SettingsState();
+        final Settings defaults = Settings.getDefaults();
 
         appNamespaceDefaultButton.addActionListener(e ->
                 this.appNamespaceTextField.setText(defaults.getAppNamespace())

@@ -6,7 +6,6 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
 
-
 data class SettingsState(
     var cakeTemplateExtension: String = "ctp",
     var appDirectory: String = "src",
@@ -17,18 +16,8 @@ data class SettingsState(
     var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = true,
     var cake3Enabled: Boolean = true,
-    var pluginNamespaces: ArrayList<String> = arrayListOf("\\DebugKit")
-) {
-
-    companion object {
-        @JvmStatic
-        val defaults: SettingsState
-            get() {
-                return SettingsState()
-            }
-    }
-
-}
+    var pluginNamespaces: List<String> = arrayListOf("\\DebugKit")
+)
 
 @State(
     name = "ChocolateCakePHPSettings",
@@ -86,6 +75,9 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
+        val defaults get() = Settings()
+
+        @JvmStatic
         fun fromSettings(settings: Settings): Settings {
             val newState = settings.state.copy()
             val newSettings = Settings()
@@ -94,14 +86,14 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
-        fun pluginEntryListFromNamespaceList(list: ArrayList<String>): List<PluginEntry> {
+        fun pluginEntryListFromNamespaceList(list: List<String>): List<PluginEntry> {
             val result = arrayListOf<PluginEntry>()
             list.forEach { result.add(PluginEntry(it)) }
             return result.toList()
         }
 
         @JvmStatic
-        fun pluginNamespaceListFromEntryList(list: List<PluginEntry>): ArrayList<String> {
+        fun pluginNamespaceListFromEntryList(list: List<PluginEntry>): List<String> {
             val result = arrayListOf<String>()
             list.forEach { result.add(it.namespace) }
             return result
