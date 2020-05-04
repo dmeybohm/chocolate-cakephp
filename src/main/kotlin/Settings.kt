@@ -5,7 +5,6 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
-import com.intellij.util.xmlb.XmlSerializerUtil
 
 
 data class SettingsState(
@@ -18,7 +17,7 @@ data class SettingsState(
     var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = true,
     var cake3Enabled: Boolean = true,
-    var pluginEntries: ArrayList<String> = arrayListOf("\\DebugKit")
+    var pluginNamespaces: ArrayList<String> = arrayListOf("\\DebugKit")
 ) {
 
     companion object {
@@ -50,7 +49,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val pluginEntries: List<PluginEntry>
         get() {
-            return pluginEntryListFromStringList(state.pluginEntries)
+            return pluginEntryListFromNamespaceList(state.pluginNamespaces)
         }
 
     val enabled: Boolean
@@ -95,18 +94,19 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
-        fun pluginEntryListFromStringList(list: ArrayList<String>): List<PluginEntry> {
+        fun pluginEntryListFromNamespaceList(list: ArrayList<String>): List<PluginEntry> {
             val result = arrayListOf<PluginEntry>()
             list.forEach { result.add(PluginEntry(it)) }
             return result.toList()
         }
 
         @JvmStatic
-        fun pluginStringListFromEntryList(list: List<PluginEntry>): ArrayList<String> {
+        fun pluginNamespaceListFromEntryList(list: List<PluginEntry>): ArrayList<String> {
             val result = arrayListOf<String>()
             list.forEach { result.add(it.namespace) }
             return result
         }
+
     }
 
 }

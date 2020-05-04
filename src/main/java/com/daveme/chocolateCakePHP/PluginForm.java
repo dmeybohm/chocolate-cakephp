@@ -11,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -108,7 +107,7 @@ public class PluginForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        state.setPluginEntries(Settings.pluginStringListFromEntryList(pluginTableModel.getPluginEntries()));
+        state.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
         state.setPluginPath(pluginPathTextField.getText());
         settings.loadState(state);
     }
