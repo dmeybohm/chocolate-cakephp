@@ -52,17 +52,17 @@ patchPluginXml {
     changeNotes """
     <p>0.6.2</p>
     <ul>
-      <li>Revert change to plugin UI that isn't ready yet</li>
-      <li>Fix saving of CakePHP plugin configuration that would throw an exceptoin</li>
-    <ul>
+        <li>Revert change to plugin UI that isn't ready yet</li>
+        <li>Fix saving of CakePHP plugin configuration that would throw an exceptoin</li>
+    </ul>
     <p>0.6.1</p>
     <ul>
-      <li>Revert change to plugin.xml that prevented installing on 2020.+ versions of IDEs</li>
+        <li>Revert change to plugin.xml that prevented installing on 2020.+ versions of IDEs</li>
     </ul>
     <p>0.6.0</p>
     <ul>
-     <li>Added plugin support for CakePHP 3</li>
-     <li>Made Cake 2 and Cake 3 support individually toggleable per project.</li>
+        <li>Added plugin support for CakePHP 3</li>
+        <li>Made Cake 2 and Cake 3 support individually toggleable per project.</li>
     </ul>
     """
 }
