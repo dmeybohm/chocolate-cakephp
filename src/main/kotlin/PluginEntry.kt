@@ -1,3 +1,3 @@
 package com.daveme.chocolateCakePHP
 
-data class PluginEntry(val namespace: String)
+data class PluginEntry(var namespace: String)

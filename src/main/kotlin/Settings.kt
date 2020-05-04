@@ -5,72 +5,109 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
-import com.intellij.serviceContainer.NonInjectable
 import com.intellij.util.xmlb.XmlSerializerUtil
+
+
+data class SettingsState(
+    var cakeTemplateExtension: String = "ctp",
+    var appDirectory: String = "src",
+    var appNamespace: String = "\\App",
+    var pluginPath: String = "plugins",
+    var cake2AppDirectory: String =  "app",
+    var cake2TemplateExtension: String = "ctp",
+    var cake2PluginPath: String = "app/Plugin",
+    var cake2Enabled: Boolean = true,
+    var cake3Enabled: Boolean = true,
+    var pluginEntries: ArrayList<String> = arrayListOf("\\DebugKit")
+) {
+
+    companion object {
+        @JvmStatic
+        val defaults: SettingsState
+            get() {
+                return SettingsState()
+            }
+    }
+
+}
 
 @State(
     name = "ChocolateCakePHPSettings",
-    storages = [Storage(file = "ChocolateCakePHP.xml")]
+    storages = [Storage( "ChocolateCakePHP.xml")]
 )
-data class Settings(
-    var cakeTemplateExtension: String = DefaultCakeTemplateExtension,
-    var appDirectory: String = DefaultAppDirectory,
-    var appNamespace: String = DefaultAppNamespace,
-    var pluginPath: String = DefaultPluginPath,
-    var cake2AppDirectory: String = DefaultCake2AppDirectory,
-    var cake2TemplateExtension: String = DefaultCake2TemplateExtension,
-    var cake2PluginPath: String = DefaultCake2PluginPath,
-    var cake2Enabled: Boolean = DefaultCake2Enabled,
-    var cake3Enabled: Boolean = DefaultCake3Enabled,
-    var pluginEntries: List<PluginEntry> = DefaultPluginEntries
-): PersistentStateComponent<Settings> {
+class Settings : PersistentStateComponent<SettingsState> {
+
+    private var state = SettingsState()
+
+    val cakeTemplateExtension get() = state.cakeTemplateExtension
+    val appDirectory get() = state.appDirectory
+    val appNamespace get() = state.appNamespace
+    val pluginPath get() = state.pluginPath
+    val cake2AppDirectory get() = state.cake2AppDirectory
+    val cake2TemplateExtension get() = state.cake2TemplateExtension
+    val cake2Enabled get() = state.cake2Enabled
+    val cake3Enabled get() = state.cake3Enabled
+
+    val pluginEntries: List<PluginEntry>
+        get() {
+            return pluginEntryListFromStringList(state.pluginEntries)
+        }
 
     val enabled: Boolean
         get() {
             return cake2Enabled || cake3Enabled
         }
 
-    @NonInjectable
-    constructor(other: Settings): this(
-            cakeTemplateExtension = other.cakeTemplateExtension,
-            appDirectory = other.appDirectory,
-            appNamespace = other.appNamespace,
-            pluginPath = other.pluginPath,
-            cake2AppDirectory = other.cake2AppDirectory,
-            cake2TemplateExtension = other.cake2TemplateExtension,
-            cake2PluginPath = other.cake2PluginPath,
-            cake2Enabled = other.cake2Enabled,
-            cake3Enabled = other.cake3Enabled
-    )
-
-    override fun getState(): Settings? {
-        return this
+    override fun equals(other: Any?): Boolean {
+        return if (other is Settings) {
+            this.state == other.state
+        } else {
+            false
+        }
     }
 
-    override fun loadState(settings: Settings) {
-        XmlSerializerUtil.copyBean(settings, this)
+    override fun hashCode(): Int {
+        return state.hashCode()
+    }
+
+    override fun getState(): SettingsState? {
+        return this.state
+    }
+
+    override fun loadState(state: SettingsState) {
+        System.err.println("Loading state: $state")
+        this.state = state
     }
 
     companion object {
-        const val DefaultCakeTemplateExtension = "ctp"
-        const val DefaultAppDirectory = "src"
-        const val DefaultAppNamespace = "\\App"
-        const val DefaultPluginPath = "plugins"
-
-        const val DefaultCake2AppDirectory = "app"
-        const val DefaultCake2TemplateExtension = "ctp"
-        const val DefaultCake2PluginPath = "app/Plugin"
-
-        const val DefaultCake2Enabled = true   // todo calculate these dynamically
-        const val DefaultCake3Enabled = true   // todo calculate these dynamically
-
-        val DefaultPluginEntries = listOf(
-            PluginEntry("\\DebugKit")
-        )
 
         @JvmStatic
         fun getInstance(project: Project): Settings {
             return ServiceManager.getService<Settings>(project, Settings::class.java)
         }
+
+        @JvmStatic
+        fun fromSettings(settings: Settings): Settings {
+            val newState = settings.state.copy()
+            val newSettings = Settings()
+            newSettings.loadState(newState)
+            return newSettings
+        }
+
+        @JvmStatic
+        fun pluginEntryListFromStringList(list: ArrayList<String>): List<PluginEntry> {
+            val result = arrayListOf<PluginEntry>()
+            list.forEach { result.add(PluginEntry(it)) }
+            return result.toList()
+        }
+
+        @JvmStatic
+        fun pluginStringListFromEntryList(list: List<PluginEntry>): ArrayList<String> {
+            val result = arrayListOf<String>()
+            list.forEach { result.add(it.namespace) }
+            return result
+        }
     }
+
 }
+

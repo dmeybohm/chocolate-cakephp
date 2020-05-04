@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.PluginTableModel;
-import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
@@ -12,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collection;
+import java.util.List;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -46,6 +45,7 @@ public class PluginForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
         pluginTableModel = PluginTableModel.fromSettings(settings);
         pluginPathTextField.setText(settings.getPluginPath());
+        final SettingsState defaults = SettingsState.getDefaults();
 
         this.tableView = new TableView<>(pluginTableModel);
         ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<PluginEntry>() {
@@ -92,7 +92,7 @@ public class PluginForm implements SearchableConfigurable {
         tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
 
         pluginPathDefaultButton.addActionListener(e ->
-                this.pluginPathTextField.setText(Settings.DefaultPluginPath)
+                this.pluginPathTextField.setText(defaults.getPluginPath())
         );
 
         return topPanel;
@@ -101,15 +101,22 @@ public class PluginForm implements SearchableConfigurable {
     @Override
     public boolean isModified() {
         Settings settings = Settings.getInstance(project);
-        return !settings.getPluginEntries().equals(pluginTableModel.getPluginEntries()) ||
-                !settings.getPluginPath().equals(pluginPathTextField.getText());
+        Settings newSettings = Settings.fromSettings(settings);
+        copySettingsFromUI(newSettings);
+        return !newSettings.equals(settings);
+    }
+
+    private void copySettingsFromUI(@NotNull Settings settings) {
+        SettingsState state = settings.getState();
+        state.setPluginEntries(Settings.pluginStringListFromEntryList(pluginTableModel.getPluginEntries()));
+        state.setPluginPath(pluginPathTextField.getText());
+        settings.loadState(state);
     }
 
     @Override
     public void apply() throws ConfigurationException {
         Settings settings = Settings.getInstance(project);
-        settings.setPluginEntries(pluginTableModel.getPluginEntries());
-        settings.setPluginPath(pluginPathTextField.getText());
+        copySettingsFromUI(settings);
     }
 
 }
