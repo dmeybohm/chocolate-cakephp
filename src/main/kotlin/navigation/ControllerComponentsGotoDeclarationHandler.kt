@@ -39,10 +39,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         // PhpStorm already has completion based on strings that contain class names, so
         // we only need to check for the components and helpers properties:
         return when {
-            text.contains("\$components") ->
+            field.textMatches("\$components") ->
                 phpIndex.componentFieldClassesFromFieldName(settings, psiElement.text).toTypedArray()
 
-            text.contains("\$helpers") ->
+            field.textMatches("\$helpers") ->
                 phpIndex.viewHelperClassesFromFieldName(settings, psiElement.text).toTypedArray()
 
             else ->

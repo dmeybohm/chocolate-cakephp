@@ -34,7 +34,7 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
-        if (classReference.text == "\$this") {
+        if (classReference.textMatches("\$this")) {
             val project = psiElement.project
             val phpIndex = PhpIndex.getInstance(project)
             return phpIndex.viewHelperClassesFromFieldName(settings, fieldName).toTypedArray()
