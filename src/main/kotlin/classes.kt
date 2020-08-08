@@ -1,5 +1,7 @@
 package com.daveme.chocolateCakePHP
 
+import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -187,4 +189,16 @@ fun viewType(settings: Settings): PhpType {
         result = result.add("${settings.appNamespace}\\View\\AppView")
     }
     return result
+}
+
+fun findParentWithClass(element: PsiElement, clazz: Class<out PsiElement>): PsiElement? {
+    var iterationElement = element
+    while (true) {
+        val parent = iterationElement.parent ?: break
+        if (PlatformPatterns.psiElement(clazz).accepts(parent)) {
+            return parent
+        }
+        iterationElement = parent
+    }
+    return null
 }

@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.navigation
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.icons.CakeIcons
+import com.daveme.chocolateCakePHP.CakeIcons
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder

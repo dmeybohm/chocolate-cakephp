@@ -29,7 +29,7 @@ class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
         if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
             return null
         }
-        if (psiElement.text != "\$this") {
+        if (!psiElement.textMatches("\$this")) {
             return null
         }
         return viewType(settings)
