@@ -33,9 +33,8 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
                 return
             }
 
-            val containingFile = psiElement.containingFile
-
             val parent = (psiElement.parent ?: return) as? FieldReference ?: return
+            val containingFile = psiElement.containingFile
             if (!containingFile.name.isCakeTemplate(settings)) {
                 return
             }
