@@ -35,7 +35,7 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
-        if (classReference.text == "\$this") {
+        if (classReference.textMatches("\$this")) {
             return viewHelperTypeFromFieldName(settings, fieldReferenceName)
         }
         return null

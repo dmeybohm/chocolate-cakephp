@@ -1,6 +1,5 @@
-package com.daveme.chocolateCakePHP.completion
+package com.daveme.chocolateCakePHP
 
-import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
@@ -33,7 +32,9 @@ class ControllerCompletionContributor : CompletionContributor() {
             val psiElement = completionParameters.position
             var parent  = psiElement.parent ?: return
             if (parent !is FieldReference) {
-                parent = findSiblingFieldReference(psiElement) ?: return
+                parent = findSiblingFieldReference(
+                    psiElement
+                ) ?: return
             }
 
             val fieldReference = parent as FieldReference
