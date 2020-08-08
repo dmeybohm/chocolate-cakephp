@@ -27,12 +27,12 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         if (!settings.enabled) {
             return null
         }
-        if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
-            return null
-        }
         val classReference = psiElement.classReference ?: return null
         val fieldReferenceName = psiElement.name ?: return null
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
+            return null
+        }
+        if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
             return null
         }
         if (classReference.textMatches("\$this")) {
