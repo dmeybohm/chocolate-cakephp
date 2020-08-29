@@ -1,5 +1,6 @@
-package com.daveme.chocolateCakePHP
+package com.daveme.chocolateCakePHP.controller
 
+import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
@@ -38,7 +39,8 @@ class ControllerCompletionContributor : CompletionContributor() {
             }
 
             val fieldReference = parent as FieldReference
-            val settings = Settings.getInstance(psiElement.project)
+            val settings =
+                Settings.getInstance(psiElement.project)
             if (!settings.enabled) {
                 return
             }
