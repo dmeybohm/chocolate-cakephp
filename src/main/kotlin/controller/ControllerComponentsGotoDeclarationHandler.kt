@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.navigation
+package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
@@ -32,7 +32,6 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val field = findParentWithClass(psiElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
-        val text = field.text
 
         val phpIndex = PhpIndex.getInstance(psiElement.project)
 

@@ -1,5 +1,9 @@
-package com.daveme.chocolateCakePHP
+package com.daveme.chocolateCakePHP.view
 
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.completeFromClasses
+import com.daveme.chocolateCakePHP.getAllViewHelperSubclasses
+import com.daveme.chocolateCakePHP.isCakeTemplate
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext
@@ -28,7 +32,8 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
-            val settings = Settings.getInstance(psiElement.project)
+            val settings =
+                Settings.getInstance(psiElement.project)
             if (!settings.enabled) {
                 return
             }

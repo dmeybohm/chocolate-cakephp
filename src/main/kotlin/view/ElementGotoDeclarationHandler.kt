@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.navigation
+package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler

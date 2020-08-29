@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.navigation
+package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.CakeIcons
