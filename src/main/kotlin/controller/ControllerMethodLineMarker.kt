@@ -36,12 +36,13 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             .createLineMarkerInfo(nameIdentifier)
     }
 
-    private fun addLineMarkerUnique(collection: MutableCollection<LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {
+    private fun addLineMarkerUnique(collection: MutableCollection<in LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {
         if (newMarker == null) {
             return
         }
         for (lineMarkerInfo in collection) {
-            val element = lineMarkerInfo.element ?: return
+            val markerElement = lineMarkerInfo as? LineMarkerInfo<*> ?: continue
+            val element = markerElement.element ?: return
             val otherElement = newMarker.element
             if (element == otherElement) {
                 return
@@ -50,7 +51,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         collection.add(newMarker)
     }
 
-    override fun collectSlowLineMarkers(list: List<PsiElement>, collection: MutableCollection<LineMarkerInfo<*>>) {
+    override fun collectSlowLineMarkers(
+        list: MutableList<out PsiElement>,
+        collection: MutableCollection<in LineMarkerInfo<*>>
+    ) {
         for (element in list) {
             val settings = Settings.getInstance(element.project)
             if (!settings.enabled) {

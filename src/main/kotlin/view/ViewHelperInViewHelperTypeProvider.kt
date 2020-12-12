@@ -13,7 +13,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class ViewHelperInViewHelperTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
-        return 0.toChar()
+        return '\u8314'
     }
 
     override fun complete(p0: String?, p1: Project?): PhpType? = null
