@@ -141,22 +141,29 @@ class ConfigForm implements SearchableConfigurable {
     private void createUIComponents() {
         FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
         try {
-            SwingUtilities.invokeAndWait(() -> {
-                PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                        new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
-                appNamespaceTextField = new TextFieldWithCompletion(
-                        project,
-                        completionProvider,
-                        "",
-                        true,
-                        true,
-                        true,
-                        true
-                );
-            });
+            if (!SwingUtilities.isEventDispatchThread()) {
+                SwingUtilities.invokeAndWait(() -> {
+                    setupHandler(insertHandler);
+                });
+            } else {
+                setupHandler(insertHandler);
+            }
         } catch (InterruptedException | InvocationTargetException e) {
             e.printStackTrace();
         }
     }
 
+    private void setupHandler(FullyQualifiedNameInsertHandler insertHandler) {
+        PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
+                new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
+        appNamespaceTextField = new TextFieldWithCompletion(
+                project,
+                completionProvider,
+                "",
+                true,
+                true,
+                true,
+                true
+        );
+    }
 }
