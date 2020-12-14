@@ -13,7 +13,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
     override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? = null
 
-    private fun getRelatedFiles(file: PsiFile, controllerName: String, element: PsiElement): LineMarkerInfo<*>? {
+    private fun getRelatedFiles(file: PsiFile, controllerName: String, element: PsiElement): LineMarkerInfo<PsiElement>? {
         if (element !is Method) {
             return null
         }
@@ -36,7 +36,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             .createLineMarkerInfo(nameIdentifier)
     }
 
-    private fun addLineMarkerUnique(collection: MutableCollection<in LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {
+    private fun addLineMarkerUnique(
+        collection: MutableCollection<LineMarkerInfo<PsiElement>>,
+        newMarker: LineMarkerInfo<PsiElement>?
+    ) {
         if (newMarker == null) {
             return
         }
@@ -52,8 +55,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     override fun collectSlowLineMarkers(
-        list: MutableList<out PsiElement>,
-        collection: MutableCollection<in LineMarkerInfo<*>>
+        list: List<PsiElement>,
+        collection: MutableCollection<LineMarkerInfo<PsiElement>>
     ) {
         for (element in list) {
             val settings = Settings.getInstance(element.project)
