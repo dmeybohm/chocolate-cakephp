@@ -3,5 +3,6 @@ package com.daveme.chocolateCakePHP
 import com.intellij.openapi.util.IconLoader
 
 object CakeIcons {
-    val LOGO = IconLoader.getIcon("../../../../cake.icon.png")
+    @JvmField
+    val LOGO = IconLoader.getIcon("/icon/cake.icon.png", CakeIcons::class.java)
 }

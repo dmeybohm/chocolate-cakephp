@@ -14,7 +14,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
-        return 0.toChar()
+        return '\u8312'
     }
 
     override fun complete(str: String?, project: Project?): PhpType? = null
