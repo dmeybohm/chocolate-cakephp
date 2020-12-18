@@ -36,7 +36,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             .createLineMarkerInfo(nameIdentifier)
     }
 
-    private fun addLineMarkerUnique(collection: MutableCollection<in LineMarkerInfo<*>>, newMarker: LineMarkerInfo<*>?) {
+    private fun addLineMarkerUnique(
+        collection: MutableCollection<LineMarkerInfo<*>>,
+        newMarker: LineMarkerInfo<*>?
+    ) {
         if (newMarker == null) {
             return
         }
@@ -52,10 +55,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     override fun collectSlowLineMarkers(
-        list: MutableList<out PsiElement>,
-        collection: MutableCollection<in LineMarkerInfo<*>>
+        elements: MutableList<PsiElement>,
+        result: MutableCollection<LineMarkerInfo<*>>
     ) {
-        for (element in list) {
+        for (element in elements) {
             val settings = Settings.getInstance(element.project)
             if (!settings.enabled) {
                 return
@@ -64,7 +67,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val virtualFile = file.virtualFile ?: continue
             val controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue
             val info = getRelatedFiles(file, controllerName, element)
-            addLineMarkerUnique(collection, info)
+            addLineMarkerUnique(result, info)
         }
     }
+
 }
