@@ -55,6 +55,8 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewHelperInViewTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ThisVariableInViewTypeProvider" />
+
+        <libraryRoot id="chocolate_cake_files" path="/chocolate-cakephp/" runtime="false"  />
     </extensions>
 
     <actions>
