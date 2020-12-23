@@ -3,6 +3,5 @@ ChocolateCakePHP.jar
 lib/
 out/
 build/
-gradle/
 .gradle/
 .idea
