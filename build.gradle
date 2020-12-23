@@ -50,19 +50,9 @@ test {
 patchPluginXml {
     sinceBuild '193'
     changeNotes """
-    <p>0.6.2</p>
+    <p>0.7.0</p>
     <ul>
-        <li>Revert change to plugin UI that isn't ready yet</li>
-        <li>Fix saving of CakePHP plugin configuration that would throw an exception</li>
-    </ul>
-    <p>0.6.1</p>
-    <ul>
-        <li>Revert change to plugin.xml that prevented installing on 2020.+ versions of IDEs</li>
-    </ul>
-    <p>0.6.0</p>
-    <ul>
-        <li>Added plugin support for CakePHP 3</li>
-        <li>Made Cake 2 and Cake 3 support individually toggleable per project.</li>
+        <li>Add ClassRegistry::init() navigation to models</li>
     </ul>
     """
 }
