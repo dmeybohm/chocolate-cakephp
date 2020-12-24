@@ -23,3 +23,4 @@
 
 - [ ] Add quickfix for undefined controller/view/component methods to add method
 - [ ] Add error for undefined controller/view/component methods/fields
+- [ ] Add ability to create view file from Cake icon
