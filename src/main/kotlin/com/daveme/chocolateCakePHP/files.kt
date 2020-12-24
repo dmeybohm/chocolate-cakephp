@@ -37,41 +37,57 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
     return VfsUtil.findRelativeFile(dir.virtualFile, *pathPartsArray)
 }
 
-fun templatePathToVirtualFile(
+fun templatePathToVirtualFiles(
     settings: Settings,
-    appOrPluginDir: PsiDirectory?,
+    appDirectories: List<PsiDirectory>,
     controllerName: String,
     controllerAction: String
-): VirtualFile? {
-    var relativeFile: VirtualFile? = null
+): List<VirtualFile> {
+    val result = mutableListOf<VirtualFile>()
     if (settings.cake3Enabled) {
         val templatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
-        relativeFile = findRelativeFile(appOrPluginDir, templatePath)
-    }
-    if (relativeFile == null) {
-        if (settings.cake2Enabled) {
-            val cakeTwoTemplatePath = CakeTwo.templatePath(settings, controllerName, controllerAction)
-            relativeFile = findRelativeFile(appOrPluginDir, cakeTwoTemplatePath)
+        appDirectories.forEach { appDir ->
+            val relativeFile = findRelativeFile(appDir, templatePath)
+            if (relativeFile != null) {
+                result.add(relativeFile)
+            }
         }
     }
-    return relativeFile
+    if (settings.cake2Enabled) {
+        val cakeTwoTemplatePath = CakeTwo.templatePath(settings, controllerName, controllerAction)
+        appDirectories.forEach { appDir ->
+            val relativeFile = findRelativeFile(appDir, cakeTwoTemplatePath)
+            if (relativeFile != null) {
+                result.add(relativeFile)
+            }
+        }
+    }
+    return result
 }
 
-fun elementPathToVirtualFile(
+fun elementPathToVirtualFiles(
     settings: Settings,
-    appDir: PsiDirectory?,
+    appDirectories: List<PsiDirectory>,
     elementPath: String
-): VirtualFile? {
-    var relativeFile: VirtualFile? = null
+): List<VirtualFile> {
+    val result = mutableListOf<VirtualFile>()
     if (settings.cake3Enabled) {
         val cakeThreeElementFilename = CakeThree.elementPath(settings, elementPath)
-        relativeFile = findRelativeFile(appDir, cakeThreeElementFilename)
-    }
-    if (relativeFile == null) {
-        if (settings.cake2Enabled) {
-            val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
-            relativeFile = findRelativeFile(appDir, cakeTwoElementFilename)
+        appDirectories.forEach { appDir ->
+            val relativeFile = findRelativeFile(appDir, cakeThreeElementFilename)
+            if (relativeFile != null) {
+                result.add(relativeFile)
+            }
         }
     }
-    return relativeFile
+    if (settings.cake2Enabled) {
+        val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
+        appDirectories.forEach { appDir ->
+            val relativeFile = findRelativeFile(appDir, cakeTwoElementFilename)
+            if (relativeFile != null) {
+                result.add(relativeFile)
+            }
+        }
+    }
+    return result
 }

@@ -13,45 +13,50 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
     override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? = null
 
-    private fun getRelatedFiles(file: PsiFile, controllerName: String, element: PsiElement): LineMarkerInfo<*>? {
+    private fun getRelatedFiles(file: PsiFile, controllerName: String, element: PsiElement): List<LineMarkerInfo<*>> {
+        val result = mutableListOf<LineMarkerInfo<*>>()
         if (element !is Method) {
-            return null
+            return result
         }
         if (!element.access.isPublic) {
-            return null
+            return result
         }
-        val nameIdentifier = element.nameIdentifier ?: return null
+        val nameIdentifier = element.nameIdentifier ?: return result
         val project = file.project
         val settings = Settings.getInstance(project)
-        val pluginOrAppDir = pluginOrAppDirectoryFromFile(settings, file)
-        val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, element.name)
-                ?: return null
+        val appDirectories = appDirectories(settings, file)
+        val relativeFiles = templatePathToVirtualFiles(settings, appDirectories, controllerName, element.name)
+        if (relativeFiles.isEmpty()) {
+            return result
+        }
 
-        val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null
-        val targetElement = targetFile.firstChild
+        val targetFiles = virtualFilesToPsiFiles(project, relativeFiles)
+        targetFiles.forEach { targetFile ->
+            val targetElement = targetFile.firstChild
 
-        return NavigationGutterIconBuilder
-            .create(CakeIcons.LOGO)
-            .setTarget(targetElement)
-            .createLineMarkerInfo(nameIdentifier)
+            result.add(NavigationGutterIconBuilder
+                .create(CakeIcons.LOGO)
+                .setTarget(targetElement)
+                .createLineMarkerInfo(nameIdentifier)
+            )
+        }
+        return result
     }
 
     private fun addLineMarkerUnique(
         collection: MutableCollection<LineMarkerInfo<*>>,
-        newMarker: LineMarkerInfo<*>?
+        newMarkers: List<LineMarkerInfo<*>>
     ) {
-        if (newMarker == null) {
+        var result = newMarkers
+        if (newMarkers.isEmpty()) {
             return
         }
         for (lineMarkerInfo in collection) {
             val markerElement = lineMarkerInfo as? LineMarkerInfo<*> ?: continue
-            val element = markerElement.element ?: return
-            val otherElement = newMarker.element
-            if (element == otherElement) {
-                return
-            }
+            val element = markerElement.element ?: continue
+            result = result.filter {  element != it.element }
         }
-        collection.add(newMarker)
+        collection.addAll(newMarkers)
     }
 
     override fun collectSlowLineMarkers(
@@ -66,8 +71,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
             val controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue
-            val info = getRelatedFiles(file, controllerName, element)
-            addLineMarkerUnique(result, info)
+            val markers = getRelatedFiles(file, controllerName, element)
+            addLineMarkerUnique(result, markers)
         }
     }
 

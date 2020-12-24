@@ -4,12 +4,10 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import java.util.*
 
 class ElementGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -31,13 +29,13 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
-        val pluginOrAppDir = pluginOrAppDirectoryFromFile(settings, containingFile)
-        val relativeFile = elementPathToVirtualFile(settings, pluginOrAppDir, psiElement.text)
-                ?: return PsiElement.EMPTY_ARRAY
+        val appDirectories = appDirectories(settings, containingFile)
+        val relativeFiles = elementPathToVirtualFiles(settings, appDirectories, psiElement.text)
+        if (relativeFiles.isEmpty()) {
+            return PsiElement.EMPTY_ARRAY
+        }
 
-        val files = HashSet<VirtualFile>()
-        files.add(relativeFile)
-        return virtualFilesToPsiFiles(project, files).toTypedArray()
+        return virtualFilesToPsiFiles(project, relativeFiles).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
