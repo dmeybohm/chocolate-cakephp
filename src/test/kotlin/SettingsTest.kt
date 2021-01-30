@@ -1,10 +1,9 @@
 import com.daveme.chocolateCakePHP.Settings
-import org.junit.jupiter.api.Assertions.*
+import junit.framework.TestCase
 
-internal class SettingsTest {
+class SettingsTest : TestCase() {
 
-    @org.junit.jupiter.api.Test
-    fun settingsEqualsDefaults() {
+    fun `test default constructed settings equals defaults property`() {
         val settings = Settings()
         val defaults = Settings.defaults
         assertEquals(settings, defaults)
