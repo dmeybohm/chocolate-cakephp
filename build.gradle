@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.daveme.chocolateCakePHP'
-version '0.6.3'
+version '0.7.0'
 
 sourceCompatibility = 1.8
 
@@ -19,7 +19,7 @@ apply plugin: 'java'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
@@ -41,7 +41,8 @@ compileTestKotlin {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnit()
+    maxHeapSize = '1G'
     testLogging {
         events "passed", "skipped", "failed"
     }
@@ -56,3 +57,21 @@ patchPluginXml {
     </ul>
     """
 }
+
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+tasks.withType(Test) {
+    testLogging {
+        events TestLogEvent.FAILED,
+                TestLogEvent.SKIPPED,
+                TestLogEvent.STANDARD_ERROR,
+                TestLogEvent.STANDARD_OUT
+        exceptionFormat TestExceptionFormat.FULL
+        showCauses true
+        showExceptions true
+        showStackTraces true
+        showStandardStreams true
+    }
+}
+
