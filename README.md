@@ -10,16 +10,16 @@ It adds a gutter icon in controller methods if the plugin finds an associated vi
 
 #### Cake 3 Controller
 
-<img src="https://github.com/dmeybohm/chocolate-cakephp/blob/master/screenshots/cake3-controller.gif?raw=true" alt="Cake 3 Controller" />
+<![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake3-controller.gif?raw=true)
 
 #### Cake 2 Controller
 
-![CakePHP 2 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/master/screenshots/cake2-controller.gif?raw=true)
+![CakePHP 2 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake2-controller.gif?raw=true)
 
 #### Main Config Screen
 
-![Main config screen](https://github.com/dmeybohm/chocolate-cakephp/blob/master/screenshots/main-preferences.gif?raw=true)
+![Main config screen](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/main-preferences.gif?raw=true)
 
 #### Cake 3 Plugin Config Screen
 
-![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/master/screenshots/plugin-preferences.gif?raw=true)
+![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/plugin-preferences.gif?raw=true)
