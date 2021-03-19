@@ -10,7 +10,7 @@ It adds a gutter icon in controller methods if the plugin finds an associated vi
 
 #### Cake 3 Controller
 
-<![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake3-controller.gif?raw=true)
+![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake3-controller.gif?raw=true)
 
 #### Cake 2 Controller
 
