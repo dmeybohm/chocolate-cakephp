@@ -44,7 +44,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
                 return
             }
             val classReference = parent.classReference ?: return
-            if (classReference.text == "\$this") {
+            if (classReference.textMatches("\$this")) {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
                 val viewHelperClasses = phpIndex.getAllViewHelperSubclasses(settings)
                 completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
