@@ -4,11 +4,6 @@ import com.jetbrains.php.PhpCaches
 
 class ViewTest : PluginTestCase() {
 
-    override fun setUp() {
-        super.setUp()
-//        createTempDirTestFixture()
-    }
-
     fun `test completing view helper`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",

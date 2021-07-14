@@ -40,7 +40,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             if (!classReference.textMatches("\$this")) {
                 return
             }
-            val containingFile = psiElement.originalElement.containingFile
+            val containingFile = psiElement.containingFile
             if (!isCakeViewFile(settings, containingFile)) {
                 return
             }
