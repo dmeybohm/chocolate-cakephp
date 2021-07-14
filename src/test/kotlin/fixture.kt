@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP.test
 
-import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 
 fun CodeInsightTestFixture.configureByFilePathAndText(filePath: String, text: String) {
