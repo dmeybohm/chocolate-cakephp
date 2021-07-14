@@ -9,8 +9,32 @@ sealed class Cake(val viewDirectory: String, val elementTop: String) {
 }
 
 fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
-    val pluginDir = pluginDirectoryFromFile(settings, file) ?: return appDirectoryFromFile(settings, file)
-    return pluginDir
+    val originalFile = file.originalFile
+    return pluginDirectoryFromFile(settings, originalFile)
+        ?: return appDirectoryFromFile(settings, originalFile)
+}
+
+fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
+    var hasExtension = false
+    if (settings.cake2Enabled) {
+        hasExtension = hasExtension || file.name.endsWith(settings.cake2TemplateExtension)
+    }
+    if (settings.cake3Enabled) {
+        hasExtension = hasExtension || file.name.endsWith(settings.cakeTemplateExtension)
+    }
+    if (!hasExtension) {
+        return false
+    }
+    val originalFile = file.originalFile
+    val topDir = pluginOrAppDirectoryFromFile(settings, originalFile)
+    var dir = originalFile.containingDirectory
+    while (dir != null && dir != topDir) {
+        if ((dir.name == "View" || dir.name == "Template") && dir.parent == topDir) {
+            return true
+        }
+        dir = dir.parentDirectory
+    }
+    return false
 }
 
 fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
@@ -28,7 +52,7 @@ fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     return null
 }
 
-fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+private fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     var dir: PsiDirectory? = file.containingDirectory
     while (dir != null) {
         if (settings.cake3Enabled) {

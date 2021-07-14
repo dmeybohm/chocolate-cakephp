@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.isCakeTemplate
+import com.daveme.chocolateCakePHP.isCakeViewFile
 import com.daveme.chocolateCakePHP.viewType
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -26,10 +26,10 @@ class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
         if (!settings.enabled) {
             return null
         }
-        if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
+        if (!psiElement.textMatches("\$this")) {
             return null
         }
-        if (!psiElement.textMatches("\$this")) {
+        if (!isCakeViewFile(settings, psiElement.containingFile)) {
             return null
         }
         return viewType(settings)

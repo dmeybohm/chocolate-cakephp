@@ -28,6 +28,10 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider4 {
         }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
+        if (!referenceType.isComplete) {
+            return null
+        }
+
         val fieldReferenceName = psiElement.name ?: return null
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null

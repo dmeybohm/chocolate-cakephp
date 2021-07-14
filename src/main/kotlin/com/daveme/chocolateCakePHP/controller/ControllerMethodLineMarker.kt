@@ -37,7 +37,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     private fun addLineMarkerUnique(
-        collection: MutableCollection<LineMarkerInfo<*>>,
+        collection: MutableCollection<in LineMarkerInfo<*>>,
         newMarker: LineMarkerInfo<*>?
     ) {
         if (newMarker == null) {
@@ -55,8 +55,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     override fun collectSlowLineMarkers(
-        elements: MutableList<PsiElement>,
-        result: MutableCollection<LineMarkerInfo<*>>
+        elements: MutableList<out PsiElement>,
+        result: MutableCollection<in LineMarkerInfo<*>>
     ) {
         for (element in elements) {
             val settings = Settings.getInstance(element.project)
