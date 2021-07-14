@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.Settings
 
-class ControllerTest : PluginTestCase() {
+class ControllerTest : BaseTestCase() {
 
     fun `test completing a component inside a controller`() {
         myFixture.configureByFiles(

@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test
 
-class ViewTest : PluginTestCase() {
+class ViewTest : BaseTestCase() {
 
     fun `test completing view helper inside a view`() {
         myFixture.configureByFiles(

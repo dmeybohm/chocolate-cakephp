@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.Settings
 
-class SettingsTest : PluginTestCase() {
+class SettingsTest : BaseTestCase() {
 
     fun `test default constructed settings equals defaults property`() {
         val settings = Settings()
