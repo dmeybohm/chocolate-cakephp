@@ -1,7 +1,5 @@
 package com.daveme.chocolateCakePHP.test
 
-import com.jetbrains.php.PhpCaches
-
 class ViewTest : PluginTestCase() {
 
     fun `test completing view helper`() {
@@ -12,9 +10,11 @@ class ViewTest : PluginTestCase() {
             "cake3/src/View/AppView.php",
             "cake3/vendor/cakephp.php"
         )
-        myFixture.configureByFile("cake3/src/Template/Movie/artist.ctp")
-        myFixture.editor.caretModel.moveCaretRelatively("\$this->".length, 1, false, false, false)
-        PhpCaches.getInstance(myFixture.project).SIGNATURES_CACHE
+
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php            
+        ${'$'}this-><caret>
+        """.trimIndent())
         myFixture.completeBasic();
 
         val result = myFixture.lookupElementStrings
