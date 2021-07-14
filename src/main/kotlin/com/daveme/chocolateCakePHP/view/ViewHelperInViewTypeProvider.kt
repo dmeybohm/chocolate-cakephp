@@ -1,9 +1,6 @@
 package com.daveme.chocolateCakePHP.view
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.isCakeTemplate
-import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldName
-import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
@@ -32,13 +29,13 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
-        if (!psiElement.containingFile.name.isCakeTemplate(settings)) {
+        if (!classReference.textMatches("\$this")) {
+            return null;
+        }
+        if (!isCakeViewFile(settings, psiElement.originalElement.containingFile)) {
             return null
         }
-        if (classReference.textMatches("\$this")) {
-            return viewHelperTypeFromFieldName(settings, fieldReferenceName)
-        }
-        return null
+        return viewHelperTypeFromFieldName(settings, fieldReferenceName)
     }
 
     override fun getBySignature(s: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement>? {

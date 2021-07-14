@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP
 
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 
 sealed class Cake(val viewDirectory: String, val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
@@ -9,8 +10,30 @@ sealed class Cake(val viewDirectory: String, val elementTop: String) {
 }
 
 fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
-    val pluginDir = pluginDirectoryFromFile(settings, file) ?: return appDirectoryFromFile(settings, file)
+    val originalFile = file.originalFile
+    val pluginDir = pluginDirectoryFromFile(settings, originalFile)
+        ?: return appDirectoryFromFile(settings, originalFile)
     return pluginDir
+}
+
+fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
+    val hasExtension = file.name.endsWith(settings.cake2TemplateExtension) ||
+           file.name.endsWith(settings.cakeTemplateExtension)
+    if (!hasExtension) {
+        return false
+    }
+    val originalFile = file.originalFile
+    val topDir = pluginOrAppDirectoryFromFile(settings, originalFile)
+    var dir = originalFile.containingDirectory
+    var maxDirs = 6;
+    while (dir != null && dir != topDir) {
+        if (dir.name == "View" || dir.name == "Template") {
+            return true
+        }
+        dir = dir.parentDirectory
+        maxDirs--
+    }
+    return false
 }
 
 fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {

@@ -29,6 +29,9 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
+        if (!referenceType.isComplete) {
+            return null
+        }
         val fieldReferenceName = psiElement.name ?: return null
 
         // don't add types for nested types ($this->FooBar->FooBar):
