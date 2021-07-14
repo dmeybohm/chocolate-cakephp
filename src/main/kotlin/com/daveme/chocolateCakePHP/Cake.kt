@@ -15,8 +15,13 @@ fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirector
 }
 
 fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
-    val hasExtension = file.name.endsWith(settings.cake2TemplateExtension) ||
-           file.name.endsWith(settings.cakeTemplateExtension)
+    var hasExtension = false
+    if (settings.cake2Enabled) {
+        hasExtension = hasExtension || file.name.endsWith(settings.cake2TemplateExtension)
+    }
+    if (settings.cake3Enabled) {
+        hasExtension = hasExtension || file.name.endsWith(settings.cakeTemplateExtension)
+    }
     if (!hasExtension) {
         return false
     }
@@ -24,7 +29,7 @@ fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
     val topDir = pluginOrAppDirectoryFromFile(settings, originalFile)
     var dir = originalFile.containingDirectory
     while (dir != null && dir != topDir) {
-        if (dir.name == "View" || dir.name == "Template") {
+        if ((dir.name == "View" || dir.name == "Template") && dir.parent == topDir) {
             return true
         }
         dir = dir.parentDirectory

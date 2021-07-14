@@ -11,8 +11,7 @@ class ControllerTest : PluginTestCase() {
             "cake3/vendor/cakephp.php"
         )
 
-        myFixture.configureByText("MovieController.php",
-        """
+        myFixture.configureByText("MovieController.php", """
         <?php
 
         namespace App\Controller;
@@ -40,8 +39,7 @@ class ControllerTest : PluginTestCase() {
             "cake3/vendor/cakephp.php"
         )
 
-        myFixture.configureByText("MovieController.php",
-        """
+        myFixture.configureByText("MovieController.php", """
         <?php
 
         namespace App\Controller;

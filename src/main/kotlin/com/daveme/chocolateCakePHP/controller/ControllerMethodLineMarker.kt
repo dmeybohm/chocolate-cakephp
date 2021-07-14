@@ -8,7 +8,6 @@ import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
-import org.jetbrains.annotations.NotNull
 
 class ControllerMethodLineMarker : LineMarkerProvider {
 
