@@ -60,6 +60,40 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("generateMetadata"))
     }
 
+    fun `test completing a component from a plugin`() {
+        // Add plugin namespace to state.
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state!!.copy()
+        newState.pluginNamespaces = listOf("\\TestPlugin")
+        originalSettings.loadState(newState)
+
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/plugins/Controller/Component/InsidePluginComponent.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}metadata = ${'$'}this->InsidePlugin-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("insidePluginComponentMethod"))
+    }
+
     fun `test completing a cake2 model inside a controller`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -79,6 +113,8 @@ class ControllerTest : BaseTestCase() {
             }
         }
         """.trimIndent())
+
+
         assertTrue(Settings.getInstance(myFixture.project).cake2Enabled)
         myFixture.completeBasic()
 
@@ -111,5 +147,6 @@ class ControllerTest : BaseTestCase() {
         val strings = myFixture.lookupElementStrings
         assertTrue(strings!!.contains("findById"))
     }
+
 
 }
