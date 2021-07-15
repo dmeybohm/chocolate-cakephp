@@ -114,7 +114,6 @@ class ControllerTest : BaseTestCase() {
         }
         """.trimIndent())
 
-
         assertTrue(Settings.getInstance(myFixture.project).cake2Enabled)
         myFixture.completeBasic()
 
@@ -147,6 +146,5 @@ class ControllerTest : BaseTestCase() {
         val strings = myFixture.lookupElementStrings
         assertTrue(strings!!.contains("findById"))
     }
-
 
 }
