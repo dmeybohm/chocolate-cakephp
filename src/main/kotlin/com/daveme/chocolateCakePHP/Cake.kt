@@ -11,7 +11,22 @@ sealed class Cake(val viewDirectory: String, val elementTop: String) {
 fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     val originalFile = file.originalFile
     return pluginDirectoryFromFile(settings, originalFile)
-        ?: return appDirectoryFromFile(settings, originalFile)
+        ?: appDirectoryFromFile(settings, originalFile)
+        ?: templateDirectoryFromFile(settings, originalFile)
+}
+
+fun templateDirectoryFromFile(settings: Settings, originalFile: PsiFile): PsiDirectory? {
+    if (!settings.cake3Enabled) {
+        return null
+    }
+    var dir: PsiDirectory? = originalFile.containingDirectory
+    while (dir != null) {
+        if (dir.name == "templates") {
+            return dir
+        }
+        dir = dir.parent
+    }
+    return null
 }
 
 fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
@@ -68,6 +83,14 @@ private fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirector
         dir = dir.parent
     }
     return null
+}
+
+object CakeFour : Cake(viewDirectory = "templates", elementTop = "element") {
+    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
+        "../$viewDirectory/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
+
+    override fun elementPath(settings: Settings, elementPath: String): String =
+        "../$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
 }
 
 object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element") {

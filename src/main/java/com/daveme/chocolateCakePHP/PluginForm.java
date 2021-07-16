@@ -62,6 +62,7 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setEditAction(action -> {
             PluginEntry selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
+            assert selected != null;
             EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected.getNamespace());
             dialog.addTextFieldListener(fieldText -> {
                 String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
@@ -107,6 +108,7 @@ public class PluginForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
+        assert state != null;
         state.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
         state.setPluginPath(pluginPathTextField.getText());
         settings.loadState(state);

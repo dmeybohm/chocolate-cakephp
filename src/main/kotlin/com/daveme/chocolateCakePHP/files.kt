@@ -45,8 +45,12 @@ fun templatePathToVirtualFile(
 ): VirtualFile? {
     var relativeFile: VirtualFile? = null
     if (settings.cake3Enabled) {
-        val templatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
-        relativeFile = findRelativeFile(appOrPluginDir, templatePath)
+        val cakeThreeTemplatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
+        relativeFile = findRelativeFile(appOrPluginDir, cakeThreeTemplatePath)
+        if (relativeFile == null) {
+            val cakeFourTemplatePath = CakeFour.templatePath(settings, controllerName, controllerAction)
+            relativeFile = findRelativeFile(appOrPluginDir, cakeFourTemplatePath)
+        }
     }
     if (relativeFile == null) {
         if (settings.cake2Enabled) {
@@ -59,18 +63,22 @@ fun templatePathToVirtualFile(
 
 fun elementPathToVirtualFile(
     settings: Settings,
-    appDir: PsiDirectory?,
+    pluginOrAppDir: PsiDirectory?,
     elementPath: String
 ): VirtualFile? {
     var relativeFile: VirtualFile? = null
     if (settings.cake3Enabled) {
         val cakeThreeElementFilename = CakeThree.elementPath(settings, elementPath)
-        relativeFile = findRelativeFile(appDir, cakeThreeElementFilename)
+        relativeFile = findRelativeFile(pluginOrAppDir, cakeThreeElementFilename)
+        if (relativeFile == null) {
+            val cakeFourElementFilename = CakeFour.elementPath(settings, elementPath)
+            relativeFile = findRelativeFile(pluginOrAppDir, cakeFourElementFilename)
+        }
     }
     if (relativeFile == null) {
         if (settings.cake2Enabled) {
             val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
-            relativeFile = findRelativeFile(appDir, cakeTwoElementFilename)
+            relativeFile = findRelativeFile(pluginOrAppDir, cakeTwoElementFilename)
         }
     }
     return relativeFile
