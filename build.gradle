@@ -54,7 +54,8 @@ patchPluginXml {
     <ul>
         <li>Add ClassRegistry::init() navigation to models</li>
         <li>Port to newer version of PhpStorm</li>
-        <li>Improve performance</li>
+        <li>Fix bugs in plugin handling so it works now</li>
+        <li>Add basic cake4 support</li>
     </ul>
     """
 }
