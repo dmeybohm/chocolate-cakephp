@@ -15,5 +15,4 @@ class SettingsTest : BaseTestCase() {
         assertNotNull(Settings.getInstance(this.project))
     }
 
-
 }
