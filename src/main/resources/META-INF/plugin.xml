@@ -7,7 +7,7 @@
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      This supports Cake 3 and Cake 2. <br><br>
+      This supports Cake 3 and Cake 2, and has some support for Cake 4. <br><br>
 
       Current features:
 
@@ -33,7 +33,7 @@
                              id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="CakePHP 3 Plugins"
+                             displayName="CakePHP 3 / 4 Plugins"
                              id="chocolatecakephp.PluginForm"
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
 
