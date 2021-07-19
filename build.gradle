@@ -48,7 +48,7 @@ test {
 }
 
 patchPluginXml {
-    sinceBuild '193'
+    sinceBuild '202'
     changeNotes """
     <p>0.7.0</p>
     <ul>
