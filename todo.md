@@ -7,23 +7,23 @@
     - [ ] Models
     - [ ] Breadcrumbs
     - [ ] Form
-- [ ] Suppress dynamic property / method warning on classes that exist on Controllers / Cells / View Helpers / Views
 
 ### Planned for 0.9.0
 
 - [ ] Add quickfix for undefined controller/view/component methods to add method
+- [ ] Suppress dynamic property / method warning on classes that exist on Controllers / Cells / View Helpers / Views
 - [ ] Add error for undefined controller/view/component methods/fields
+- [ ] Add support for navigating to view from `->render` methods
+
+### Planned for 1.0.0
+
 - [ ] Convert GUI to Kotlin
   - [ ] Add ability to add more paths to view navigation for Cake3 plugins
   - [ ] Use separate config sheet in preferences
 - [ ] Rework plugin support to read from `vendor/cakephp-plugins.php`
-
-### Planned for 1.0.0
-
 - [ ] Investigate LineMarker performance
-- [ ] Add support for navigating to view from `->render` methods
 - [ ] Add menu to LineMarker to create view file
-
+  
 ### Maybe in the future:
 
 - [ ] Add completion contributor for view helpers inside view helpers
