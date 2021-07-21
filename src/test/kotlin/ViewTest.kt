@@ -4,6 +4,15 @@ import com.daveme.chocolateCakePHP.Settings
 
 class ViewTest : BaseTestCase() {
 
+    override fun tearDown() {
+        // Reset plugin settings:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = Settings().state!!
+        originalSettings.loadState(newState)
+
+        super.tearDown()
+    }
+
     fun `test completing view helper inside a view`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -95,6 +104,31 @@ class ViewTest : BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("helpWithSomething"))
+    }
+
+    fun `test completing view helper inside a view for cake4`() {
+        // change app directory:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state!!.copy()
+        newState.appDirectory = "srcx"
+        originalSettings.loadState(newState)
+
+        myFixture.configureByFiles(
+            "cake4/srcx/Controller/AppController.php",
+            "cake4/srcx/Controller/Component/MovieMetadataComponent.php",
+            "cake4/srcx/View/Helper/MovieFormatterHelper.php",
+            "cake4/srcx/View/AppView.php",
+            "cake4/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.ctp", """
+        <?php
+        ${'$'}this-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("MovieFormatter"))
     }
 
 }

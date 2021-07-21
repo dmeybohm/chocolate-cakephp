@@ -35,7 +35,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
 
-        val pluginOrAppDir = pluginOrAppDirectoryFromFile(settings, containingFile)
+        val pluginOrAppDir = topSourceDirectoryFromFile(settings, containingFile)
         val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, psiElement.text)
                 ?: return PsiElement.EMPTY_ARRAY
 

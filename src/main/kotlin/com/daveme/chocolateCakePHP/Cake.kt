@@ -6,16 +6,17 @@ import com.intellij.psi.PsiFile
 sealed class Cake(val viewDirectory: String, val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
     abstract fun elementPath(settings: Settings, elementPath: String): String
+    abstract fun isCakeViewFile(settings: Settings, topDir: PsiDirectory?, file: PsiFile): Boolean
 }
 
-fun pluginOrAppDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+fun topSourceDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
     val originalFile = file.originalFile
     return pluginDirectoryFromFile(settings, originalFile)
         ?: appDirectoryFromFile(settings, originalFile)
         ?: templateDirectoryFromFile(settings, originalFile)
 }
 
-fun templateDirectoryFromFile(settings: Settings, originalFile: PsiFile): PsiDirectory? {
+private fun templateDirectoryFromFile(settings: Settings, originalFile: PsiFile): PsiDirectory? {
     if (!settings.cake3Enabled) {
         return null
     }
@@ -30,29 +31,41 @@ fun templateDirectoryFromFile(settings: Settings, originalFile: PsiFile): PsiDir
 }
 
 fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
-    var hasExtension = false
-    if (settings.cake2Enabled) {
-        hasExtension = hasExtension || file.name.endsWith(settings.cake2TemplateExtension)
-    }
-    if (settings.cake3Enabled) {
-        hasExtension = hasExtension || file.name.endsWith(settings.cakeTemplateExtension)
-    }
-    if (!hasExtension) {
+    if (!settings.enabled) {
         return false
     }
-    val originalFile = file.originalFile
-    val topDir = pluginOrAppDirectoryFromFile(settings, originalFile)
-    var dir = originalFile.containingDirectory
-    while (dir != null && dir != topDir) {
-        if ((dir.name == "View" || dir.name == "Template") && dir.parent == topDir) {
+
+    val hasCakeThree = if (settings.cake3Enabled)
+        file.name.endsWith(settings.cakeTemplateExtension)
+    else
+        false
+
+    val hasCakeTwo = if (settings.cake2Enabled)
+        file.name.endsWith(settings.cake2TemplateExtension)
+    else
+        false
+
+    val topDir = topSourceDirectoryFromFile(settings, file)
+    if (hasCakeThree) {
+        if (CakeFour.isCakeViewFile(settings, topDir, file)) {
             return true
         }
-        dir = dir.parentDirectory
+        if (CakeThree.isCakeViewFile(settings, topDir, file)) {
+            return true
+        }
     }
+
+    if (hasCakeTwo && CakeTwo.isCakeViewFile(settings, topDir, file)) {
+        return true
+    }
+
     return false
 }
 
-fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+private fun pluginDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirectory? {
+    if (!settings.cake3Enabled) {
+        return null
+    }
     var first: PsiDirectory? = file.containingDirectory
     var second = first?.parent
     var third = second?.parent
@@ -91,6 +104,10 @@ object CakeFour : Cake(viewDirectory = "templates", elementTop = "element") {
 
     override fun elementPath(settings: Settings, elementPath: String): String =
         "../$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
+
+    override fun isCakeViewFile(settings: Settings, topDir: PsiDirectory?, file: PsiFile): Boolean {
+        return topDir?.name == viewDirectory
+    }
 }
 
 object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element") {
@@ -99,6 +116,21 @@ object CakeThree : Cake(viewDirectory = "Template", elementTop = "Element") {
 
     override fun elementPath(settings: Settings, elementPath: String): String =
         "$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
+
+    override fun isCakeViewFile(settings: Settings, topDir: PsiDirectory?, file: PsiFile): Boolean {
+        var dir = file.originalFile.containingDirectory
+
+        while (dir != null && dir != topDir) {
+            if (settings.cake3Enabled) {
+                if (dir.name == viewDirectory && dir.parent == topDir) {
+                    return true
+                }
+            }
+            dir = dir.parentDirectory
+        }
+
+        return false
+    }
 }
 
 object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements") {
@@ -107,4 +139,15 @@ object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements") {
 
     override fun elementPath(settings: Settings, elementPath: String): String =
             "${viewDirectory}/${elementTop}/$elementPath.${settings.cake2TemplateExtension}"
+
+    override fun isCakeViewFile(settings: Settings, topDir: PsiDirectory?, file: PsiFile): Boolean {
+        var dir = file.originalFile.containingDirectory
+        while (dir != null && dir != topDir) {
+            if (dir.name == viewDirectory && dir.parent == topDir) {
+                return true
+            }
+            dir = dir.parentDirectory
+        }
+        return false
+    }
 }
