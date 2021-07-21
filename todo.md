@@ -1,6 +1,7 @@
 ### Planned for 0.8.0
 
 - [ ] Autodetect cake and disable code unless forced
+  - [ ] Autodetect app namespace unless specified
 - [ ] Add "cell" support
 - [ ] Support Cake 3 / Cake 4 models from controllers / cells  
 - [ ] Use `expectedArguments` in `.phpstorm.meta.php` to provide completion for Cake classes, including:
