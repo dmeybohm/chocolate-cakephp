@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.Variable
 
 class ControllerCompletionContributor : CompletionContributor() {
 
@@ -51,6 +52,9 @@ class ControllerCompletionContributor : CompletionContributor() {
             }
 
             val classReference = fieldReference.classReference ?: return
+            if (!classReference.type.isComplete || classReference !is Variable) {
+                return
+            }
 
             val controllerClassNames = classReference.type.types.filter { it.isControllerClass() }
             if (controllerClassNames.isNotEmpty()) {
