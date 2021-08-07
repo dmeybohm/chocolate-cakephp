@@ -147,4 +147,30 @@ class ControllerTest : BaseTestCase() {
         assertTrue(strings!!.contains("findById"))
     }
 
+    fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Controller/Component/MovieMetadataComponent.php",
+            "cake3/src/View/AppView.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends \Cake\Controller\Controller
+        {
+            public function testViewBuilder() 
+            {
+                ${'$'}this->viewBuilder()-><caret>
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("MovieMetadata"))
+    }
+
 }
