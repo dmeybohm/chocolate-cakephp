@@ -4,7 +4,6 @@ import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
 import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import com.jetbrains.php.completion.PhpCompletionUtil;
 import org.jetbrains.annotations.Nls;
@@ -15,7 +14,7 @@ import javax.swing.*;
 import java.lang.reflect.InvocationTargetException;
 
 class ConfigForm implements SearchableConfigurable {
-    private Project project;
+    private final Project project;
     private JPanel topPanel;
     private JCheckBox enableCake3SupportCheckBox;
     private JButton appNamespaceDefaultButton;
@@ -43,12 +42,13 @@ class ConfigForm implements SearchableConfigurable {
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
         toggleCake2State(settings.getCake2Enabled());
-        cake2TemplateExtensionTextField.setText(settings.getCakeTemplateExtension());
+        cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
+        assert state != null;
 
         state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
         state.setAppDirectory(appDirectoryTextField.getText());
@@ -142,9 +142,7 @@ class ConfigForm implements SearchableConfigurable {
         FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
         try {
             if (!SwingUtilities.isEventDispatchThread()) {
-                SwingUtilities.invokeAndWait(() -> {
-                    setupHandler(insertHandler);
-                });
+                SwingUtilities.invokeAndWait(() -> setupHandler(insertHandler));
             } else {
                 setupHandler(insertHandler);
             }
