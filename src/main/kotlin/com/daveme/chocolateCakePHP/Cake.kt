@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP
 
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
+import com.jetbrains.php.lang.psi.elements.PhpClass
 
 sealed class Cake(val viewDirectory: String, val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
@@ -150,4 +151,9 @@ object CakeTwo : Cake(viewDirectory = "View", elementTop = "Elements") {
         }
         return false
     }
+
+    fun isModelClass(classes: Collection<PhpClass>): Boolean {
+        return classes.any { phpClass -> phpClass.superFQN == "\\AppModel" }
+    }
+
 }

@@ -11,7 +11,7 @@ class MovieController extends AppController
 	    $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
 	    $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
 
-	    ClassRegistry::init('Movie')->otherModelMethod();
+	    ClassRegistry::init('Movie')->saveScreening();
 	    $this->set(compact('movies', 'artist', 'metadata'));
 	}
 
