@@ -11,6 +11,7 @@
 - Update build system to make upgrading plugin easier and improve QA
 - Remove deprecated API usages
 - Add completion for nested Cake 2 models
+- Add completion for first argument of `find()` in Cake2 models
 
 ## [0.7.0] - 2021-08-09
 ### Added
