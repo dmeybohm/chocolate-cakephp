@@ -1,9 +1,6 @@
 package com.daveme.chocolateCakePHP
 
-import com.intellij.openapi.components.PersistentStateComponent
-import com.intellij.openapi.components.ServiceManager
-import com.intellij.openapi.components.State
-import com.intellij.openapi.components.Storage
+import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 
 data class SettingsState(
@@ -19,6 +16,7 @@ data class SettingsState(
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit")
 )
 
+@Service
 @State(
     name = "ChocolateCakePHPSettings",
     storages = [Storage( "ChocolateCakePHP.xml")]
@@ -70,7 +68,8 @@ class Settings : PersistentStateComponent<SettingsState> {
 
         @JvmStatic
         fun getInstance(project: Project): Settings {
-            return ServiceManager.getService<Settings>(project, Settings::class.java)
+            val settings = project.getService(Settings::class.java)
+            return settings
         }
 
         @JvmStatic
