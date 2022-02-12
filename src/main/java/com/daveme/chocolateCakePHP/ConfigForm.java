@@ -2,7 +2,10 @@ package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
 import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.options.SearchableConfigurable;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import com.jetbrains.php.completion.PhpCompletionUtil;
@@ -140,14 +143,10 @@ class ConfigForm implements SearchableConfigurable {
 
     private void createUIComponents() {
         FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
-        try {
-            if (!SwingUtilities.isEventDispatchThread()) {
-                SwingUtilities.invokeAndWait(() -> setupHandler(insertHandler));
-            } else {
-                setupHandler(insertHandler);
-            }
-        } catch (InterruptedException | InvocationTargetException e) {
-            e.printStackTrace();
+        if (!SwingUtilities.isEventDispatchThread()) {
+            ApplicationManager.getApplication().invokeAndWait(() -> setupHandler(insertHandler), ModalityState.any());
+        } else {
+            setupHandler(insertHandler);
         }
     }
 
