@@ -19,6 +19,7 @@ data class SettingsState(
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit")
 )
 
+@Service
 @State(
     name = "ChocolateCakePHPSettings",
     storages = [Storage( "ChocolateCakePHP.xml")]
@@ -70,7 +71,8 @@ class Settings : PersistentStateComponent<SettingsState> {
 
         @JvmStatic
         fun getInstance(project: Project): Settings {
-            return ServiceManager.getService<Settings>(project, Settings::class.java)
+            val settings = project.getService(Settings::class.java)
+            return settings
         }
 
         @JvmStatic
