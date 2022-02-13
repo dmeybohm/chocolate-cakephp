@@ -46,7 +46,6 @@ class ControllerCompletionContributor : CompletionContributor() {
                 return
             }
 
-            // Don't add completion for nested classes: (e.g. $this->FooBar->FooBar):
             val childElement = fieldReference.firstChild
             if (childElement is FieldReference) {
                 return nestedLookup(settings, psiElement, completionResultSet, childElement)
@@ -97,7 +96,7 @@ class ControllerCompletionContributor : CompletionContributor() {
             val phpIndex = PhpIndex.getInstance(psiElement.project)
             val fieldName = fieldReferenceChild.name
 
-            // Check if parent is in the list of model subclasses
+            // Check if "child" (preceeding $this->FieldReference) is in the list of model subclasses
             val modelClasses = phpIndex.getAllModelSubclasses(settings)
             val fqn = "\\" + fieldName
             if (!modelClasses.any { modelClass -> modelClass.fqn == fqn }) {
