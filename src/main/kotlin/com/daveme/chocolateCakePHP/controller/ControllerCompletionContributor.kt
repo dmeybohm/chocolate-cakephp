@@ -95,6 +95,10 @@ class ControllerCompletionContributor : CompletionContributor() {
             }
             val phpIndex = PhpIndex.getInstance(psiElement.project)
             val fieldName = fieldReferenceChild.name
+            val isUppercase = fieldName?.startsWithUppercaseCharacter() ?: false
+            if (!isUppercase) {
+                return
+            }
 
             // Check if "child" (preceeding $this->FieldReference) is in the list of model subclasses
             val modelClasses = phpIndex.getAllModelSubclasses(settings)
