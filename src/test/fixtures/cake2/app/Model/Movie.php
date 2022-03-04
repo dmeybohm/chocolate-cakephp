@@ -3,7 +3,10 @@
 
 class Movie extends AppModel
 {
-	public function otherModelMethod()
+    public $hasMany = ['Artist'];
+    public $belongsTo = ['Director'];
+
+	public function saveScreening()
 	{
 
 	}

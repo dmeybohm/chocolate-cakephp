@@ -173,32 +173,94 @@ class ControllerTest : BaseTestCase() {
         assertFalse(result!!.contains("MovieMetadata"))
     }
 
-
-    fun `test nested model completion in cake`() {
+    fun `test nested model completion type provider in cake2`() {
         myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Controller/Component/MovieMetadataComponent.php",
-            "cake3/src/View/AppView.php",
-            "cake3/vendor/cakephp.php"
+            "cake2/app/Controller/AppController.php",
+            "cake2/app/Controller/Component/AppComponent.php",
+            "cake2/app/Controller/Component/MovieMetadataComponent.php",
+            "cake2/app/Model/AppModel.php",
+            "cake2/app/Model/Artist.php",
+            "cake2/app/Model/Director.php",
+            "cake2/app/Model/Movie.php",
+            "cake2/vendor/cakephp.php"
         )
 
-        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         namespace App\Controller;
 
         class MovieController extends \Cake\Controller\Controller
         {
-            public function testViewBuilder() 
+            public function testNestedCake2Model() 
             {
-                ${'$'}this->viewBuilder()-><caret>
+                ${'$'}this->Movie->Director-><caret>
             }
         }
         """.trimIndent())
         myFixture.completeBasic()
 
         val result = myFixture.lookupElementStrings
-        assertFalse(result!!.contains("MovieMetadata"))
+        assertTrue(result!!.contains("releaseFilm"))
+    }
 
+    fun `test nested model completion contributor in cake2`() {
+        myFixture.configureByFiles(
+            "cake2/app/Controller/AppController.php",
+            "cake2/app/Controller/Component/AppComponent.php",
+            "cake2/app/Controller/Component/MovieMetadataComponent.php",
+            "cake2/app/Model/AppModel.php",
+            "cake2/app/Model/Artist.php",
+            "cake2/app/Model/Director.php",
+            "cake2/app/Model/Movie.php",
+            "cake2/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends \Cake\Controller\Controller
+        {
+            public function testNestedCake2Model() 
+            {
+                ${'$'}this->Movie-><caret>
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("Director"))
+    }
+
+    fun `test nested model completion contributor in cake2 only if parent is a model`() {
+        myFixture.configureByFiles(
+            "cake2/app/Controller/AppController.php",
+            "cake2/app/Controller/Component/AppComponent.php",
+            "cake2/app/Controller/Component/MovieMetadataComponent.php",
+            "cake2/app/Model/AppModel.php",
+            "cake2/app/Model/Artist.php",
+            "cake2/app/Model/Director.php",
+            "cake2/app/Model/Movie.php",
+            "cake2/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends \Cake\Controller\Controller
+        {
+            public function testNestedCake2Model() 
+            {
+                ${'$'}this->MovieMetadata-><caret>
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("Director"))
     }
 
 }

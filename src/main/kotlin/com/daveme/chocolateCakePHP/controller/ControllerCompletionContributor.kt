@@ -32,7 +32,7 @@ class ControllerCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
-            var parent  = psiElement.parent ?: return
+            var parent = psiElement.parent ?: return
             if (parent !is FieldReference) {
                 parent = findSiblingFieldReference(
                     psiElement
@@ -46,11 +46,20 @@ class ControllerCompletionContributor : CompletionContributor() {
                 return
             }
 
-            // Don't add completion for nested classes: (e.g. $this->FooBar->FooBar):
-            if (fieldReference.firstChild is FieldReference) {
-                return
+            val childElement = fieldReference.firstChild
+            if (childElement is FieldReference) {
+                return nestedLookup(settings, psiElement, completionResultSet, childElement)
+            } else {
+                return directLookup(settings, psiElement, completionResultSet, fieldReference)
             }
+        }
 
+        private fun directLookup(
+            settings: Settings,
+            psiElement: PsiElement,
+            completionResultSet: CompletionResultSet,
+            fieldReference: FieldReference,
+        ) {
             val classReference = fieldReference.classReference ?: return
             if (!classReference.type.isComplete || classReference !is Variable) {
                 return
@@ -72,6 +81,32 @@ class ControllerCompletionContributor : CompletionContributor() {
                     containingClasses = containingClasses
                 )
             }
+        }
+
+        private fun nestedLookup(
+            settings: Settings,
+            psiElement: PsiElement,
+            completionResultSet: CompletionResultSet,
+            fieldReferenceChild: FieldReference,
+        ) {
+            // Only Cake2 models support nested lookup.
+            if (!settings.cake2Enabled) {
+                return
+            }
+            val phpIndex = PhpIndex.getInstance(psiElement.project)
+            val fieldName = fieldReferenceChild.name
+            val isUppercase = fieldName?.startsWithUppercaseCharacter() ?: false
+            if (!isUppercase) {
+                return
+            }
+
+            // Check if "child" (preceeding $this->FieldReference) is in the list of model subclasses
+            val modelClasses = phpIndex.getAllModelSubclasses(settings)
+            val fqn = "\\" + fieldName
+            if (!modelClasses.any { modelClass -> modelClass.fqn == fqn }) {
+                return
+            }
+            completionResultSet.completeFromClasses(modelClasses)
         }
 
     }

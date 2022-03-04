@@ -11,6 +11,9 @@ class App {
 
 class Controller {
 
+    public function __get() {}
+
+    public function set($keyOrArray, $value = null) {}
 }
 
 class Model {
