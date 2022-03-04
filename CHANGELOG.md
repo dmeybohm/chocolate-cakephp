@@ -3,9 +3,6 @@
 # Chocolate CakePHP Changelog
 
 ## [Unreleased]
-### Added
-
-## [0.8.0] - 2022-02-12
 ### Changed
 - Fix warning when upgrading plugin to PhpStorm 2021.3.2
 - Update build system to make upgrading plugin easier and improve QA
