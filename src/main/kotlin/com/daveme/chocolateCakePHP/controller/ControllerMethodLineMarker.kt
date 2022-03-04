@@ -32,6 +32,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
         return NavigationGutterIconBuilder
             .create(CakeIcons.LOGO)
+            .setTooltipText("Click to navigate to view file")
             .setTarget(targetElement)
             .createLineMarkerInfo(nameIdentifier)
     }
