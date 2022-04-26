@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.8.1] - 2022-04-26
+### Changed
+- Update for PhpStorm 2022.1
+
 ## [0.8.0] - 2022-03-11
 ### Added
 - Add completion for nested Cake 2 models
