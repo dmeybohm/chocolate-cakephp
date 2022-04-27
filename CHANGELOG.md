@@ -7,8 +7,8 @@
 ## [0.8.1] - 2022-04-26
 ### Changed
 - Update for PhpStorm 2022.1
-- Map from camelcased action names to underscored names for view files
-- Set default template filename to '.php' when user selects view button
+- Map from camel-cased action names to underscored names for view files
+- Fix handling of extension between CakePHP 3 and CakePHP 4.
 
 ## [0.8.0] - 2022-03-11
 ### Added
