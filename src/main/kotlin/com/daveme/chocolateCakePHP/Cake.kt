@@ -36,6 +36,11 @@ fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
         return false
     }
 
+    val hasCakeFour = if (settings.cake3Enabled)
+        file.name.endsWith("php")
+    else
+        false
+
     val hasCakeThree = if (settings.cake3Enabled)
         file.name.endsWith(settings.cakeTemplateExtension)
     else
@@ -47,15 +52,12 @@ fun isCakeViewFile(settings: Settings, file: PsiFile): Boolean {
         false
 
     val topDir = topSourceDirectoryFromFile(settings, file)
-    if (hasCakeThree) {
-        if (CakeFour.isCakeViewFile(settings, topDir, file)) {
-            return true
-        }
-        if (CakeThree.isCakeViewFile(settings, topDir, file)) {
-            return true
-        }
+    if (hasCakeFour && CakeFour.isCakeViewFile(settings, topDir, file)) {
+        return true
     }
-
+    if (hasCakeThree && CakeThree.isCakeViewFile(settings, topDir, file)) {
+        return true
+    }
     if (hasCakeTwo && CakeTwo.isCakeViewFile(settings, topDir, file)) {
         return true
     }
@@ -101,10 +103,10 @@ private fun appDirectoryFromFile(settings: Settings, file: PsiFile): PsiDirector
 
 object CakeFour : Cake(viewDirectory = "templates", elementTop = "element") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-        "../$viewDirectory/$controllerName/$controllerAction.${settings.cakeTemplateExtension}"
+        "../$viewDirectory/$controllerName/$controllerAction.php"
 
     override fun elementPath(settings: Settings, elementPath: String): String =
-        "../$viewDirectory/$elementTop/$elementPath.${settings.cakeTemplateExtension}"
+        "../$viewDirectory/$elementTop/$elementPath.php"
 
     override fun isCakeViewFile(settings: Settings, topDir: PsiDirectory?, file: PsiFile): Boolean {
         return topDir?.name == viewDirectory
