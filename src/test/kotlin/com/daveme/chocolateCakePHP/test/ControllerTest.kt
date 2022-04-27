@@ -1,9 +1,11 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.Settings
+import org.junit.Test
 
 class ControllerTest : BaseTestCase() {
 
+    @Test
     fun `test completing a component inside a controller`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -32,6 +34,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("MovieMetadata"))
     }
 
+    @Test
     fun `test completing component methods inside a controller`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -60,6 +63,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("generateMetadata"))
     }
 
+    @Test
     fun `test completing a component from a plugin`() {
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
@@ -94,6 +98,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("insidePluginComponentMethod"))
     }
 
+    @Test
     fun `test completing a cake2 model inside a controller`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -121,6 +126,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(strings!!.contains("Movie"))
     }
 
+    @Test
     fun `test completing cake2 model methods inside a controller`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -147,6 +153,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(strings!!.contains("findById"))
     }
 
+    @Test
     fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -173,6 +180,7 @@ class ControllerTest : BaseTestCase() {
         assertFalse(result!!.contains("MovieMetadata"))
     }
 
+    @Test
     fun `test nested model completion type provider in cake2`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -203,6 +211,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("releaseFilm"))
     }
 
+    @Test
     fun `test nested model completion contributor in cake2`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -233,6 +242,7 @@ class ControllerTest : BaseTestCase() {
         assertTrue(result!!.contains("Director"))
     }
 
+    @Test
     fun `test nested model completion contributor in cake2 only if parent is a model`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -262,5 +272,5 @@ class ControllerTest : BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertFalse(result!!.contains("Director"))
     }
-
+    
 }

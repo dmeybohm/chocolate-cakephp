@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.Settings
+import org.junit.Test
 
 class ViewTest : BaseTestCase() {
 
@@ -13,6 +14,7 @@ class ViewTest : BaseTestCase() {
         super.tearDown()
     }
 
+    @Test
     fun `test completing view helper inside a view`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -32,6 +34,7 @@ class ViewTest : BaseTestCase() {
         assertTrue(result!!.contains("MovieFormatter"))
     }
 
+    @Test
     fun `test completing view helper methods inside a view`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -51,6 +54,7 @@ class ViewTest : BaseTestCase() {
         assertTrue(result!!.contains("format"))
     }
 
+    @Test
     fun `test completing child view helper methods inside a view helper`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -75,6 +79,7 @@ class ViewTest : BaseTestCase() {
         assertTrue(result!!.contains("format"))
     }
 
+    @Test
     fun `test completing from plugin in view helper`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -106,6 +111,7 @@ class ViewTest : BaseTestCase() {
         assertTrue(result!!.contains("helpWithSomething"))
     }
 
+    @Test
     fun `test completing view helper inside a view for cake4`() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
