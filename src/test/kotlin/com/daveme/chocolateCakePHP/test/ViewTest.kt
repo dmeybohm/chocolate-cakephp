@@ -16,6 +16,12 @@ class ViewTest : BaseTestCase() {
 
     @Test
     fun `test completing view helper inside a view`() {
+        // change template extension:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state!!.copy()
+        newState.cakeTemplateExtension = "ctp"
+        originalSettings.loadState(newState)
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -36,6 +42,12 @@ class ViewTest : BaseTestCase() {
 
     @Test
     fun `test completing view helper methods inside a view`() {
+        // change template extension:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state!!.copy()
+        newState.cakeTemplateExtension = "ctp"
+        originalSettings.loadState(newState)
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -127,7 +139,7 @@ class ViewTest : BaseTestCase() {
             "cake4/vendor/cakephp.php"
         )
 
-        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.ctp", """
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
         <?php
         ${'$'}this-><caret>
         """.trimIndent())
