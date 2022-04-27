@@ -159,7 +159,7 @@
                   <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
                 <properties>
-                  <text value="This is the extension used for view files. By default it is &quot;ctp.&quot;"/>
+                  <text value="This is the extension used for view files. By default it is &quot;php&quot;. (Change to &quot;ctp&quot; for Cake 3 projects)"/>
                 </properties>
               </component>
               <vspacer id="4cda0">
