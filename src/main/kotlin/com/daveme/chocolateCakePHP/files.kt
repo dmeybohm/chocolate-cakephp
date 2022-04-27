@@ -45,10 +45,11 @@ fun templatePathToVirtualFile(
 ): VirtualFile? {
     var relativeFile: VirtualFile? = null
     if (settings.cake3Enabled) {
-        val cakeThreeTemplatePath = CakeThree.templatePath(settings, controllerName, controllerAction)
+        val underscored = controllerAction.camelCaseToUnderscore()
+        val cakeThreeTemplatePath = CakeThree.templatePath(settings, controllerName, underscored)
         relativeFile = findRelativeFile(appOrPluginDir, cakeThreeTemplatePath)
         if (relativeFile == null) {
-            val cakeFourTemplatePath = CakeFour.templatePath(settings, controllerName, controllerAction)
+            val cakeFourTemplatePath = CakeFour.templatePath(settings, controllerName, underscored)
             relativeFile = findRelativeFile(appOrPluginDir, cakeFourTemplatePath)
         }
     }

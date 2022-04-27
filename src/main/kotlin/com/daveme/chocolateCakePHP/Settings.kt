@@ -4,7 +4,7 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 
 data class SettingsState(
-    var cakeTemplateExtension: String = "ctp",
+    var cakeTemplateExtension: String = "php",
     var appDirectory: String = "src",
     var appNamespace: String = "\\App",
     var pluginPath: String = "plugins",
