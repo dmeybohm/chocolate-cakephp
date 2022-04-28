@@ -18,3 +18,14 @@ fun String.controllerBaseName(): String? =
         null
     else
         substring(0, length - "Controller".length)
+
+val matchUpperCase = Regex("([A-Z])")
+fun String.camelCaseToUnderscore(): String {
+    val removeFirst = this.isNotEmpty() && this[0].isUpperCase()
+    val result = matchUpperCase.replace(this, "_$1")
+    return if (removeFirst)
+        result.substring(1).lowercase()
+    else
+        result.lowercase()
+}
+

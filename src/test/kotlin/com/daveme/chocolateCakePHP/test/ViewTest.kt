@@ -127,7 +127,7 @@ class ViewTest : BaseTestCase() {
             "cake4/vendor/cakephp.php"
         )
 
-        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.ctp", """
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
         <?php
         ${'$'}this-><caret>
         """.trimIndent())
