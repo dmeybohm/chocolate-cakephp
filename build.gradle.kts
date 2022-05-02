@@ -1,4 +1,3 @@
-import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 fun properties(key: String) = project.findProperty(key).toString()
@@ -7,7 +6,8 @@ plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.6.20"
+    // Note: update based on IntelliJ version from https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
+    id("org.jetbrains.kotlin.jvm") version "1.5.10"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.5.2"
     // Gradle Changelog Plugin
