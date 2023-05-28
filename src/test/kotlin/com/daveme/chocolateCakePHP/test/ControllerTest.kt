@@ -3,10 +3,10 @@ package com.daveme.chocolateCakePHP.test
 import com.daveme.chocolateCakePHP.Settings
 import org.junit.Test
 
-class ControllerTest : BaseTestCase() {
+public class ControllerTest : BaseTestCase() {
 
     @Test
-    fun `test completing a component inside a controller`() {
+    public fun `test completing a component inside a controller`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -35,7 +35,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing component methods inside a controller`() {
+    public fun `test completing component methods inside a controller`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -64,7 +64,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing a component from a plugin`() {
+    public fun `test completing a component from a plugin`() {
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = originalSettings.state!!.copy()
@@ -99,7 +99,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing a cake2 model inside a controller`() {
+    public fun `test completing a cake2 model inside a controller`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/MovieMetadataComponent.php",
@@ -127,7 +127,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing cake2 model methods inside a controller`() {
+    public fun `test completing cake2 model methods inside a controller`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/MovieMetadataComponent.php",
@@ -154,7 +154,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
+    public fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -181,7 +181,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test nested model completion type provider in cake2`() {
+    public fun `test nested model completion type provider in cake2`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",
@@ -212,7 +212,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test nested model completion contributor in cake2`() {
+    public fun `test nested model completion contributor in cake2`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",
@@ -243,7 +243,7 @@ class ControllerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test nested model completion contributor in cake2 only if parent is a model`() {
+    public fun `test nested model completion contributor in cake2 only if parent is a model`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",

@@ -3,10 +3,10 @@ package com.daveme.chocolateCakePHP.test
 import com.daveme.chocolateCakePHP.Settings
 import org.junit.Test
 
-class SettingsTest : BaseTestCase() {
+public class SettingsTest() : BaseTestCase() {
 
     @Test
-    fun `test default constructed settings equals defaults property`() {
+    public fun `test default constructed settings equals defaults property`() {
         val settings = Settings()
         val defaults = Settings.defaults
         assertEquals(settings, defaults)
@@ -14,7 +14,7 @@ class SettingsTest : BaseTestCase() {
     }
 
     @Test
-    fun `test getting settings service`() {
+    public fun `test getting settings service`() {
         assertNotNull(Settings.getInstance(this.project))
     }
 
