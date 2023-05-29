@@ -45,7 +45,6 @@ fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
     if (settings.cake2Enabled) {
         result += getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
     }
-//    val cake3Subclasses = phpIndex.getAllSubclasses(MODEL_CAKE3_PARENT_CLASS)
     return result
 }
 
