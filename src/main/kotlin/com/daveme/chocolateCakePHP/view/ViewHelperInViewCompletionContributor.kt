@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
@@ -35,7 +36,10 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
                 return
             }
 
-            val parent = (psiElement.parent ?: return) as? FieldReference ?: return
+            val parent = PsiTreeUtil.getParentOfType(
+                completionParameters.position,
+                FieldReference::class.java
+            ) ?: return
             val classReference = parent.classReference ?: return
             if (!classReference.textMatches("\$this")) {
                 return

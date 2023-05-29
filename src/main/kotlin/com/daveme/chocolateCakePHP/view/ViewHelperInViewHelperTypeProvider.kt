@@ -28,15 +28,13 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider4 {
         }
         val classReference = psiElement.classReference ?: return null
         val referenceType = classReference.type
-        if (!referenceType.isComplete) {
-            return null
-        }
+        val knownType = referenceType.filterUnknown()
 
         val fieldReferenceName = psiElement.name ?: return null
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
-        for (type in referenceType.types) {
+        for (type in knownType.types) {
             if (type.contains("Helper")) {
                 return viewHelperTypeFromFieldName(settings, fieldReferenceName)
             }
