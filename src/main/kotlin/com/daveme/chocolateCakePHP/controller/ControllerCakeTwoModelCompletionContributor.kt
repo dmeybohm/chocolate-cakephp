@@ -42,7 +42,9 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
             val fieldReference = parent as FieldReference
             val settings =
                 Settings.getInstance(psiElement.project)
-            if (!settings.enabled) {
+            if (!settings.enabled ||
+                !settings.cake2Enabled
+            ) {
                 return
             }
 
@@ -85,10 +87,6 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet,
             fieldReferenceChild: FieldReference,
         ) {
-            // Only Cake2 models support nested lookup.
-            if (!settings.cake2Enabled) {
-                return
-            }
             val phpIndex = PhpIndex.getInstance(psiElement.project)
             val fieldName = fieldReferenceChild.name
             val isUppercase = fieldName?.startsWithUppercaseCharacter() ?: false
