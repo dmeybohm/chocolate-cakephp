@@ -42,9 +42,7 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
             val fieldReference = parent as FieldReference
             val settings =
                 Settings.getInstance(psiElement.project)
-            if (!settings.enabled ||
-                !settings.cake2Enabled
-            ) {
+            if (!settings.cake2Enabled) {
                 return
             }
 
