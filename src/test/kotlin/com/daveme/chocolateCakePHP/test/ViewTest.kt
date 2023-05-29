@@ -3,9 +3,9 @@ package com.daveme.chocolateCakePHP.test
 import com.daveme.chocolateCakePHP.Settings
 import org.junit.Test
 
-class ViewTest : BaseTestCase() {
+public class ViewTest() : BaseTestCase() {
 
-    override fun tearDown() {
+    public override fun tearDown() {
         // Reset plugin settings:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings().state!!
@@ -15,7 +15,7 @@ class ViewTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing view helper inside a view`() {
+    public fun `test completing view helper inside a view`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -35,7 +35,7 @@ class ViewTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing view helper methods inside a view`() {
+    public fun `test completing view helper methods inside a view`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -55,7 +55,7 @@ class ViewTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing child view helper methods inside a view helper`() {
+    public fun `test completing child view helper methods inside a view helper`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/View/AppView.php",
@@ -80,7 +80,7 @@ class ViewTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing from plugin in view helper`() {
+    public fun `test completing from plugin in view helper`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/plugins/TestPlugin/src/View/Helper/TestPluginHelper.php",
@@ -112,7 +112,7 @@ class ViewTest : BaseTestCase() {
     }
 
     @Test
-    fun `test completing view helper inside a view for cake4`() {
+    public fun `test completing view helper inside a view for cake4`() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = originalSettings.state!!.copy()
