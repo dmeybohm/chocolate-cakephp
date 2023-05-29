@@ -9,8 +9,7 @@ import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Variable
 
-class ControllerCompletionContributor : CompletionContributor() {
-
+class ControllerComponentCompletionContributor : CompletionContributor() {
     init {
         extend(
             CompletionType.BASIC,
@@ -48,7 +47,7 @@ class ControllerCompletionContributor : CompletionContributor() {
 
             val childElement = fieldReference.firstChild
             if (childElement is FieldReference) {
-                return nestedLookup(settings, psiElement, completionResultSet, childElement)
+                return directLookup(settings, psiElement, completionResultSet, childElement)
             } else {
                 return directLookup(settings, psiElement, completionResultSet, fieldReference)
             }
@@ -70,45 +69,14 @@ class ControllerCompletionContributor : CompletionContributor() {
                 val phpIndex = PhpIndex.getInstance(psiElement.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
 
+                val componentSubclasses = phpIndex.getAllComponentSubclasses(settings)
                 completionResultSet.completeFromClasses(
-                    phpIndex.getAllModelSubclasses(settings),
-                    containingClasses = containingClasses
-                )
-
-                completionResultSet.completeFromClasses(
-                    phpIndex.getAllComponentSubclasses(settings),
+                    componentSubclasses,
                     replaceName = "Component",
                     containingClasses = containingClasses
                 )
             }
         }
-
-        private fun nestedLookup(
-            settings: Settings,
-            psiElement: PsiElement,
-            completionResultSet: CompletionResultSet,
-            fieldReferenceChild: FieldReference,
-        ) {
-            // Only Cake2 models support nested lookup.
-            if (!settings.cake2Enabled) {
-                return
-            }
-            val phpIndex = PhpIndex.getInstance(psiElement.project)
-            val fieldName = fieldReferenceChild.name
-            val isUppercase = fieldName?.startsWithUppercaseCharacter() ?: false
-            if (!isUppercase) {
-                return
-            }
-
-            // Check if "child" (preceeding $this->FieldReference) is in the list of model subclasses
-            val modelClasses = phpIndex.getAllModelSubclasses(settings)
-            val fqn = "\\" + fieldName
-            if (!modelClasses.any { modelClass -> modelClass.fqn == fqn }) {
-                return
-            }
-            completionResultSet.completeFromClasses(modelClasses)
-        }
-
     }
 
     companion object {
