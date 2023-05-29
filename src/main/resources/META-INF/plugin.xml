@@ -37,7 +37,8 @@
                              id="chocolatecakephp.PluginForm"
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
 
-        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCakeTwoModelCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
