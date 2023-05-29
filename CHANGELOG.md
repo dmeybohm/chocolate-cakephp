@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.8.2] - 2022-05-29
+### Changed
+- Fix problem with completion of Cake 2 models and components from controllers
+
 ## [0.8.1] - 2022-04-26
 ### Changed
 - Update for PhpStorm 2022.1
