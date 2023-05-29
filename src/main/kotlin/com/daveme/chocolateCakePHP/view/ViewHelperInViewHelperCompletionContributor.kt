@@ -1,15 +1,18 @@
 package com.daveme.chocolateCakePHP.view
 
-import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.completeFromClasses
+import com.daveme.chocolateCakePHP.getAllViewHelperSubclasses
+import com.daveme.chocolateCakePHP.isCakeViewFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
-import com.jetbrains.php.lang.psi.elements.Variable
 
-class ViewHelperInViewCompletionContributor : CompletionContributor() {
+class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
+
     init {
         extend(
             CompletionType.BASIC,
@@ -44,12 +47,10 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             if (!classReference.textMatches("\$this")) {
                 return
             }
-            val containingFile = psiElement.containingFile
-            if (!isCakeViewFile(settings, containingFile)) {
-                return
-            }
             val phpIndex = PhpIndex.getInstance(psiElement.project)
+            val type = classReference.type.filterUnknown()
             val viewHelperClasses = phpIndex.getAllViewHelperSubclasses(settings)
+                .filter { !type.types.contains(it.fqn) }
             completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
         }
     }

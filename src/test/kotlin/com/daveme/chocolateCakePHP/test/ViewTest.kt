@@ -137,4 +137,93 @@ public class ViewTest() : BaseTestCase() {
         assertTrue(result!!.contains("MovieFormatter"))
     }
 
+    public fun `test completing view helper inside a view helper for cake4`() {
+        // change app directory:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state!!.copy()
+        newState.appDirectory = "srcx"
+        originalSettings.loadState(newState)
+
+        myFixture.configureByFiles(
+            "cake4/srcx/Controller/AppController.php",
+            "cake4/srcx/Controller/Component/MovieMetadataComponent.php",
+            "cake4/srcx/View/Helper/MovieFormatterHelper.php",
+            "cake4/srcx/View/Helper/ArtistFormatterHelper.php",
+            "cake4/srcx/View/AppView.php",
+            "cake4/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake4/srcx/View/Helper/MovieFormatterHelper.php", """
+        <?php
+        namespace App\View\Helper;
+
+        class MovieFormatterHelper extends \Cake\View\Helper
+        {
+            public function format(array ${'$'}movies): string {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
+    public fun `test completing view helper inside a view helper for cake3`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Controller/Component/MovieMetadataComponent.php",
+            "cake3/src/View/Helper/MovieFormatterHelper.php",
+            "cake3/src/View/Helper/ArtistFormatterHelper.php",
+            "cake3/src/View/AppView.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake3/src/View/Helper/MovieFormatterHelper.php", """
+        <?php
+        namespace App\View\Helper;
+
+        class MovieFormatterHelper extends \Cake\View\Helper
+        {
+            public function format(array ${'$'}movies): string {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
+    public fun `test completing view helper inside a view helper for cake2`() {
+        myFixture.configureByFiles(
+            "cake2/app/Controller/AppController.php",
+            "cake2/app/Controller/Component/MovieMetadataComponent.php",
+            "cake2/app/View/Helper/MovieFormatterHelper.php",
+            "cake2/app/View/Helper/ArtistFormatterHelper.php",
+            "cake2/app/View/AppView.php",
+            "cake2/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake2/app/View/Helper/MovieFormatterHelper.php", """
+        <?php
+
+        class MovieFormatterHelper extends AppHelper
+        {
+            public function format(array ${'$'}movies): string {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
 }

@@ -25,19 +25,14 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             return null
         }
         val classReference = psiElement.classReference ?: return null
-        val referenceType = classReference.type
         val fieldReferenceName = psiElement.name ?: return null
-
-        // don't add types for nested types ($this->FooBar->FooBar) on cake 3+:
-        if (psiElement.firstChild is FieldReference && !settings.cake2Enabled) {
-            return null
-        }
 
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
 
-        if (!referenceType.isComplete) {
+        // don't add types for nested types ($this->FooBar->FooBar) on cake 3+:
+        if (psiElement.firstChild is FieldReference) {
             if (settings.cake2Enabled) {
                 return cakeTwoNestedModelCompletion(psiElement)
             } else {
@@ -45,6 +40,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             }
         }
 
+        val referenceType = classReference.type.filterUnknown()
         for (type in referenceType.types) {
             if (type.isControllerClass()) {
                 return componentOrModelTypeFromFieldName(settings, fieldReferenceName)
