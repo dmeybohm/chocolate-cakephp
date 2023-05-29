@@ -10,8 +10,6 @@ It adds a gutter icon in controller methods if the plugin finds an associated vi
 It supports supports CakePHP versions 4, 3, and 2. 
 <!-- Plugin description end -->
 
-<br><br>
-
 ### Screenshots
 
 #### Cake 3 Controller
