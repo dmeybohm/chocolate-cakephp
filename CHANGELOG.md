@@ -3,6 +3,8 @@
 # Chocolate CakePHP Changelog
 
 ## [Unreleased]
+### Added
+- Add autocompletion for other ViewHelpers in ViewHelpers
 
 ## [0.8.2] - 2022-05-29
 ### Changed
