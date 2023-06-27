@@ -137,6 +137,7 @@ public class ViewTest() : BaseTestCase() {
         assertTrue(result!!.contains("MovieFormatter"))
     }
 
+    @Test
     public fun `test completing view helper inside a view helper for cake4`() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
@@ -199,6 +200,38 @@ public class ViewTest() : BaseTestCase() {
         assertFalse(result.contains("MovieFormatter"))
     }
 
+    @Test
+    public fun `test does not complete view helper does not apply in irrelevant contexts for cake3`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Controller/Component/MovieMetadataComponent.php",
+            "cake3/src/View/Helper/MovieFormatterHelper.php",
+            "cake3/src/View/Helper/ArtistFormatterHelper.php",
+            "cake3/src/View/AppView.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+        
+        class MovieController extends AppController
+        {
+            public function index() {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
+
+    @Test
     public fun `test completing view helper inside a view helper for cake2`() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
@@ -223,6 +256,34 @@ public class ViewTest() : BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
+    @Test
+    public fun `test does not complete view helper does not apply in irrelevant contexts for cake2`() {
+        myFixture.configureByFiles(
+            "cake2/app/Controller/AppController.php",
+            "cake2/app/Controller/Component/MovieMetadataComponent.php",
+            "cake2/app/View/Helper/MovieFormatterHelper.php",
+            "cake2/app/View/Helper/ArtistFormatterHelper.php",
+            "cake2/app/View/AppView.php",
+            "cake2/vendor/cakephp.php"
+        )
+
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController
+        {
+            public function index() {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("ArtistFormatter"))
         assertFalse(result.contains("MovieFormatter"))
     }
 

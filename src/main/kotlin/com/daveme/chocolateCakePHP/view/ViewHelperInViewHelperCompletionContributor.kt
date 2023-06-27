@@ -47,11 +47,18 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
             if (!classReference.textMatches("\$this")) {
                 return
             }
+
             val phpIndex = PhpIndex.getInstance(psiElement.project)
             val type = classReference.type.filterUnknown()
-            val viewHelperClasses = phpIndex.getAllViewHelperSubclasses(settings)
-                .filter { !type.types.contains(it.fqn) }
-            completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
+            val viewHelperSubclasses = phpIndex.getAllViewHelperSubclasses(settings)
+            val filtered = viewHelperSubclasses.filter { !type.types.contains(it.fqn) }
+
+            val isCurrentFileAViewHelper = filtered.size < viewHelperSubclasses.size
+            if (!isCurrentFileAViewHelper) {
+                return
+            }
+
+            completionResultSet.completeFromClasses(filtered, "Helper")
         }
     }
 
