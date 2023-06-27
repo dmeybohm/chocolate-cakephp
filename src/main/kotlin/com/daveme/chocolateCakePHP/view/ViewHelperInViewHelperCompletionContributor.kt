@@ -44,7 +44,11 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
                 FieldReference::class.java
             ) ?: return
             val classReference = parent.classReference ?: return
+
             if (!classReference.textMatches("\$this")) {
+                return
+            }
+            if (!psiElement.containingFile.name.contains("Helper")) {
                 return
             }
 
