@@ -24,16 +24,20 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val project = file.project
         val settings = Settings.getInstance(project)
         val pluginOrAppDir = topSourceDirectoryFromFile(settings, file)
-        val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, element.name)
-                ?: return null
+        val controllerAction = element.name
+        val relativeFile1 = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, controllerAction)
+        val relativeFile2 = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, "json/" + controllerAction)
+        val relativeFile3 = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, "xml/" + controllerAction)
 
-        val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null
-        val targetElement = targetFile.firstChild
-
+        val relativeFiles = listOfNotNull(relativeFile1, relativeFile2, relativeFile3)
+        if (relativeFiles.size == 0) {
+            return null
+        }
+        val targetFiles = virtualFilesToPsiFiles(project, relativeFiles)
         return NavigationGutterIconBuilder
             .create(CakeIcons.LOGO)
             .setTooltipText("Click to navigate to view file")
-            .setTarget(targetElement)
+            .setTargets(targetFiles)
             .createLineMarkerInfo(nameIdentifier)
     }
 
