@@ -28,7 +28,7 @@ class ConfigForm(val project: Project) : SearchableConfigurable {
                         .gap(RightGap.SMALL)
                         .resizableColumn()
                         .horizontalAlign(HorizontalAlign.FILL)
-                    button("Reset") {
+                    button("Default") {
                         println("Reset")
                     }
                 }.visibleIf(cake3Enabled.selected)
@@ -44,7 +44,7 @@ class ConfigForm(val project: Project) : SearchableConfigurable {
                         .gap(RightGap.SMALL)
                         .resizableColumn()
                         .horizontalAlign(HorizontalAlign.FILL)
-                    button("Reset") {
+                    button("Default") {
                         println("Reset")
                     }
                 }.visibleIf(cake3Enabled.selected)
@@ -55,7 +55,7 @@ class ConfigForm(val project: Project) : SearchableConfigurable {
                         .gap(RightGap.SMALL)
                         .resizableColumn()
                         .horizontalAlign(HorizontalAlign.FILL)
-                    button("Reset") {
+                    button("Default") {
                         println("Reset")
                     }
                 }.visibleIf(cake3Enabled.selected)
@@ -77,7 +77,7 @@ class ConfigForm(val project: Project) : SearchableConfigurable {
                         .gap(RightGap.SMALL)
                         .resizableColumn()
                         .horizontalAlign(HorizontalAlign.FILL)
-                    button("Reset") {
+                    button("Default") {
                         println("Reset")
                     }
                 }.visibleIf(cake2Enabled.selected)
@@ -88,7 +88,7 @@ class ConfigForm(val project: Project) : SearchableConfigurable {
                         .gap(RightGap.SMALL)
                         .resizableColumn()
                         .horizontalAlign(HorizontalAlign.FILL)
-                    button("Reset") {
+                    button("Default") {
                         println("Reset")
                     }
                 }.visibleIf(cake2Enabled.selected)
