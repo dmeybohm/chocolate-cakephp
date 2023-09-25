@@ -1,17 +1,13 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import java.util.HashSet
-
-fun virtualFileToPsiFile(project: Project, file: VirtualFile): PsiFile? {
-    val psiManager = PsiManager.getInstance(project)
-    return psiManager.findFile(file)
-}
 
 fun virtualFilesToPsiFiles(project: Project, files: Collection<VirtualFile>): Collection<PsiFile> {
 
@@ -60,6 +56,17 @@ fun templatePathToVirtualFile(
         }
     }
     return relativeFile
+}
+
+fun makeRelativeToProjectDir(project: Project, file: VirtualFile): String {
+    val projectDir = project.guessProjectDir() ?: return file.path
+    val parentPath = projectDir.path
+    val childPath = file.path
+    return if (childPath.contains(parentPath)) {
+        childPath.replace(parentPath, "").substring(1)
+    } else {
+        file.path
+    }
 }
 
 fun elementPathToVirtualFile(
