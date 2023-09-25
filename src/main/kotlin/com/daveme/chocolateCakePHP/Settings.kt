@@ -56,7 +56,7 @@ class Settings : PersistentStateComponent<SettingsState> {
         return state.hashCode()
     }
 
-    override fun getState(): SettingsState? {
+    override fun getState(): SettingsState {
         return this.state
     }
 

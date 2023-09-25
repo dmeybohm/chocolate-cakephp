@@ -24,14 +24,16 @@
 
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-    <idea-version since-build="213.6461.21"/>
+    <idea-version since-build="221.6008.13"/>
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.daveme.chocolateCakePHP.Settings" />
-
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
                              id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
+        <projectConfigurable parentId="reference.webide.settings.project.settings.php"
+                             displayName="Chocolate CakePHP New"
+                             id="chocolatecakephp.ui.ConfigForm"
+                             instance="com.daveme.chocolateCakePHP.ui.ConfigForm" />
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
                              displayName="CakePHP 3 / 4 Plugins"
                              id="chocolatecakephp.PluginForm"
