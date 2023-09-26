@@ -8,7 +8,7 @@ public class ViewTest() : BaseTestCase() {
     public override fun tearDown() {
         // Reset plugin settings:
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = Settings().state!!
+        val newState = Settings().state
         originalSettings.loadState(newState)
 
         super.tearDown()
@@ -90,7 +90,7 @@ public class ViewTest() : BaseTestCase() {
 
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state!!.copy()
+        val newState = originalSettings.state.copy()
         newState.pluginNamespaces = listOf("\\TestPlugin")
         originalSettings.loadState(newState)
 
@@ -115,7 +115,7 @@ public class ViewTest() : BaseTestCase() {
     public fun `test completing view helper inside a view for cake4`() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state!!.copy()
+        val newState = originalSettings.state.copy()
         newState.appDirectory = "srcx"
         originalSettings.loadState(newState)
 
@@ -140,7 +140,7 @@ public class ViewTest() : BaseTestCase() {
     public fun `test completing view helper inside a view helper for cake4`() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state!!.copy()
+        val newState = originalSettings.state.copy()
         newState.appDirectory = "srcx"
         originalSettings.loadState(newState)
 
