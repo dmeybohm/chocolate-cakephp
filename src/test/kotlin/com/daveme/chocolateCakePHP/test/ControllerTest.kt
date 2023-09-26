@@ -67,7 +67,7 @@ public class ControllerTest : BaseTestCase() {
     public fun `test completing a component from a plugin`() {
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state!!.copy()
+        val newState = originalSettings.state.copy()
         newState.pluginNamespaces = listOf("\\TestPlugin")
         originalSettings.loadState(newState)
 
