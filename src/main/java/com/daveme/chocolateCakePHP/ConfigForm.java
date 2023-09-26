@@ -50,7 +50,6 @@ class ConfigForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        assert state != null;
 
         state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
         state.setAppDirectory(appDirectoryTextField.getText());
@@ -141,8 +140,10 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void createUIComponents() {
+        System.out.println("project = " + (project == null));
         FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
         if (!SwingUtilities.isEventDispatchThread()) {
+            System.out.println("delayed application manager create");
             ApplicationManager.getApplication().invokeAndWait(() -> setupHandler(insertHandler), ModalityState.any());
         } else {
             setupHandler(insertHandler);
@@ -152,6 +153,7 @@ class ConfigForm implements SearchableConfigurable {
     private void setupHandler(FullyQualifiedNameInsertHandler insertHandler) {
         PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
                 new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
+        System.out.println("project is null in setuphandler: " + (project == null));
         appNamespaceTextField = new TextFieldWithCompletion(
                 project,
                 completionProvider,
