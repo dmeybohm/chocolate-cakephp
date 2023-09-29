@@ -50,7 +50,6 @@ class ConfigForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        assert state != null;
 
         state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
         state.setAppDirectory(appDirectoryTextField.getText());

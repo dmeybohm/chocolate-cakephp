@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.CakeIcons
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
@@ -24,16 +25,24 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val project = file.project
         val settings = Settings.getInstance(project)
         val pluginOrAppDir = topSourceDirectoryFromFile(settings, file)
-        val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, element.name)
-                ?: return null
+        val controllerAction = element.name
+        val fileExtensions = settings.viewFileExtensions
 
-        val targetFile = virtualFileToPsiFile(project, relativeFile) ?: return null
-        val targetElement = targetFile.firstChild
+        // Create one file for each of the file extensions:
+        val relativeFiles = fileExtensions.mapNotNull { fileExtension ->
+            templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, fileExtension + "/" + controllerAction)
+        } + listOfNotNull(
+            templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, controllerAction)
+        )
+        if (relativeFiles.size == 0) {
+            return null
+        }
 
+        val targetFiles = virtualFilesToPsiFiles(project, relativeFiles)
         return NavigationGutterIconBuilder
             .create(CakeIcons.LOGO)
             .setTooltipText("Click to navigate to view file")
-            .setTarget(targetElement)
+            .setTargets(targetFiles)
             .createLineMarkerInfo(nameIdentifier)
     }
 

@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.PluginTableModel;
+import com.daveme.chocolateCakePHP.ui.ViewFileTableModel;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
@@ -12,44 +12,41 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
-public class PluginForm implements SearchableConfigurable {
+public class ViewFileExtensionsForm implements SearchableConfigurable {
 
-    private TableView<PluginEntry> tableView;
+    private TableView<String> tableView;
     private final Project project;
-    private PluginTableModel pluginTableModel;
+    private ViewFileTableModel viewFileTableModel;
     private JPanel topPanel;
     private JPanel tableViewPanel;
-    private JButton pluginPathDefaultButton;
-    private JTextField pluginPathTextField;
     private JPanel headlinePanelForPlugins;
 
-    public PluginForm(Project project) {
+    public ViewFileExtensionsForm(Project project) {
         this.project = project;
     }
 
     @NotNull
     @Override
     public String getId() {
-        return "com.daveme.chocolateCakePHP.PluginForm";
+        return "com.daveme.chocolateCakePHP.Form";
     }
 
     @Override
     public String getDisplayName() {
-        return "CakePHP 3 Plugins";
+        return "CakePHP View File Extensions";
     }
 
     @Nullable
     @Override
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
-        pluginTableModel = PluginTableModel.fromSettings(settings);
-        pluginPathTextField.setText(settings.getPluginPath());
+        viewFileTableModel = ViewFileTableModel.fromSettings(settings);
         final Settings defaults = Settings.getDefaults();
 
-        this.tableView = new TableView<>(pluginTableModel);
-        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<PluginEntry>() {
+        this.tableView = new TableView<>(viewFileTableModel);
+        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
             @Override
-            public PluginEntry createElement() {
+            public String createElement() {
                 return null;
             }
 
@@ -60,14 +57,11 @@ public class PluginForm implements SearchableConfigurable {
         });
 
         decorator.setEditAction(action -> {
-            PluginEntry selected = tableView.getSelectedObject();
+            String selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
-            assert selected != null;
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected.getNamespace());
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected);
             dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
-                pluginTableModel.setValueAt(newPluginEntry, selectedRow, 0);
+                viewFileTableModel.setValueAt(fieldText, selectedRow, 0);
             });
             dialog.setVisible(true);
         });
@@ -75,25 +69,19 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setAddAction(action -> {
             EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, "");
             dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
-                pluginTableModel.addRow(newPluginEntry);
+                viewFileTableModel.addRow(fieldText);
             });
             dialog.setVisible(true);
         });
 
         decorator.setRemoveAction(action -> {
-            pluginTableModel.removeRow(tableView.getSelectedRow());
+            viewFileTableModel.removeRow(tableView.getSelectedRow());
         });
 
         decorator.disableUpAction();
         decorator.disableDownAction();
 
         tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
-
-        pluginPathDefaultButton.addActionListener(e ->
-                this.pluginPathTextField.setText(defaults.getPluginPath())
-        );
 
         return topPanel;
     }
@@ -108,8 +96,7 @@ public class PluginForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        state.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
-        state.setPluginPath(pluginPathTextField.getText());
+        state.setViewFileExtensions(viewFileTableModel.getViewFiles());
         settings.loadState(state);
     }
 

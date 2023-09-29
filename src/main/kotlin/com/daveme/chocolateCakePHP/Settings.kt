@@ -13,7 +13,8 @@ data class SettingsState(
     var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = true,
     var cake3Enabled: Boolean = true,
-    var pluginNamespaces: List<String> = arrayListOf("\\DebugKit")
+    var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
+    var viewFileExtensions: List<String> = arrayListOf("json", "xml", "rss")
 )
 
 @Service
@@ -39,6 +40,11 @@ class Settings : PersistentStateComponent<SettingsState> {
             return pluginEntryListFromNamespaceList(state.pluginNamespaces)
         }
 
+    val viewFileExtensions: List<String>
+        get() {
+            return state.viewFileExtensions
+        }
+
     val enabled: Boolean
         get() {
             return cake2Enabled || cake3Enabled
@@ -56,7 +62,7 @@ class Settings : PersistentStateComponent<SettingsState> {
         return state.hashCode()
     }
 
-    override fun getState(): SettingsState? {
+    override fun getState(): SettingsState {
         return this.state
     }
 
@@ -66,7 +72,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     companion object {
 
-        @JvmStatic
+       @JvmStatic
         fun getInstance(project: Project): Settings {
             val settings = project.getService(Settings::class.java)
             return settings
