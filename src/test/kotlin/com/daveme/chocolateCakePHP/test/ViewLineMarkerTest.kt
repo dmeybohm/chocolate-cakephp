@@ -5,7 +5,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.junit.Test
 import com.jetbrains.php.lang.psi.elements.Method
 
-class ViewLineMarkerTest : BaseLineMarkerTest() {
+class ViewLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that line markers contain one entry for each type of view`() {
