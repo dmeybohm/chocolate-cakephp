@@ -6,10 +6,13 @@ import com.intellij.codeInsight.daemon.LineMarkerProviders
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlin.reflect.KClass
 
 public abstract class BaseTestCase : BasePlatformTestCase() {
+
+    data class RelatedItemInfo(val filename: String, val containingDir: String)
 
     override fun getTestDataPath(): String {
         return "src/test/fixtures"
@@ -31,5 +34,15 @@ public abstract class BaseTestCase : BasePlatformTestCase() {
         val renderer = marker.createGutterRenderer() as LineMarkerInfo.LineMarkerGutterIconRenderer<*>
         val lineMarkerInfo = renderer.lineMarkerInfo as RelatedItemLineMarkerInfo<*>
         return lineMarkerInfo.createGotoRelatedItems()
+    }
+
+    protected fun getRelatedItemInfos(collection: Collection<GotoRelatedItem>): Set<RelatedItemInfo> {
+        return collection.mapNotNull { relatedItem ->
+            val file = (relatedItem.element as? PsiFile) ?: return@mapNotNull null
+            RelatedItemInfo(
+                filename = file.name,
+                containingDir = file.containingDirectory.name
+            )
+        }.toSet()
     }
 }
