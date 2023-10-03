@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker
 import com.intellij.psi.util.PsiTreeUtil
 import org.junit.Test
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.elements.MethodReference
 
 class ViewLineMarkerTest : BaseTestCase() {
 
@@ -38,7 +39,7 @@ class ViewLineMarkerTest : BaseTestCase() {
 
         val markers = calculateLineMarkers(method!!.nameIdentifier!!,
             ControllerMethodLineMarker::class)
-        assertEquals(markers.size, 1)
+        assertEquals(1, markers.size)
 
         val items = gotoRelatedItems(markers.first())
         assertEquals(2, items.size)
@@ -84,7 +85,7 @@ class ViewLineMarkerTest : BaseTestCase() {
 
         val markers = calculateLineMarkers(method!!.nameIdentifier!!,
             ControllerMethodLineMarker::class)
-        assertEquals(markers.size, 1)
+        assertEquals(1, markers.size)
 
         val items = gotoRelatedItems(markers.first())
         assertEquals(3, items.size)
@@ -132,7 +133,7 @@ class ViewLineMarkerTest : BaseTestCase() {
 
         val markers = calculateLineMarkers(method!!.nameIdentifier!!,
             ControllerMethodLineMarker::class)
-        assertEquals(markers.size, 1)
+        assertEquals(1, markers.size)
 
         val items = gotoRelatedItems(markers.first())
         assertEquals(3, items.size)
@@ -146,4 +147,49 @@ class ViewLineMarkerTest : BaseTestCase() {
         assertEquals(expected, infos)
     }
 
+    @Test
+    fun `test that line marker adds markers to render calls`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/json/movie.ctp",
+            "cake3/src/Template/Movie/movie.ctp",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/custom/nested.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """"
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->render("custom/nested");
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val methodReference = PsiTreeUtil.findChildOfType(myFixture.file, MethodReference::class.java, false)
+        assertNotNull(methodReference)
+
+        val markers = calculateLineMarkers(methodReference!!.firstChild!!.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "nested.ctp", containingDir = "custom"),
+        )
+        assertEquals(expected, infos)
+    }
 }
