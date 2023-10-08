@@ -123,31 +123,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         }.flatMap { it }
 
         if (files.size == 0) {
-            // todo handle cake2 vs cake3 vs cake4:
-            val defaultViewFile = "${pluginOrAppDir.virtualFile.path}/Template/${relatedLookupInfo.controllerName}/${actionNames.last()}.${settings.cakeTemplateExtension}"
-
-            val markerInfo = LineMarkerInfo(
-                element,
-                element.textRange,
-                CakeIcons.LOGO,
-                { e: PsiElement? -> "Click for actions" },  // Tooltip text
-                NavigateToCreatedFile(),
-                GutterIconRenderer.Alignment.CENTER,
-                NameProvider(),
-            )
-            return markerInfo
-
-//            val target = element.containingFile.virtualFile
-//            val targets = virtualFilesToPsiFiles(relatedLookupInfo.project, arrayListOf(target))
-//            return NavigationGutterIconBuilder
-//                .create(
-//                    CakeIcons.LOGO,
-//                    ContainerUtil::createMaybeSingletonList,
-//                    CustomGotoRelatedItemProvider(relatedLookupInfo.project, defaultViewFile)
-//                )
-//                .setTooltipText("Click to create corresponding view file")
-//                .setTargets(targets)
-//                .createLineMarkerInfo(element)
+            return null
         } else {
             val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
             return NavigationGutterIconBuilder
