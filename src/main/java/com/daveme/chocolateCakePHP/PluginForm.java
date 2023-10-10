@@ -23,9 +23,6 @@ public class PluginForm implements SearchableConfigurable {
     private JTextField pluginPathTextField;
     private JPanel headlinePanelForPlugins;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Namespace";
-    private static final String EDIT_ENTRY_LABEL = "Plugin namespace";
-
     public PluginForm(Project project) {
         this.project = project;
     }
@@ -66,12 +63,7 @@ public class PluginForm implements SearchableConfigurable {
             PluginEntry selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
             assert selected != null;
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
-                    project,
-                    selected.getNamespace()
-            );
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected.getNamespace());
             dialog.addTextFieldListener(fieldText -> {
                 String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
                 PluginEntry newPluginEntry = new PluginEntry(withBackslash);
@@ -81,12 +73,7 @@ public class PluginForm implements SearchableConfigurable {
         });
 
         decorator.setAddAction(action -> {
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
-                    project,
-                    ""
-            );
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, "");
             dialog.addTextFieldListener(fieldText -> {
                 String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
                 PluginEntry newPluginEntry = new PluginEntry(withBackslash);

@@ -20,10 +20,6 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
     private JPanel topPanel;
     private JPanel tableViewPanel;
     private JPanel headlinePanelForPlugins;
-    private JLabel viewFilesLabel;
-
-    private static final String EDIT_ENTRY_TITLE = "Edit View File Extension";
-    private static final String EDIT_ENTRY_LABEL = "View file extension";
 
     public ViewFileExtensionsForm(Project project) {
         this.project = project;
@@ -32,7 +28,7 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
     @NotNull
     @Override
     public String getId() {
-        return "com.daveme.chocolateCakePHP.ViewFileExtensionsForm";
+        return "com.daveme.chocolateCakePHP.Form";
     }
 
     @Override
@@ -63,11 +59,7 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
         decorator.setEditAction(action -> {
             String selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
-                    project,
-                    selected);
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, selected);
             dialog.addTextFieldListener(fieldText -> {
                 viewFileTableModel.setValueAt(fieldText, selectedRow, 0);
             });
@@ -75,12 +67,7 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
         });
 
         decorator.setAddAction(action -> {
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
-                    project,
-                    ""
-            );
+            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(project, "");
             dialog.addTextFieldListener(fieldText -> {
                 viewFileTableModel.addRow(fieldText);
             });
