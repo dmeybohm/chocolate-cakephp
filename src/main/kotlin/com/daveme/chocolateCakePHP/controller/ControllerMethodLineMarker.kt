@@ -1,26 +1,17 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
-import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
-import com.intellij.navigation.GotoRelatedItem
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.util.Function
-import com.intellij.util.NotNullFunction
-import com.intellij.util.containers.ContainerUtil
-import com.jetbrains.php.lang.PhpFileType
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
-import java.util.*
 
 
 data class RelatedLookupInfo(
@@ -122,35 +113,11 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             )
         }.flatMap { it }
 
-        if (files.size == 0) {
-            // todo handle cake2 vs cake3 vs cake4:
-            val defaultViewFile = "${pluginOrAppDir.virtualFile.path}/Template/${relatedLookupInfo.controllerName}/${actionNames.last()}.${settings.cakeTemplateExtension}"
-
-            val markerInfo = LineMarkerInfo(
-                element,
-                element.textRange,
-                CakeIcons.LOGO,
-                { e: PsiElement? -> "Click for actions" },  // Tooltip text
-                NavigateToCreatedFile(),
-                GutterIconRenderer.Alignment.CENTER,
-                NameProvider(),
-            )
-            return markerInfo
-
-//            val target = element.containingFile.virtualFile
-//            val targets = virtualFilesToPsiFiles(relatedLookupInfo.project, arrayListOf(target))
-//            return NavigationGutterIconBuilder
-//                .create(
-//                    CakeIcons.LOGO,
-//                    ContainerUtil::createMaybeSingletonList,
-//                    CustomGotoRelatedItemProvider(relatedLookupInfo.project, defaultViewFile)
-//                )
-//                .setTooltipText("Click to create corresponding view file")
-//                .setTargets(targets)
-//                .createLineMarkerInfo(element)
+        return if (files.size == 0) {
+            null
         } else {
             val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
-            return NavigationGutterIconBuilder
+            NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
                 .setTooltipText("Click to navigate to view file")
                 .setTargets(targetFiles)
@@ -204,13 +171,4 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         }
     }
 
-}
-
-class CustomGotoRelatedItemProvider(val project: Project, val targetFilename: String) :
-    NotNullFunction<PsiFile, MutableCollection<out GotoRelatedItem>> {
-    override fun `fun`(element: PsiFile?): MutableCollection<out GotoRelatedItem> {
-        val createFile = PsiFileFactory.getInstance(project)
-            .createFileFromText(targetFilename, PhpFileType.INSTANCE, "<?php\n")
-        return arrayListOf(GotoRelatedItem(createFile))
-    }
 }
