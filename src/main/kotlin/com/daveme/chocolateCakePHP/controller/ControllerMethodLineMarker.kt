@@ -4,9 +4,7 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
-import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -14,15 +12,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
 
-data class RelatedLookupInfo(
-    val project: Project,
-    val settings: Settings,
-    val controllerName: String,
-    val file: PsiFile,
-)
-
 class ControllerMethodLineMarker : LineMarkerProvider {
-
 
     override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? = null
 
