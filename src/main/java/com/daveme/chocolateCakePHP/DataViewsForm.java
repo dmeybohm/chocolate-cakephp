@@ -45,7 +45,6 @@ public class DataViewsForm implements SearchableConfigurable {
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
         viewFileTableModel = ViewFileTableModel.fromSettings(settings);
-        final Settings defaults = Settings.getDefaults();
 
         this.tableView = new TableView<>(viewFileTableModel);
         ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
@@ -68,9 +67,7 @@ public class DataViewsForm implements SearchableConfigurable {
                     EDIT_ENTRY_LABEL,
                     project,
                     selected);
-            dialog.addTextFieldListener(fieldText -> {
-                viewFileTableModel.setValueAt(fieldText, selectedRow, 0);
-            });
+            dialog.addTextFieldListener(fieldText -> viewFileTableModel.setValueAt(fieldText, selectedRow, 0));
             dialog.setVisible(true);
         });
 
@@ -81,15 +78,11 @@ public class DataViewsForm implements SearchableConfigurable {
                     project,
                     ""
             );
-            dialog.addTextFieldListener(fieldText -> {
-                viewFileTableModel.addRow(fieldText);
-            });
+            dialog.addTextFieldListener(fieldText -> viewFileTableModel.addRow(fieldText));
             dialog.setVisible(true);
         });
 
-        decorator.setRemoveAction(action -> {
-            viewFileTableModel.removeRow(tableView.getSelectedRow());
-        });
+        decorator.setRemoveAction(action -> viewFileTableModel.removeRow(tableView.getSelectedRow()));
 
         decorator.disableUpAction();
         decorator.disableDownAction();
@@ -114,7 +107,7 @@ public class DataViewsForm implements SearchableConfigurable {
     }
 
     @Override
-    public void apply() throws ConfigurationException {
+    public void apply() {
         Settings settings = Settings.getInstance(project);
         copySettingsFromUI(settings);
     }
