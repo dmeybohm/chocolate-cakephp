@@ -4,8 +4,10 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
+import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.containers.ContainerUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -111,24 +113,13 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 element,
                 element.textRange,
                 CakeIcons.LOGO,
-                { e: PsiElement? -> "Click for actions" },  // Tooltip text
+                { _: PsiElement? -> "Click for actions" },  // Tooltip text
                 NavigateToCreatedFile(),
                 GutterIconRenderer.Alignment.CENTER,
-                NameProvider(),
+                NameProvider()
             )
             return markerInfo
 
-//            val target = element.containingFile.virtualFile
-//            val targets = virtualFilesToPsiFiles(relatedLookupInfo.project, arrayListOf(target))
-//            return NavigationGutterIconBuilder
-//                .create(
-//                    CakeIcons.LOGO,
-//                    ContainerUtil::createMaybeSingletonList,
-//                    CustomGotoRelatedItemProvider(relatedLookupInfo.project, defaultViewFile)
-//                )
-//                .setTooltipText("Click to create corresponding view file")
-//                .setTargets(targets)
-//                .createLineMarkerInfo(element)
         } else {
             val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
             NavigationGutterIconBuilder
