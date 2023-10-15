@@ -1,11 +1,7 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
 import com.daveme.chocolateCakePHP.ui.TextFieldListener;
 import com.intellij.openapi.project.Project;
-import com.intellij.util.textCompletion.TextFieldWithCompletion;
-import com.jetbrains.php.completion.PhpCompletionUtil;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -14,8 +10,8 @@ public class EditEntryDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
-    private TextFieldWithCompletion fieldValueTextField;
     private JLabel fieldLabel;
+    private JTextField fieldValueTextField;
 
     final private Project project;
 
@@ -65,18 +61,6 @@ public class EditEntryDialog extends JDialog {
     }
 
     private void createUIComponents() {
-        FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
-        PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
-        fieldValueTextField = new TextFieldWithCompletion(
-                project,
-                completionProvider,
-                "",
-                true,
-                true,
-                false,
-                false
-        );
     }
 
     public void addTextFieldListener(TextFieldListener listener) {

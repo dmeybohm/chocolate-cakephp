@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
-public class ViewFileExtensionsForm implements SearchableConfigurable {
+public class DataViewsForm implements SearchableConfigurable {
 
     private TableView<String> tableView;
     private final Project project;
@@ -22,22 +22,22 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
     private JPanel headlinePanelForPlugins;
     private JLabel viewFilesLabel;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit View File Extension";
-    private static final String EDIT_ENTRY_LABEL = "View file extension";
+    private static final String EDIT_ENTRY_TITLE = "Data View Extension";
+    private static final String EDIT_ENTRY_LABEL = "Data view extension";
 
-    public ViewFileExtensionsForm(Project project) {
+    public DataViewsForm(Project project) {
         this.project = project;
     }
 
     @NotNull
     @Override
     public String getId() {
-        return "com.daveme.chocolateCakePHP.ViewFileExtensionsForm";
+        return "com.daveme.chocolateCakePHP.DataViewForm";
     }
 
     @Override
     public String getDisplayName() {
-        return "CakePHP View File Extensions";
+        return "CakePHP Data Views";
     }
 
     @Nullable
@@ -45,7 +45,6 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
         viewFileTableModel = ViewFileTableModel.fromSettings(settings);
-        final Settings defaults = Settings.getDefaults();
 
         this.tableView = new TableView<>(viewFileTableModel);
         ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
@@ -68,9 +67,7 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
                     EDIT_ENTRY_LABEL,
                     project,
                     selected);
-            dialog.addTextFieldListener(fieldText -> {
-                viewFileTableModel.setValueAt(fieldText, selectedRow, 0);
-            });
+            dialog.addTextFieldListener(fieldText -> viewFileTableModel.setValueAt(fieldText, selectedRow, 0));
             dialog.setVisible(true);
         });
 
@@ -81,15 +78,11 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
                     project,
                     ""
             );
-            dialog.addTextFieldListener(fieldText -> {
-                viewFileTableModel.addRow(fieldText);
-            });
+            dialog.addTextFieldListener(fieldText -> viewFileTableModel.addRow(fieldText));
             dialog.setVisible(true);
         });
 
-        decorator.setRemoveAction(action -> {
-            viewFileTableModel.removeRow(tableView.getSelectedRow());
-        });
+        decorator.setRemoveAction(action -> viewFileTableModel.removeRow(tableView.getSelectedRow()));
 
         decorator.disableUpAction();
         decorator.disableDownAction();
@@ -109,12 +102,12 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        state.setViewFileExtensions(viewFileTableModel.getViewFiles());
+        state.setDataViewExtensions(viewFileTableModel.getViewFiles());
         settings.loadState(state);
     }
 
     @Override
-    public void apply() throws ConfigurationException {
+    public void apply() {
         Settings settings = Settings.getInstance(project);
         copySettingsFromUI(settings);
     }
