@@ -137,6 +137,16 @@ class ConfigForm implements SearchableConfigurable {
 
     public void apply() {
         Settings settings = Settings.getInstance(project);
+
+        // Ensure namespace starts with backslash:
+        String namespace = appNamespaceTextField.getText();
+        if (settings.getCake3Enabled() &&
+                !namespace.isEmpty() &&
+                !namespace.startsWith("\\")) {
+            String newNamespace = "\\" + namespace;
+            appNamespaceTextField.setText(newNamespace);
+        }
+
         copySettingsFromUI(settings);
     }
 
@@ -147,6 +157,7 @@ class ConfigForm implements SearchableConfigurable {
         } else {
             setupHandler(insertHandler);
         }
+
     }
 
     private void setupHandler(FullyQualifiedNameInsertHandler insertHandler) {
