@@ -14,7 +14,7 @@ data class SettingsState(
     var cake2Enabled: Boolean = true,
     var cake3Enabled: Boolean = true,
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
-    var dataViewExtensions: List<String> = arrayListOf("json", "xml", "rss")
+    var dataViewExtensions: List<String> = arrayListOf("json", "xml")
 )
 
 @Service
