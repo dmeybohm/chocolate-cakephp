@@ -95,7 +95,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val pluginOrAppDir = topSourceDirectoryFromFile(settings, relatedLookupInfo.file)
             ?: return null
 
-        val fileExtensions = relatedLookupInfo.settings.viewFileExtensions
+        val fileExtensions = relatedLookupInfo.settings.dataViewExtensions
 
         // Create one file for each of the file extensions that match the naming convention:
         val files = actionNames.map { controllerAction ->

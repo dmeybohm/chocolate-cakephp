@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
-public class ViewFileExtensionsForm implements SearchableConfigurable {
+public class DataViewsForm implements SearchableConfigurable {
 
     private TableView<String> tableView;
     private final Project project;
@@ -22,17 +22,17 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
     private JPanel headlinePanelForPlugins;
     private JLabel viewFilesLabel;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit View File Extension";
-    private static final String EDIT_ENTRY_LABEL = "View file extension";
+    private static final String EDIT_ENTRY_TITLE = "Data View Extension";
+    private static final String EDIT_ENTRY_LABEL = "Data view extension";
 
-    public ViewFileExtensionsForm(Project project) {
+    public DataViewsForm(Project project) {
         this.project = project;
     }
 
     @NotNull
     @Override
     public String getId() {
-        return "com.daveme.chocolateCakePHP.ViewFileExtensionsForm";
+        return "com.daveme.chocolateCakePHP.DataViewForm";
     }
 
     @Override
@@ -109,7 +109,7 @@ public class ViewFileExtensionsForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        state.setViewFileExtensions(viewFileTableModel.getViewFiles());
+        state.setDataViewExtensions(viewFileTableModel.getViewFiles());
         settings.loadState(state);
     }
 

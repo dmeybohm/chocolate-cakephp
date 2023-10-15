@@ -14,7 +14,7 @@ data class SettingsState(
     var cake2Enabled: Boolean = true,
     var cake3Enabled: Boolean = true,
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
-    var viewFileExtensions: List<String> = arrayListOf("json", "xml", "rss")
+    var dataViewExtensions: List<String> = arrayListOf("json", "xml", "rss")
 )
 
 @Service
@@ -40,9 +40,9 @@ class Settings : PersistentStateComponent<SettingsState> {
             return pluginEntryListFromNamespaceList(state.pluginNamespaces)
         }
 
-    val viewFileExtensions: List<String>
+    val dataViewExtensions: List<String>
         get() {
-            return state.viewFileExtensions
+            return state.dataViewExtensions
         }
 
     val enabled: Boolean

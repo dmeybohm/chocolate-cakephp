@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP.ui
 
-import com.daveme.chocolateCakePHP.PluginEntry
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -73,12 +72,12 @@ class ViewFileTableModel private constructor(
     companion object {
         private val myColumns =
             arrayOf<ColumnInfo<String, String>>(
-                ViewFileColumn("File Extension")
+                ViewFileColumn("Data View Extension")
             )
 
         @JvmStatic
         fun fromSettings(settings: Settings): ViewFileTableModel {
-            return ViewFileTableModel(settings.viewFileExtensions.toMutableList(), myColumns)
+            return ViewFileTableModel(settings.dataViewExtensions.toMutableList(), myColumns)
         }
     }
 

@@ -38,7 +38,7 @@
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
                              displayName="View File Extensions"
                              id="chocolatecakephp.ui.ViewFileExtensionsForm"
-                             instance="com.daveme.chocolateCakePHP.ViewFileExtensionsForm" />
+                             instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCakeTwoModelCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
