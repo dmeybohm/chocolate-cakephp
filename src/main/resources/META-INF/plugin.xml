@@ -36,7 +36,7 @@
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
 
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="View File Extensions"
+                             displayName="Data Views"
                              id="chocolatecakephp.ui.ViewFileExtensionsForm"
                              instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 

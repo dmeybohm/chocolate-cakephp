@@ -37,7 +37,7 @@ public class DataViewsForm implements SearchableConfigurable {
 
     @Override
     public String getDisplayName() {
-        return "CakePHP View File Extensions";
+        return "CakePHP Data Views";
     }
 
     @Nullable
