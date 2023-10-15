@@ -32,7 +32,9 @@ class ConfigForm implements SearchableConfigurable {
     private JButton appDirectoryDefaultButton;
     private JPanel cake3Panel;
     private JPanel cake2Panel;
-     
+    private JLabel cakeThreePlusTitle;
+    private JLabel cakeTwoTitle;
+
     public ConfigForm(Project project) {
         this.project = project;
     }
