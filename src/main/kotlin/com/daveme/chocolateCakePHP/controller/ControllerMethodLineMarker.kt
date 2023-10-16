@@ -114,7 +114,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 element.textRange,
                 CakeIcons.LOGO,
                 { _: PsiElement? -> "Click for actions" },  // Tooltip text
-                NavigateToCreatedFile(),
+                NavigateToCreatedFile(defaultViewFile),
                 GutterIconRenderer.Alignment.CENTER,
                 NameProvider()
             )
