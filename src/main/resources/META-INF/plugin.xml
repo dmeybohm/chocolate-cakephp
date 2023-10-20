@@ -68,6 +68,7 @@
         <!-- Add your actions here -->
     </actions>
 
+
     <depends>com.jetbrains.php</depends>
     <depends>com.intellij.modules.platform</depends>
 </idea-plugin>

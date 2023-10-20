@@ -7,7 +7,6 @@ import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.util.containers.ContainerUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -107,7 +106,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
         return if (files.size == 0) {
             // todo handle cake2 vs cake3 vs cake4:
-            val defaultViewFile = "${pluginOrAppDir.virtualFile.path}/Template/${relatedLookupInfo.controllerName}/${actionNames.last()}.${settings.cakeTemplateExtension}"
+            val viewFilename = actionNames.last().camelCaseToUnderscore()
+            val defaultViewFile = "${pluginOrAppDir.virtualFile.name}/Template/${relatedLookupInfo.controllerName}/${viewFilename}.${settings.cakeTemplateExtension}"
 
             val markerInfo = LineMarkerInfo(
                 element,

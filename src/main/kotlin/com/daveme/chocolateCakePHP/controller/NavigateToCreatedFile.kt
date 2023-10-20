@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.topSourceDirectoryFromFile
 import com.daveme.chocolateCakePHP.virtualFileToPsiFile
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
+import com.intellij.ide.fileTemplates.FileTemplate
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.command.WriteCommandAction
@@ -14,26 +15,31 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
+import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
+import javax.swing.SwingUtilities
 
 
 class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationHandler<PsiElement> {
 
     override fun navigate(e: MouseEvent, elt: PsiElement?) {
-        val element = elt as? PsiElement ?: return
+        val element = elt ?: return
         val project = element.project
 
-
+        val resultPath = destinationPath
         val popup = JBPopupFactory.getInstance()
-            .createConfirmation("Create view file", "Create view file", "Cancel",
+            .createConfirmation("Create View File", "Create view file", "Cancel",
                 {
-                    val template = FileTemplateManager.getInstance(project)
-                        .getCodeTemplate("CakePHP View File.php")
+                    val template: FileTemplate = FileTemplateManager.getInstance(project)
+                        .getInternalTemplate("CakePHP View File.php")
+                    println("Internal template: ${template}")
+//                        .getCodeTemplate("PHP File.php")
                     val text = template.getText()
 
                     // Create file
@@ -41,7 +47,9 @@ class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationH
                         val baseDir = project.guessProjectDir() ?: return@runWriteCommandAction
 
                         // TODO: also create directories that don't exist along path here.
-                        val parentDir = destinationPath.substring(0, destinationPath.lastIndexOf('/'));
+                        val lastSlash = resultPath.lastIndexOf('/')
+                        val parentDir = resultPath.substring(0, lastSlash)
+                        val filename = resultPath.substring(lastSlash + 1)
                         val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir)
                         val parentDirPsiFile = if (parentDirVirtualFile != null && parentDirVirtualFile.isDirectory) {
                             PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
@@ -51,21 +59,20 @@ class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationH
 
                         val psiFile = PsiFileFactory.getInstance(project)
                             .createFileFromText(
-                                destinationPath,
-                                FileTypeManager.getInstance().getFileTypeByFileName(destinationPath),
+                                filename,
+                                FileTypeManager.getInstance().getFileTypeByFileName(filename),
                                 text
                             )
+                        CodeStyleManager.getInstance(project).reformat(psiFile)
 
-                        parentDirPsiFile.add(psiFile) as PsiFile
+                        val result = parentDirPsiFile.add(psiFile)
+                        if (result is PsiFile) {
+                            OpenFileDescriptor(project, result.virtualFile).navigate(true)
+//                            if (editor != null) {
+//                                FileEditorManager.getInstance(project).scrollToCaret(editor)
+//                            }
 
-                        // Open file in editor
-                        val editor: Editor? = FileEditorManager.getInstance(project).openTextEditor(
-                            OpenFileDescriptor(project, psiFile.virtualFile),
-                            true
-                        )
-//                        if (editor != null) {
-//                            FileEditorManager.getInstance(project).scrollToCaret(editor)
-//                        }
+                        }
                     }
                 },
                 0
@@ -78,6 +85,6 @@ class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationH
 //                k
 //            })
 
-        popup.show(RelativePoint(e));
+        popup.show(RelativePoint(e))
     }
 }
