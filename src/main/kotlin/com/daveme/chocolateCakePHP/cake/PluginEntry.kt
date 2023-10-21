@@ -1,3 +1,3 @@
-package com.daveme.chocolateCakePHP
+package com.daveme.chocolateCakePHP.cake
 
 data class PluginEntry(var namespace: String)

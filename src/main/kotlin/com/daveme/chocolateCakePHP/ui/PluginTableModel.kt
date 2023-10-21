@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
-import com.daveme.chocolateCakePHP.PluginEntry
+import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel

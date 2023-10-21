@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.controller
 
-import com.daveme.chocolateCakePHP.CakeIcons
+import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent

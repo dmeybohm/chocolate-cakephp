@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.cake.templatePathToVirtualFile
 import com.daveme.chocolateCakePHP.cake.topSourceDirectoryFromFile
 import com.intellij.codeInsight.daemon.LineMarkerInfo

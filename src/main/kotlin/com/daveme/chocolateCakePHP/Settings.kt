@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 
