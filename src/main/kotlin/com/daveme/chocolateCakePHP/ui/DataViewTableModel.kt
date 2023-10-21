@@ -7,7 +7,7 @@ import com.intellij.util.ui.SortableColumnModel
 import javax.swing.RowSorter
 import javax.swing.table.TableModel
 
-class ViewFileTableModel private constructor(
+class DataViewTableModel private constructor(
     val viewFiles: MutableList<String>,
     columns: Array<ColumnInfo<String, String>>
 ) :
@@ -72,12 +72,12 @@ class ViewFileTableModel private constructor(
     companion object {
         private val myColumns =
             arrayOf<ColumnInfo<String, String>>(
-                ViewFileColumn("Data View Extension")
+                DataViewColumn("Data View Extension")
             )
 
         @JvmStatic
-        fun fromSettings(settings: Settings): ViewFileTableModel {
-            return ViewFileTableModel(settings.dataViewExtensions.toMutableList(), myColumns)
+        fun fromSettings(settings: Settings): DataViewTableModel {
+            return DataViewTableModel(settings.dataViewExtensions.toMutableList(), myColumns)
         }
     }
 
