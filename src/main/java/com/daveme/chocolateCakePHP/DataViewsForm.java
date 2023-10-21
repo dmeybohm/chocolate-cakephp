@@ -18,6 +18,8 @@ public class DataViewsForm implements SearchableConfigurable {
     private DataViewTableModel dataViewTableModel;
     private JPanel topPanel;
     private JPanel tableViewPanel;
+    private JPanel headlinePanelForPlugins;
+    private JLabel viewFilesLabel;
 
     private static final String EDIT_ENTRY_TITLE = "Data View Extension";
     private static final String EDIT_ENTRY_LABEL = "Data view extension";
