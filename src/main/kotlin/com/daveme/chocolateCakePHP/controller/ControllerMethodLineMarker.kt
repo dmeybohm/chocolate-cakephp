@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -11,6 +12,8 @@ import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
+import org.jetbrains.annotations.Nls
+import java.util.function.Supplier
 
 
 class ControllerMethodLineMarker : LineMarkerProvider {
@@ -112,11 +115,11 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val markerInfo = LineMarkerInfo(
                 element,
                 element.textRange,
-                CakeIcons.LOGO,
+                AllIcons.Actions.AddFile,
                 { _: PsiElement? -> "Click for actions" },  // Tooltip text
                 NavigateToCreatedFile(defaultViewFile),
                 GutterIconRenderer.Alignment.CENTER,
-                NameProvider()
+                NameProvider,
             )
             return markerInfo
 
@@ -176,4 +179,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         }
     }
 
+    object NameProvider: Supplier<@Nls String> {
+        override fun get(): String {
+            // TODO
+            return "Click for actions"
+        }
+    }
 }
