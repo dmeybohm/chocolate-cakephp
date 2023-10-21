@@ -34,10 +34,10 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
         // don't add types for nested types ($this->FooBar->FooBar) on cake 3+:
         if (psiElement.firstChild is FieldReference) {
-            if (settings.cake2Enabled) {
-                return cakeTwoNestedModelCompletion(psiElement)
+            return if (settings.cake2Enabled) {
+                cakeTwoNestedModelCompletion(psiElement)
             } else {
-                return null
+                null
             }
         }
 
@@ -80,7 +80,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
         val index = PhpIndex.getInstance(project)
 
-        val firstClasses = index.getClassesByFQN("\\" + firstFieldName);
+        val firstClasses = index.getClassesByFQN("\\" + firstFieldName)
         if (!isCakeTwoModelClass(firstClasses)) {
             return null
         }

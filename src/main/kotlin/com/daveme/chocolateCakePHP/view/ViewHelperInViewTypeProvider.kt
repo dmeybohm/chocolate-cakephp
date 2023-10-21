@@ -31,7 +31,7 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
             return null
         }
         if (!classReference.textMatches("\$this")) {
-            return null;
+            return null
         }
         if (!isCakeViewFile(settings, psiElement.containingFile)) {
             return null
