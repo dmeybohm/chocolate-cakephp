@@ -65,7 +65,10 @@
     </extensions>
 
     <actions>
-        <!-- Add your actions here -->
+        <action id="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
+                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
+                text="Create CakePHP View File"
+                description="Create a view file for the CakePHP framework"/>
     </actions>
 
 
