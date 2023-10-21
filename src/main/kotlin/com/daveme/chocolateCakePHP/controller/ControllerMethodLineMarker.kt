@@ -93,18 +93,19 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
         // Create one file for each of the file extensions that match the naming convention:
         val files = actionNames.map { controllerAction ->
+            listOfNotNull(
+                templatePathToVirtualFile(
+                    relatedLookupInfo.settings, pluginOrAppDir, relatedLookupInfo.controllerName, controllerAction
+                )
+            ) +
             fileExtensions.mapNotNull { fileExtension ->
                 templatePathToVirtualFile(
                     relatedLookupInfo.settings,
                     pluginOrAppDir,
                     relatedLookupInfo.controllerName,
-                    fileExtension + "/" + controllerAction
+                    "${fileExtension}/${controllerAction}"
                 )
-            } + listOfNotNull(
-                templatePathToVirtualFile(
-                    relatedLookupInfo.settings, pluginOrAppDir, relatedLookupInfo.controllerName, controllerAction
-                )
-            )
+            }
         }.flatMap { it }
 
         return if (files.size == 0) {
