@@ -1,13 +1,13 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
-import com.jetbrains.php.lang.psi.elements.Variable
 
 class ViewHelperInViewCompletionContributor : CompletionContributor() {
     init {

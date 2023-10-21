@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.CakeModel.isCakeTwoModelClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -80,12 +81,12 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         val index = PhpIndex.getInstance(project)
 
         val firstClasses = index.getClassesByFQN("\\" + firstFieldName);
-        if (!CakeTwo.isModelClass(firstClasses)) {
+        if (!isCakeTwoModelClass(firstClasses)) {
             return null
         }
 
         val targetClasses = index.getClassesByFQN("\\" + targetFieldName)
-        if (!CakeTwo.isModelClass(targetClasses)) {
+        if (!isCakeTwoModelClass(targetClasses)) {
             return null
         }
 

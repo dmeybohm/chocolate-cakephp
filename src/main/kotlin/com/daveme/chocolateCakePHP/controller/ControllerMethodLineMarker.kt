@@ -1,19 +1,18 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.templatePathToVirtualFile
+import com.daveme.chocolateCakePHP.cake.topSourceDirectoryFromFile
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
-import org.jetbrains.annotations.Nls
-import java.util.function.Supplier
 
 
 class ControllerMethodLineMarker : LineMarkerProvider {
@@ -110,7 +109,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         return if (files.size == 0) {
             // todo handle cake2 vs cake3 vs cake4:
             val viewFilename = actionNames.last().camelCaseToUnderscore()
-            val defaultViewFile = "${pluginOrAppDir.virtualFile.name}/Template/${relatedLookupInfo.controllerName}/${viewFilename}.${settings.cakeTemplateExtension}"
+            val topDirName = pluginOrAppDir.psiDirectory.virtualFile.name
+            val controllerName = relatedLookupInfo.controllerName
+            val extension = settings.cakeTemplateExtension
+            val defaultViewFile = "${topDirName}/Template/${controllerName}/${viewFilename}.${extension}"
 
             return NavigationGutterIconBuilder
                 .create(AllIcons.Actions.AddFile)

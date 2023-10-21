@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
