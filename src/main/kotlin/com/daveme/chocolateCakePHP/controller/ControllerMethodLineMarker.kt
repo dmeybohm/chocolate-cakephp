@@ -112,17 +112,11 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val viewFilename = actionNames.last().camelCaseToUnderscore()
             val defaultViewFile = "${pluginOrAppDir.virtualFile.name}/Template/${relatedLookupInfo.controllerName}/${viewFilename}.${settings.cakeTemplateExtension}"
 
-            val markerInfo = LineMarkerInfo(
-                element,
-                element.textRange,
-                AllIcons.Actions.AddFile,
-                { _: PsiElement? -> "Click for actions" },  // Tooltip text
-                NavigateToCreatedFile(defaultViewFile),
-                GutterIconRenderer.Alignment.CENTER,
-                NameProvider,
-            )
-            return markerInfo
-
+            return NavigationGutterIconBuilder
+                .create(AllIcons.Actions.AddFile)
+                .setTargets(listOf())
+                .setTooltipText("Click to create view file")
+                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile))
         } else {
             val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
             NavigationGutterIconBuilder
@@ -176,13 +170,6 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
             val renderViewMarker = markerForSingleRenderCallInAction(relatedLookupInfo, element)
             addLineMarkerUnique(result, renderViewMarker)
-        }
-    }
-
-    object NameProvider: Supplier<@Nls String> {
-        override fun get(): String {
-            // TODO
-            return "Click for actions"
         }
     }
 }

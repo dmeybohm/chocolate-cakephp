@@ -10,9 +10,9 @@ import com.intellij.psi.PsiElement
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
 
-class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationHandler<PsiElement> {
+class ShowCreateViewFilePopup(val destinationPath: String) : GutterIconNavigationHandler<PsiElement> {
 
-    class NavigateToCreateFileActionGroup(val destinationPath: String) : ActionGroup() {
+    class CreateViewFileActionGroup(val destinationPath: String) : ActionGroup() {
         override fun getChildren(e: AnActionEvent?): Array<AnAction> {
             return arrayOf(
                 CreateViewFileAction(destinationPath, useCustomPath = false),
@@ -26,7 +26,7 @@ class NavigateToCreatedFile(val destinationPath: String) : GutterIconNavigationH
         val popup = JBPopupFactory.getInstance()
             .createActionGroupPopup(
                 "Create View File",
-                NavigateToCreateFileActionGroup(destinationPath),
+                CreateViewFileActionGroup(destinationPath),
                 context,
                 JBPopupFactory.ActionSelectionAid.NUMBERING,
                 true,
