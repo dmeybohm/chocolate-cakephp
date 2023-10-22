@@ -45,7 +45,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
                 return
             }
             val containingFile = psiElement.containingFile
-            if (!isCakeViewFile(settings, containingFile)) {
+            if (!isCakeViewFile(psiElement.project, settings, containingFile)) {
                 return
             }
             val phpIndex = PhpIndex.getInstance(psiElement.project)

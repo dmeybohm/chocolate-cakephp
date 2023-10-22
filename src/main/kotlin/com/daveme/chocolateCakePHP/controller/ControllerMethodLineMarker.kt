@@ -1,9 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.CakeIcons
-import com.daveme.chocolateCakePHP.cake.templatePathToVirtualFile
-import com.daveme.chocolateCakePHP.cake.topSourceDirectoryFromFile
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
@@ -79,15 +77,21 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
         return relatedItemLineMarkerInfo(listOf(firstParameter.contents), relatedLookupInfo, element)
     }
-    
+
+
     private fun relatedItemLineMarkerInfo(
         actionNames: List<String>,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
-        val pluginOrAppDir = topSourceDirectoryFromFile(settings, relatedLookupInfo.file)
+        val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, relatedLookupInfo.file)
             ?: return null
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
+            relatedLookupInfo.project,
+            settings,
+            topSourceDirectory
+        ) ?: return null
 
         val fileExtensions = relatedLookupInfo.settings.dataViewExtensions
 
@@ -95,26 +99,27 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val files = actionNames.map { controllerAction ->
             listOfNotNull(
                 templatePathToVirtualFile(
-                    relatedLookupInfo.settings, pluginOrAppDir, relatedLookupInfo.controllerName, controllerAction
+                    relatedLookupInfo.settings,
+                    templatesDirectory,
+                    relatedLookupInfo.controllerName,
+                    controllerAction
                 )
             ) +
             fileExtensions.mapNotNull { fileExtension ->
                 templatePathToVirtualFile(
                     relatedLookupInfo.settings,
-                    pluginOrAppDir,
+                    templatesDirectory,
                     relatedLookupInfo.controllerName,
                     "${fileExtension}/${controllerAction}"
                 )
             }
         }.flatMap { it }
 
-        return if (files.size == 0) {
-            // todo handle cake2 vs cake3 vs cake4:
-            val viewFilename = actionNames.last().camelCaseToUnderscore()
-            val topDirName = pluginOrAppDir.psiDirectory.virtualFile.name
+        return if (files.isEmpty()) {
+            val viewFilename = actionNameToViewFilename(templatesDirectory, settings, actionNames.first())
             val controllerName = relatedLookupInfo.controllerName
-            val extension = settings.cakeTemplateExtension
-            val defaultViewFile = "${topDirName}/Template/${controllerName}/${viewFilename}.${extension}"
+            val templateFullPath = templatesDirectory.psiDirectory.virtualFile.canonicalPath
+            val defaultViewFile = "${templateFullPath}/${controllerName}/${viewFilename}"
 
             return NavigationGutterIconBuilder
                 .create(AllIcons.Actions.AddFile)

@@ -8,6 +8,11 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import java.util.HashSet
 
+fun virtualFileToPsiDirectory(project: Project, file: VirtualFile): PsiDirectory? {
+    val psiManager = PsiManager.getInstance(project)
+    return psiManager.findDirectory(file)
+}
+
 fun virtualFilesToPsiFiles(project: Project, files: Collection<VirtualFile>): Collection<PsiFile> {
 
     val psiFiles = HashSet<PsiFile>()
