@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.cake.CakeIcons
+import com.daveme.chocolateCakePHP.createDirectoriesIfMissing
+import com.daveme.chocolateCakePHP.cake.viewFilePathInfoFromPath
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -35,16 +37,19 @@ class CreateViewFileAction(
 
                     val baseDir = project.guessProjectDir() ?: return
 
-                    // TODO: also create directories that don't exist along path here.
-                    val lastSlash = destinationPath.lastIndexOf('/')
-                    val parentDir = destinationPath.substring(0, lastSlash)
-                    val filename = destinationPath.substring(lastSlash + 1)
-                    val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir)
-                    val parentDirPsiFile = if (parentDirVirtualFile != null && parentDirVirtualFile.isDirectory) {
-                        PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
-                    } else {
-                        null
-                    } ?: return
+                    val viewFilePathInfo = viewFilePathInfoFromPath(destinationPath) ?: return
+                    val parentDir = viewFilePathInfo.templateAndControllerPath
+                    val filename = viewFilePathInfo.viewFilename
+                    val baseDirPath = baseDir.path
+                    if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
+                        return
+                    }
+                    val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
+                    if (!parentDirVirtualFile.isDirectory) {
+                        return
+                    }
+                    val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
+                        ?: return
 
                     val psiFile = PsiFileFactory.getInstance(project)
                         .createFileFromText(

@@ -7,6 +7,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import java.io.IOException
 import java.util.HashSet
 
 fun virtualFileToPsiDirectory(project: Project, file: VirtualFile): PsiDirectory? {
@@ -15,7 +16,6 @@ fun virtualFileToPsiDirectory(project: Project, file: VirtualFile): PsiDirectory
 }
 
 fun virtualFilesToPsiFiles(project: Project, files: Collection<VirtualFile>): Collection<PsiFile> {
-
     val psiFiles = HashSet<PsiFile>()
     val psiManager = PsiManager.getInstance(project)
 
@@ -49,4 +49,14 @@ fun pathRelativeToProject(project: Project, psiDirectory: PsiDirectory): String?
     }
     pathNames.reverse()
     return pathNames.joinToString("/")
+}
+
+fun createDirectoriesIfMissing(relativePath: String): Boolean {
+    try {
+        VfsUtil.createDirectoryIfMissing(relativePath)
+    } catch (e: IOException) {
+        return false
+    }
+
+    return true
 }
