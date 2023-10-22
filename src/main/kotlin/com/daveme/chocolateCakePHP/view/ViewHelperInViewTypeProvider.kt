@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.FieldReference
@@ -30,9 +31,9 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
             return null
         }
         if (!classReference.textMatches("\$this")) {
-            return null;
+            return null
         }
-        if (!isCakeViewFile(settings, psiElement.containingFile)) {
+        if (!isCakeViewFile(psiElement.project, settings, psiElement.containingFile)) {
             return null
         }
         return viewHelperTypeFromFieldName(settings, fieldReferenceName)

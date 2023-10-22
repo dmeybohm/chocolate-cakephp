@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP
+package com.daveme.chocolateCakePHP.cake
 
 import com.intellij.openapi.util.IconLoader
 

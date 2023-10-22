@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.templatePathToVirtualFile
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -35,9 +37,10 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
 
-        val pluginOrAppDir = topSourceDirectoryFromFile(settings, containingFile)
-        val relativeFile = templatePathToVirtualFile(settings, pluginOrAppDir, controllerName, psiElement.text)
-                ?: return PsiElement.EMPTY_ARRAY
+        val templatesDir = templatesDirectoryFromViewFile(psiElement.project, settings, containingFile)
+            ?: return PsiElement.EMPTY_ARRAY
+        val relativeFile = templatePathToVirtualFile(settings, templatesDir, controllerName, psiElement.text)
+            ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
         files.add(relativeFile)

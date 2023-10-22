@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.ViewFileTableModel;
-import com.intellij.openapi.options.ConfigurationException;
+import com.daveme.chocolateCakePHP.ui.DataViewTableModel;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.ToolbarDecorator;
@@ -16,7 +15,7 @@ public class DataViewsForm implements SearchableConfigurable {
 
     private TableView<String> tableView;
     private final Project project;
-    private ViewFileTableModel viewFileTableModel;
+    private DataViewTableModel dataViewTableModel;
     private JPanel topPanel;
     private JPanel tableViewPanel;
     private JPanel headlinePanelForPlugins;
@@ -44,9 +43,9 @@ public class DataViewsForm implements SearchableConfigurable {
     @Override
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
-        viewFileTableModel = ViewFileTableModel.fromSettings(settings);
+        dataViewTableModel = DataViewTableModel.fromSettings(settings);
 
-        this.tableView = new TableView<>(viewFileTableModel);
+        this.tableView = new TableView<>(dataViewTableModel);
         ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
             @Override
             public String createElement() {
@@ -67,7 +66,7 @@ public class DataViewsForm implements SearchableConfigurable {
                     EDIT_ENTRY_LABEL,
                     project,
                     selected);
-            dialog.addTextFieldListener(fieldText -> viewFileTableModel.setValueAt(fieldText, selectedRow, 0));
+            dialog.addTextFieldListener(fieldText -> dataViewTableModel.setValueAt(fieldText, selectedRow, 0));
             dialog.setVisible(true);
         });
 
@@ -78,11 +77,11 @@ public class DataViewsForm implements SearchableConfigurable {
                     project,
                     ""
             );
-            dialog.addTextFieldListener(fieldText -> viewFileTableModel.addRow(fieldText));
+            dialog.addTextFieldListener(fieldText -> dataViewTableModel.addRow(fieldText));
             dialog.setVisible(true);
         });
 
-        decorator.setRemoveAction(action -> viewFileTableModel.removeRow(tableView.getSelectedRow()));
+        decorator.setRemoveAction(action -> dataViewTableModel.removeRow(tableView.getSelectedRow()));
 
         decorator.disableUpAction();
         decorator.disableDownAction();
@@ -102,7 +101,7 @@ public class DataViewsForm implements SearchableConfigurable {
 
     private void copySettingsFromUI(@NotNull Settings settings) {
         SettingsState state = settings.getState();
-        state.setDataViewExtensions(viewFileTableModel.getViewFiles());
+        state.setDataViewExtensions(dataViewTableModel.getViewFiles());
         settings.loadState(state);
     }
 

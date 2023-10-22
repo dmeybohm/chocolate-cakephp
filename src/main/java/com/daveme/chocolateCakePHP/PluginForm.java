@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
+import com.daveme.chocolateCakePHP.cake.PluginEntry;
 import com.daveme.chocolateCakePHP.ui.PluginTableModel;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;

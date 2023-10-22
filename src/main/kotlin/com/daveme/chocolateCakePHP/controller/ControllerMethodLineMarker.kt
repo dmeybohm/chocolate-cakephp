@@ -1,9 +1,11 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
+import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
@@ -75,36 +77,55 @@ class ControllerMethodLineMarker : LineMarkerProvider {
 
         return relatedItemLineMarkerInfo(listOf(firstParameter.contents), relatedLookupInfo, element)
     }
-    
+
+
     private fun relatedItemLineMarkerInfo(
         actionNames: List<String>,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
-        val pluginOrAppDir = topSourceDirectoryFromFile(settings, relatedLookupInfo.file)
+        val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, relatedLookupInfo.file)
             ?: return null
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
+            relatedLookupInfo.project,
+            settings,
+            topSourceDirectory
+        ) ?: return null
 
         val fileExtensions = relatedLookupInfo.settings.dataViewExtensions
 
         // Create one file for each of the file extensions that match the naming convention:
         val files = actionNames.map { controllerAction ->
+            listOfNotNull(
+                templatePathToVirtualFile(
+                    relatedLookupInfo.settings,
+                    templatesDirectory,
+                    relatedLookupInfo.controllerName,
+                    controllerAction
+                )
+            ) +
             fileExtensions.mapNotNull { fileExtension ->
                 templatePathToVirtualFile(
                     relatedLookupInfo.settings,
-                    pluginOrAppDir,
+                    templatesDirectory,
                     relatedLookupInfo.controllerName,
-                    fileExtension + "/" + controllerAction
+                    "${fileExtension}/${controllerAction}"
                 )
-            } + listOfNotNull(
-                templatePathToVirtualFile(
-                    relatedLookupInfo.settings, pluginOrAppDir, relatedLookupInfo.controllerName, controllerAction
-                )
-            )
+            }
         }.flatMap { it }
 
-        return if (files.size == 0) {
-            null
+        return if (files.isEmpty()) {
+            val viewFilename = actionNameToViewFilename(templatesDirectory, settings, actionNames.first())
+            val controllerName = relatedLookupInfo.controllerName
+            val templateFullPath = pathRelativeToProject(relatedLookupInfo.project, templatesDirectory.psiDirectory)
+            val defaultViewFile = "${templateFullPath}/${controllerName}/${viewFilename}"
+
+            return NavigationGutterIconBuilder
+                .create(AllIcons.Actions.AddFile)
+                .setTargets(listOf())
+                .setTooltipText("Click to create view file")
+                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile))
         } else {
             val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
             NavigationGutterIconBuilder
@@ -160,5 +181,4 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             addLineMarkerUnique(result, renderViewMarker)
         }
     }
-
 }

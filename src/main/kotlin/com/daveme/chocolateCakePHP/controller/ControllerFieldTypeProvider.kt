@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.isCakeTwoModelClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -33,10 +34,10 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
         // don't add types for nested types ($this->FooBar->FooBar) on cake 3+:
         if (psiElement.firstChild is FieldReference) {
-            if (settings.cake2Enabled) {
-                return cakeTwoNestedModelCompletion(psiElement)
+            return if (settings.cake2Enabled) {
+                cakeTwoNestedModelCompletion(psiElement)
             } else {
-                return null
+                null
             }
         }
 
@@ -79,13 +80,13 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
         val index = PhpIndex.getInstance(project)
 
-        val firstClasses = index.getClassesByFQN("\\" + firstFieldName);
-        if (!CakeTwo.isModelClass(firstClasses)) {
+        val firstClasses = index.getClassesByFQN("\\" + firstFieldName)
+        if (!isCakeTwoModelClass(firstClasses)) {
             return null
         }
 
         val targetClasses = index.getClassesByFQN("\\" + targetFieldName)
-        if (!CakeTwo.isModelClass(targetClasses)) {
+        if (!isCakeTwoModelClass(targetClasses)) {
             return null
         }
 

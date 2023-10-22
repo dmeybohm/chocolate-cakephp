@@ -19,7 +19,7 @@ class ViewLineMarkerTest : BaseTestCase() {
         )
 
         val lastFile = files.last()
-        myFixture.saveText(lastFile.virtualFile, """"
+        myFixture.saveText(lastFile.virtualFile, """
         <?php
 
         namespace App\Controller;
@@ -64,7 +64,7 @@ class ViewLineMarkerTest : BaseTestCase() {
         )
 
         val lastFile = files.last()
-        myFixture.saveText(lastFile.virtualFile, """"
+        myFixture.saveText(lastFile.virtualFile, """
         <?php
 
         namespace App\Controller;
@@ -112,7 +112,7 @@ class ViewLineMarkerTest : BaseTestCase() {
         )
 
         val lastFile = files.last()
-        myFixture.saveText(lastFile.virtualFile, """"
+        myFixture.saveText(lastFile.virtualFile, """
         <?php
 
         namespace App\Controller;
@@ -160,7 +160,7 @@ class ViewLineMarkerTest : BaseTestCase() {
         )
 
         val lastFile = files.last()
-        myFixture.saveText(lastFile.virtualFile, """"
+        myFixture.saveText(lastFile.virtualFile, """
         <?php
 
         namespace App\Controller;
