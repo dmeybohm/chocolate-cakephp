@@ -159,7 +159,7 @@ private fun appOrSrcDirectoryFromControllerFile(settings: Settings, file: PsiFil
     return null
 }
 
-sealed class CakeView(val viewDirectory: String, val elementTop: String) {
+sealed class CakeView(val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
     abstract fun elementPath(settings: Settings, elementPath: String): String
 }
@@ -168,7 +168,7 @@ fun isCakeViewFile(project: Project, settings: Settings, file: PsiFile): Boolean
     return if (templatesDirectoryFromViewFile(project, settings, file) != null) true else false
 }
 
-object CakeFour : CakeView(viewDirectory = "templates", elementTop = "element") {
+object CakeFour : CakeView(elementTop = "element") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/${controllerAction}.php"
 
@@ -176,7 +176,7 @@ object CakeFour : CakeView(viewDirectory = "templates", elementTop = "element") 
         "${elementTop}/${elementPath}.php"
 }
 
-object CakeThree : CakeView(viewDirectory = "Template", elementTop = "Element") {
+object CakeThree : CakeView(elementTop = "Element") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/${controllerAction}.${settings.cakeTemplateExtension}"
 
@@ -184,7 +184,7 @@ object CakeThree : CakeView(viewDirectory = "Template", elementTop = "Element") 
         "${elementTop}/${elementPath}.${settings.cakeTemplateExtension}"
 }
 
-object CakeTwo : CakeView(viewDirectory = "View", elementTop = "Elements") {
+object CakeTwo : CakeView(elementTop = "Elements") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/$controllerAction.${settings.cake2TemplateExtension}"
 

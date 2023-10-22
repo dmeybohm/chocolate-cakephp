@@ -3,7 +3,6 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.elementPathToVirtualFile
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
-import com.daveme.chocolateCakePHP.cake.topSourceDirectoryFromControllerFile
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor

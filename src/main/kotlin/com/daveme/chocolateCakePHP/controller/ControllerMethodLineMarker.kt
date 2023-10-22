@@ -118,7 +118,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         return if (files.isEmpty()) {
             val viewFilename = actionNameToViewFilename(templatesDirectory, settings, actionNames.first())
             val controllerName = relatedLookupInfo.controllerName
-            val templateFullPath = templatesDirectory.psiDirectory.virtualFile.canonicalPath
+            val templateFullPath = pathRelativeToProject(relatedLookupInfo.project, templatesDirectory.psiDirectory)
             val defaultViewFile = "${templateFullPath}/${controllerName}/${viewFilename}"
 
             return NavigationGutterIconBuilder

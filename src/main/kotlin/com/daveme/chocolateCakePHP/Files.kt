@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
@@ -35,4 +36,17 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
     val pathPartsList = childPath.split("/".toRegex())
     val pathPartsArray = pathPartsList.dropLastWhile { it.isEmpty() }.toTypedArray()
     return VfsUtil.findRelativeFile(dir.virtualFile, *pathPartsArray)
+}
+
+fun pathRelativeToProject(project: Project, psiDirectory: PsiDirectory): String? {
+    val projectVirtualFile = project.guessProjectDir() ?: return null
+    val projectPsiDirectory = virtualFileToPsiDirectory(project, projectVirtualFile) ?: return null
+    var dir = psiDirectory.parent
+    val pathNames = mutableListOf(psiDirectory.name)
+    while (dir != null && dir != projectPsiDirectory) {
+        pathNames.add(dir.name)
+        dir = dir.parent
+    }
+    pathNames.reverse()
+    return pathNames.joinToString("/")
 }
