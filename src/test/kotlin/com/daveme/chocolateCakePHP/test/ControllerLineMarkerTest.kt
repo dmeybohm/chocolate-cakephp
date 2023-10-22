@@ -1,12 +1,13 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker
+import com.intellij.icons.AllIcons
 import com.intellij.psi.util.PsiTreeUtil
 import org.junit.Test
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 
-class ViewLineMarkerTest : BaseTestCase() {
+class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that line markers contain one entry for each type of view`() {
@@ -192,4 +193,78 @@ class ViewLineMarkerTest : BaseTestCase() {
         )
         assertEquals(expected, infos)
     }
+
+    @Test
+    fun `test that a line marker is added to the method name when a corresponding view file doesn't exist`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/artist.ctp", // create Template dir
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val method = PsiTreeUtil.findChildOfType(myFixture.file, Method::class.java, false)
+        assertNotNull(method?.nameIdentifier)
+
+        val markers = calculateLineMarkers(method!!.nameIdentifier!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val path = markers.first().icon.toString()
+        assertEquals(path, AllIcons.Actions.AddFile.toString())
+    }
+
+    @Test
+    fun `test that a line marker is added next to redner call when a corresponding view file doesn't exist`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/artist.ctp", // create Template dir
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->render("custom/nested");
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val methodReference = PsiTreeUtil.findChildOfType(myFixture.file, MethodReference::class.java, false)
+        assertNotNull(methodReference?.firstChild?.firstChild)
+
+        val markers = calculateLineMarkers(methodReference!!.firstChild!!.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val path = markers.first().icon.toString()
+        assertEquals(path, AllIcons.Actions.AddFile.toString())
+    }
+
 }
