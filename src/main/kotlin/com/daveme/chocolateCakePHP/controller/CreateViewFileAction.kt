@@ -7,6 +7,7 @@ import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileTypeManager
@@ -61,17 +62,17 @@ class CreateViewFileAction(
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
                     if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
-                        Messages.showErrorDialog("Failed to create directories", "Create View File")
+                        showError("Failed to create directories")
                         return
                     }
                     val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
                     if (!parentDirVirtualFile.isDirectory) {
-                        Messages.showErrorDialog("Failed to create directories", "Create View File")
+                        showError("Failed to create directories")
                         return
                     }
                     val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
                     if (parentDirPsiFile == null) {
-                        Messages.showErrorDialog("Failed to create directories", "Create View File")
+                        showError("Failed to create directories")
                         return
                     }
 
@@ -88,7 +89,14 @@ class CreateViewFileAction(
                         OpenFileDescriptor(project, result.virtualFile).navigate(true)
                     }
                 }
+
+                fun showError(error: String) {
+                    ApplicationManager.getApplication().invokeLater {
+                        Messages.showErrorDialog(error, "Create View File")
+                    }
+                }
             }
+
         )
     }
 
