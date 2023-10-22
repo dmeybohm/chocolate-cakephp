@@ -52,25 +52,28 @@ class CreateViewFileAction(
             object : Runnable {
                 override fun run() {
 
-
                     val template = FileTemplateManager.getInstance(project)
                         .getInternalTemplate("CakePHP View File.php")
                     val text = template.getText()
-
 
                     val viewFilePathInfo = viewFilePathInfoFromPath(filePath) ?: return
                     val parentDir = viewFilePathInfo.templateDirPath
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
                     if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
+                        Messages.showErrorDialog("Failed to create directories", "Create View File")
                         return
                     }
                     val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
                     if (!parentDirVirtualFile.isDirectory) {
+                        Messages.showErrorDialog("Failed to create directories", "Create View File")
                         return
                     }
                     val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
-                        ?: return
+                    if (parentDirPsiFile == null) {
+                        Messages.showErrorDialog("Failed to create directories", "Create View File")
+                        return
+                    }
 
                     val psiFile = PsiFileFactory.getInstance(project)
                         .createFileFromText(
