@@ -11,6 +11,8 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.ui.InputValidator
+import com.intellij.openapi.ui.Messages
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
@@ -23,6 +25,24 @@ class CreateViewFileAction(
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
+        val baseDir = project.guessProjectDir() ?: return
+
+        val filePath = if (useCustomPath) {
+            val userInput = Messages.showInputDialog(
+                project,
+                "View file path",
+                "Create View File",
+                Messages.getQuestionIcon(),
+                destinationPath,
+                object : InputValidator {
+                    override fun checkInput(inputString: String?): Boolean = true
+                    override fun canClose(inputString: String?): Boolean = true
+                }
+            )
+            if (userInput != null) userInput else null
+        } else {
+            destinationPath
+        } ?: return
 
         // Create file
         WriteCommandAction.runWriteCommandAction(
@@ -31,13 +51,14 @@ class CreateViewFileAction(
             null,
             object : Runnable {
                 override fun run() {
+
+
                     val template = FileTemplateManager.getInstance(project)
                         .getInternalTemplate("CakePHP View File.php")
                     val text = template.getText()
 
-                    val baseDir = project.guessProjectDir() ?: return
 
-                    val viewFilePathInfo = viewFilePathInfoFromPath(destinationPath) ?: return
+                    val viewFilePathInfo = viewFilePathInfoFromPath(filePath) ?: return
                     val parentDir = viewFilePathInfo.templateAndControllerPath
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
