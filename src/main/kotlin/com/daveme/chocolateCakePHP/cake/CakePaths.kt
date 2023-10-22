@@ -30,11 +30,6 @@ fun topSourceDirectoryFromControllerFile(settings: Settings, file: PsiFile): Top
         ?: appOrSrcDirectoryFromControllerFile(settings, originalFile)
 }
 
-fun templatesDirFromControllerFile(project: Project, settings: Settings, file: PsiFile): TemplatesDir? {
-    val topDir = topSourceDirectoryFromControllerFile(settings, file) ?: return null
-    return templatesDirectoryFromTopSourceDirectory(project, settings, topDir)
-}
-
 fun templatesDirectoryFromTopSourceDirectory(
     project: Project,
     settings: Settings,
