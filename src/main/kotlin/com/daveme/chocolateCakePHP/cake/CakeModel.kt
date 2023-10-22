@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.cake.CakeModel
+package com.daveme.chocolateCakePHP.cake
 
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
