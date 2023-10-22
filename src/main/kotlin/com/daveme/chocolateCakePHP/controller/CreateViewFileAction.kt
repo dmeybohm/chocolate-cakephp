@@ -59,7 +59,7 @@ class CreateViewFileAction(
 
 
                     val viewFilePathInfo = viewFilePathInfoFromPath(filePath) ?: return
-                    val parentDir = viewFilePathInfo.templateAndControllerPath
+                    val parentDir = viewFilePathInfo.templateDirPath
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
                     if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
