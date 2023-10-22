@@ -7,6 +7,7 @@ import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileTypeManager
@@ -52,25 +53,28 @@ class CreateViewFileAction(
             object : Runnable {
                 override fun run() {
 
-
                     val template = FileTemplateManager.getInstance(project)
                         .getInternalTemplate("CakePHP View File.php")
                     val text = template.getText()
 
-
                     val viewFilePathInfo = viewFilePathInfoFromPath(filePath) ?: return
-                    val parentDir = viewFilePathInfo.templateAndControllerPath
+                    val parentDir = viewFilePathInfo.templateDirPath
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
                     if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
+                        showError("Failed to create directories")
                         return
                     }
                     val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
                     if (!parentDirVirtualFile.isDirectory) {
+                        showError("Failed to find directory")
                         return
                     }
                     val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
-                        ?: return
+                    if (parentDirPsiFile == null) {
+                        showError("Failed to find directory")
+                        return
+                    }
 
                     val psiFile = PsiFileFactory.getInstance(project)
                         .createFileFromText(
@@ -85,7 +89,14 @@ class CreateViewFileAction(
                         OpenFileDescriptor(project, result.virtualFile).navigate(true)
                     }
                 }
+
+                fun showError(error: String) {
+                    ApplicationManager.getApplication().invokeLater {
+                        Messages.showErrorDialog(error, "Create View File")
+                    }
+                }
             }
+
         )
     }
 

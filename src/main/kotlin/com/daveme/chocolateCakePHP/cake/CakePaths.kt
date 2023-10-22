@@ -239,23 +239,18 @@ fun elementPathToVirtualFile(
 
 data class ViewFilePathInfo(
     val templateDirPath: String, // relative to project root.
-    val controllerName: String,
     val viewFilename: String,
-) {
-    val templateAndControllerPath: String
-        get() = "${templateDirPath}/${controllerName}"
-}
+)
 
 fun viewFilePathInfoFromPath(viewFilePath: String): ViewFilePathInfo? {
     val pathPartsList = viewFilePath.split("/".toRegex())
-    if (pathPartsList.size < 3) {
+    if (pathPartsList.size < 2) {
         return null
     }
-    val lastElements = pathPartsList.takeLast(2)
-    val templateDir = pathPartsList.dropLast(2)
+    val lastElements = pathPartsList.takeLast(1)
+    val templateDir = pathPartsList.dropLast(1)
     return ViewFilePathInfo(
         templateDirPath = templateDir.joinToString("/"),
-        controllerName = lastElements.first(),
-        viewFilename = lastElements.get(1)
+        viewFilename = lastElements.first()
     )
 }
