@@ -67,12 +67,12 @@ class CreateViewFileAction(
                     }
                     val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
                     if (!parentDirVirtualFile.isDirectory) {
-                        showError("Failed to create directories")
+                        showError("Failed to find directory")
                         return
                     }
                     val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
                     if (parentDirPsiFile == null) {
-                        showError("Failed to create directories")
+                        showError("Failed to find directory")
                         return
                     }
 
