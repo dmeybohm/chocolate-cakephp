@@ -1,17 +1,16 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.findParentWithClass
-import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.patterns.PlatformPatterns
+import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.Field
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import org.jetbrains.annotations.Nls
 
@@ -28,14 +27,20 @@ class FinderGotoDeclarationHandler : GotoDeclarationHandler {
         if (!settings.enabled) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (!PlatformPatterns
-                .psiElement(StringLiteralExpression::class.java)
+        if (!psiElement(StringLiteralExpression::class.java)
                 .withLanguage(PhpLanguage.INSTANCE)
                 .accepts(sourceElement.context)
         ) {
             return PsiElement.EMPTY_ARRAY
         }
-        val field = findParentWithClass(sourceElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
+        val methodReference = sourceElement.parent as? MethodReference
+            ?: return PsiElement.EMPTY_ARRAY
+        val methodName = methodReference.name
+        if (methodName != "find") {
+            return PsiElement.EMPTY_ARRAY
+        }
+        val field = findParentWithClass(sourceElement, Field::class.java) as Field?
+            ?: return PsiElement.EMPTY_ARRAY
 
         val phpIndex = PhpIndex.getInstance(sourceElement.project)
 
