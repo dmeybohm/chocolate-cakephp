@@ -30,7 +30,7 @@
             </constraints>
             <properties>
               <font style="1"/>
-              <text value="Cake 3/4 Plugins"/>
+              <text value="CakePHP 3+ Plugins"/>
             </properties>
           </component>
           <component id="a487f" class="javax.swing.JSeparator">

@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
-import com.daveme.chocolateCakePHP.PluginEntry
+import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.intellij.util.ui.ColumnInfo
 
 class NamespaceColumn(name: String) :

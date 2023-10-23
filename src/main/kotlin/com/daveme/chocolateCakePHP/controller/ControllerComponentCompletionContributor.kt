@@ -33,7 +33,7 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
             val fieldReference = PsiTreeUtil.getParentOfType(
                 completionParameters.position,
                 FieldReference::class.java
-            ) as? FieldReference ?: return
+            ) ?: return
 
             val settings =
                 Settings.getInstance(fieldReference.project)
@@ -42,10 +42,10 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
             }
 
             val childElement = fieldReference.firstChild
-            if (childElement is FieldReference) {
-                return directLookup(settings, completionResultSet, childElement)
+            return if (childElement is FieldReference) {
+                directLookup(settings, completionResultSet, childElement)
             } else {
-                return directLookup(settings, completionResultSet, fieldReference)
+                directLookup(settings, completionResultSet, fieldReference)
             }
         }
 

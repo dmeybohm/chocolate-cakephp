@@ -26,16 +26,19 @@
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
     <idea-version since-build="213.6461.21"/>
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.daveme.chocolateCakePHP.Settings" />
-
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
                              id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="CakePHP 3 / 4 Plugins"
+                             displayName="CakePHP 3+ Plugins"
                              id="chocolatecakephp.PluginForm"
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
+
+        <projectConfigurable parentId="chocolatecakephp.ConfigForm"
+                             displayName="Data Views"
+                             id="chocolatecakephp.ui.ViewFileExtensionsForm"
+                             instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCakeTwoModelCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
@@ -63,8 +66,12 @@
     </extensions>
 
     <actions>
-        <!-- Add your actions here -->
+        <action id="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
+                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
+                text="Create CakePHP View File"
+                description="Create a view file for the CakePHP framework"/>
     </actions>
+
 
     <depends>com.jetbrains.php</depends>
     <depends>com.intellij.modules.platform</depends>

@@ -1,32 +1,30 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
 import com.daveme.chocolateCakePHP.ui.TextFieldListener;
 import com.intellij.openapi.project.Project;
-import com.intellij.util.textCompletion.TextFieldWithCompletion;
-import com.jetbrains.php.completion.PhpCompletionUtil;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.*;
 
-public class EditPluginEntryDialog extends JDialog {
+public class EditEntryDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
-    private TextFieldWithCompletion appNamespaceTextField;
+    private JLabel fieldLabel;
+    private JTextField fieldValueTextField;
 
     final private Project project;
 
     private TextFieldListener listener;
 
-    public EditPluginEntryDialog(Project project, String initialValue) {
+    public EditEntryDialog(String fieldLabelText, Project project, String initialValue) {
         this.project = project;
 
         setContentPane(contentPane);
         setModal(true);
         getRootPane().setDefaultButton(buttonOK);
+
+        fieldLabel.setText(fieldLabelText);
 
         buttonOK.addActionListener(e -> onOK());
 
@@ -46,13 +44,13 @@ public class EditPluginEntryDialog extends JDialog {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT
         );
 
-        appNamespaceTextField.requestFocus();
-        appNamespaceTextField.setText(initialValue);
+        fieldValueTextField.requestFocus();
+        fieldValueTextField.setText(initialValue);
     }
 
     private void onOK() {
         if (listener != null) {
-            listener.actionPerformed(appNamespaceTextField.getText());
+            listener.actionPerformed(fieldValueTextField.getText());
         }
         dispose();
     }
@@ -63,28 +61,16 @@ public class EditPluginEntryDialog extends JDialog {
     }
 
     private void createUIComponents() {
-        FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
-        PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
-        appNamespaceTextField = new TextFieldWithCompletion(
-                project,
-                completionProvider,
-                "",
-                true,
-                true,
-                false,
-                false
-        );
     }
 
     public void addTextFieldListener(TextFieldListener listener) {
         this.listener = listener;
     }
 
-    public static EditPluginEntryDialog createDialog(Project project, String initialValue) {
-        EditPluginEntryDialog dialog = new EditPluginEntryDialog(project, initialValue);
+    public static EditEntryDialog createDialog(String title, String fieldLabel, Project project, String initialValue) {
+        EditEntryDialog dialog = new EditEntryDialog(fieldLabel, project, initialValue);
         dialog.setLocationRelativeTo(null);
-        dialog.setTitle("Edit Plugin Namespace");
+        dialog.setTitle(title);
         dialog.pack();
         return dialog;
     }

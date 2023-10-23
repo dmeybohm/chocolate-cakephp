@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP.ui
 
-import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -8,11 +7,11 @@ import com.intellij.util.ui.SortableColumnModel
 import javax.swing.RowSorter
 import javax.swing.table.TableModel
 
-class PluginTableModel private constructor(
-    val pluginEntries: MutableList<PluginEntry>,
-    columns: Array<ColumnInfo<PluginEntry, String>>
+class DataViewTableModel private constructor(
+    val viewFiles: MutableList<String>,
+    columns: Array<ColumnInfo<String, String>>
 ) :
-    ListTableModel<PluginEntry>(*columns),
+    ListTableModel<String>(*columns),
     SortableColumnModel,
     TableModel {
 
@@ -22,8 +21,8 @@ class PluginTableModel private constructor(
         return false
     }
 
-    override fun getRowValue(row: Int): PluginEntry {
-        return pluginEntries[row]
+    override fun getRowValue(row: Int): String {
+        return viewFiles[row]
     }
 
     override fun getDefaultSortKey(): RowSorter.SortKey? {
@@ -31,7 +30,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getRowCount(): Int {
-        return pluginEntries.size
+        return viewFiles.size
     }
 
     override fun getColumnCount(): Int {
@@ -51,34 +50,34 @@ class PluginTableModel private constructor(
     }
 
     override fun getValueAt(i: Int, i1: Int): Any {
-        return pluginEntries[i].namespace
+        return viewFiles[i]
     }
 
     override fun setValueAt(o: Any, i: Int, i1: Int) {
-        pluginEntries[i] = o as PluginEntry
+        viewFiles[i] = o as String
         fireTableCellUpdated(i, i1)
     }
 
-    override fun addRow(item: PluginEntry?) {
-        pluginEntries.add(item!!)
-        val size = pluginEntries.size
+    override fun addRow(item: String?) {
+        viewFiles.add(item!!)
+        val size = viewFiles.size
         fireTableRowsInserted(size - 1, size - 1)
     }
 
     override fun removeRow(idx: Int) {
-        pluginEntries.removeAt(idx)
+        viewFiles.removeAt(idx)
         fireTableRowsDeleted(idx, idx)
     }
 
     companion object {
         private val myColumns =
-            arrayOf<ColumnInfo<PluginEntry, String>>(
-                NamespaceColumn("Namespace")
+            arrayOf<ColumnInfo<String, String>>(
+                DataViewColumn("Data View Extension")
             )
 
         @JvmStatic
-        fun fromSettings(settings: Settings): PluginTableModel {
-            return PluginTableModel(settings.pluginEntries.toMutableList(), myColumns)
+        fun fromSettings(settings: Settings): DataViewTableModel {
+            return DataViewTableModel(settings.dataViewExtensions.toMutableList(), myColumns)
         }
     }
 

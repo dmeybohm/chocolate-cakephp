@@ -20,7 +20,7 @@ class FullyQualifiedNameTextFieldCompletionProvider(
         completionResultSet: CompletionResultSet
     ) {
         val phpIndex = PhpIndex.getInstance(project)
-        PhpCompletionUtil.addSubNamespaces(namespaceName + "\\", completionResultSet, phpIndex, handler)
+        PhpCompletionUtil.addSubNamespaces(project, namespaceName + "\\", completionResultSet, handler, false, phpIndex)
         completionResultSet.stopHere()
     }
 
