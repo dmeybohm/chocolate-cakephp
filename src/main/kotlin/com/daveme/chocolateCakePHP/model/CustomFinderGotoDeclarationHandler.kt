@@ -50,7 +50,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Iterate each of the types looking for the findXXX method:
         val phpIndex = PhpIndex.getInstance(sourceElement.project)
-        return phpIndex.customFinderMethods(settings, tableTypes, sourceElement.text).toTypedArray()
+        return phpIndex.customFinderMethods(tableTypes, sourceElement.text).toTypedArray()
     }
 
     override fun getActionText(context: DataContext): @Nls(capitalization = Nls.Capitalization.Title) String? {

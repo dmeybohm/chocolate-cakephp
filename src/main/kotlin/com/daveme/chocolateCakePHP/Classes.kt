@@ -133,15 +133,11 @@ fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: S
     return result
 }
 
-fun PhpIndex.customFinderMethods(settings: Settings, types: List<String>, customFinderName: String): Collection<Method> {
+fun PhpIndex.customFinderMethods(types: List<String>, customFinderName: String): Collection<Method> {
     var result = listOf<Method>()
     val fullFinderMethodName = "find" + customFinderName
-    if (settings.cake3Enabled) {
-        result += types.flatMap { type ->
-            getClassesByFQN(type).flatMap { phpClass ->
-                listOf(phpClass.findMethodByName(fullFinderMethodName))
-            }.mapNotNull { it -> it }
-        }
+    result += types.flatMap { type ->
+        getClassesByFQN(type).mapNotNull { phpClass -> phpClass.findMethodByName(fullFinderMethodName) }
     }
     return result
 }
