@@ -47,6 +47,7 @@
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.model.CustomFinderGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerFieldGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerComponentsGotoDeclarationHandler" />

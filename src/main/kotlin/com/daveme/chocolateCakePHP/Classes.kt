@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
@@ -130,6 +131,13 @@ fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: S
         }
     }
     return result
+}
+
+fun PhpIndex.customFinderMethods(types: List<String>, customFinderName: String): Collection<Method> {
+    val fullFinderMethodName = "find" + customFinderName
+    return types.flatMap { type ->
+        getClassesByFQN(type).mapNotNull { phpClass -> phpClass.findMethodByName(fullFinderMethodName) }
+    }
 }
 
 fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
