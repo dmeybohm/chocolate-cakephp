@@ -134,12 +134,10 @@ fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: S
 }
 
 fun PhpIndex.customFinderMethods(types: List<String>, customFinderName: String): Collection<Method> {
-    var result = listOf<Method>()
     val fullFinderMethodName = "find" + customFinderName
-    result += types.flatMap { type ->
+    return types.flatMap { type ->
         getClassesByFQN(type).mapNotNull { phpClass -> phpClass.findMethodByName(fullFinderMethodName) }
     }
-    return result
 }
 
 fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: String): Collection<PhpClass> {
