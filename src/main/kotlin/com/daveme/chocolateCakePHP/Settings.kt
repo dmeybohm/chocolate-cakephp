@@ -27,7 +27,15 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val cakeTemplateExtension get() = state.cakeTemplateExtension
     val appDirectory get() = state.appDirectory
-    val appNamespace get() = state.appNamespace
+
+    val appNamespace get(): String {
+        return if (!state.appNamespace.startsWith("\\")) {
+            "\\${state.appNamespace}"
+        } else {
+            state.appNamespace
+        }
+    }
+
     val pluginPath get() = state.pluginPath
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
