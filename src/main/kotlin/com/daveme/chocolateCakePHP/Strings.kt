@@ -10,8 +10,10 @@ fun String.chopFromEnd(end: String): String =
         this.substring(0, this.length - end.length)
 
 fun String.isControllerClass(): Boolean =
-    this.contains("Controller") ||
-        this.contains("\\Cake\\Controller\\Controller")
+    this.contains("Controller")
+
+fun String.hasGetTableLocatorMethodCall(): Boolean =
+    this.contains(".getTableLocator")
 
 fun String.controllerBaseName(): String? =
     if (!endsWith("Controller"))

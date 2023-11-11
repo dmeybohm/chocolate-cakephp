@@ -11,7 +11,6 @@ import com.intellij.psi.PsiFile
 // This represents either:
 //   - the "app" directory in CakePHP 2
 //   - the "src" directory in CakePHP 3+
-//   - the "templates" directory in CakePHP 4+
 //   - the "plugins/MyPlugin/src" directory in CakePHP 3+
 //
 sealed interface TopSourceDirectory {
@@ -22,7 +21,15 @@ class PluginSrcDirectory(override val psiDirectory: PsiDirectory, val pluginDirN
 class AppDirectory(override val psiDirectory: PsiDirectory) : AppOrSrcDirectory
 class SrcDirectory(override val psiDirectory: PsiDirectory) : AppOrSrcDirectory
 
-data class TemplatesDir(val dirName: String, val psiDirectory: PsiDirectory)
+sealed interface TemplatesDir {
+    val dirName: String
+    val psiDirectory: PsiDirectory
+}
+
+data class CakeFourTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
+data class CakeThreeTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
+data class CakeTwoTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
+
 
 fun topSourceDirectoryFromControllerFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
     val originalFile = file.originalFile
@@ -41,14 +48,14 @@ fun templatesDirectoryFromTopSourceDirectory(
         if (cakeFourViewDir != null) {
             val dir = virtualFileToPsiDirectory(project, cakeFourViewDir)
             if (dir != null) {
-                return TemplatesDir("templates", dir)
+                return CakeFourTemplatesDir("templates", dir)
             }
         }
         val cakeThreeViewDir = findRelativeFile(topDir.psiDirectory, "Template")
         if (cakeThreeViewDir != null) {
             val dir = virtualFileToPsiDirectory(project, cakeThreeViewDir)
             if (dir != null) {
-                return TemplatesDir("Template", dir)
+                return CakeThreeTemplatesDir("Template", dir)
             }
         }
     }
@@ -57,7 +64,7 @@ fun templatesDirectoryFromTopSourceDirectory(
         if (cakeTwoViewDir != null) {
             val dir = virtualFileToPsiDirectory(project, cakeTwoViewDir)
             if (dir != null) {
-                return TemplatesDir("View", dir)
+                return CakeTwoTemplatesDir("View", dir)
             }
         }
     }
@@ -91,13 +98,13 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     val projectDir = project.guessProjectDir() ?: return null
     while (child != null && child != projectDir && child.name != settings.pluginPath) {
         if (hasCakeFour && parent?.name == "templates") {
-            return TemplatesDir(parent.name, parent)
+            return CakeFourTemplatesDir(parent.name, parent)
         }
         else if (hasCakeThree && parent?.name == settings.appDirectory && child.name == "Template") {
-            return TemplatesDir(child.name, child)
+            return CakeThreeTemplatesDir(child.name, child)
         }
         else if (hasCakeTwo && parent?.name == settings.cake2AppDirectory && child.name == "View") {
-            return TemplatesDir(child.name, child)
+            return CakeTwoTemplatesDir(child.name, child)
         }
         child = parent
         parent = parent?.parent
@@ -111,10 +118,10 @@ fun actionNameToViewFilename(
     settings: Settings,
     actionName: String
 ): String {
-    return when (templatesDirectory.dirName) {
-        "Template" -> "${actionName.camelCaseToUnderscore()}.${settings.cakeTemplateExtension}"
-        "View" -> "${actionName}.${settings.cake2TemplateExtension}"
-        else -> "${actionName.camelCaseToUnderscore()}.php" // cake 4+
+    return when (templatesDirectory) {
+        is CakeFourTemplatesDir -> "${actionName.camelCaseToUnderscore()}.php" // cake 4+
+        is CakeThreeTemplatesDir -> "${actionName.camelCaseToUnderscore()}.${settings.cakeTemplateExtension}"
+        is CakeTwoTemplatesDir -> "${actionName}.${settings.cake2TemplateExtension}"
     }
 }
 
