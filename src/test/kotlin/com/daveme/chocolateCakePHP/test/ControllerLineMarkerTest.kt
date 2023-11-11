@@ -231,7 +231,7 @@ class ControllerLineMarkerTest : BaseTestCase() {
     }
 
     @Test
-    fun `test that a line marker is added next to redner call when a corresponding view file doesn't exist`() {
+    fun `test that a line marker is added next to render call when a corresponding view file doesn't exist`() {
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
