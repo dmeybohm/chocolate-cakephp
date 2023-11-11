@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.8.3] - 2023-11-11
+### Changed
+- Fix problems with setting namespace field in the main config UI form
+
 ## [0.8.2] - 2022-05-29
 ### Changed
 - Fix problem with completion models and components from controllers
