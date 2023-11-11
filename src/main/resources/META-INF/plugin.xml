@@ -44,6 +44,7 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.FetchTableCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler" />
