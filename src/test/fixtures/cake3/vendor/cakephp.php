@@ -31,6 +31,13 @@ namespace Cake\ORM\Query {
 namespace Cake\ORM {
     class RulesChecker {}
     class Table {}
+
+    class TableRegistry {
+    /**
+     * @return \Cake\ORM\Locator\LocatorInterface
+     */
+        public function getTableLocator() {}
+    }
 }
 namespace Cake\Validation {
     class Validator {}
