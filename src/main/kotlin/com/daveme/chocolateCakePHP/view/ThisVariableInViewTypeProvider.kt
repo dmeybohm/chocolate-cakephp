@@ -13,7 +13,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
-        return '\u8316'
+        return '\u8313'
     }
 
     override fun complete(p0: String?, p1: Project?): PhpType? = null

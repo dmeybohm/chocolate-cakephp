@@ -15,7 +15,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class TableLocatorTypeProvider : PhpTypeProvider4 {
 
     override fun getKey(): Char {
-        return '\u8317'
+        return '\u8316'
     }
 
     override fun getType(psiElement: PsiElement?): PhpType? {
