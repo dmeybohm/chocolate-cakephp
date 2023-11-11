@@ -1,13 +1,10 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.isCakeTwoModelClass
-import com.daveme.chocolateCakePHP.componentOrModelTypeFromFieldName
 import com.daveme.chocolateCakePHP.isControllerClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
