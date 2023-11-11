@@ -24,13 +24,13 @@
             <properties/>
             <border type="none"/>
             <children>
-              <component id="12925" class="javax.swing.JLabel">
+              <component id="12925" class="javax.swing.JLabel" binding="cakeThreePlusTitle">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
                 <properties>
                   <font style="1"/>
-                  <text value="CakePHP 3 and CakePHP 4"/>
+                  <text value="CakePHP 3+"/>
                 </properties>
               </component>
               <component id="9dbcf" class="javax.swing.JCheckBox" binding="enableCake3SupportCheckBox" default-binding="true">
@@ -38,7 +38,7 @@
                   <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
                 <properties>
-                  <text value="Enable CakePHP 3 / CakePHP 4 Support"/>
+                  <text value="Enable CakePHP 3+ Support"/>
                 </properties>
               </component>
               <component id="a650c" class="javax.swing.JSeparator">
@@ -159,7 +159,7 @@
                   <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
                 <properties>
-                  <text value="This is the extension used for view files. By default this is &quot;ctp&quot;. NOTE: this is only for CakePHP 3."/>
+                  <text value="&lt;html&gt;This is the extension used for view files. By default this is &lt;b&gt;ctp&lt;/b&gt;.&lt;br&gt;&lt;b&gt;NOTE:&lt;/b&gt; this is only for CakePHP 3. For CakePHP 4+, &lt;b&gt;php&lt;/b&gt; extension is used.&lt;/html&gt;"/>
                 </properties>
               </component>
               <vspacer id="4cda0">
@@ -200,7 +200,7 @@
             <properties/>
             <border type="none"/>
             <children>
-              <component id="e6a8d" class="javax.swing.JLabel">
+              <component id="e6a8d" class="javax.swing.JLabel" binding="cakeTwoTitle">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
