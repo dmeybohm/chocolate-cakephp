@@ -1,12 +1,11 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.hasGetTableLocatorMethodCall
 import com.daveme.chocolateCakePHP.isControllerClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -37,20 +36,30 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val referenceType = classReference.type.filterUnknown()
             for (type in referenceType.types) {
                 if (type.isControllerClass()) {
-                    PsiTreeUtil.findChildOfType(psiElement, ParameterList::class.java)?.let { paramList ->
-                        val firstParam = paramList.parameters.firstOrNull() as? StringLiteralExpression
-                            ?: return null
-                        val contents = firstParam.contents
-                        if (contents.length < 255) {
-                            // sanity check
-                            return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
-                        }
+                    val firstParam = psiElement.parameters.firstOrNull() as? StringLiteralExpression ?: return null
+                    val contents = firstParam.contents
+                    if (contents.length < 255) {
+                        // sanity check
+                        return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
                     }
                 }
             }
         }
         else if (name.equals("get")) {
-            // todo
+            //
+            // Find the first argument to the method:
+            //
+            val classReference = psiElement.classReference ?: return null
+            for (type in classReference.type.types) {
+                if (type.hasGetTableLocatorMethodCall()) {
+                    val firstParam = psiElement.parameters.firstOrNull() as? StringLiteralExpression ?: return null
+                    val contents = firstParam.contents
+                    if (contents.length < 255) {
+                        // sanity check
+                        return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+                    }
+                }
+            }
         }
 
         return null

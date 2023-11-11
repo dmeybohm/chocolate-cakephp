@@ -43,11 +43,17 @@ class TableLocatorTest : BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
-
+        use Cake\ORM\Locator\LocatorAwareTrait;
+        
+        class LocatorTester {
+            use LocatorAwareTrait;
+        }
+        
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}result = ${'$'}this->fetchTable('Articles')-><caret>
+                ${'$'}locator = new LocatorTester();
+                ${'$'}locator = ${'$'}locator->getTableLocator()->get('Articles')-><caret>
             }
         }
         """.trimIndent())

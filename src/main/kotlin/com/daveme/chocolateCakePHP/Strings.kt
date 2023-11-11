@@ -13,6 +13,9 @@ fun String.isControllerClass(): Boolean =
     this.contains("Controller") ||
         this.contains("\\Cake\\Controller\\Controller")
 
+fun String.hasGetTableLocatorMethodCall(): Boolean =
+    this.contains(".getTableLocator")
+
 fun String.controllerBaseName(): String? =
     if (!endsWith("Controller"))
         null

@@ -35,3 +35,23 @@ namespace Cake\ORM {
 namespace Cake\Validation {
     class Validator {}
 }
+
+namespace Cake\ORM\Locator {
+    interface LocatorInterface {
+
+        /**
+         * Get a table instance from the registry.
+         * @param string $alias
+         * @return \Cake\ORM\Table
+         */
+        public function get($alias, array $options = []);
+    }
+
+    trait LocatorAwareTrait {
+
+        /**
+         * @return \Cake\ORM\Locator\LocatorInterface
+         */
+        public function getTableLocator() {}
+    }
+}
