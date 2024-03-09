@@ -2,27 +2,21 @@ package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
-import com.intellij.patterns.PatternCondition
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
-import com.jetbrains.php.lang.psi.elements.FieldReference
-import com.jetbrains.php.lang.psi.elements.Variable
 import com.intellij.patterns.PlatformPatterns.psiElement
-import com.intellij.psi.PsiElement
-import com.jetbrains.php.lang.PhpLanguage
-import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.php.lang.psi.elements.ConstantReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class FetchTableCompletionContributor : CompletionContributor() {
 
     init {
-        val pattern = psiElement()
+        // When typing $this->fetchTable(, without a quote:
+        val constantPattern = psiElement(LeafPsiElement::class.java)
             .withParent(
                 psiElement(ConstantReference::class.java)
                     .withParent(
@@ -32,17 +26,41 @@ class FetchTableCompletionContributor : CompletionContributor() {
                            )
                     )
             )
+        val completionProvider = FetchTableCompletionProvider()
 
         extend(
             CompletionType.BASIC,
-            pattern,
-            FetchTableCompletionProvider()
+            constantPattern,
+            completionProvider,
         )
         extend(
             CompletionType.SMART,
-            pattern,
-            FetchTableCompletionProvider()
+            constantPattern,
+            completionProvider,
         )
+
+        // When typing $this->fetchTable(' or $this->fetchTable(", with a quote
+        val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
+            .withParent(
+                psiElement(StringLiteralExpression::class.java)
+                    .withParent(
+                        psiElement(ParameterList::class.java)
+                            .withParent(
+                                MethodReference::class.java
+                            )
+                    )
+            )
+        extend(
+            CompletionType.BASIC,
+            stringLiteralPattern,
+            completionProvider,
+        )
+        extend(
+            CompletionType.SMART,
+            stringLiteralPattern,
+            completionProvider,
+        )
+
     }
 
     class FetchTableCompletionProvider : CompletionProvider<CompletionParameters>() {
@@ -58,7 +76,7 @@ class FetchTableCompletionContributor : CompletionContributor() {
 
             val settings =
                 Settings.getInstance(methodReference.project)
-            if (!settings.cake2Enabled) {
+            if (!settings.cake3Enabled) {
                 return
             }
 
@@ -66,9 +84,13 @@ class FetchTableCompletionContributor : CompletionContributor() {
             if (methodName != "fetchTable") {
                 return
             }
+
             val phpIndex = PhpIndex.getInstance(methodReference.project)
             val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
-            completionResultSet.completeFromClasses(modelSubclasses)
+            completionResultSet.completeFromClasses(
+                modelSubclasses,
+                replaceName = "Table"
+            )
         }
     }
 

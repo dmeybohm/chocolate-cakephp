@@ -43,7 +43,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val reference = methodReference.classReference ?: return PsiElement.EMPTY_ARRAY
         val varType = reference.type.filterUnknown()
-        val tableTypes = varType.types.filter { type -> type.contains("\\Table", ignoreCase = true) }
+        val tableTypes = varType.types.filter { type -> type.contains("Table", ignoreCase = true) }
         if (tableTypes.isEmpty()) {
             return PsiElement.EMPTY_ARRAY
         }

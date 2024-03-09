@@ -128,7 +128,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    fun `test fetchTable argument can be autocompleted`() {
+    fun `test fetchTable argument can be autocompleted without quotes`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
@@ -146,7 +146,36 @@ class TableLocatorTest : BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}result = ${'$'}this->fetchTable('<caret')
+                ${'$'}result = ${'$'}this->fetchTable(<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test fetchTable argument can be autocompleted with quotes`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}result = ${'$'}this->fetchTable('<caret>
             }
         }
         """.trimIndent())
