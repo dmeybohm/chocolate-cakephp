@@ -69,7 +69,7 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
                 val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
                 completionResultSet.completeFromClasses(
                     modelSubclasses,
-                    containingClasses = containingClasses
+                    containingClasses = containingClasses,
                 )
             }
         }

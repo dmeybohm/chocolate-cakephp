@@ -85,11 +85,15 @@ class FetchTableCompletionContributor : CompletionContributor() {
                 return
             }
 
+            // If the current element is not quote, we need to quote:
+            val completeInsideString = completionParameters.position.parent is ConstantReference
+
             val phpIndex = PhpIndex.getInstance(methodReference.project)
             val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
-            completionResultSet.completeFromClasses(
+            completionResultSet.completeMethodCallWithParameterFromClasses(
                 modelSubclasses,
-                replaceName = "Table"
+                chopFromEnd = "Table",
+                completeInsideString = completeInsideString
             )
         }
     }

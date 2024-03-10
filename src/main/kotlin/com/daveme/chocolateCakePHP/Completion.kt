@@ -1,27 +1,88 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.InsertHandler
+import com.intellij.codeInsight.completion.InsertionContext
+import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
+class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHandler<LookupElement> {
+    override fun handleInsert(context: InsertionContext, item: LookupElement) {
+        val document = context.document
+        val lookupString = if (wrapInString)
+            "'${item.lookupString}"
+        else
+            item.lookupString
+        document.charsSequence
+        document.replaceString(
+            context.startOffset,
+            context.tailOffset,
+            lookupString
+        )
+
+        // Add close quote that matches the opening quote:
+        val startChar = document.charsSequence[context.startOffset]
+        val addCloseQuote = when (startChar) {
+            '\'' -> "'"
+            '"' ->  "\""
+            else -> null
+        }
+
+        var nextTailOffset = context.startOffset + lookupString.length
+        if (addCloseQuote != null) {
+            document.insertString(nextTailOffset, addCloseQuote)
+            nextTailOffset++
+        }
+
+        if (document.textLength > nextTailOffset) {
+            nextTailOffset++
+            if (document.textLength > nextTailOffset) {
+                val advancedChar = document.charsSequence[nextTailOffset]
+                if (advancedChar == ')' || advancedChar == ',') {
+                    // advance past the closing parenthesis/comma
+                    nextTailOffset++
+                }
+            }
+        }
+
+        // Go one char after the comma or parentheses
+        context.editor.caretModel.moveToOffset(nextTailOffset)
+    }
+}
+
 fun CompletionResultSet.completeFromClasses(
     classes: Collection<PhpClass>,
-    replaceName: String = "",
-    containingClasses: List<PhpClass> = arrayListOf()
+    chopFromEnd: String = "",
+    containingClasses: List<PhpClass> = arrayListOf(),
 ) {
     classes.map { klass ->
-        val replacedName = klass.name.chopFromEnd(replaceName)
-        if (hasFieldAlready(containingClasses, replacedName)) {
+        val targetName = klass.name.chopFromEnd(chopFromEnd)
+        if (hasFieldAlready(containingClasses, targetName)) {
             return@map
         }
-        val lookupElement = LookupElementBuilder.create(replacedName)
+        val lookupElement = LookupElementBuilder.create(targetName)
                 .withIcon(PhpIcons.FIELD)
                 .withTypeText(klass.type.toString().substring(1))
         this.addElement(lookupElement)
     }
 }
 
+fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
+    classes: Collection<PhpClass>,
+    chopFromEnd: String = "",
+    completeInsideString: Boolean = false,
+) {
+    classes.map { klass ->
+        val targetName = klass.name.chopFromEnd(chopFromEnd)
+        val lookupElement = LookupElementBuilder.create(targetName)
+            .withIcon(PhpIcons.FIELD)
+            .withTypeText(klass.type.toString().substring(1))
+            .withInsertHandler(CompleteMethodWithParameter(completeInsideString))
+        this.addElement(lookupElement)
+    }
+}
 private fun hasFieldAlready(containingClasses: List<PhpClass>, propertyName: String): Boolean =
     containingClasses.any {
         val hasField = it.findFieldByName(propertyName, true) != null
