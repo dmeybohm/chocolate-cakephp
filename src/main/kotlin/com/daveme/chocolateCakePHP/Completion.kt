@@ -15,7 +15,7 @@ class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHan
             "'${item.lookupString}"
         else
             item.lookupString
-        document.charsSequence
+
         document.replaceString(
             context.startOffset,
             context.tailOffset,
