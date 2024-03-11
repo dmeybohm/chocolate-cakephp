@@ -37,12 +37,17 @@ class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHan
         }
 
         if (document.textLength > nextTailOffset) {
-            nextTailOffset++
-            if (document.textLength > nextTailOffset) {
-                val advancedChar = document.charsSequence[nextTailOffset]
-                if (advancedChar == ')' || advancedChar == ',') {
-                    // advance past the closing parenthesis/comma
-                    nextTailOffset++
+            val trailingChar = document.charsSequence[nextTailOffset]
+            if (trailingChar == '\r' || trailingChar == '\n') {
+                nextTailOffset--;
+            } else {
+                nextTailOffset++
+                if (document.textLength > nextTailOffset) {
+                    val advancedChar = document.charsSequence[nextTailOffset]
+                    if (advancedChar == ')' || advancedChar == ',') {
+                        // advance past the closing parenthesis/comma
+                        nextTailOffset++
+                    }
                 }
             }
         }
