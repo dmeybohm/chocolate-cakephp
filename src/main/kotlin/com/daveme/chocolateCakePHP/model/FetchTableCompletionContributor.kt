@@ -87,29 +87,6 @@ class FetchTableCompletionContributor : CompletionContributor() {
             stringLiteralPattern,
             completionProvider,
         )
-
-        val locatorInterfacePattern = psiElement(LeafPsiElement::class.java)
-            .withParent(
-                psiElement(StringLiteralExpression::class.java)
-                    .withParent(
-                        psiElement(ParameterList::class.java)
-                            .withParent(
-                                psiElement(MethodReference::class.java)
-                                    .with(methodMatcher)
-                            )
-                        )
-                    )
-
-        extend(
-            CompletionType.BASIC,
-            locatorInterfacePattern,
-            completionProvider,
-        )
-        extend(
-            CompletionType.SMART,
-            locatorInterfacePattern,
-            completionProvider,
-        )
     }
 
     class FetchTableCompletionProvider : CompletionProvider<CompletionParameters>() {
