@@ -29,11 +29,12 @@ class FetchTableCompletionContributor : CompletionContributor() {
                     return false
                 }
                 val classRefType = methodReference.classReference?.type ?: return false
-                val phpIndex = PhpIndex.getInstance(methodReference.project)
                 val type = if (classRefType.isComplete)
                     classRefType
-                else
+                else {
+                    val phpIndex = PhpIndex.getInstance(methodReference.project)
                     phpIndex.completeType(methodReference.project, classRefType, null)
+                }
                 return type.types.contains("\\Cake\\ORM\\Locator\\LocatorInterface") ||
                         type.types.any { it.contains("Controller") }
             }
