@@ -243,4 +243,122 @@ class TableLocatorTest : BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("Articles"))
     }
+
+    fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator();
+                ${'$'}result = ${'$'}locator->get('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test TableRegistry from getTableLocator method can be autocompleted without quotes and saved in a variable`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator();
+                ${'$'}result = ${'$'}locator->get(<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator()->get('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test TableRegistry from getTableLocator method can be autocompleted without quotes inline`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator()->get(<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
 }
