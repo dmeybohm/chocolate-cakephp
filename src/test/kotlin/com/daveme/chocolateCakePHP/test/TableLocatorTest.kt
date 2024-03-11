@@ -304,6 +304,36 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator();
+                ${'$'}result = ${'$'}locator->get('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -360,5 +390,34 @@ class TableLocatorTest : BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test types from getTableLocator method can be autocompleted when inline`() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/vendor/cakephp.php"
+        )
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator()->get('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 }

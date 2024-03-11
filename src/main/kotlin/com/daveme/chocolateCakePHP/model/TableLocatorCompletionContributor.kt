@@ -36,7 +36,7 @@ class TableLocatorCompletionContributor : CompletionContributor() {
                     phpIndex.completeType(methodReference.project, classRefType, null)
                 }
                 return type.types.contains("\\Cake\\ORM\\Locator\\LocatorInterface") ||
-                        type.types.any { it.contains("Controller") }
+                        type.types.any { it.isControllerClass() }
             }
         }
 

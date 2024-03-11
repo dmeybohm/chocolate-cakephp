@@ -12,6 +12,12 @@ fun String.chopFromEnd(end: String): String =
 fun String.isControllerClass(): Boolean =
     this.contains("Controller")
 
+fun Set<String>.hasLocatorInterfaceClass(): Boolean =
+    this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")
+
+fun String.isLocatorInterfaceClass(): Boolean =
+    this == "\\Cake\\ORM\\Locator\\LocatorInterface"
+
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator")
 
