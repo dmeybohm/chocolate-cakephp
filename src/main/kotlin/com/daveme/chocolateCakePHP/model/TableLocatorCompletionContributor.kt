@@ -13,7 +13,7 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
-class FetchTableCompletionContributor : CompletionContributor() {
+class TableLocatorCompletionContributor : CompletionContributor() {
 
     init {
         val methodMatcher = object : PatternCondition<MethodReference>("LocatorInterfaceGetCondition") {
