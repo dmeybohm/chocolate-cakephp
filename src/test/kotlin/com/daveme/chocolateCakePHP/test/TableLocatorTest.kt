@@ -1,7 +1,10 @@
 package com.daveme.chocolateCakePHP.test
 
+import org.junit.Test
+
 class TableLocatorTest : BaseTestCase() {
 
+    @Test
     fun `test fetchTable returns methods from the users custom namespace in a controller`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -30,6 +33,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
+    @Test
     fun `test TableLocator get returns methods from the users custom namespace`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -64,6 +68,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
+    @Test
     fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -99,6 +104,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
+    @Test
     fun `test static TableLocator get returns methods from the users custom namespace`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -128,6 +134,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
+    @Test
     fun `test fetchTable argument can be autocompleted without quotes`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -157,6 +164,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test fetchTable argument can be autocompleted with quotes`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -186,6 +194,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test TableRegistry static method argument can be autocompleted with quotes`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -215,6 +224,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test TableRegistry static method argument can be autocompleted without quotes`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -244,6 +254,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -274,6 +285,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted without quotes and saved in a variable`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -304,6 +316,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -334,6 +347,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
+    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -363,6 +377,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted without quotes inline`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -392,6 +407,7 @@ class TableLocatorTest : BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
+    @Test
     fun `test types from getTableLocator method can be autocompleted when inline`() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
