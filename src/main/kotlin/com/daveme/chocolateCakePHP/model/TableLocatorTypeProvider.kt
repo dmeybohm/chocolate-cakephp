@@ -52,7 +52,8 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             for (type in classReference.type.types) {
                 if (type.hasGetTableLocatorMethodCall()) {
-                    val firstParam = psiElement.parameters.firstOrNull() as? StringLiteralExpression ?: return null
+                    val firstParam = psiElement.parameters.firstOrNull()
+                            as? StringLiteralExpression ?: return null
                     val contents = firstParam.contents
                     if (contents.length < 255) {
                         // sanity check

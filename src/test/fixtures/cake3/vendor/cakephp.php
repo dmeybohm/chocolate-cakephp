@@ -33,9 +33,9 @@ namespace Cake\ORM {
     class Table {}
 
     class TableRegistry {
-    /**
-     * @return \Cake\ORM\Locator\LocatorInterface
-     */
+        /**
+         * @return \Cake\ORM\Locator\LocatorInterface
+         */
         public function getTableLocator() {}
     }
 }

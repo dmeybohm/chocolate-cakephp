@@ -11,6 +11,7 @@ private const val VIEW_HELPER_CAKE2_PARENT_CLASS = "\\AppHelper"
 private const val VIEW_HELPER_CAKE3_PARENT_CLASS = "\\Cake\\View\\Helper"
 
 private const val MODEL_CAKE2_PARENT_CLASS = "\\AppModel"
+private const val MODEL_CAKE3_PARENT_CLASS = "\\Cake\\ORM\\Table"
 
 private const val COMPONENT_CAKE2_PARENT_CLASS = "\\AppComponent"
 private const val COMPONENT_CAKE3_PARENT_CLASS = "\\Cake\\Controller\\Component"
@@ -45,6 +46,9 @@ fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
     val result = arrayListOf<PhpClass>()
     if (settings.cake2Enabled) {
         result += getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
+    }
+    if (settings.cake3Enabled) {
+        result += getAllSubclasses(MODEL_CAKE3_PARENT_CLASS)
     }
     return result
 }

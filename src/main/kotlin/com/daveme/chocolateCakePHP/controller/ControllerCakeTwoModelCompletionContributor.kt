@@ -44,10 +44,10 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
             }
 
             val childElement = fieldReference.firstChild
-            if (childElement is FieldReference) {
-                return nestedLookup(settings, completionResultSet, childElement)
+            return if (childElement is FieldReference) {
+                nestedLookup(settings, completionResultSet, childElement)
             } else {
-                return directLookup(settings, completionResultSet, fieldReference)
+                directLookup(settings, completionResultSet, fieldReference)
             }
         }
 
@@ -69,7 +69,7 @@ class ControllerCakeTwoModelCompletionContributor : CompletionContributor() {
                 val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
                 completionResultSet.completeFromClasses(
                     modelSubclasses,
-                    containingClasses = containingClasses
+                    containingClasses = containingClasses,
                 )
             }
         }
