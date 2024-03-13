@@ -16,10 +16,10 @@ fun String.removeFromStart(start: String, ignoreCase: Boolean = false): String =
         this.substring(start.length)
 
 fun String.isControllerClass(): Boolean =
-    this.contains("Controller", ignoreCase = true)
+    this.endsWith("Controller", ignoreCase = true)
 
 fun String.isTableClass(): Boolean =
-    this.contains("Table", ignoreCase = true)
+    this.endsWith("Table", ignoreCase = true)
 
 fun Set<String>.hasLocatorInterfaceClass(): Boolean =
     this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")
