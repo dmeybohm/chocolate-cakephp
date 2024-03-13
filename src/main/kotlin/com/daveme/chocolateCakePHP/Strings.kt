@@ -1,16 +1,27 @@
 package com.daveme.chocolateCakePHP
 
+import kotlin.math.min
+
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 
-fun String.chopFromEnd(end: String): String =
-    if (end == "" || !this.endsWith(end))
+fun String.removeFromEnd(end: String, ignoreCase: Boolean = false): String =
+    if (end == "" || !this.endsWith(end, ignoreCase))
         this
     else
         this.substring(0, this.length - end.length)
 
+fun String.removeFromStart(start: String, ignoreCase: Boolean = false): String =
+    if (start == "" || !this.startsWith(start, ignoreCase = ignoreCase))
+        this
+    else
+        this.substring(start.length)
+
 fun String.isControllerClass(): Boolean =
-    this.contains("Controller")
+    this.contains("Controller", ignoreCase = true)
+
+fun String.isTableClass(): Boolean =
+    this.contains("Table", ignoreCase = true)
 
 fun Set<String>.hasLocatorInterfaceClass(): Boolean =
     this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")

@@ -67,7 +67,7 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
                 val componentSubclasses = phpIndex.getAllComponentSubclasses(settings)
                 completionResultSet.completeFromClasses(
                     componentSubclasses,
-                    chopFromEnd = "Component",
+                    removeFromEnd = "Component",
                     containingClasses = containingClasses
                 )
             }

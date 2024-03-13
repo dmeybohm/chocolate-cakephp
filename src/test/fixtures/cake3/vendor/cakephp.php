@@ -30,14 +30,34 @@ namespace Cake\ORM\Query {
 }
 namespace Cake\ORM {
     class RulesChecker {}
-    class Table {}
+    class Table {
+        public function findThreaded(): SelectQuery {
+            return new SelectQuery();
+        }
+        public function findList(): SelectQuery {
+            return new SelectQuery();
+        }
+        public function findAll(): SelectQuery {
+            return new SelectQuery();
+        }
+    }
 
+    class SelectQuery extends \Cake\Database\Query\SelectQuery {}
     class TableRegistry {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
         public function getTableLocator() {}
     }
+}
+namespace Cake\ORM\Query {
+    class SelectQuery extends \Cake\Database\SelectQuery {}
+}
+namespace Cake\Database {
+    abstract class Query {}
+}
+namespace Cake\Database\Query {
+    class SelectQuery extends \Cake\Database\Query {}
 }
 namespace Cake\Validation {
     class Validator {}

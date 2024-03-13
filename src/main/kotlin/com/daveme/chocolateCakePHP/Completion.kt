@@ -59,11 +59,11 @@ class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHan
 
 fun CompletionResultSet.completeFromClasses(
     classes: Collection<PhpClass>,
-    chopFromEnd: String = "",
+    removeFromEnd: String = "",
     containingClasses: List<PhpClass> = arrayListOf(),
 ) {
     classes.map { klass ->
-        val targetName = klass.name.chopFromEnd(chopFromEnd)
+        val targetName = klass.name.removeFromEnd(removeFromEnd, ignoreCase = true)
         if (hasFieldAlready(containingClasses, targetName)) {
             return@map
         }
@@ -76,11 +76,11 @@ fun CompletionResultSet.completeFromClasses(
 
 fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
     classes: Collection<PhpClass>,
-    chopFromEnd: String = "",
+    removeFromEnd: String = "",
     completeInsideString: Boolean = false,
 ) {
     classes.map { klass ->
-        val targetName = klass.name.chopFromEnd(chopFromEnd)
+        val targetName = klass.name.removeFromEnd(removeFromEnd, ignoreCase = true)
         val lookupElement = LookupElementBuilder.create(targetName)
             .withIcon(PhpIcons.FIELD)
             .withTypeText(klass.type.toString().substring(1))

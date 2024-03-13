@@ -2,25 +2,21 @@ package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.patterns.PatternCondition
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.jetbrains.php.lang.psi.elements.ConstantReference
-import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.PhpIcons
+import com.jetbrains.php.lang.psi.elements.*
 
-class TableLocatorCompletionContributor : CompletionContributor() {
-
+class CustomFinderCompletionContributor : CompletionContributor() {
     init {
         val methodMatcher = object : PatternCondition<MethodReference>("LocatorInterfaceGetCondition") {
             override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
-                if (!"get".equals(methodReference.name, ignoreCase = true) &&
-                    !"fetchTable".equals(methodReference.name, ignoreCase = true)
-                ) {
+                if (!"find".equals(methodReference.name, ignoreCase = true)) {
                     return false
                 }
                 val settings =
@@ -35,36 +31,11 @@ class TableLocatorCompletionContributor : CompletionContributor() {
                     val phpIndex = PhpIndex.getInstance(methodReference.project)
                     phpIndex.completeType(methodReference.project, classRefType, null)
                 }
-                return type.types.contains("\\Cake\\ORM\\Locator\\LocatorInterface") ||
-                        type.types.any { it.isControllerClass() }
+                return type.types.any { it.isTableClass() }
             }
         }
 
-        val completionProvider = FetchTableCompletionProvider()
-
-        // When typing $this->fetchTable(, without a quote:
-        val constantPattern = psiElement(LeafPsiElement::class.java)
-            .withParent(
-                psiElement(ConstantReference::class.java)
-                    .withParent(
-                        psiElement(ParameterList::class.java)
-                            .withParent(
-                                psiElement(MethodReference::class.java)
-                                    .with(methodMatcher)
-                            )
-                    )
-            )
-
-        extend(
-            CompletionType.BASIC,
-            constantPattern,
-            completionProvider,
-        )
-        extend(
-            CompletionType.SMART,
-            constantPattern,
-            completionProvider,
-        )
+        val completionProvider = CustomFinderCompletionProvider()
 
         // When typing $this->fetchTable(' or $this->fetchTable(", with a quote
         val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
@@ -90,7 +61,7 @@ class TableLocatorCompletionContributor : CompletionContributor() {
         )
     }
 
-    class FetchTableCompletionProvider : CompletionProvider<CompletionParameters>() {
+    class CustomFinderCompletionProvider : CompletionProvider<CompletionParameters>() {
         override fun addCompletions(
             completionParameters: CompletionParameters,
             context: ProcessingContext,
@@ -106,18 +77,39 @@ class TableLocatorCompletionContributor : CompletionContributor() {
             if (!settings.cake3Enabled) {
                 return
             }
-
             // If the current element is not quoted, we need to quote it:
             val completeInsideString = completionParameters.position.parent is ConstantReference
 
             val phpIndex = PhpIndex.getInstance(methodReference.project)
-            val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
-            completionResultSet.completeMethodCallWithParameterFromClasses(
-                modelSubclasses,
-                removeFromEnd = "Table",
-                completeInsideString = completeInsideString
-            )
+            val classReference = methodReference.classReference ?: return
+            val type = if (classReference.type.isComplete)
+                classReference.type
+            else
+                phpIndex.completeType(methodReference.project, classReference.type, null)
+
+            val tableClasses = type.types.filter {
+                it.startsWith("\\") && it.isTableClass()
+            }
+            tableClasses.asSequence()
+                .flatMap { className ->
+                    phpIndex.getClassesByFQN(className)
+                }
+                .flatMap { klass ->
+                    klass.methods
+                }
+                .filter { method ->
+                    method.name.startsWith("find", ignoreCase = true)
+                }
+                .map { method ->
+                        val targetName = method.name
+                            .removeFromStart("find", ignoreCase = true)
+                            .replaceFirstChar { it.lowercase() }
+                        val lookupElement = LookupElementBuilder.create(targetName)
+                            .withIcon(PhpIcons.PARAMETER)
+                        completionResultSet.addElement(lookupElement)
+                }
+                .lastOrNull()
+
         }
     }
-
 }
