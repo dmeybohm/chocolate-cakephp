@@ -16,7 +16,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 class TableLocatorCompletionContributor : CompletionContributor() {
 
     init {
-        val methodMatcher = object : PatternCondition<MethodReference>("LocatorInterfaceGetCondition") {
+        val methodMatcher = object : PatternCondition<MethodReference>("TableLocatorGetCondition") {
             override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
                 if (!"get".equals(methodReference.name, ignoreCase = true) &&
                     !"fetchTable".equals(methodReference.name, ignoreCase = true)

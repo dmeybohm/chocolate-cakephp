@@ -14,7 +14,7 @@ import com.jetbrains.php.lang.psi.elements.*
 
 class CustomFinderCompletionContributor : CompletionContributor() {
     init {
-        val methodMatcher = object : PatternCondition<MethodReference>("LocatorInterfaceGetCondition") {
+        val methodMatcher = object : PatternCondition<MethodReference>("CustomFinderMethodCondition") {
             override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
                 if (!"find".equals(methodReference.name, ignoreCase = true)) {
                     return false
