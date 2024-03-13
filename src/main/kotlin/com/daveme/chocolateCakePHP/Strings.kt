@@ -1,7 +1,5 @@
 package com.daveme.chocolateCakePHP
 
-import kotlin.math.min
-
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 

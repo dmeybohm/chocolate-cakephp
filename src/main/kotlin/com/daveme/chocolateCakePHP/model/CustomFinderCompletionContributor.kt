@@ -37,7 +37,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
 
         val completionProvider = CustomFinderCompletionProvider()
 
-        // When typing $this->fetchTable(' or $this->fetchTable(", with a quote
+        // When typing $table->find(' or $this->fetchTable("Movies"->find(', with a quote
         val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
             .withParent(
                 psiElement(StringLiteralExpression::class.java)
@@ -78,6 +78,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 return
             }
             // If the current element is not quoted, we need to quote it:
+            // TODO
             val completeInsideString = completionParameters.position.parent is ConstantReference
 
             val phpIndex = PhpIndex.getInstance(methodReference.project)
