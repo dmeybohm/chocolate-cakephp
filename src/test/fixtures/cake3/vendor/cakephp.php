@@ -40,6 +40,12 @@ namespace Cake\ORM {
         public function findAll(): SelectQuery {
             return new SelectQuery();
         }
+        /**
+         * @param string $type
+         */
+        public function find(string $type = 'all', ... $args): SelectQuery {
+            return new SelectQuery();
+        }
     }
 
     class SelectQuery extends \Cake\Database\Query\SelectQuery {}
