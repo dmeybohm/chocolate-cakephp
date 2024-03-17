@@ -92,13 +92,55 @@ class CustomFinderTest : BaseTestCase() {
     }
 
     @Test
-    fun `test custom finder from parent is generated when doing a find`() {
+    fun `test nested custom finder is generated when doing a find`() {
+        prepareTest()
 
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable->find('ownedBy')->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
     }
 
     @Test
-    fun `test custom finder filters out findOrCreate`() {
+    fun `test nested custom finder is generated when doing a find three levels deep`() {
+        prepareTest()
 
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable->find('ownedBy')->find('list')->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
     }
 
 }

@@ -62,12 +62,37 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 }
             }
         }
+        else if (name.equals("find")) {
+            //
+            // Encode the find
+            //
+            val classReference = psiElement.classReference ?: return null
+            val type = classReference.type.filterUnknown()
+            if (!type.isComplete) {
+                return null
+            }
+            val phpType = PhpType()
+            for (type in classReference.type.types) {
+                if (type.startsWith("\\")) {
+                    phpType.add("#${getKey()}.find.${type}")
+                }
+            }
+            return phpType
+        }
 
         return null
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
-        return null
+        //
+        // Check for $this->fetchTable('Movies')->find('xxx'), and
+        // augment the SelectQuery return type with metainformation about
+        // which table is included. //
+        //
+        val namespace = Settings.PRIVATE_PHP_NAMESPACE + "SelectQuery\\"
+        val classPath = expression.substring(9)
+
+        return PhpType().add(namespace + classPath)
     }
 
     override fun getBySignature(

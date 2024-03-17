@@ -31,7 +31,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                     val phpIndex = PhpIndex.getInstance(methodReference.project)
                     phpIndex.completeType(methodReference.project, classRefType, null)
                 }
-                return type.types.any { it.isTableClass() }
+                return type.types.any { it.isTableClass() || it.isQueryObject() }
             }
         }
 
@@ -92,6 +92,10 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 it.startsWith("\\") && it.isTableClass()
             }
             tableClasses.asSequence()
+                .map { className ->
+                    val replacedName = className.replace(Settings.PRIVATE_PHP_NAMESPACE + "SelectQuery", "")
+                    replacedName
+                }
                 .flatMap { className ->
                     phpIndex.getClassesByFQN(className)
                 }

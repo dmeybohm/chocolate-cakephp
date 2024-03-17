@@ -21,6 +21,10 @@ fun String.isControllerClass(): Boolean =
 fun String.isTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
 
+fun String.isQueryObject(): Boolean =
+    this.equals("\\Cake\\ORM\\SelectQuery", ignoreCase = true) ||
+            this.equals("\\Cake\\ORM\\Query", ignoreCase = true)
+
 fun Set<String>.hasLocatorInterfaceClass(): Boolean =
     this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")
 

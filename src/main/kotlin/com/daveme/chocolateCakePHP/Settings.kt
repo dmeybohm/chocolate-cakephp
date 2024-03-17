@@ -81,7 +81,16 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     companion object {
 
-       @JvmStatic
+        // This is used for augmenting some types with metainformation
+        // by attaching unused types and encoding the meta information in
+        // the names.
+        //
+        // I have the \Best php namespace for myself registered on
+        // packagist.org, so no one should use that one for this.
+        //
+        val PRIVATE_PHP_NAMESPACE = "\\Best\\ChocolateCakePHP\\"
+
+        @JvmStatic
         fun getInstance(project: Project): Settings {
             val settings = project.getService(Settings::class.java)
             return settings
