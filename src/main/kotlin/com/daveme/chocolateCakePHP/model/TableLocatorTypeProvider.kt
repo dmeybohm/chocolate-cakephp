@@ -62,22 +62,35 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 }
             }
         }
-        else if (name.equals("find")) {
+        else {
             //
             // Encode the find
             //
             val classReference = psiElement.classReference ?: return null
-            val type = classReference.type.filterUnknown()
-            if (!type.isComplete) {
-                return null
-            }
-            val phpType = PhpType()
+
+            //
+            // If we already matched the parent of the find expression,
+            // return it.
+            //
+            val recursiveStart = "#${getKey()}.find."
             for (type in classReference.type.types) {
-                if (type.startsWith("\\")) {
-                    phpType.add("#${getKey()}.find.${type}")
+                if (type.startsWith(recursiveStart)) {
+                    return PhpType().add(type)
                 }
             }
-            return phpType
+            if (name.equals("find")) {
+                val type = classReference.type.filterUnknown()
+                if (!type.isComplete) {
+                    return null
+                }
+                val phpType = PhpType()
+                for (type in classReference.type.types) {
+                    if (type.startsWith("\\")) {
+                        phpType.add("#${getKey()}.find.${type}")
+                    }
+                }
+                return phpType
+            }
         }
 
         return null

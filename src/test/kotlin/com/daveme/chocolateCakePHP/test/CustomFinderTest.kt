@@ -143,4 +143,58 @@ class CustomFinderTest : BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
+    @Test
+    fun `test nested custom finder is generated when doing a find three levels deep with intermediate vars`() {
+        prepareTest()
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->find('list');
+                ${'$'}foo->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
+
+    @Test
+    fun `test nested custom finder is generated when doing a find three levels deep with other calls inbetween`() {
+        prepareTest()
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->find('list')->where('foo', 'bar');
+                ${'$'}foo->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
+
 }
