@@ -45,30 +45,6 @@ class TableLocatorCompletionContributor : CompletionContributor() {
 
         val completionProvider = FetchTableCompletionProvider()
 
-        // When typing $this->fetchTable(, without a quote:
-        val constantPattern = psiElement(LeafPsiElement::class.java)
-            .withParent(
-                psiElement(ConstantReference::class.java)
-                    .withParent(
-                        psiElement(ParameterList::class.java)
-                            .withParent(
-                                psiElement(MethodReference::class.java)
-                                    .with(methodMatcher)
-                            )
-                    )
-            )
-
-        extend(
-            CompletionType.BASIC,
-            constantPattern,
-            completionProvider,
-        )
-        extend(
-            CompletionType.SMART,
-            constantPattern,
-            completionProvider,
-        )
-
         // When typing $this->fetchTable(' or $this->fetchTable(", with a quote
         val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
             .withParent(
