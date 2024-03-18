@@ -28,7 +28,7 @@ dependencies {
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(17)
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
@@ -38,7 +38,9 @@ intellij {
     type = properties("platformType")
 
     // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-    plugins = properties("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) }
+    plugins = properties("platformPlugins").map {
+        it.split(',').map(String::trim).filter(String::isNotEmpty)
+    }
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
@@ -52,7 +54,9 @@ qodana {
     cachePath = provider { file(".qodana").canonicalPath }
     reportPath = provider { file("build/reports/inspections").canonicalPath }
     saveReport = true
-    showReport = environment("QODANA_SHOW_REPORT").map { it.toBoolean() }.getOrElse(false)
+    showReport = environment("QODANA_SHOW_REPORT").map {
+        it.toBoolean()
+    }.getOrElse(false)
 }
 
 // Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
@@ -63,6 +67,14 @@ kover.xmlReport {
 tasks {
     wrapper {
         gradleVersion = properties("gradleVersion").get()
+    }
+
+    compileKotlin {
+        kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
+    }
+
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
     }
 
     patchPluginXml {
