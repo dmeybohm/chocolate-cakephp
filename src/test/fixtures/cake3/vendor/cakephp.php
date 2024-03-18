@@ -34,9 +34,14 @@ namespace Cake\ORM\Query {
         public function toArray(): array {
             return [];
         }
+
+        public function where(): static {
+        }
     }
 }
 namespace Cake\ORM {
+    use Cake\ORM\Query\SelectQuery;
+
     class RulesChecker {}
     class Table {
         public function findThreaded(): SelectQuery {
@@ -56,7 +61,6 @@ namespace Cake\ORM {
         }
     }
 
-    class SelectQuery extends \Cake\Database\Query\SelectQuery {}
     class TableRegistry {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
@@ -68,7 +72,20 @@ namespace Cake\ORM\Query {
     class SelectQuery extends \Cake\Database\SelectQuery {}
 }
 namespace Cake\Database {
-    abstract class Query {}
+    abstract class Query {
+        /**
+         * @return Query
+         */
+         public function where(
+             array|string|null $conditions = null,
+             array $types = [],
+             bool $overwrite = false
+         ) {
+             return $this;
+         }
+
+
+    }
 }
 namespace Cake\Database\Query {
     class SelectQuery extends \Cake\Database\Query {}

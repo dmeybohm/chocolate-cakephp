@@ -119,7 +119,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         // For non-find methods, check the return type is "SelectQuery".
         //
         val phpIndex = PhpIndex.getInstance(project)
-        val classes = phpIndex.getClassesByFQN(wrappedType)
+        // todo: cache
+        val classes = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery");
+
         classes.forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
             val returnType = if (method.type.isComplete)

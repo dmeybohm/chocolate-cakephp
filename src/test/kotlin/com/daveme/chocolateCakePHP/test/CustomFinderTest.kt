@@ -196,6 +196,7 @@ class CustomFinderTest : BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("ownedBy"))
     }
+
     fun `test nested custom finder does not continue autocompleting for non-query methods`() {
         prepareTest()
 
