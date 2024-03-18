@@ -83,15 +83,15 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 if (!classRefType.isComplete) {
                     return null
                 }
-                val phpType = PhpType()
-                for (eachClassRefType in classReference.type.types) {
+                val result = PhpType()
+                for (eachClassRefType in classRefType.types) {
                     if (eachClassRefType.startsWith("\\") &&
                         eachClassRefType.isTableClass()
                     ) {
-                        phpType.add("#${key}.find.${eachClassRefType}")
+                        result.add("#${key}.find.${eachClassRefType}")
                     }
                 }
-                return phpType
+                return result
             }
         }
 
