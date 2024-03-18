@@ -8,7 +8,6 @@ import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.jetbrains.php.lang.psi.elements.ConstantReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -86,15 +85,12 @@ class TableLocatorCompletionContributor : CompletionContributor() {
                 return
             }
 
-            // If the current element is not quoted, we need to quote it:
-            val completeInsideString = completionParameters.position.parent is ConstantReference
-
             val phpIndex = PhpIndex.getInstance(methodReference.project)
             val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
             completionResultSet.completeMethodCallWithParameterFromClasses(
                 modelSubclasses,
                 removeFromEnd = "Table",
-                completeInsideString = completeInsideString
+                advanceBeyondClosingParen = true
             )
         }
     }

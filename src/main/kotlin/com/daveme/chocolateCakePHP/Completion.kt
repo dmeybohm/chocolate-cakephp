@@ -5,16 +5,18 @@ import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.diagnostic.Logger
 import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
-class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHandler<LookupElement> {
+class CompleteStringParameter(
+    private val advanceBeyondClosingParen: Boolean = false
+) : InsertHandler<LookupElement> {
+    val LOG = Logger.getInstance(CompleteStringParameter::class.java.simpleName)
+
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
         val document = context.document
-        val lookupString = if (wrapInString)
-            "'${item.lookupString}"
-        else
-            item.lookupString
+        val lookupString = item.lookupString
 
         document.replaceString(
             context.startOffset,
@@ -22,33 +24,34 @@ class CompleteMethodWithParameter(private val wrapInString: Boolean) : InsertHan
             lookupString
         )
 
+        context.editor.caretModel.moveToOffset(context.tailOffset)
+        LOG.warn("psiElement is not null? " + (item.psiElement == null))
+        LOG.warn("psiElement.textRange is not null? " + (item.psiElement?.textRange == null))
+        LOG.warn("startOffsetChar: "+(document.charsSequence[context.startOffset]))
+        val elementStart = context.startOffset - 1
+
         // Add close quote that matches the opening quote:
-        val startChar = document.charsSequence[context.startOffset]
-        val addCloseQuote = when (startChar) {
+        val startChar = if (elementStart >= 0)
+            document.charsSequence[elementStart]
+        else
+            null
+        val closeQuote = when (startChar) {
             '\'' -> "'"
             '"' ->  "\""
             else -> null
         }
 
         var nextTailOffset = context.startOffset + lookupString.length
-        if (addCloseQuote != null) {
-            document.insertString(nextTailOffset, addCloseQuote)
+        if (closeQuote != null) {
             nextTailOffset++
         }
 
-        if (document.textLength > nextTailOffset) {
-            val trailingChar = document.charsSequence[nextTailOffset]
-            if (trailingChar == '\r' || trailingChar == '\n') {
-                nextTailOffset--;
-            } else {
+        if (advanceBeyondClosingParen && document.textLength > nextTailOffset) {
+            val advancedChar = document.charsSequence[nextTailOffset]
+            LOG.warn("advancedChar: "+advancedChar)
+            if (advancedChar == ')' || advancedChar == ',') {
+                // advance past the closing parenthesis/comma
                 nextTailOffset++
-                if (document.textLength > nextTailOffset) {
-                    val advancedChar = document.charsSequence[nextTailOffset]
-                    if (advancedChar == ')' || advancedChar == ',') {
-                        // advance past the closing parenthesis/comma
-                        nextTailOffset++
-                    }
-                }
             }
         }
 
@@ -77,14 +80,14 @@ fun CompletionResultSet.completeFromClasses(
 fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
     classes: Collection<PhpClass>,
     removeFromEnd: String = "",
-    completeInsideString: Boolean = false,
+    advanceBeyondClosingParen: Boolean = false,
 ) {
     classes.map { klass ->
         val targetName = klass.name.removeFromEnd(removeFromEnd, ignoreCase = true)
         val lookupElement = LookupElementBuilder.create(targetName)
             .withIcon(PhpIcons.FIELD)
             .withTypeText(klass.type.toString().substring(1))
-            .withInsertHandler(CompleteMethodWithParameter(completeInsideString))
+            .withInsertHandler(CompleteStringParameter(advanceBeyondClosingParen))
         this.addElement(lookupElement)
     }
 }
