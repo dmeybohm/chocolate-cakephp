@@ -13,10 +13,4 @@ class MoviesTable extends Table
     {
     }
 
-    public function where(
-        array|string|null $conditions = null,
-        array $types = [],
-        bool $overwrite = false,
-    ): DbQuery {
-    }
 }

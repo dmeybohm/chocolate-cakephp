@@ -196,5 +196,29 @@ class CustomFinderTest : BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("ownedBy"))
     }
+    fun `test nested custom finder does not continue autocompleting for non-query methods`() {
+        prepareTest()
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->toArray();
+                ${'$'}foo->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("ownedBy"))
+    }
 
 }

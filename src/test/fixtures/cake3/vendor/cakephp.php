@@ -26,7 +26,15 @@ namespace Cake\View {
 
 
 namespace Cake\ORM\Query {
-    class SelectQuery {}
+    class SelectQuery {
+        public function find(string $finder, mixed ... $args): static {
+            return new SelectQuery();
+        }
+
+        public function toArray(): array {
+            return [];
+        }
+    }
 }
 namespace Cake\ORM {
     class RulesChecker {}
