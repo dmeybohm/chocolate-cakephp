@@ -3,8 +3,10 @@ package com.daveme.chocolateCakePHP.model
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.hasGetTableLocatorMethodCall
 import com.daveme.chocolateCakePHP.isControllerClass
+import com.daveme.chocolateCakePHP.wrapInPluginSpecificTypeForQueryBuilder
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -72,10 +74,11 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             // If we already matched the parent of the find expression,
             // return it.
             //
-            val recursiveStart = "#${getKey()}.find."
+            val recursiveStart = "#${key}.find."
             for (type in classReference.type.types) {
                 if (type.startsWith(recursiveStart)) {
-                    return PhpType().add(type)
+                    val wrappedType = type.split('.')[2]
+                    return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
             }
             if (name.equals("find")) {
@@ -86,7 +89,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 val phpType = PhpType()
                 for (type in classReference.type.types) {
                     if (type.startsWith("\\")) {
-                        phpType.add("#${getKey()}.find.${type}")
+                        phpType.add("#${key}.find.${type}")
                     }
                 }
                 return phpType
@@ -97,15 +100,40 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
+        val (_, invokingMethodName, wrappedType) = expression.split('.')
+
         //
         // Check for $this->fetchTable('Movies')->find('xxx'), and
         // augment the SelectQuery return type with metainformation about
-        // which table is included. //
+        // which table is included.
         //
-        val namespace = Settings.PRIVATE_PHP_NAMESPACE + "SelectQuery\\"
-        val classPath = expression.substring(9)
 
-        return PhpType().add(namespace + classPath)
+        // For find, skip index lookup:
+        val result = PhpType()
+        if (invokingMethodName == "find") {
+            result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
+            return result
+        }
+
+        //
+        // For non-find methods, check the return type is "SelectQuery".
+        //
+        val phpIndex = PhpIndex.getInstance(project)
+        val classes = phpIndex.getClassesByFQN(wrappedType)
+        classes.forEach { klass ->
+            val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
+            val returnType = if (method.type.isComplete)
+                method.type
+            else
+                phpIndex.completeType(project, method.type, null)
+            if (returnType == null) {
+                return@forEach
+            }
+            if (returnType.types.any { it.contains("Query", ignoreCase = true) }) {
+                result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
+            }
+        }
+        return result
     }
 
     override fun getBySignature(

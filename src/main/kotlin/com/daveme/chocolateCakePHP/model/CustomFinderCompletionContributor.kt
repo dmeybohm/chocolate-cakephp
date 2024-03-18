@@ -93,7 +93,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
             }
             tableClasses.asSequence()
                 .map { className ->
-                    val replacedName = className.replace(Settings.PRIVATE_PHP_NAMESPACE + "SelectQuery", "")
+                    val replacedName = className.unwrapFromPluginSpecificTypeForQueryBuilder()
                     replacedName
                 }
                 .flatMap { className ->
