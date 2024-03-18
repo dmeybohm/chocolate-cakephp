@@ -77,11 +77,9 @@ class CustomFinderCompletionContributor : CompletionContributor() {
             if (!settings.cake3Enabled) {
                 return
             }
-            // If the current element is not quoted, we need to quote it:
-            // TODO
-            val completeInsideString = completionParameters.position.parent is ConstantReference
 
-            val phpIndex = PhpIndex.getInstance(methodReference.project)
+            val project = methodReference.project
+            val phpIndex = PhpIndex.getInstance(project)
             val classReference = methodReference.classReference ?: return
             val type = if (classReference.type.isComplete)
                 classReference.type
@@ -109,12 +107,20 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                             // for default arguments:
                             !method.name.equals("findAll", ignoreCase = true)
                 }
+                .filter { method ->
+                    val completeType = if (method.type.isComplete)
+                        method.type
+                    else
+                        phpIndex.completeType(project, method.type, null)
+
+                    completeType.types.any { it.contains("Query") }
+                }
                 .map { method ->
                         val targetName = method.name
                             .removeFromStart("find", ignoreCase = true)
                             .replaceFirstChar { it.lowercase() }
                         val lookupElement = LookupElementBuilder.create(targetName)
-                            .withIcon(PhpIcons.PARAMETER)
+                            .withTypeText("string")
                         completionResultSet.addElement(lookupElement)
                 }
                 .lastOrNull()
