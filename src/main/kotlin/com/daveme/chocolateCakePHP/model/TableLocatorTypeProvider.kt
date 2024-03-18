@@ -1,9 +1,6 @@
 package com.daveme.chocolateCakePHP.model
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.hasGetTableLocatorMethodCall
-import com.daveme.chocolateCakePHP.isControllerClass
-import com.daveme.chocolateCakePHP.wrapInPluginSpecificTypeForQueryBuilder
+import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -74,7 +71,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             // If we already matched the parent of the find expression,
             // return it.
             //
-            val recursiveStart = "#${key}.find."
+            val recursiveStart = "#${key}."
             for (type in classReference.type.types) {
                 if (type.startsWith(recursiveStart)) {
                     val wrappedType = type.split('.')[2]
@@ -88,7 +85,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 }
                 val phpType = PhpType()
                 for (eachClassRefType in classReference.type.types) {
-                    if (eachClassRefType.startsWith("\\")) {
+                    if (eachClassRefType.startsWith("\\") &&
+                        eachClassRefType.isTableClass()
+                    ) {
                         phpType.add("#${key}.find.${eachClassRefType}")
                     }
                 }
