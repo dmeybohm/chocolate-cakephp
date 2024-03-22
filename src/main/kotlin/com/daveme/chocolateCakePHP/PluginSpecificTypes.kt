@@ -25,3 +25,6 @@ fun String.unwrapFromPluginSpecificTypeForQueryBuilder(): String =
         this.substring(QUERY_BUILDER_PREFIX.length)
     else
         this
+
+fun String.isPluginSpecificTypeForQueryBuilder(): Boolean =
+    this.startsWith(QUERY_BUILDER_PREFIX)

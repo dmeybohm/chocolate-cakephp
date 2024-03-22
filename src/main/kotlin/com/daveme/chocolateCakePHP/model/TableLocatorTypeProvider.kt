@@ -12,8 +12,13 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
 class TableLocatorTypeProvider : PhpTypeProvider4 {
 
+    companion object {
+        const val typeProviderChar = '\u8316'
+        const val recursiveStart = "#" + typeProviderChar
+    }
+
     override fun getKey(): Char {
-        return '\u8316'
+        return typeProviderChar
     }
 
     override fun getType(psiElement: PsiElement?): PhpType? {
@@ -62,6 +67,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             }
         }
         else {
+
             //
             // Encode the find
             //
@@ -71,9 +77,12 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             // If we already matched the parent of the find expression,
             // return it.
             //
-            val recursiveStart = "#${key}."
             for (type in classReference.type.types) {
-                if (type.startsWith(recursiveStart)) {
+                if (type.isPluginSpecificTypeForQueryBuilder()) {
+                    val unwrappedType = type.unwrapFromPluginSpecificTypeForQueryBuilder()
+                    return PhpType().add("#${key}.${name}.${unwrappedType}")
+                }
+                else if (type.startsWith(recursiveStart)) {
                     val wrappedType = type.split('.')[2]
                     return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
@@ -88,7 +97,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     if (eachClassRefType.startsWith("\\") &&
                         eachClassRefType.isTableClass()
                     ) {
-                        result.add("#${key}.find.${eachClassRefType}")
+                        result.add(eachClassRefType.wrapInPluginSpecificTypeForQueryBuilder())
                     }
                 }
                 return result
@@ -107,21 +116,18 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         // which table is included.
         //
 
-        // For find, skip index lookup:
         val result = PhpType()
-        if (invokingMethodName == "find") {
-            result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
-            return result
-        }
 
         //
         // For non-find methods, check the return type is "SelectQuery".
         //
         val phpIndex = PhpIndex.getInstance(project)
-        // todo: cache
-        val classes = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery");
 
-        classes.forEach { klass ->
+        // todo: cache method lists
+        val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery");
+        val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query");
+
+        (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
             val returnType = if (method.type.isComplete)
                 method.type
@@ -134,6 +140,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
             }
         }
+
         return result
     }
 
