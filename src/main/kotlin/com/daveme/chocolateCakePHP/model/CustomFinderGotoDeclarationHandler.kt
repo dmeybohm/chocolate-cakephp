@@ -56,7 +56,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
             }
             .filter {
                 it.startsWith("\\") &&  // only full-formed classes
-                        !it.equals("\\Cake\\ORM\\Table", ignoreCase = true) // more specific types only
+                        !it.isTopLevelTableClass() // more specific types only
             }
             .distinct()
 

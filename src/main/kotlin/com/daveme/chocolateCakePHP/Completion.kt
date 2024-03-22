@@ -12,7 +12,6 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class CompleteStringParameter(
     private val advanceBeyondClosingParen: Boolean = false
 ) : InsertHandler<LookupElement> {
-    val LOG = Logger.getInstance(CompleteStringParameter::class.java.simpleName)
 
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
         val document = context.document
@@ -25,9 +24,6 @@ class CompleteStringParameter(
         )
 
         context.editor.caretModel.moveToOffset(context.tailOffset)
-        LOG.warn("psiElement is not null? " + (item.psiElement == null))
-        LOG.warn("psiElement.textRange is not null? " + (item.psiElement?.textRange == null))
-        LOG.warn("startOffsetChar: "+(document.charsSequence[context.startOffset]))
         val elementStart = context.startOffset - 1
 
         // Add close quote that matches the opening quote:
@@ -48,7 +44,6 @@ class CompleteStringParameter(
 
         if (advanceBeyondClosingParen && document.textLength > nextTailOffset) {
             val advancedChar = document.charsSequence[nextTailOffset]
-            LOG.warn("advancedChar: "+advancedChar)
             if (advancedChar == ')' || advancedChar == ',') {
                 // advance past the closing parenthesis/comma
                 nextTailOffset++

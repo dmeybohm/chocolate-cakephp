@@ -28,12 +28,6 @@ fun String.isQueryObject(): Boolean =
     this.equals("\\Cake\\ORM\\SelectQuery", ignoreCase = true) ||
             this.equals("\\Cake\\ORM\\Query", ignoreCase = true)
 
-fun Set<String>.hasLocatorInterfaceClass(): Boolean =
-    this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")
-
-fun String.isLocatorInterfaceClass(): Boolean =
-    this == "\\Cake\\ORM\\Locator\\LocatorInterface"
-
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator")
 
