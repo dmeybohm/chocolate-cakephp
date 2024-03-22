@@ -116,14 +116,14 @@ public class ViewTest() : BaseTestCase() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = originalSettings.state.copy()
-        newState.appDirectory = "srcx"
+        newState.appDirectory = "src2"
         originalSettings.loadState(newState)
 
         myFixture.configureByFiles(
-            "cake4/srcx/Controller/AppController.php",
-            "cake4/srcx/Controller/Component/MovieMetadataComponent.php",
-            "cake4/srcx/View/Helper/MovieFormatterHelper.php",
-            "cake4/srcx/View/AppView.php",
+            "cake4/src2/Controller/AppController.php",
+            "cake4/src2/Controller/Component/MovieMetadataComponent.php",
+            "cake4/src2/View/Helper/MovieFormatterHelper.php",
+            "cake4/src2/View/AppView.php",
             "cake4/vendor/cakephp.php"
         )
 
@@ -142,19 +142,19 @@ public class ViewTest() : BaseTestCase() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = originalSettings.state.copy()
-        newState.appDirectory = "srcx"
+        newState.appDirectory = "src2"
         originalSettings.loadState(newState)
 
         myFixture.configureByFiles(
-            "cake4/srcx/Controller/AppController.php",
-            "cake4/srcx/Controller/Component/MovieMetadataComponent.php",
-            "cake4/srcx/View/Helper/MovieFormatterHelper.php",
-            "cake4/srcx/View/Helper/ArtistFormatterHelper.php",
-            "cake4/srcx/View/AppView.php",
+            "cake4/src2/Controller/AppController.php",
+            "cake4/src2/Controller/Component/MovieMetadataComponent.php",
+            "cake4/src2/View/Helper/MovieFormatterHelper.php",
+            "cake4/src2/View/Helper/ArtistFormatterHelper.php",
+            "cake4/src2/View/AppView.php",
             "cake4/vendor/cakephp.php"
         )
 
-        myFixture.configureByFilePathAndText("cake4/srcx/View/Helper/MovieFormatterHelper.php", """
+        myFixture.configureByFilePathAndText("cake4/src2/View/Helper/MovieFormatterHelper.php", """
         <?php
         namespace App\View\Helper;
 

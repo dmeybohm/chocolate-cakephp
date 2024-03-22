@@ -1,14 +1,21 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.Settings
 import org.junit.Test
 
 class CustomFinderInCakeFiveTest : BaseTestCase() {
 
     private fun prepareTest() {
+        // change app directory:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state.copy()
+        newState.appDirectory = "src3"
+        originalSettings.loadState(newState)
+
         myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake5/src3/Controller/AppController.php",
+            "cake5/src3/Model/Table/MoviesTable.php",
+            "cake5/vendor/cakephp.php"
         )
     }
 
