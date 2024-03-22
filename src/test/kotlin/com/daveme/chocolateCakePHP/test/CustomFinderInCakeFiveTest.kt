@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.test
 
 import org.junit.Test
 
-class CustomFinderTest : BaseTestCase() {
+class CustomFinderInCakeFiveTest : BaseTestCase() {
 
     private fun prepareTest() {
         myFixture.configureByFiles(
