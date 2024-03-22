@@ -9,7 +9,6 @@ import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.lang.psi.elements.*
 
 class CustomFinderCompletionContributor : CompletionContributor() {
@@ -31,7 +30,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                     val phpIndex = PhpIndex.getInstance(methodReference.project)
                     phpIndex.completeType(methodReference.project, classRefType, null)
                 }
-                return type.types.any { it.isTableClass() || it.isQueryObject() }
+                return type.types.any { it.isAnyTableClass() || it.isQueryObject() }
             }
         }
 
@@ -87,7 +86,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 phpIndex.completeType(methodReference.project, classReference.type, null)
 
             val tableClasses = type.types.filter {
-                it.startsWith("\\") && it.isTableClass()
+                it.startsWith("\\") && it.isAnyTableClass()
             }
             tableClasses.asSequence()
                 .map { className ->

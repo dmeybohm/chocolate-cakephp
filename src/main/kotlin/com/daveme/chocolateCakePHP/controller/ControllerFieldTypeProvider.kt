@@ -43,7 +43,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
         val referenceType = classReference.type.filterUnknown()
         for (type in referenceType.types) {
-            if (type.isControllerClass()) {
+            if (type.isAnyControllerClass()) {
                 return componentOrModelTypeFromFieldName(settings, fieldReferenceName)
             }
         }

@@ -36,7 +36,7 @@ class TableLocatorCompletionContributor : CompletionContributor() {
                 }
                 return type.types.contains("\\Cake\\ORM\\Locator\\LocatorInterface") ||
                         type.types.any {
-                            it.isControllerClass() ||
+                            it.isAnyControllerClass() ||
                                     it.contains("getTableLocator", ignoreCase = true)
                         }
             }

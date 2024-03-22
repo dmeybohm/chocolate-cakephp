@@ -15,11 +15,14 @@ fun String.removeFromStart(start: String, ignoreCase: Boolean = false): String =
     else
         this.substring(start.length)
 
-fun String.isControllerClass(): Boolean =
+fun String.isAnyControllerClass(): Boolean =
     this.endsWith("Controller", ignoreCase = true)
 
-fun String.isTableClass(): Boolean =
+fun String.isAnyTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
+
+fun String.isTopLevelTableClass(): Boolean =
+    this.equals("\\Cake\\ORM\\Table", ignoreCase = true)
 
 fun String.isQueryObject(): Boolean =
     this.equals("\\Cake\\ORM\\SelectQuery", ignoreCase = true) ||

@@ -39,7 +39,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val referenceType = classReference.type.filterUnknown()
             for (type in referenceType.types) {
-                if (type.isControllerClass()) {
+                if (type.isAnyControllerClass()) {
                     val firstParam = psiElement.parameters.firstOrNull() as? StringLiteralExpression ?: return null
                     val contents = firstParam.contents
                     if (contents.length < 255) {
@@ -95,7 +95,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 val result = PhpType()
                 for (eachClassRefType in classRefType.types) {
                     if (eachClassRefType.startsWith("\\") &&
-                        eachClassRefType.isTableClass()
+                        eachClassRefType.isAnyTableClass()
                     ) {
                         result.add(eachClassRefType.wrapInPluginSpecificTypeForQueryBuilder())
                     }

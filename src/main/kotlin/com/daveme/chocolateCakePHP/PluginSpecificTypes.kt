@@ -28,3 +28,6 @@ fun String.unwrapFromPluginSpecificTypeForQueryBuilder(): String =
 
 fun String.isPluginSpecificTypeForQueryBuilder(): Boolean =
     this.startsWith(QUERY_BUILDER_PREFIX)
+
+fun String.containsPluginSpecificTypeForQueryBuilder(): Boolean =
+    this.contains(QUERY_BUILDER_PREFIX, ignoreCase = true)
