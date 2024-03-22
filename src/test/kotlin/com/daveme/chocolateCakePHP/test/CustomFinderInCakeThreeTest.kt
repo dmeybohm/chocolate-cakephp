@@ -22,11 +22,12 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
-
+        use Cake\ORM\TableRegistry;
+        
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = TableRegistry::getTableLocator()->get('Movies');
                 ${'$'}moviesTable->find('<caret>
             }
         }
