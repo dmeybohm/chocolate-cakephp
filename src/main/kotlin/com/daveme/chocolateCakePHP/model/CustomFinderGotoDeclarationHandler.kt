@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.model
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.customFinderMethods
+import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -15,6 +14,7 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import org.jetbrains.annotations.Nls
 
 class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
+
     override fun getGotoDeclarationTargets(
         sourceElement: PsiElement?,
         offset: Int,
@@ -41,19 +41,35 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         if (!methodName.equals("find", ignoreCase = true)) {
             return PsiElement.EMPTY_ARRAY
         }
+        val phpIndex = PhpIndex.getInstance(sourceElement.project)
         val reference = methodReference.classReference ?: return PsiElement.EMPTY_ARRAY
-        val varType = reference.type.filterUnknown()
-        val tableTypes = varType.types.filter { type -> type.contains("Table", ignoreCase = true) }
+        val completedType = if (reference.type.isComplete)
+            reference.type
+        else
+            phpIndex.completeType(sourceElement.project, reference.type, null)
+        val tableTypes = completedType.types.mapNotNull { type ->
+                when {
+                    type.isPluginSpecificTypeForQueryBuilder() -> type.unwrapFromPluginSpecificTypeForQueryBuilder()
+                    type.isAnyTableClass() -> type
+                    else -> null
+                }
+            }
+            .filter {
+                it.startsWith("\\") &&  // only full-formed classes
+                        !it.isTopLevelTableClass() // more specific types only
+            }
+            .distinct()
+
         if (tableTypes.isEmpty()) {
             return PsiElement.EMPTY_ARRAY
         }
 
         // Iterate each of the types looking for the findXXX method:
-        val phpIndex = PhpIndex.getInstance(sourceElement.project)
         return phpIndex.customFinderMethods(tableTypes, sourceElement.text).toTypedArray()
     }
 
     override fun getActionText(context: DataContext): @Nls(capitalization = Nls.Capitalization.Title) String? {
         return super<GotoDeclarationHandler>.getActionText(context)
     }
+
 }

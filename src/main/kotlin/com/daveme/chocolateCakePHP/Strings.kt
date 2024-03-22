@@ -3,20 +3,30 @@ package com.daveme.chocolateCakePHP
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 
-fun String.chopFromEnd(end: String): String =
-    if (end == "" || !this.endsWith(end))
+fun String.removeFromEnd(end: String, ignoreCase: Boolean = false): String =
+    if (end == "" || !this.endsWith(end, ignoreCase))
         this
     else
         this.substring(0, this.length - end.length)
 
-fun String.isControllerClass(): Boolean =
-    this.contains("Controller")
+fun String.removeFromStart(start: String, ignoreCase: Boolean = false): String =
+    if (start == "" || !this.startsWith(start, ignoreCase = ignoreCase))
+        this
+    else
+        this.substring(start.length)
 
-fun Set<String>.hasLocatorInterfaceClass(): Boolean =
-    this.contains("\\Cake\\ORM\\Locator\\LocatorInterface")
+fun String.isAnyControllerClass(): Boolean =
+    this.endsWith("Controller", ignoreCase = true)
 
-fun String.isLocatorInterfaceClass(): Boolean =
-    this == "\\Cake\\ORM\\Locator\\LocatorInterface"
+fun String.isAnyTableClass(): Boolean =
+    this.endsWith("Table", ignoreCase = true)
+
+fun String.isTopLevelTableClass(): Boolean =
+    this.equals("\\Cake\\ORM\\Table", ignoreCase = true)
+
+fun String.isQueryObject(): Boolean =
+    this.equals("\\Cake\\ORM\\SelectQuery", ignoreCase = true) ||
+            this.equals("\\Cake\\ORM\\Query", ignoreCase = true)
 
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator")

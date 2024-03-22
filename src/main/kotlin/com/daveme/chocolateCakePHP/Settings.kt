@@ -81,7 +81,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     companion object {
 
-       @JvmStatic
+        @JvmStatic
         fun getInstance(project: Project): Settings {
             val settings = project.getService(Settings::class.java)
             return settings

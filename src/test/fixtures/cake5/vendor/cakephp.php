@@ -12,12 +12,8 @@ namespace Cake\View {
     class View {}
     class Helper {}
     class ViewBuilder {}
-
     trait ViewVarsTrait {
-        /**
-         * @return ViewBuilder
-         */
-        public function viewBuilder() {
+        public function viewBuilder(): ViewBuilder {
             return new ViewBuilder();
         }
 
@@ -29,14 +25,10 @@ namespace Cake\View {
 }
 
 
-namespace Cake\ORM {
-}
-
-namespace Cake\ORM {
-
-    class Query {
+namespace Cake\ORM\Query {
+    class SelectQuery {
         public function find(string $finder, mixed ... $args): static {
-            return new Query();
+            return new SelectQuery();
         }
 
         public function toArray(): array {
@@ -46,24 +38,26 @@ namespace Cake\ORM {
         public function where(): static {
         }
     }
+}
+namespace Cake\ORM {
+    use Cake\ORM\Query\SelectQuery;
 
     class RulesChecker {}
-
     class Table {
-        public function findThreaded(): Query {
-            return new Query();
+        public function findThreaded(): SelectQuery {
+            return new SelectQuery();
         }
-        public function findList(): Query {
-            return new Query();
+        public function findList(): SelectQuery {
+            return new SelectQuery();
         }
-        public function findAll(): Query {
-            return new Query();
+        public function findAll(): SelectQuery {
+            return new SelectQuery();
         }
         /**
          * @param string $type
          */
-        public function find(string $type = 'all', ... $args): Query {
-            return new Query();
+        public function find(string $type = 'all', ... $args): SelectQuery {
+            return new SelectQuery();
         }
     }
 
@@ -71,10 +65,12 @@ namespace Cake\ORM {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
-        public function getTableLocator() { }
+        public function getTableLocator() {}
     }
 }
-
+namespace Cake\ORM\Query {
+    class SelectQuery extends \Cake\Database\SelectQuery {}
+}
 namespace Cake\Database {
     abstract class Query {
         /**
@@ -87,42 +83,33 @@ namespace Cake\Database {
          ) {
              return $this;
          }
+
+
     }
 }
-
 namespace Cake\Database\Query {
-    class Query {}
+    class SelectQuery extends \Cake\Database\Query {}
 }
-
 namespace Cake\Validation {
     class Validator {}
 }
 
 namespace Cake\ORM\Locator {
-
     interface LocatorInterface {
+
         /**
+         * Get a table instance from the registry.
          * @param string $alias
          * @return \Cake\ORM\Table
          */
         public function get($alias, array $options = []);
     }
 
-    class TableLocator implements LocatorInterface {
-        /**
-         * @param string $alias
-         * @return \Cake\ORM\Table
-         */
-        public function get($alias, array $options = []) {
-            return new Table();
-        }
-    }
-
     trait LocatorAwareTrait {
+
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
         public function getTableLocator() {}
     }
-
 }
