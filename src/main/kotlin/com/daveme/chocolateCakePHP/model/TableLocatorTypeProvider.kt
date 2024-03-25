@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -13,12 +14,12 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class TableLocatorTypeProvider : PhpTypeProvider4 {
 
     companion object {
-        const val typeProviderChar = '\u8316'
-        const val recursiveStart = "#" + typeProviderChar
+        const val TYPE_PROVIDER_CHAR = '\u8316'
+        const val RECURSIVE_START = "#$TYPE_PROVIDER_CHAR"
     }
 
     override fun getKey(): Char {
-        return typeProviderChar
+        return TYPE_PROVIDER_CHAR
     }
 
     override fun getType(psiElement: PsiElement?): PhpType? {
@@ -40,11 +41,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val referenceType = classReference.type.filterUnknown()
             for (type in referenceType.types) {
                 if (type.isAnyControllerClass()) {
-                    val firstParam = psiElement.parameters.firstOrNull() as? StringLiteralExpression ?: return null
-                    val contents = firstParam.contents
-                    if (contents.length < 255) {
-                        // sanity check
-                        return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+                    val tableClass = getTableClass(psiElement, settings)
+                    if (tableClass != null) {
+                        return tableClass
                     }
                 }
             }
@@ -56,12 +55,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             for (type in classReference.type.types) {
                 if (type.hasGetTableLocatorMethodCall()) {
-                    val firstParam = psiElement.parameters.firstOrNull()
-                            as? StringLiteralExpression ?: return null
-                    val contents = firstParam.contents
-                    if (contents.length < 255) {
-                        // sanity check
-                        return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+                    val tableClass = getTableClass(psiElement, settings)
+                    if (tableClass != null) {
+                        return tableClass
                     }
                 }
             }
@@ -82,7 +78,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     val unwrappedType = type.unwrapFromPluginSpecificTypeForQueryBuilder()
                     return PhpType().add("#${key}.${name}.${unwrappedType}")
                 }
-                else if (type.startsWith(recursiveStart)) {
+                else if (type.startsWith(RECURSIVE_START)) {
                     val wrappedType = type.split('.')[2]
                     return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
@@ -107,7 +103,36 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return null
     }
 
-    override fun complete(expression: String, project: Project): PhpType? {
+    private fun getTableClass(methodRef: MethodReference, settings: Settings): PhpType? {
+        val parameters = methodRef.parameters
+        when (parameters.size) {
+            2 -> {
+                val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
+                for (element in arrayCreationExpr.hashElements) {
+                    val key = element.key as? StringLiteralExpression ?: continue
+                    if (key.contents == "className") {
+                        val contents = element.value?.getStringifiedClassOrNull() ?: continue
+                        if (contents.length < 255) {
+                            // sanity check
+                            return PhpType().add(contents)
+                        }
+                    }
+                }
+            }
+            else -> {
+                val firstParam = parameters.firstOrNull()
+                        as? StringLiteralExpression ?: return null
+                val contents = firstParam.contents
+                if (contents.length < 255) {
+                    // sanity check
+                    return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+                }
+            }
+        }
+        return null
+    }
+
+    override fun complete(expression: String, project: Project): PhpType {
         val (_, invokingMethodName, wrappedType) = expression.split('.')
 
         //
@@ -124,8 +149,8 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         val phpIndex = PhpIndex.getInstance(project)
 
         // todo: cache method lists
-        val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery");
-        val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query");
+        val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")
+        val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query")
 
         (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
