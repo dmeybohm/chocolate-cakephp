@@ -109,27 +109,34 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
 
     private fun getTableClass(methodRef: MethodReference, settings: Settings): PhpType? {
         val parameters = methodRef.parameters
-        when (parameters.size) {
-            2 -> {
-                val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
-                for (element in arrayCreationExpr.hashElements) {
-                    val key = element.key as? StringLiteralExpression ?: continue
-                    if (key.contents == "className") {
-                        val contents = element.value?.getStringifiedClassOrNull() ?: continue
-                        if (contents.length < 255) {
-                            // sanity check
-                            return PhpType().add(contents)
-                        }
-                    }
-                }
-            }
-            else -> {
-                val firstParam = parameters.firstOrNull()
-                        as? StringLiteralExpression ?: return null
-                val contents = firstParam.contents
+        return when (parameters.size) {
+            0 -> null
+            1 -> getTableClassFromFirstParam(parameters, settings)
+            else -> getTableClassFromSecondParam(parameters, settings) ?:
+                    getTableClassFromFirstParam(parameters, settings)
+        }
+    }
+
+    private fun getTableClassFromFirstParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
+        val firstParam = parameters.firstOrNull()
+                as? StringLiteralExpression ?: return null
+        val contents = firstParam.contents
+        if (contents.length < 255) {
+            // sanity check
+            return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+        }
+        return null
+    }
+
+    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
+        val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
+        for (element in arrayCreationExpr.hashElements) {
+            val key = element.key as? StringLiteralExpression ?: continue
+            if (key.contents == "className") {
+                val contents = element.value?.getStringifiedClassOrNull() ?: continue
                 if (contents.length < 255) {
                     // sanity check
-                    return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
+                    return PhpType().add(contents)
                 }
             }
         }
