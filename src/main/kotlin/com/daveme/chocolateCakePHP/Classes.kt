@@ -253,7 +253,7 @@ fun findParentWithClass(element: PsiElement, clazz: Class<out PsiElement>): PsiE
 
 // Get the literal string contents, or ::class reference.
 fun PsiElement.getStringifiedClassOrNull(): String? = when (this) {
-    is StringLiteralExpression -> "\\${this.contents}"
+    is StringLiteralExpression -> this.contents.absoluteClassName()
     is ClassConstantReference -> this.getStaticClassRefOrNull()
     else -> null
 }
