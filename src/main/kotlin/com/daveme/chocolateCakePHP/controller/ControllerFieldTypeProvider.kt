@@ -56,8 +56,8 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
     private fun cakeTwoNestedModelCompletion(
         psiElement: FieldReference
     ): PhpType? {
-        var element : FieldReference? = psiElement
-        while (element?.firstChild != null) {
+        var element = psiElement as? FieldReference ?: return null
+        while (element.firstChild != null) {
             if (!(element.name?.startsWithUppercaseCharacter() ?: false)) {
                 return null
             }
@@ -69,7 +69,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         }
         // Defer lookup to complete.
         // First verify that first index extends from AppModel, and then that the last one is also a model.
-        return PhpType().add("#" + getKey() + element!!.name + getKey() + psiElement.name)
+        return PhpType().add("#" + getKey() + element.name + getKey() + psiElement.name)
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
