@@ -1,8 +1,6 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.PluginEntry
-import com.daveme.chocolateCakePHP.isAnyTableClass
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -14,6 +12,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
 class AssociatedTableTypeProvider : PhpTypeProvider4 {
+
     companion object {
         const val typeProviderChar = '\u8317'
     }
@@ -48,27 +47,38 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         if (!settings.cake3Enabled) {
             return null
         }
-        val resultClasses = mutableListOf<PhpClass>()
-        val possibleTableClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
         val phpIndex = PhpIndex.getInstance(project)
-        resultClasses += phpIndex.getClassesByFQN(possibleTableClass)
+        return getAllPossibleAssociationTableClassesFromName(phpIndex, possibleTableName)
+    }
+
+    override fun getBySignature(
+            expression: String,
+            set: Set<String>,
+            depth: Int,
+            project: Project
+    ): Collection<PhpNamedElement?> {
+        return emptyList()
+    }
+
+    private fun getAllPossibleAssociationTableClassesFromName(phpIndex: PhpIndex, possibleTableName: String): PhpType? {
+        val resultClasses = mutableListOf<PhpClass>()
+        val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
+        resultClasses += phpIndex.getClassesByFQN(possibleAppNamespaceClass)
+
         settings.pluginEntries.forEach { pluginEntry ->
             resultClasses += phpIndex.getClassesByFQN("${pluginEntry.namespace}\\Model\\Table\\${possibleTableName}Table")
         }
         if (resultClasses.size > 0) {
             val result = PhpType()
-                .add("\\Cake\\ORM\\Association\\BelongsTo")
-                .add("\\Cake\\ORM\\Association\\BelongsToMany")
-                .add("\\Cake\\ORM\\Association\\HasOne")
-                .add("\\Cake\\ORM\\Association\\HasMany")
+                    .add("\\Cake\\ORM\\Association\\BelongsTo")
+                    .add("\\Cake\\ORM\\Association\\BelongsToMany")
+                    .add("\\Cake\\ORM\\Association\\HasOne")
+                    .add("\\Cake\\ORM\\Association\\HasMany")
 
             resultClasses.forEach { result.add(it.fqn) }
             return result
         }
-        return null
-    }
 
-    override fun getBySignature(s: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement?> {
-        return emptyList()
+        return null
     }
 }
