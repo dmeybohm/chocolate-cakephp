@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker
 import com.intellij.icons.AllIcons
 import com.intellij.psi.util.PsiTreeUtil
@@ -9,8 +10,18 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 
 class ControllerLineMarkerTest : BaseTestCase() {
 
+    private fun prepareTest() {
+        // change app directory:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state.copy()
+        newState.appDirectory = "src"
+        originalSettings.loadState(newState)
+    }
+
     @Test
     fun `test that line markers contain one entry for each type of view`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
@@ -55,6 +66,8 @@ class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that line marker navigates to explicit render() calls`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
@@ -102,6 +115,8 @@ class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that line marker navigates to explicit render() calls when nested`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
@@ -150,6 +165,8 @@ class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that line marker adds markers to render calls`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
@@ -196,6 +213,8 @@ class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that a line marker is added to the method name when a corresponding view file doesn't exist`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
@@ -232,6 +251,8 @@ class ControllerLineMarkerTest : BaseTestCase() {
 
     @Test
     fun `test that a line marker is added next to render call when a corresponding view file doesn't exist`() {
+        prepareTest();
+
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",

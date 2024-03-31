@@ -5,6 +5,14 @@ import org.junit.Test
 
 public class ViewTest() : BaseTestCase() {
 
+    private fun prepareTest() {
+        // change app directory:
+        val originalSettings = Settings.getInstance(myFixture.project)
+        val newState = originalSettings.state.copy()
+        newState.appDirectory = "src"
+        originalSettings.loadState(newState)
+    }
+
     public override fun tearDown() {
         // Reset plugin settings:
         val originalSettings = Settings.getInstance(myFixture.project)
@@ -16,6 +24,8 @@ public class ViewTest() : BaseTestCase() {
 
     @Test
     public fun `test completing view helper inside a view`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -36,6 +46,8 @@ public class ViewTest() : BaseTestCase() {
 
     @Test
     public fun `test completing view helper methods inside a view`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -56,6 +68,8 @@ public class ViewTest() : BaseTestCase() {
 
     @Test
     public fun `test completing child view helper methods inside a view helper`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/View/AppView.php",
@@ -81,6 +95,8 @@ public class ViewTest() : BaseTestCase() {
 
     @Test
     public fun `test completing from plugin in view helper`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/plugins/TestPlugin/src/View/Helper/TestPluginHelper.php",
@@ -173,6 +189,8 @@ public class ViewTest() : BaseTestCase() {
     }
 
     public fun `test completing view helper inside a view helper for cake3`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
@@ -202,6 +220,8 @@ public class ViewTest() : BaseTestCase() {
 
     @Test
     public fun `test does not complete view helper does not apply in irrelevant contexts for cake3`() {
+        prepareTest()
+
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
