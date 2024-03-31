@@ -48,7 +48,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             return null
         }
         val phpIndex = PhpIndex.getInstance(project)
-        return getAllPossibleAssociationTableClassesFromName(phpIndex, possibleTableName)
+        return getAllPossibleAssociationTableClassesFromName(phpIndex, settings, possibleTableName)
     }
 
     override fun getBySignature(
@@ -60,7 +60,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         return emptyList()
     }
 
-    private fun getAllPossibleAssociationTableClassesFromName(phpIndex: PhpIndex, possibleTableName: String): PhpType? {
+    private fun getAllPossibleAssociationTableClassesFromName(phpIndex: PhpIndex, settings: Settings, possibleTableName: String): PhpType? {
         val resultClasses = mutableListOf<PhpClass>()
         val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
         resultClasses += phpIndex.getClassesByFQN(possibleAppNamespaceClass)
