@@ -16,12 +16,13 @@ public class AssociatedTableTest : BaseTestCase() {
         myFixture.configureByFiles(
                 "cake5/src3/Controller/AppController.php",
                 "cake5/src3/Model/Table/MoviesTable.php",
+                "cake5/src3/Model/Table/ArticlesTable.php",
                 "cake5/vendor/cakephp.php"
         )
     }
 
     @Test
-    fun `test custom finder from Table class is generated when doing a find`() {
+    fun `test associated table methods are completed`() {
         prepareTest()
 
         myFixture.configureByText("MovieController.php", """
@@ -35,7 +36,7 @@ public class AssociatedTableTest : BaseTestCase() {
         {
             public function ownedBy() {
                 ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
-                ${'$'}moviesTable->find('<caret>
+                ${'$'}moviesTable->Articles-><caret>
             }
         }
         """.trimIndent())
@@ -43,6 +44,6 @@ public class AssociatedTableTest : BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
-        assertTrue(result!!.contains("ownedBy"))
+        assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 }
