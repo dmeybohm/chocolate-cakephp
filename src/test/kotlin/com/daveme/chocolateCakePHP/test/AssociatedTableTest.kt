@@ -71,8 +71,33 @@ public class AssociatedTableTest : BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
+
     @Test
     fun `test associated tables themselves are completed`() {
+        prepareTest()
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}this-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test nested associated tables themselves are completed`() {
         prepareTest()
 
         myFixture.configureByText("MovieController.php", """
