@@ -40,13 +40,12 @@
                              id="chocolatecakephp.ui.ViewFileExtensionsForm"
                              instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 
-        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCakeTwoModelCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerModelOrTableCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.TableLocatorCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.CustomFinderCompletionContributor" />
-        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerModelCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler" />
