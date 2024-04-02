@@ -121,14 +121,16 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             }
 
             val controllerClassNames = classReference.type.types.filter { it.isAnyControllerClass() }
-            val phpIndex = PhpIndex.getInstance(fieldReference.project)
-            val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
-
-            val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
-            completionResultSet.completeFromClasses(
-                modelSubclasses,
-                containingClasses = containingClasses,
-            )
+            if (controllerClassNames.size > 0) {
+                val phpIndex = PhpIndex.getInstance(fieldReference.project)
+                val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
+                val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
+                completionResultSet.completeFromClasses(
+                        modelSubclasses,
+                        removeFromEnd = "Table",
+                        containingClasses = containingClasses,
+                )
+            }
         }
 
         private fun nestedLookup(
@@ -138,10 +140,6 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
         ) {
             val phpIndex = PhpIndex.getInstance(fieldReferenceChild.project)
             val fieldName = fieldReferenceChild.name
-            val isUppercase = fieldName?.startsWithUppercaseCharacter() ?: false
-            if (!isUppercase) {
-                return
-            }
 
             // Check if "child" (preceding $this->FieldReference) is in the list of model subclasses
             val modelClasses = phpIndex.getAllModelSubclasses(settings)
@@ -149,7 +147,10 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
                 return
             }
-            completionResultSet.completeFromClasses(modelClasses)
+            completionResultSet.completeFromClasses(
+                    modelClasses,
+                    removeFromEnd = "Table"
+            )
         }
     }
 
