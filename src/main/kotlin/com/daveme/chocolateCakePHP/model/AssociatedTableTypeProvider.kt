@@ -1,12 +1,12 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
-import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
@@ -36,7 +36,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             if (!parentFieldName.startsWithUppercaseCharacter()) {
                 return null
             }
-            return PhpType().add("#${key}.${fieldName}");
+            return PhpType().add("#${key}.${fieldName}")
         }
         return null
     }
@@ -61,13 +61,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     }
 
     private fun getAllPossibleAssociationTableClassesFromName(phpIndex: PhpIndex, settings: Settings, possibleTableName: String): PhpType? {
-        val resultClasses = mutableListOf<PhpClass>()
-        val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
-        resultClasses += phpIndex.getClassesByFQN(possibleAppNamespaceClass)
-
-        settings.pluginEntries.forEach { pluginEntry ->
-            resultClasses += phpIndex.getClassesByFQN("${pluginEntry.namespace}\\Model\\Table\\${possibleTableName}Table")
-        }
+        val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
         if (resultClasses.size > 0) {
             val result = PhpType()
                     .add("\\Cake\\ORM\\Association\\BelongsTo")

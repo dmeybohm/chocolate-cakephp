@@ -135,7 +135,7 @@ public class AssociatedTableTest : BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}this->Movie->Articles->Movies->find('<caret>
+                ${'$'}this->Movies->Articles->Movies->find('<caret>
             }
         }
         """.trimIndent())
