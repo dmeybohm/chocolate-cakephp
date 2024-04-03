@@ -40,7 +40,7 @@
                              id="chocolatecakephp.ui.ViewFileExtensionsForm"
                              instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 
-        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerCakeTwoModelCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerModelOrTableCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerComponentCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperCompletionContributor" />
@@ -64,6 +64,7 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ThisVariableInViewTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.TableLocatorTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.AssociatedTableTypeProvider" />
 
         <libraryRoot id="chocolate_cake_files" path="/chocolate-cakephp/" runtime="false"  />
     </extensions>

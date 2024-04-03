@@ -1,11 +1,13 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
 import com.daveme.chocolateCakePHP.cake.isCakeTwoModelClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
@@ -32,13 +34,9 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             return null
         }
 
-        // don't add types for nested types ($this->FooBar->FooBar) on cake 3+:
-        if (psiElement.firstChild is FieldReference) {
-            return if (settings.cake2Enabled) {
-                cakeTwoNestedModelCompletion(psiElement)
-            } else {
-                null
-            }
+        val childReference = psiElement.firstChild as? FieldReference
+        if (childReference != null) {
+            return nestedPropertyType(psiElement)
         }
 
         val referenceType = classReference.type.filterUnknown()
@@ -53,11 +51,11 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
     //
     // Look for a series of nested model reference like $this->Movie->Writer->Script...
     //
-    private fun cakeTwoNestedModelCompletion(
+    private fun nestedPropertyType(
         psiElement: FieldReference
     ): PhpType? {
-        var element : FieldReference? = psiElement
-        while (element?.firstChild != null) {
+        var element = psiElement as? FieldReference ?: return null
+        while (element.firstChild != null) {
             if (!(element.name?.startsWithUppercaseCharacter() ?: false)) {
                 return null
             }
@@ -69,7 +67,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         }
         // Defer lookup to complete.
         // First verify that first index extends from AppModel, and then that the last one is also a model.
-        return PhpType().add("#" + getKey() + element!!.name + getKey() + psiElement.name)
+        return PhpType().add("#" + getKey() + element.name + getKey() + psiElement.name)
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
@@ -79,18 +77,51 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         val targetFieldName = expression.substring(indexOfDelimiter + 1)
 
         val index = PhpIndex.getInstance(project)
+        val settings = Settings.getInstance(project)
 
-        val firstClasses = index.getClassesByFQN("\\" + firstFieldName)
+        val result = PhpType()
+
+        if (settings.cake3Enabled) {
+            val cakeThreeClasses = getCakeThreeClasses(index, settings, firstFieldName, targetFieldName)
+            if (cakeThreeClasses.size > 0) {
+                cakeThreeClasses.forEach { result.add(it.fqn) }
+            }
+        }
+
+        if (settings.cake2Enabled) {
+            val cakeTwoClass = getCakeTwoClass(index, firstFieldName, targetFieldName)
+            if (cakeTwoClass != null) {
+                result.add(cakeTwoClass)
+            }
+        }
+
+        if (result.types.size > 0) {
+            return result
+        } else {
+            return null
+        }
+    }
+
+    private fun getCakeTwoClass(phpIndex: PhpIndex, firstFieldName: String, targetFieldName: String): String? {
+        val firstClasses = phpIndex.getClassesByFQN("\\" + firstFieldName)
         if (!isCakeTwoModelClass(firstClasses)) {
             return null
         }
 
-        val targetClasses = index.getClassesByFQN("\\" + targetFieldName)
+        val targetClasses = phpIndex.getClassesByFQN("\\" + targetFieldName)
         if (!isCakeTwoModelClass(targetClasses)) {
             return null
         }
+        return "\\" + targetFieldName
+    }
 
-        return PhpType().add("\\" + targetFieldName)
+    private fun getCakeThreeClasses(phpIndex: PhpIndex, settings: Settings,
+                                    firstFieldName: String, targetFieldName: String): Collection<PhpClass> {
+        val firstClasses = phpIndex.getPossibleTableClasses(settings, firstFieldName)
+        if (firstClasses.size == 0) {
+            return listOf()
+        }
+        return phpIndex.getPossibleTableClasses(settings, targetFieldName)
     }
 
     override fun getBySignature(
