@@ -76,9 +76,9 @@
                 description="Create a view file for the CakePHP framework"/>
         <action id="com.daveme.chocolateCakePHP.view.NavigateToController"
                 class="com.daveme.chocolateCakePHP.view.NavigateToController"
-                text="Your Action Text"
+                text="Navigate to Controller"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
-                description="Your action description">
+                description="Navigate to the corresponding controller for this view.">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
         </action>
     </actions>

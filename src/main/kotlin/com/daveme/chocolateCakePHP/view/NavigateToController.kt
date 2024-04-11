@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -10,6 +11,10 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 
 class NavigateToController : AnAction() {
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun update(e: AnActionEvent) {
         super.update(e)
