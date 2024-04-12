@@ -10,11 +10,9 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import java.io.File
@@ -50,7 +48,7 @@ class NavigateToControllerAction : AnAction() {
 
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return;
+        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
         val pathParts = relativePath.split("/")
         if (pathParts.size <= 1) {
             return
@@ -60,7 +58,7 @@ class NavigateToControllerAction : AnAction() {
         when (templatesDir) {
             is CakeFourTemplatesDir, is CakeThreeTemplatesDir ->  {
                 if (settings.cake3Enabled) {
-                    tryToNavigateToCakeThreeController(project, projectRoot, settings, templatesDir, potentialControllerName)
+                    tryToNavigateToCakeThreeController(project, settings, templatesDir, potentialControllerName)
                 }
             }
             is CakeTwoTemplatesDir -> {
@@ -90,7 +88,6 @@ class NavigateToControllerAction : AnAction() {
 
     private fun tryToNavigateToCakeThreeController(
         project: Project,
-        projectRoot: VirtualFile,
         settings: Settings,
         templatesDir: TemplatesDir,
         potentialControllerName: String
