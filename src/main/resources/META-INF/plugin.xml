@@ -74,8 +74,8 @@
                 class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
                 text="Create CakePHP View File"
                 description="Create a view file for the CakePHP framework"/>
-        <action id="com.daveme.chocolateCakePHP.view.NavigateToController"
-                class="com.daveme.chocolateCakePHP.view.NavigateToController"
+        <action id="com.daveme.chocolateCakePHP.view.NavigateToControllerAction"
+                class="com.daveme.chocolateCakePHP.view.NavigateToControllerAction"
                 text="Navigate to Controller"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 description="Navigate to the corresponding controller for this view.">
