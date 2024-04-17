@@ -1,8 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
-import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.daveme.chocolateCakePHP.findRelativeFile
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -15,6 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.jetbrains.php.PhpIndex
 import java.io.File
 
 class NavigateToControllerAction : AnAction() {
@@ -53,17 +53,30 @@ class NavigateToControllerAction : AnAction() {
         if (pathParts.size <= 1) {
             return
         }
+        val viewFileName = virtualFile.nameWithoutExtension
         val potentialControllerName = pathParts[0]
 
         when (templatesDir) {
             is CakeFourTemplatesDir, is CakeThreeTemplatesDir ->  {
                 if (settings.cake3Enabled) {
-                    tryToNavigateToCakeThreeController(project, settings, templatesDir, potentialControllerName)
+                    tryToNavigateToCakeThreeController(
+                        project,
+                        settings,
+                        templatesDir,
+                        potentialControllerName,
+                        viewFileName
+                    )
                 }
             }
             is CakeTwoTemplatesDir -> {
                 if (settings.cake2Enabled) {
-                    tryToNavigateToCakeTwoController(project, projectRoot, settings, templatesDir, potentialControllerName)
+                    tryToNavigateToCakeTwoController(
+                        project,
+                        projectRoot,
+                        settings,
+                        templatesDir,
+                        potentialControllerName
+                    )
                 }
             }
         }
@@ -90,14 +103,26 @@ class NavigateToControllerAction : AnAction() {
         project: Project,
         settings: Settings,
         templatesDir: TemplatesDir,
-        potentialControllerName: String
+        potentialControllerName: String,
+        viewFileName: String
     ) {
-        val topSrcDir = topSourceDirectoryFromTemplatesDirectory(templatesDir, project, settings)
-            ?: return
-        val controllerPath = "Controller/${potentialControllerName}Controller.php"
-        val targetController = findRelativeFile(topSrcDir.psiDirectory, controllerPath)
-            ?: return
-        FileEditorManager.getInstance(project).openFile(targetController, true)
+        val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
+        val phpIndex = PhpIndex.getInstance(project)
+        val controllerClasses = phpIndex.phpClassesFromType(controllerType)
+        val camelCaseName = viewFileName.underscoreToCamelCase()
+        val method = controllerClasses.findFirstMethodWithName(camelCaseName)
+
+        if (method == null || !method.canNavigate()) {
+            val topSrcDir = topSourceDirectoryFromTemplatesDirectory(templatesDir, project, settings)
+                ?: return
+            val controllerPath = "Controller/${potentialControllerName}Controller.php"
+            val targetController = findRelativeFile(topSrcDir.psiDirectory, controllerPath)
+                ?: return
+            FileEditorManager.getInstance(project).openFile(targetController, true)
+            return
+        } else {
+            method.navigate(true)
+        }
     }
 
 

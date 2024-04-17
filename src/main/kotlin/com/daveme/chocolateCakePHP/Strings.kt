@@ -1,5 +1,7 @@
 package com.daveme.chocolateCakePHP
 
+import java.util.*
+
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 
@@ -47,3 +49,20 @@ fun String.camelCaseToUnderscore(): String {
         result.lowercase()
 }
 
+fun String.latinCapitalize(): String {
+    return replaceFirstChar {
+        if (it.isLowerCase())
+            it.titlecase(Locale.US)
+        else
+            it.toString()
+    }
+}
+
+fun String.underscoreToCamelCase(): String {
+    return this.split('_')
+        .mapIndexed { index, s ->
+            if (index == 0) s
+            else s.latinCapitalize()
+        }
+        .joinToString("")
+}

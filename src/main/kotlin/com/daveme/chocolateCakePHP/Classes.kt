@@ -42,6 +42,7 @@ fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass
     return result
 }
 
+
 fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
     val result = arrayListOf<PhpClass>()
     if (settings.cake2Enabled) {
@@ -160,6 +161,21 @@ fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: Strin
     return result
 }
 
+fun PhpIndex.phpClassesFromType(type: PhpType): Collection<PhpClass> {
+    return type.types.asSequence()
+        .map { klass ->
+            this.getClassesByFQN(klass).asSequence()
+        }
+        .flatMap { it -> it }
+        .toList()
+}
+
+fun Collection<PhpClass>.findFirstMethodWithName(methodName: String): Method? {
+    return this.asSequence()
+        .mapNotNull { it.findMethodByName(methodName) }
+        .firstOrNull()
+}
+
 fun viewHelperTypeFromFieldName(settings: Settings, fieldName: String): PhpType {
     var result = PhpType()
     if (settings.cake2Enabled) {
@@ -186,6 +202,21 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
             .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
         for (pluginEntry in settings.pluginEntries) {
             result = result.add("${pluginEntry.namespace}\\Controller\\Component\\${fieldName}Component")
+        }
+    }
+    return result
+}
+
+fun controllerTypeFromControllerName(settings: Settings, controllerName: String): PhpType {
+    var result = PhpType()
+    if (settings.cake2Enabled) {
+        result = result.add("\\${controllerName}Controller")
+    }
+    if (settings.cake3Enabled) {
+        result = result.add("\\Cake\\Controller\\${controllerName}Controller")
+            .add("${settings.appNamespace}\\Controller\\${controllerName}Controller")
+        for (pluginEntry in settings.pluginEntries) {
+            result = result.add("${pluginEntry.namespace}\\Controller\\${controllerName}Controller")
         }
     }
     return result
