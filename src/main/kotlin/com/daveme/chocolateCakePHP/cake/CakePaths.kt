@@ -126,7 +126,11 @@ fun topSourceDirectoryFromTemplatesDirectory(templatesDir: TemplatesDir, project
     }
 }
 
-private fun pluginSrcDirectoryFromTemplatesDir(templatesDir: TemplatesDir, project: Project, settings: Settings): TopSourceDirectory? {
+private fun pluginSrcDirectoryFromTemplatesDir(
+    templatesDir: TemplatesDir,
+    project: Project,
+    settings: Settings
+): TopSourceDirectory? {
     assert(templatesDir is CakeFourTemplatesDir || templatesDir is CakeThreeTemplatesDir)
     val parent = templatesDir.psiDirectory.parentDirectory ?: return null
     val grandparent = parent.parentDirectory ?: return null
@@ -142,7 +146,11 @@ private fun pluginSrcDirectoryFromTemplatesDir(templatesDir: TemplatesDir, proje
     }
 }
 
-private fun srcDirectoryFromTemplaesDir(templatesDir: TemplatesDir, project: Project, settings: Settings): TopSourceDirectory? {
+private fun srcDirectoryFromTemplaesDir(
+    templatesDir: TemplatesDir,
+    project: Project,
+    settings: Settings
+): TopSourceDirectory? {
     assert(templatesDir is CakeFourTemplatesDir || templatesDir is CakeThreeTemplatesDir)
     when (templatesDir) {
         is CakeFourTemplatesDir -> {
@@ -178,7 +186,10 @@ fun actionNameToViewFilename(
     }
 }
 
-fun pluginSrcDirectoryFromControllerFile(settings: Settings, file: PsiFile): PluginSrcDirectory? {
+fun pluginSrcDirectoryFromControllerFile(
+    settings: Settings,
+    file: PsiFile
+): PluginSrcDirectory? {
     if (!settings.cake3Enabled) {
         return null
     }
@@ -196,7 +207,10 @@ fun pluginSrcDirectoryFromControllerFile(settings: Settings, file: PsiFile): Plu
     return null
 }
 
-fun appOrSrcDirectoryFromControllerFile(settings: Settings, file: PsiFile): AppOrSrcDirectory? {
+fun appOrSrcDirectoryFromControllerFile(
+    settings: Settings,
+    file: PsiFile
+): AppOrSrcDirectory? {
     var dir: PsiDirectory? = file.containingDirectory
     while (dir != null) {
         if (settings.cake3Enabled) {
