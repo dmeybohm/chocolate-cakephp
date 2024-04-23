@@ -80,6 +80,7 @@
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 description="Navigate to the corresponding controller for this view.">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
+            <keyboard-shortcut first-keystroke="ctrl alt UP" keymap="$default" />
         </action>
     </actions>
 
