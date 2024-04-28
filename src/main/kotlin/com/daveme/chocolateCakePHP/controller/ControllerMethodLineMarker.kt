@@ -7,10 +7,8 @@ import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
 
@@ -39,18 +37,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return null
         }
 
-        // Collect $this->render("some_file") calls:
-        val renderCalls = PsiTreeUtil.findChildrenOfAnyType(method, false, MethodReference::class.java)
-                as Collection<MethodReference>
-        val actionNames: List<String> = renderCalls.mapNotNull {
-            if (it.name != "render") {
-                return@mapNotNull null
-            }
-            val firstParameter = it.parameterList?.getParameter(0) as? StringLiteralExpression
-                ?: return@mapNotNull null
-            return@mapNotNull firstParameter.contents
-        } + listOf(method.name)
-
+        val actionNames = actionNamesFromControllerMethod(method)
         return relatedItemLineMarkerInfo(actionNames, relatedLookupInfo, element)
     }
 
@@ -69,18 +56,17 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return null
         }
         val methodReference = variable.parent as? MethodReference ?: return null
-        if (methodReference.name != "render") {
-            return null
-        }
-        val firstParameter = methodReference.parameterList?.getParameter(0) as? StringLiteralExpression
-            ?: return null
+        val actionNames = actionNamesFromSingleConstantRenderExpression(methodReference) ?: return null
 
-        return relatedItemLineMarkerInfo(listOf(firstParameter.contents), relatedLookupInfo, element)
+        return relatedItemLineMarkerInfo(
+            actionNames,
+            relatedLookupInfo,
+            element
+        )
     }
 
-
     private fun relatedItemLineMarkerInfo(
-        actionNames: List<String>,
+        actionNames: ActionNames,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement
     ): LineMarkerInfo<PsiElement>? {
@@ -93,45 +79,33 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             topSourceDirectory
         ) ?: return null
 
-        val fileExtensions = relatedLookupInfo.settings.dataViewExtensions
-
-        // Create one file for each of the file extensions that match the naming convention:
-        val files = actionNames.map { controllerAction ->
-            listOfNotNull(
-                templatePathToVirtualFile(
-                    relatedLookupInfo.settings,
-                    templatesDirectory,
-                    relatedLookupInfo.controllerName,
-                    controllerAction
-                )
-            ) +
-            fileExtensions.mapNotNull { fileExtension ->
-                templatePathToVirtualFile(
-                    relatedLookupInfo.settings,
-                    templatesDirectory,
-                    relatedLookupInfo.controllerName,
-                    "${fileExtension}/${controllerAction}"
-                )
-            }
-        }.flatMap { it }
+        val files = viewFilesFromControllerAction(
+            project = relatedLookupInfo.project,
+            templatesDirectory = templatesDirectory,
+            settings = settings,
+            controllerName = relatedLookupInfo.controllerName,
+            actionNames = actionNames
+        )
 
         return if (files.isEmpty()) {
-            val viewFilename = actionNameToViewFilename(templatesDirectory, settings, actionNames.first())
-            val controllerName = relatedLookupInfo.controllerName
-            val templateFullPath = pathRelativeToProject(relatedLookupInfo.project, templatesDirectory.psiDirectory)
-            val defaultViewFile = "${templateFullPath}/${controllerName}/${viewFilename}"
+            val defaultViewFile = defaultViewFileFromController(
+                relatedLookupInfo.project,
+                relatedLookupInfo.controllerName,
+                templatesDirectory,
+                settings,
+                actionNames
+            )
 
-            return NavigationGutterIconBuilder
+            NavigationGutterIconBuilder
                 .create(AllIcons.Actions.AddFile)
                 .setTargets(listOf())
                 .setTooltipText("Click to create view file")
                 .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile))
         } else {
-            val targetFiles = virtualFilesToPsiFiles(relatedLookupInfo.project, files)
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
                 .setTooltipText("Click to navigate to view file")
-                .setTargets(targetFiles)
+                .setTargets(files)
                 .createLineMarkerInfo(element)
         }
     }
