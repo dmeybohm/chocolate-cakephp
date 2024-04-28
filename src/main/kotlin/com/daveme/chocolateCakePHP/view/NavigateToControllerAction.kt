@@ -90,6 +90,7 @@ class NavigateToControllerAction : AnAction() {
         templatesDir: TemplatesDir,
         potentialControllerName: String
     ) {
+        TODO()
         val topPath = projectRoot.path
         val controllerPath = "${settings.cake2AppDirectory}/Controller/${potentialControllerName}Controller.php"
         val fullPath = "${topPath}/${controllerPath}"
