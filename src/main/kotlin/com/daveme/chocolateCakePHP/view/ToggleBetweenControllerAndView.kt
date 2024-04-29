@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
+import com.intellij.codeInsight.navigation.NavigationUtil
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -14,10 +15,12 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.Method
 import java.io.File
 
-class NavigateToControllerAction : AnAction() {
+class ToggleBetweenControllerAndView : AnAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
@@ -34,8 +37,11 @@ class NavigateToControllerAction : AnAction() {
         }
 
         val psiFile = getPsiFile(project, e) ?: return
-        val enabled = isCakeViewFile(project, settings, psiFile)
-        e.presentation.isEnabledAndVisible = enabled
+        val isViewFile = isCakeViewFile(project, settings, psiFile)
+        val isControllerFile = isCakeControllerFile(project, settings, psiFile)
+
+        e.presentation.isEnabled = isViewFile || isControllerFile
+        e.presentation.isVisible = isViewFile
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -46,6 +52,66 @@ class NavigateToControllerAction : AnAction() {
         val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
         val settings = Settings.getInstance(project)
 
+        if (isCakeViewFile(project, settings, psiFile)) {
+            tryToNavigateToController(project, projectRoot, settings, virtualFile, psiFile)
+        } else if (isCakeControllerFile(project, settings, psiFile)) {
+            tryToNavigateToView(project, projectRoot, settings, virtualFile, psiFile, e)
+        }
+    }
+
+    private fun tryToNavigateToView(
+        project: Project,
+        projectRoot: VirtualFile,
+        settings: Settings,
+        virtualFile: VirtualFile,
+        psiFile: PsiFile,
+        e: AnActionEvent
+    ) {
+        val editor = e.getData(CommonDataKeys.EDITOR) ?: return
+        val offset = editor.caretModel.offset
+        val element = psiFile.findElementAt(offset)
+        val method = PsiTreeUtil.getParentOfType(element, Method::class.java) ?: return
+
+        val actionNames = actionNamesFromControllerMethod(method)
+        val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, psiFile)
+            ?: return
+        val templateDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
+            ?: return
+        val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
+            ?: return
+
+        val files = viewFilesFromControllerAction(
+            project = project,
+            templatesDirectory = templateDirectory,
+            settings = settings,
+            controllerName = controllerName,
+            actionNames = actionNames
+        )
+
+        when (files.size) {
+            0 -> {
+                TODO("show create popup here")
+            }
+            1 -> {
+                val first = files.first().virtualFile
+                FileEditorManager.getInstance(project).openFile(first, true)
+            }
+            else -> {
+                NavigationUtil.getPsiElementPopup(
+                    files.toTypedArray(),
+                    "Select Target To Navigate"
+                ).showInBestPositionFor(editor)
+            }
+        }
+    }
+
+    private fun tryToNavigateToController(
+        project: Project,
+        projectRoot: VirtualFile,
+        settings: Settings,
+        virtualFile: VirtualFile,
+        psiFile: PsiFile
+    ) {
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return

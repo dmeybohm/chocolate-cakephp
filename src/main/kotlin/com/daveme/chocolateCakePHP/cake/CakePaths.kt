@@ -234,7 +234,14 @@ sealed class CakeView(val elementTop: String) {
 }
 
 fun isCakeViewFile(project: Project, settings: Settings, file: PsiFile): Boolean {
-    return if (templatesDirectoryFromViewFile(project, settings, file) != null) true else false
+    return if (templatesDirectoryFromViewFile(project, settings, file) != null)
+        true
+    else
+        false
+}
+
+fun isCakeControllerFile(project: Project, settings: Settings, file: PsiFile): Boolean {
+    return file.virtualFile.nameWithoutExtension.endsWith("Controller")
 }
 
 object CakeFour : CakeView(elementTop = "element") {
