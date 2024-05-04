@@ -75,12 +75,12 @@
 
     <actions>
         <action id="com.daveme.chocolateCakePHP.controller.CreateDefaultViewFileAction"
-                class="com.daveme.chocolateCakePHP.controller.CreateDefaultViewFileAction"
+                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 text="Create Default CakePHP View File"
                 description="Create a default view file for the CakePHP framework"/>
         <action id="com.daveme.chocolateCakePHP.controller.CreateCustomViewFileAction"
-                class="com.daveme.chocolateCakePHP.controller.CreateCustomViewFileAction"
+                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 text="Create Custom CakePHP View File"
                 description="Create a custom view file for the CakePHP framework"/>

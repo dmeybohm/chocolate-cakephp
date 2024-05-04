@@ -7,6 +7,7 @@ import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.Variable
@@ -56,7 +57,8 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return null
         }
         val methodReference = variable.parent as? MethodReference ?: return null
-        val actionNames = actionNamesFromSingleConstantRenderExpression(methodReference) ?: return null
+        val actionNames = actionNamesFromSingleConstantRenderExpression(methodReference)
+            ?: return null
 
         return relatedItemLineMarkerInfo(
             actionNames,
@@ -71,8 +73,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         element: PsiElement
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
-        val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, relatedLookupInfo.file)
-            ?: return null
+        val topSourceDirectory = topSourceDirectoryFromControllerFile(
+            settings,
+            relatedLookupInfo.file
+        ) ?: return null
         val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
             relatedLookupInfo.project,
             settings,
@@ -95,18 +99,25 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 settings,
                 actionNames
             )
+            val emptyTargets = listOf<PsiFile>()
 
             NavigationGutterIconBuilder
                 .create(AllIcons.Actions.AddFile)
-                .setTargets(listOf())
+                .setTargets(emptyTargets)
                 .setTooltipText("Click to create view file")
-                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile))
+                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile, emptyTargets))
         } else {
+            val defaultViewPath = defaultViewPathFromController(
+                relatedLookupInfo.project,
+                relatedLookupInfo.controllerName,
+                templatesDirectory
+            )
+            val filesList = files.toList()
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
                 .setTooltipText("Click to navigate to view file")
-                .setTargets(files)
-                .createLineMarkerInfo(element)
+                .setTargets(filesList)
+                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewPath, filesList))
         }
     }
 

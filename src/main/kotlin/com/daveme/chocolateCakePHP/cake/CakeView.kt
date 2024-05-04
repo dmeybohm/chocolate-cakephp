@@ -44,9 +44,20 @@ fun defaultViewFileFromController(
     settings: Settings,
     actionNames: ActionNames,
 ): String {
-    val viewFilename = actionNameToViewFilename(templatesDirectory, settings, actionNames.defaultActionName)
-    val templateFullPath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
-    val defaultViewFile = "${templateFullPath}/${controllerName}/${viewFilename}"
-    return defaultViewFile
+    val defaultViewPath = defaultViewPathFromController(project, controllerName, templatesDirectory)
+    val viewFilename = actionNameToViewFilename(
+        templatesDirectory,
+        settings,
+        actionNames.defaultActionName
+    )
+    return "${defaultViewPath}/${viewFilename}"
 }
 
+fun defaultViewPathFromController(
+    project: Project,
+    controllerName: String,
+    templatesDirectory: TemplatesDir,
+): String {
+    val templateFullPath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
+    return "${templateFullPath}/${controllerName}/"
+}
