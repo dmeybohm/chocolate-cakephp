@@ -105,7 +105,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 .create(AllIcons.Actions.AddFile)
                 .setTargets(emptyTargets)
                 .setTooltipText("Click to create view file")
-                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewFile, emptyTargets))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(defaultViewFile, emptyTargets))
         } else {
             val defaultViewPath = defaultViewPathFromController(
                 relatedLookupInfo.project,
@@ -115,9 +115,9 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val filesList = files.toList()
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
-                .setTooltipText("Click to navigate to view file")
+                .setTooltipText("Click to navigate to view file, right-click to create")
                 .setTargets(filesList)
-                .createLineMarkerInfo(element, ShowCreateViewFilePopup(defaultViewPath, filesList))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(defaultViewPath, filesList))
         }
     }
 

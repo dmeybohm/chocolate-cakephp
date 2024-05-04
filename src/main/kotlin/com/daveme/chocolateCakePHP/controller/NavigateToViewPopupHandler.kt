@@ -16,7 +16,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
 
-class ShowCreateViewFilePopup(
+class NavigateToViewPopupHandler(
     val destinationPath: String,
     val targets: List<PsiFile>
 ) : GutterIconNavigationHandler<PsiElement> {
