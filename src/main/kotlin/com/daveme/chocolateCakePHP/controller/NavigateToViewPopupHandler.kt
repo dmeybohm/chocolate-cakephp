@@ -68,7 +68,7 @@ class NavigateToViewPopupHandler(
             }
             else -> {
                 NavigationUtil.getPsiElementPopup(
-                    files.toTypedArray(),
+                    files.sortedBy { it.virtualFile.path }.toTypedArray(),
                     "Select Target To Navigate"
                 ).show(point)
             }
