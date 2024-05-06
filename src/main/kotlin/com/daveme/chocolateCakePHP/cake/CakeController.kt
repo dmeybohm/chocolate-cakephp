@@ -1,5 +1,9 @@
 package com.daveme.chocolateCakePHP.cake
 
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.camelCaseToUnderscore
+import com.daveme.chocolateCakePHP.removeFromStart
+import com.daveme.chocolateCakePHP.underscoreToCamelCase
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -56,4 +60,45 @@ fun actionNamesFromSingleConstantRenderExpression(methodReference: MethodReferen
         defaultActionName = renderParameter,
         allActionNames = listOf(renderParameter)
     )
+}
+
+fun viewFileNameToActionName(
+    viewFileName: String,
+    settings: Settings,
+    templatesDir: TemplatesDir,
+): ActionNames {
+    when (templatesDir) {
+        is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
+            val extension = if (templatesDir is CakeThreeTemplatesDir)
+                settings.cakeTemplateExtension
+            else
+                "php"
+            val trimmed = viewFileName.removeFromStart(".${extension}", ignoreCase = true)
+            val camelCaseActionName = trimmed.underscoreToCamelCase()
+            return ActionNames(
+                defaultActionName = camelCaseActionName,
+                allActionNames = listOf(camelCaseActionName)
+            )
+        }
+        is CakeTwoTemplatesDir -> {
+            val extension = settings.cake2TemplateExtension
+            val trimmed = viewFileName.removeFromStart(".${extension}", ignoreCase = true)
+            return ActionNames(
+                defaultActionName = trimmed,
+                allActionNames = listOf(trimmed)
+            )
+        }
+    }
+}
+
+fun actionNameToViewFilename(
+    templatesDirectory: TemplatesDir,
+    settings: Settings,
+    actionName: String
+): String {
+    return when (templatesDirectory) {
+        is CakeFourTemplatesDir -> "${actionName.camelCaseToUnderscore()}.php" // cake 4+
+        is CakeThreeTemplatesDir -> "${actionName.camelCaseToUnderscore()}.${settings.cakeTemplateExtension}"
+        is CakeTwoTemplatesDir -> "${actionName}.${settings.cake2TemplateExtension}"
+    }
 }

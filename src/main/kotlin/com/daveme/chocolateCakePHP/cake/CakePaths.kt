@@ -120,8 +120,7 @@ fun topSourceDirectoryFromTemplatesDirectory(templatesDir: TemplatesDir, project
             ?: srcDirectoryFromTemplaesDir(templatesDir, project, settings)
         }
         is CakeTwoTemplatesDir -> {
-            // todo
-            null
+            appDirectoryFromTemplatesDir(templatesDir, settings)
         }
     }
 }
@@ -144,6 +143,21 @@ private fun pluginSrcDirectoryFromTemplatesDir(
     } else {
         null
     }
+}
+
+// file must be within app/
+fun appDirectoryFromTemplatesDir(
+    templatesDir: TemplatesDir,
+    settings: Settings,
+): TopSourceDirectory? {
+    assert(templatesDir is CakeTwoTemplatesDir)
+    val parent = templatesDir.psiDirectory.parentDirectory ?: return null
+    if (settings.cake2Enabled) {
+        if (parent.name == settings.cake2AppDirectory) {
+            return AppDirectory(parent)
+        }
+    }
+    return null
 }
 
 private fun srcDirectoryFromTemplaesDir(
@@ -171,18 +185,6 @@ private fun srcDirectoryFromTemplaesDir(
                 return null
         }
         else -> return null
-    }
-}
-
-fun actionNameToViewFilename(
-    templatesDirectory: TemplatesDir,
-    settings: Settings,
-    actionName: String
-): String {
-    return when (templatesDirectory) {
-        is CakeFourTemplatesDir -> "${actionName.camelCaseToUnderscore()}.php" // cake 4+
-        is CakeThreeTemplatesDir -> "${actionName.camelCaseToUnderscore()}.${settings.cakeTemplateExtension}"
-        is CakeTwoTemplatesDir -> "${actionName}.${settings.cake2TemplateExtension}"
     }
 }
 
@@ -227,6 +229,7 @@ fun appOrSrcDirectoryFromControllerFile(
     }
     return null
 }
+
 
 sealed class CakeView(val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String

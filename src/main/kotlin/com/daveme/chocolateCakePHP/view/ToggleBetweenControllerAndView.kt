@@ -15,13 +15,11 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Method
-import java.io.File
 
 class ToggleBetweenControllerAndView : AnAction() {
 
@@ -50,13 +48,12 @@ class ToggleBetweenControllerAndView : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val projectRoot = project.guessProjectDir() ?: return
         val virtualFile = e.dataContext.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
         val settings = Settings.getInstance(project)
 
         if (isCakeViewFile(project, settings, psiFile)) {
-            tryToNavigateToController(project, projectRoot, settings, virtualFile, psiFile)
+            tryToNavigateToController(project, settings, virtualFile, psiFile)
         } else if (isCakeControllerFile(project, settings, psiFile)) {
             tryToNavigateToView(project, settings, virtualFile, psiFile, e)
         }
@@ -99,8 +96,8 @@ class ToggleBetweenControllerAndView : AnAction() {
                     settings,
                     actionNames
                 )
-                val context = DataManager.getInstance().dataContextFromFocusAsync
-                context.then { context ->
+                val getContext = DataManager.getInstance().dataContextFromFocusAsync
+                getContext.then { context ->
                     val popup = JBPopupFactory.getInstance()
                         .createActionGroupPopup(
                             "Create View File",
@@ -127,7 +124,6 @@ class ToggleBetweenControllerAndView : AnAction() {
 
     private fun tryToNavigateToController(
         project: Project,
-        projectRoot: VirtualFile,
         settings: Settings,
         virtualFile: VirtualFile,
         psiFile: PsiFile
@@ -142,51 +138,16 @@ class ToggleBetweenControllerAndView : AnAction() {
         val viewFileName = virtualFile.nameWithoutExtension
         val potentialControllerName = pathParts[0]
 
-        when (templatesDir) {
-            is CakeFourTemplatesDir, is CakeThreeTemplatesDir ->  {
-                if (settings.cake3Enabled) {
-                    tryToNavigateToCakeThreeController(
-                        project,
-                        settings,
-                        templatesDir,
-                        potentialControllerName,
-                        viewFileName
-                    )
-                }
-            }
-            is CakeTwoTemplatesDir -> {
-                if (settings.cake2Enabled) {
-                    tryToNavigateToCakeTwoController(
-                        project,
-                        projectRoot,
-                        settings,
-                        templatesDir,
-                        potentialControllerName
-                    )
-                }
-            }
-        }
-
+        openAndNavigateToController(
+            project,
+            settings,
+            templatesDir,
+            potentialControllerName,
+            viewFileName
+        )
     }
 
-    private fun tryToNavigateToCakeTwoController(
-        project: Project,
-        projectRoot: VirtualFile,
-        settings: Settings,
-        templatesDir: TemplatesDir,
-        potentialControllerName: String
-    ) {
-        TODO()
-        val topPath = projectRoot.path
-        val controllerPath = "${settings.cake2AppDirectory}/Controller/${potentialControllerName}Controller.php"
-        val fullPath = "${topPath}/${controllerPath}"
-        val file = File(fullPath)
-        val fileURL = file.toURL().toString()
-        val targetFile = VirtualFileManager.getInstance().findFileByUrl(fileURL) ?: return
-        FileEditorManager.getInstance(project).openFile(targetFile, true)
-    }
-
-    private fun tryToNavigateToCakeThreeController(
+    private fun openAndNavigateToController(
         project: Project,
         settings: Settings,
         templatesDir: TemplatesDir,
@@ -196,8 +157,8 @@ class ToggleBetweenControllerAndView : AnAction() {
         val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
         val phpIndex = PhpIndex.getInstance(project)
         val controllerClasses = phpIndex.phpClassesFromType(controllerType)
-        val camelCaseName = viewFileName.underscoreToCamelCase()
-        val method = controllerClasses.findFirstMethodWithName(camelCaseName)
+        val actionNames = viewFileNameToActionName(viewFileName, settings, templatesDir)
+        val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName)
 
         if (method == null || !method.canNavigate()) {
             val topSrcDir = topSourceDirectoryFromTemplatesDirectory(templatesDir, project, settings)
