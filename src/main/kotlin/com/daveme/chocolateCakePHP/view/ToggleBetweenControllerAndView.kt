@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.navigation.NavigationUtil
+import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -10,6 +11,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -55,13 +57,12 @@ class ToggleBetweenControllerAndView : AnAction() {
         if (isCakeViewFile(project, settings, psiFile)) {
             tryToNavigateToController(project, projectRoot, settings, virtualFile, psiFile)
         } else if (isCakeControllerFile(project, settings, psiFile)) {
-            tryToNavigateToView(project, projectRoot, settings, virtualFile, psiFile, e)
+            tryToNavigateToView(project, settings, virtualFile, psiFile, e)
         }
     }
 
     private fun tryToNavigateToView(
         project: Project,
-        projectRoot: VirtualFile,
         settings: Settings,
         virtualFile: VirtualFile,
         psiFile: PsiFile,
@@ -90,7 +91,25 @@ class ToggleBetweenControllerAndView : AnAction() {
 
         when (files.size) {
             0 -> {
-                TODO("show create popup here")
+                val defaultViewFile = defaultViewFileFromController(
+                    project,
+                    controllerName,
+                    templateDirectory,
+                    settings,
+                    actionNames
+                )
+                val context = DataManager.getInstance().dataContextFromFocusAsync
+                context.then { context ->
+                    val popup = JBPopupFactory.getInstance()
+                        .createActionGroupPopup(
+                            "Create View File",
+                            NavigateToViewPopupHandler.CreateViewFileActionGroup(defaultViewFile),
+                            context,
+                            JBPopupFactory.ActionSelectionAid.NUMBERING,
+                            true,
+                        )
+                    popup.showInBestPositionFor(editor)
+                }
             }
             1 -> {
                 val first = files.first().virtualFile

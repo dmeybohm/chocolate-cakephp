@@ -50,7 +50,7 @@ fun defaultViewFileFromController(
         settings,
         actionNames.defaultActionName
     )
-    return "${defaultViewPath}/${viewFilename}"
+    return "${defaultViewPath}${viewFilename}"
 }
 
 fun defaultViewPathFromController(
