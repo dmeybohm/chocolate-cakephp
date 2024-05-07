@@ -145,7 +145,6 @@ private fun pluginSrcDirectoryFromTemplatesDir(
     }
 }
 
-// file must be within app/
 fun appDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,
     settings: Settings,
