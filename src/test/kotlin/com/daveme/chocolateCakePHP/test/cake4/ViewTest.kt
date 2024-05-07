@@ -17,7 +17,7 @@ class ViewTest : Cake4BaseTestCase() {
     }
 
     @Test
-    public fun `test completing view helper inside a view for cake4`() {
+    fun `test completing view helper inside a view for cake4`() {
         myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
         <?php
         ${'$'}this-><caret>
@@ -29,7 +29,7 @@ class ViewTest : Cake4BaseTestCase() {
     }
 
     @Test
-    public fun `test completing view helper inside a view helper for cake4`() {
+    fun `test completing view helper inside a view helper for cake4`() {
         myFixture.configureByFilePathAndText("cake4/src2/View/Helper/MovieFormatterHelper.php", """
         <?php
         namespace App\View\Helper;
