@@ -37,7 +37,7 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
 
             val settings =
                 Settings.getInstance(fieldReference.project)
-            if (!settings.cake2Enabled) {
+            if (!settings.enabled) {
                 return
             }
 

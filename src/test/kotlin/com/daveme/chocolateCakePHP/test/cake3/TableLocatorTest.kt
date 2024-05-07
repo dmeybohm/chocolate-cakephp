@@ -1,28 +1,21 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.cake3
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.test.BaseTestCase
 import org.junit.Test
 
-class TableLocatorTest : BaseTestCase() {
+class TableLocatorTest : Cake3BaseTestCase() {
 
-    private fun prepareTest() {
-        // change app directory:
-        val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state.copy()
-        newState.appDirectory = "src"
-        originalSettings.loadState(newState)
-    }
-
-    @Test
-    fun `test fetchTable returns methods from the users custom namespace in a controller`() {
-        prepareTest()
-
+    override fun prepareTest() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
             "cake3/vendor/cakephp.php"
         )
+    }
 
+    @Test
+    fun `test fetchTable returns methods from the users custom namespace in a controller`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -46,14 +39,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test TableLocator get returns methods from the users custom namespace`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -83,14 +68,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -121,14 +98,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test static TableLocator get returns methods from the users custom namespace`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -153,14 +122,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test fetchTable argument can be autocompleted with quotes`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -185,8 +146,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test TableRegistry static method argument can be autocompleted with quotes`() {
-        prepareTest()
-
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
@@ -217,14 +176,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -250,14 +201,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -283,14 +226,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -316,14 +251,6 @@ class TableLocatorTest : BaseTestCase() {
 
     @Test
     fun `test types from getTableLocator method can be autocompleted when inline`() {
-        prepareTest()
-
-        myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
-        )
-
         myFixture.configureByText("MovieController.php", """
         <?php
 

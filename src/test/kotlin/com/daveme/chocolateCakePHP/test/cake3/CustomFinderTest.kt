@@ -1,10 +1,10 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.cake3
 
 import org.junit.Test
 
-class CustomFinderInCakeThreeTest : BaseTestCase() {
+class CustomFinderTest : Cake3BaseTestCase() {
 
-    private fun prepareTest() {
+    override fun prepareTest() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/MoviesTable.php",
@@ -14,8 +14,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test custom finder from Table class is generated when doing a find`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -41,8 +39,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test custom finder does not generate an empty completion`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -67,8 +63,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test custom finder does not generate two 'all' completions`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -94,8 +88,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test nested custom finder is generated when doing a find`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -120,8 +112,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test nested custom finder is generated when doing a find three levels deep`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -146,8 +136,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test nested custom finder is generated when doing a find three levels deep with intermediate vars`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -173,8 +161,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
 
     @Test
     fun `test nested custom finder is generated when doing a find three levels deep with other calls inbetween`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -199,8 +185,6 @@ class CustomFinderInCakeThreeTest : BaseTestCase() {
     }
 
     fun `test nested custom finder does not continue autocompleting for non-query methods`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 

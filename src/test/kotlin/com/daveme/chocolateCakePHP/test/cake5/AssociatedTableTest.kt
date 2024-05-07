@@ -1,18 +1,13 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.test.BaseTestCase
 import org.junit.Test
 
 
-public class AssociatedTableTest : BaseTestCase() {
+public class AssociatedTableTest : Cake5BaseTestCase() {
 
-    private fun prepareTest() {
-        // change app directory:
-        val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state.copy()
-        newState.appDirectory = "src3"
-        originalSettings.loadState(newState)
-
+    override fun prepareTest() {
         myFixture.configureByFiles(
                 "cake5/src3/Controller/AppController.php",
                 "cake5/src3/Model/Table/MoviesTable.php",
@@ -23,8 +18,6 @@ public class AssociatedTableTest : BaseTestCase() {
 
     @Test
     fun `test associated table methods are completed`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -49,8 +42,6 @@ public class AssociatedTableTest : BaseTestCase() {
 
     @Test
     fun `test associated table methods are completed 2`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -74,8 +65,6 @@ public class AssociatedTableTest : BaseTestCase() {
 
     @Test
     fun `test associated tables themselves are completed`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -98,8 +87,6 @@ public class AssociatedTableTest : BaseTestCase() {
     }
 
     fun `test nested associated tables themselves are completed`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -123,8 +110,6 @@ public class AssociatedTableTest : BaseTestCase() {
 
     @Test
     fun `test custom finders on associated tables are completed`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
