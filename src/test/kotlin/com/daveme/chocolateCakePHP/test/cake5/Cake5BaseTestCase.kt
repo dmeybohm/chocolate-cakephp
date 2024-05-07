@@ -10,7 +10,7 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
 
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state.copy()
+        val newState = Settings.defaults.state.copy()
         newState.cake3Enabled = true
         newState.cake2Enabled = false
         newState.appDirectory = "src3"

@@ -1,10 +1,9 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
-import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import org.junit.Test
 
-class ViewTest : Cake4BaseTest() {
+class ViewTest : Cake4BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
