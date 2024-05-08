@@ -1,7 +1,5 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import org.junit.Test
 
@@ -126,9 +124,7 @@ public class ControllerTest : Cake3BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertFalse(result!!.isEmpty())
         assertFalse(result.contains("Director"))
-
-        // TODO
-        // assertFalse(result.contains("MovieMetadata"))
+        assertFalse(result.contains("MovieMetadata"))
     }
 
 }

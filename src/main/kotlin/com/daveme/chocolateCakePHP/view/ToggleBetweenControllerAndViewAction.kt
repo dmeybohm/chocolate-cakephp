@@ -20,7 +20,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Method
 
-class ToggleBetweenControllerAndView : AnAction() {
+class ToggleBetweenControllerAndViewAction : AnAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT

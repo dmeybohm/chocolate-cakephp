@@ -121,9 +121,7 @@ class ControllerTest : Cake2BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertFalse(result!!.isEmpty())
         assertFalse(result.contains("Director"))
-
-        // TODO
-        // assertFalse(result.contains("MovieMetadata"))
+        assertFalse(result.contains("MovieMetadata"))
     }
 
 }

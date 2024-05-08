@@ -89,9 +89,13 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             }
             if (name.equals("find")) {
                 val classRefType = classReference.type.filterUnknown()
+
+                // TODO: handle incomplete types here by deferring lookup to
+                //       complete method
                 if (!classRefType.isComplete) {
                     return null
                 }
+
                 val result = PhpType()
                 for (eachClassRefType in classRefType.types) {
                     if (eachClassRefType.startsWith("\\") &&
@@ -107,7 +111,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return null
     }
 
-    override fun complete(expression: String, project: Project): PhpType? {
+    override fun complete(expression: String, project: Project): PhpType {
         val (_, invokingMethodName, wrappedType) = expression.split('.')
 
         //
@@ -124,8 +128,8 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         val phpIndex = PhpIndex.getInstance(project)
 
         // todo: cache method lists
-        val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery");
-        val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query");
+        val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")
+        val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query")
 
         (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach

@@ -84,8 +84,8 @@
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 text="Create Custom CakePHP View File"
                 description="Create a custom view file for the CakePHP framework"/>
-        <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndView"
-                class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndView"
+        <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
+                class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 text="Navigate to Controller"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 description="Navigate to the corresponding controller for this view.">
