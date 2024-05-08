@@ -7,9 +7,10 @@
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      This supports Cake 3 and Cake 2, and has some support for Cake 4. <br><br>
+      This supports CakePHP 2, 3, 4, and 5. CakePHP 2 support is disabled by default, but<br>
+      can be enabled in settings.<br><br>
 
-      Current features:
+      Current features:<br>
 
       <ul>
         <li>Navigate and autocomplete $this->Model->someMethod and $this->Component->someMethod inside controllers</li>

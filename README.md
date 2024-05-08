@@ -3,15 +3,15 @@
 <!-- Plugin description -->
 This plugin improves support for the CakePHP frameworks in PhpStorm / IntelliJ Ultimate.
 
-It adds the ability to navigate to the dynamic classes (controllers, views, models, components, and view helpers).
- 
-It adds a gutter icon in controller methods if the plugin finds an associated view file.
+It adds the ability to navigate to the dynamic classes (controllers, views, models, components, 
+and view helpers) and autocompletion.
 
-It supports supports CakePHP versions 4, 3, and 2. 
+It supports CakePHP versions 5, 4, 3, and 2. CakePHP 2 support is disabled by default, but
+can be enabled in the settings.
 <!-- Plugin description end -->
 
 ### Screenshots
-
+u
 #### Cake 3 Controller
 
 ![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake3-controller.gif?raw=true)
