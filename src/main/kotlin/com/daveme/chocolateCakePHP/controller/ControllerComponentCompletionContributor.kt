@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.controller
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
@@ -11,14 +12,21 @@ import com.jetbrains.php.lang.psi.elements.Variable
 
 class ControllerComponentCompletionContributor : CompletionContributor() {
     init {
+        // When typing $this-><caret>
+        val fieldInControllerPattern = PlatformPatterns.psiElement(LeafPsiElement::class.java)
+            .withParent(
+                PlatformPatterns.psiElement(FieldReference::class.java)
+                    .with(IsControllerPattern)
+            )
+
         extend(
             CompletionType.BASIC,
-            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            fieldInControllerPattern,
             ControllerCompletionProvider()
         )
         extend(
             CompletionType.SMART,
-            PlatformPatterns.psiElement().withParent(FieldReference::class.java),
+            fieldInControllerPattern,
             ControllerCompletionProvider()
         )
     }
@@ -37,16 +45,11 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
 
             val settings =
                 Settings.getInstance(fieldReference.project)
-            if (!settings.cake2Enabled) {
+            if (!settings.enabled) {
                 return
             }
 
-            val childElement = fieldReference.firstChild
-            return if (childElement is FieldReference) {
-                directLookup(settings, completionResultSet, childElement)
-            } else {
-                directLookup(settings, completionResultSet, fieldReference)
-            }
+            directLookup(settings, completionResultSet, fieldReference)
         }
 
         private fun directLookup(
@@ -58,8 +61,9 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
             if (classReference !is Variable) {
                 return
             }
+            val completeType = classReference.type.lookupCompleteType(classReference.project, null)
 
-            val controllerClassNames = classReference.type.types.filter { it.isAnyControllerClass() }
+            val controllerClassNames = completeType.types.filter { it.isAnyControllerClass() }
             if (controllerClassNames.isNotEmpty()) {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)

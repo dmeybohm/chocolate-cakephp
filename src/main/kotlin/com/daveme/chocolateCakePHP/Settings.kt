@@ -12,7 +12,7 @@ data class SettingsState(
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
     var cake2PluginPath: String = "app/Plugin",
-    var cake2Enabled: Boolean = true,
+    var cake2Enabled: Boolean = false,
     var cake3Enabled: Boolean = true,
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
     var dataViewExtensions: List<String> = arrayListOf("json", "xml")

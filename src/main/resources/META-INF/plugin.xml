@@ -7,9 +7,10 @@
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
-      This supports Cake 3 and Cake 2, and has some support for Cake 4. <br><br>
+      This supports CakePHP 2, 3, 4, and 5. CakePHP 2 support is disabled by default, but<br>
+      can be enabled in settings.<br><br>
 
-      Current features:
+      Current features:<br>
 
       <ul>
         <li>Navigate and autocomplete $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
@@ -84,8 +85,8 @@
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 text="Create Custom CakePHP View File"
                 description="Create a custom view file for the CakePHP framework"/>
-        <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndView"
-                class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndView"
+        <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
+                class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 text="Navigate to Controller"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO"
                 description="Navigate to the corresponding controller for this view.">

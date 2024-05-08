@@ -2,7 +2,6 @@ package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
-import com.intellij.patterns.PatternCondition
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.util.ProcessingContext
@@ -15,40 +14,13 @@ import com.intellij.psi.util.PsiTreeUtil
 class ControllerModelOrTableCompletionContributor : CompletionContributor() {
 
     init {
-        val isControllerPattern = object : PatternCondition<FieldReference>("IsControllerPattern") {
-            override fun accepts(fieldReference: FieldReference, context: ProcessingContext): Boolean {
-                val settings = Settings.getInstance(fieldReference.project)
-                if (!settings.enabled) {
-                    return false
-                }
-                val classRefType = fieldReference.classReference?.type ?: return false
-                val completedClassType = if (classRefType.isComplete)
-                    classRefType
-                else {
-                    val phpIndex = PhpIndex.getInstance(fieldReference.project)
-                    phpIndex.completeType(fieldReference.project, classRefType, null)
-                }
-                return completedClassType.types.any { it.isAnyControllerClass() }
-            }
-        }
-
-        val isUppercaseFieldRef = object : PatternCondition<FieldReference>("IsUppercaseFieldRef") {
-            override fun accepts(fieldReference: FieldReference, context: ProcessingContext): Boolean {
-                val settings = Settings.getInstance(fieldReference.project)
-                if (!settings.enabled) {
-                    return false
-                }
-                return fieldReference.name?.startsWithUppercaseCharacter() ?: false
-            }
-        }
-
         val completionProvider = ControllerModelCompletionProvider()
 
         // When typing $this-><caret>
         val fieldInControllerPattern = PlatformPatterns.psiElement(LeafPsiElement::class.java)
                 .withParent(
                         PlatformPatterns.psiElement(FieldReference::class.java)
-                                .with(isControllerPattern)
+                                .with(IsControllerPattern)
                 )
 
         // When typing $this->Movie-><caret>
@@ -57,7 +29,7 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
                         PlatformPatterns.psiElement(FieldReference::class.java)
                                 .withFirstChild(
                                         PlatformPatterns.psiElement(FieldReference::class.java)
-                                                .with(isUppercaseFieldRef)
+                                                .with(IsUpperCaseFieldRefPattern)
                                 )
                 )
 
@@ -119,8 +91,9 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             if (classReference !is Variable) {
                 return
             }
+            val completeType = classReference.type.lookupCompleteType(classReference.project, null)
 
-            val controllerClassNames = classReference.type.types.filter { it.isAnyControllerClass() }
+            val controllerClassNames = completeType.types.filter { it.isAnyControllerClass() }
             if (controllerClassNames.size > 0) {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
