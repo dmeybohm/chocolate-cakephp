@@ -11,7 +11,7 @@ can be enabled in the settings.
 <!-- Plugin description end -->
 
 ### Screenshots
-u
+
 #### Cake 3 Controller
 
 ![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/cake3-controller.gif?raw=true)
