@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
+import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
     private JPanel topPanel;
@@ -44,18 +46,19 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void applyToSettings(@NotNull Settings settings) {
-        SettingsState state = settings.getState();
+        SettingsState origState = settings.getState();
+        SettingsState newState = copySettingsState(origState);
 
-        state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
-        state.setAppDirectory(appDirectoryTextField.getText());
-        state.setCakeTemplateExtension(templateExtensionTextField.getText());
-        state.setAppNamespace(appNamespaceTextField.getText());
+        newState.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
+        newState.setAppDirectory(appDirectoryTextField.getText());
+        newState.setCakeTemplateExtension(templateExtensionTextField.getText());
+        newState.setAppNamespace(appNamespaceTextField.getText());
 
-        state.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
-        state.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
-        state.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+        newState.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
+        newState.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
+        newState.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
 
-        settings.loadState(state);
+        settings.loadState(newState);
     }
 
     @Override

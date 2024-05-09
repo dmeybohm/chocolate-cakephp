@@ -13,6 +13,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
+import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+
 public class PluginForm implements SearchableConfigurable {
 
     private TableView<PluginEntry> tableView;
@@ -116,21 +118,22 @@ public class PluginForm implements SearchableConfigurable {
     public boolean isModified() {
         Settings settings = Settings.getInstance(project);
         Settings newSettings = Settings.fromSettings(settings);
-        copySettingsFromUI(newSettings);
+        applyToSettings(newSettings);
         return !newSettings.equals(settings);
     }
 
-    private void copySettingsFromUI(@NotNull Settings settings) {
-        SettingsState state = settings.getState();
-        state.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
-        state.setPluginPath(pluginPathTextField.getText());
-        settings.loadState(state);
+    private void applyToSettings(@NotNull Settings settings) {
+        SettingsState origState = settings.getState();
+        SettingsState newState = copySettingsState(origState);
+        newState.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
+        newState.setPluginPath(pluginPathTextField.getText());
+        settings.loadState(newState);
     }
 
     @Override
     public void apply() throws ConfigurationException {
         Settings settings = Settings.getInstance(project);
-        copySettingsFromUI(settings);
+        applyToSettings(settings);
     }
 
 }
