@@ -117,7 +117,7 @@ fun topSourceDirectoryFromTemplatesDirectory(templatesDir: TemplatesDir, project
     return when (templatesDir) {
         is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
             pluginSrcDirectoryFromTemplatesDir(templatesDir, project, settings)
-            ?: srcDirectoryFromTemplaesDir(templatesDir, project, settings)
+            ?: srcDirectoryFromTemplatesDir(templatesDir, project, settings)
         }
         is CakeTwoTemplatesDir -> {
             appDirectoryFromTemplatesDir(templatesDir, settings)
@@ -159,7 +159,7 @@ fun appDirectoryFromTemplatesDir(
     return null
 }
 
-private fun srcDirectoryFromTemplaesDir(
+private fun srcDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,
     project: Project,
     settings: Settings

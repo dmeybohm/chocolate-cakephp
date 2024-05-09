@@ -1,19 +1,12 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameInsertHandler;
-import com.daveme.chocolateCakePHP.ui.FullyQualifiedNameTextFieldCompletionProvider;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
-import com.intellij.util.textCompletion.TextFieldWithCompletion;
-import com.jetbrains.php.completion.PhpCompletionUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.lang.reflect.InvocationTargetException;
 
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
@@ -27,7 +20,7 @@ class ConfigForm implements SearchableConfigurable {
     private JButton cake2AppDirectoryDefaultButton;
     private JTextField cake2TemplateExtensionTextField;
     private JButton cake2TemplateExtensionDefaultButton;
-    private TextFieldWithCompletion appNamespaceTextField;
+    private JTextField appNamespaceTextField;
     private JTextField appDirectoryTextField;
     private JButton appDirectoryDefaultButton;
     private JPanel cake3Panel;
@@ -50,7 +43,7 @@ class ConfigForm implements SearchableConfigurable {
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
 
-    private void copySettingsFromUI(@NotNull Settings settings) {
+    private void applyToSettings(@NotNull Settings settings) {
         SettingsState state = settings.getState();
 
         state.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
@@ -76,10 +69,6 @@ class ConfigForm implements SearchableConfigurable {
     @Nullable
     public String getDisplayName() {
         return "Chocolate CakePHP";
-    }
-
-    @Override
-    public void disposeUIResources() {
     }
 
     @Override
@@ -132,7 +121,8 @@ class ConfigForm implements SearchableConfigurable {
     public boolean isModified() {
         Settings originalSettings = Settings.getInstance(project);
         Settings newSettings = Settings.fromSettings(originalSettings);
-        copySettingsFromUI(newSettings);
+
+        applyToSettings(newSettings);
         return !newSettings.equals(originalSettings);
     }
 
@@ -148,30 +138,7 @@ class ConfigForm implements SearchableConfigurable {
             appNamespaceTextField.setText(newNamespace);
         }
 
-        copySettingsFromUI(settings);
+        applyToSettings(settings);
     }
 
-    private void createUIComponents() {
-        FullyQualifiedNameInsertHandler insertHandler = new FullyQualifiedNameInsertHandler();
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ApplicationManager.getApplication().invokeAndWait(() -> setupHandler(insertHandler), ModalityState.any());
-        } else {
-            setupHandler(insertHandler);
-        }
-
-    }
-
-    private void setupHandler(FullyQualifiedNameInsertHandler insertHandler) {
-        PhpCompletionUtil.PhpFullyQualifiedNameTextFieldCompletionProvider completionProvider =
-                new FullyQualifiedNameTextFieldCompletionProvider(project, insertHandler);
-        appNamespaceTextField = new TextFieldWithCompletion(
-                project,
-                completionProvider,
-                "",
-                true,
-                true,
-                true,
-                true
-        );
-    }
 }
