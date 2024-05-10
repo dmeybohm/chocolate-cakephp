@@ -41,7 +41,7 @@ public class PluginForm implements SearchableConfigurable {
 
     @Override
     public String getDisplayName() {
-        return "CakePHP 3 Plugins";
+        return "Plugins";
     }
 
     @Nullable

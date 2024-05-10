@@ -34,7 +34,7 @@
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
 
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="CakePHP 3+ Plugins"
+                             displayName="Plugins"
                              nonDefaultProject="false"
                              id="chocolatecakephp.PluginForm"
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
