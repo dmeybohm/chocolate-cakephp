@@ -11,6 +11,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
+import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+
 public class DataViewsForm implements SearchableConfigurable {
 
     private TableView<String> tableView;
@@ -95,20 +97,21 @@ public class DataViewsForm implements SearchableConfigurable {
     public boolean isModified() {
         Settings settings = Settings.getInstance(project);
         Settings newSettings = Settings.fromSettings(settings);
-        copySettingsFromUI(newSettings);
+        applyToSettings(newSettings);
         return !newSettings.equals(settings);
     }
 
-    private void copySettingsFromUI(@NotNull Settings settings) {
-        SettingsState state = settings.getState();
-        state.setDataViewExtensions(dataViewTableModel.getViewFiles());
-        settings.loadState(state);
+    private void applyToSettings(@NotNull Settings settings) {
+        SettingsState origState = settings.getState();
+        SettingsState newState = copySettingsState(origState);
+        newState.setDataViewExtensions(dataViewTableModel.getViewFiles());
+        settings.loadState(newState);
     }
 
     @Override
     public void apply() {
         Settings settings = Settings.getInstance(project);
-        copySettingsFromUI(settings);
+        applyToSettings(settings);
     }
 
 }

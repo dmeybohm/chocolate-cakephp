@@ -18,6 +18,9 @@ data class SettingsState(
     var dataViewExtensions: List<String> = arrayListOf("json", "xml")
 )
 
+// For accessibility from Java, which doesn't support copy() with default args:
+fun copySettingsState(state: SettingsState): SettingsState = state.copy()
+
 @Service
 @State(
     name = "ChocolateCakePHPSettings",
