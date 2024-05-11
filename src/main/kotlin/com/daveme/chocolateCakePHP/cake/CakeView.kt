@@ -5,7 +5,6 @@ import com.daveme.chocolateCakePHP.pathRelativeToProject
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
-import io.ktor.util.*
 
 fun viewFilesFromControllerAction(
     project: Project,
@@ -63,7 +62,7 @@ fun allViewPathsFromController(
     )
     val dataViewPaths = settings.dataViewExtensions.map {
         DataView(
-            label = it.toUpperCasePreservingASCIIRules(),
+            label = it.uppercase(),
             fullPath = "${defaultViewPath}${it}/${viewFilename}"
         )
     }
