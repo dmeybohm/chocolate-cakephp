@@ -91,33 +91,29 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             actionNames = actionNames
         )
 
+        val allViewPaths = allViewPathsFromController(
+            relatedLookupInfo.project,
+            relatedLookupInfo.controllerName,
+            templatesDirectory,
+            settings,
+            actionNames
+        )
+
         return if (files.isEmpty()) {
-            val defaultViewFile = defaultViewFileFromController(
-                relatedLookupInfo.project,
-                relatedLookupInfo.controllerName,
-                templatesDirectory,
-                settings,
-                actionNames
-            )
             val emptyTargets = listOf<PsiFile>()
 
             NavigationGutterIconBuilder
                 .create(AllIcons.Actions.AddFile)
                 .setTargets(emptyTargets)
                 .setTooltipText("Click to create view file")
-                .createLineMarkerInfo(element, NavigateToViewPopupHandler(defaultViewFile, emptyTargets))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, emptyTargets))
         } else {
-            val defaultViewPath = defaultViewPathFromController(
-                relatedLookupInfo.project,
-                relatedLookupInfo.controllerName,
-                templatesDirectory
-            )
             val filesList = files.toList()
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
                 .setTooltipText("Click to navigate to view file, right-click to create")
                 .setTargets(filesList)
-                .createLineMarkerInfo(element, NavigateToViewPopupHandler(defaultViewPath, filesList))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList))
         }
     }
 

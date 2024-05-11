@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.daveme.chocolateCakePHP.controller.NavigateToViewPopupHandler
+import com.daveme.chocolateCakePHP.controller.makeCreateViewActionPopup
 import com.intellij.codeInsight.navigation.NavigationUtil
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -88,7 +88,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         when (files.size) {
             0 -> {
-                val defaultViewFile = defaultViewFileFromController(
+                val allViewPaths = allViewPathsFromController(
                     project,
                     controllerName,
                     templateDirectory,
@@ -100,7 +100,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
                     val popup = JBPopupFactory.getInstance()
                         .createActionGroupPopup(
                             "Create View File",
-                            NavigateToViewPopupHandler.CreateViewFileActionGroup(defaultViewFile),
+                            makeCreateViewActionPopup(allViewPaths),
                             context,
                             JBPopupFactory.ActionSelectionAid.NUMBERING,
                             true,
