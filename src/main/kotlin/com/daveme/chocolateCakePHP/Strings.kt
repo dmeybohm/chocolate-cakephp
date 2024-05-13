@@ -49,6 +49,12 @@ fun String.camelCaseToUnderscore(): String {
         result.lowercase()
 }
 
+fun String.conditionalCamelCaseToUnderscore(convert: Boolean): String =
+    if (convert)
+        this.camelCaseToUnderscore()
+    else
+        this
+
 fun String.latinCapitalize(): String {
     return replaceFirstChar {
         if (it.isLowerCase())

@@ -18,12 +18,20 @@ import java.awt.event.MouseEvent
 fun makeCreateViewActionPopup(allViewPaths: AllViewPaths): DefaultActionGroup {
     val defaultActionGroup = DefaultActionGroup()
     defaultActionGroup.add(CreateViewFileAction(
-        allViewPaths.defaultViewPath,
+        title = "Create ${allViewPaths.defaultViewPath.label}",
+        destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = false
     ))
+    allViewPaths.otherViewPaths.map { otherViewPath ->
+        defaultActionGroup.add(CreateViewFileAction(
+            title = "Create ${otherViewPath.label}",
+            destinationPath = otherViewPath.fullPath,
+            allowEdit = false
+        ))
+    }
     defaultActionGroup.add(CreateViewFileAction(
         title = "Create Custom View File",
-        destinationPath = allViewPaths.defaultViewPath,
+        destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = true
     ))
     defaultActionGroup.addSeparator()

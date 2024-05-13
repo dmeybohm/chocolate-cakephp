@@ -97,7 +97,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             templatesDirectory,
             settings,
             actionNames
-        )
+        ) ?: return null
 
         return if (files.isEmpty()) {
             val emptyTargets = listOf<PsiFile>()

@@ -22,14 +22,14 @@ fun viewFilesFromControllerAction(
                 settings,
                 templatesDirectory,
                 controllerName,
-                controllerAction
+                controllerAction.path
             )
         ) + fileExtensions.mapNotNull { fileExtension ->
             templatePathToVirtualFile(
                 settings,
                 templatesDirectory,
                 controllerName,
-                "${fileExtension}/${controllerAction}"
+                "${controllerAction.pathPrefix}${fileExtension}/${controllerAction.name}"
             )
         }
     }.flatMap { it }
@@ -37,14 +37,46 @@ fun viewFilesFromControllerAction(
     return virtualFilesToPsiFiles(project, files)
 }
 
-data class DataView(
+data class ViewPath(
     val label: String,
+    val templatePath: String,
+    val prefix: String,
+    val relativePath: String,
+) {
     val fullPath: String
-)
+        get() = "${templatePath}/${prefix}${relativePath}"
+}
+
+fun viewPathFromControllerNameAndActionName(
+    templatesDir: TemplatesDir,
+    settings: Settings,
+    templatePath: String,
+    label: String,
+    controllerName: String,
+    actionName: ActionName,
+    convertCase: Boolean,
+): ViewPath {
+    if (actionName.isAbsolute) {
+        return ViewPath(
+            templatePath = templatePath,
+            prefix = "",
+            label = label,
+            relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
+        )
+    } else {
+        return ViewPath(
+            templatePath = templatePath,
+            prefix = "${controllerName}/",
+            label = label,
+            relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
+        )
+    }
+}
 
 data class AllViewPaths(
-    val defaultViewPath: String,
-    val dataViewPaths: List<DataView>
+    val defaultViewPath: ViewPath,
+    val otherViewPaths: List<ViewPath>,
+    val dataViewPaths: List<ViewPath>,
 )
 
 fun allViewPathsFromController(
@@ -53,30 +85,46 @@ fun allViewPathsFromController(
     templatesDirectory: TemplatesDir,
     settings: Settings,
     actionNames: ActionNames,
-): AllViewPaths {
-    val defaultViewPath = defaultViewPathFromController(project, controllerName, templatesDirectory)
-    val viewFilename = actionNameToViewFilename(
-        templatesDirectory,
-        settings,
-        actionNames.defaultActionName
-    )
+): AllViewPaths? {
+    val templatePath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
+        ?: return null
     val dataViewPaths = settings.dataViewExtensions.map {
-        DataView(
+        val actionName = ActionName(
+            pathPrefix = "/${controllerName}/${it}/",
+            name = actionNames.defaultActionName.name,
+        )
+        viewPathFromControllerNameAndActionName(
+            templatesDir = templatesDirectory,
+            settings = settings,
+            templatePath = templatePath,
             label = it.uppercase(),
-            fullPath = "${defaultViewPath}${it}/${viewFilename}"
+            controllerName = controllerName,
+            actionName = actionName,
+            convertCase = true
+        )
+    }
+    val otherViewPaths = actionNames.otherActionNames.map { actionName ->
+        viewPathFromControllerNameAndActionName(
+            templatesDir = templatesDirectory,
+            settings = settings,
+            templatePath = templatePath,
+            label = actionName.path,
+            controllerName = controllerName,
+            actionName = actionName,
+            convertCase = false
         )
     }
     return AllViewPaths(
-        defaultViewPath = "${defaultViewPath}${viewFilename}",
+        defaultViewPath = viewPathFromControllerNameAndActionName(
+            templatesDir = templatesDirectory,
+            settings = settings,
+            templatePath = templatePath,
+            label = "Default",
+            controllerName = controllerName,
+            actionName = actionNames.defaultActionName,
+            convertCase = true
+        ),
+        otherViewPaths = otherViewPaths,
         dataViewPaths = dataViewPaths
     )
-}
-
-fun defaultViewPathFromController(
-    project: Project,
-    controllerName: String,
-    templatesDirectory: TemplatesDir,
-): String {
-    val templateFullPath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
-    return "${templateFullPath}/${controllerName}/"
 }

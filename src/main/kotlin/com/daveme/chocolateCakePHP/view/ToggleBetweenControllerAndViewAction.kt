@@ -94,7 +94,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
                     templateDirectory,
                     settings,
                     actionNames
-                )
+                ) ?: return
                 val getContext = DataManager.getInstance().dataContextFromFocusAsync
                 getContext.then { context ->
                     val popup = JBPopupFactory.getInstance()
@@ -151,13 +151,13 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         settings: Settings,
         templatesDir: TemplatesDir,
         potentialControllerName: String,
-        viewFileName: String
+        viewFilename: String
     ) {
         val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
         val phpIndex = PhpIndex.getInstance(project)
         val controllerClasses = phpIndex.phpClassesFromType(controllerType)
-        val actionNames = viewFileNameToActionName(viewFileName, settings, templatesDir)
-        val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName)
+        val actionNames = viewFilenameToActionName(viewFilename, settings, templatesDir)
+        val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName.name)
 
         if (method == null || !method.canNavigate()) {
             val topSrcDir = topSourceDirectoryFromTemplatesDirectory(templatesDir, project, settings)
