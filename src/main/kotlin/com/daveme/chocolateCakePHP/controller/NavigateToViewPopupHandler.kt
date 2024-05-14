@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.cake.AllViewPaths
+import com.daveme.chocolateCakePHP.mneumonicEscape
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
@@ -21,17 +22,17 @@ fun makeCreateViewActionPopup(
 ): DefaultActionGroup {
     val defaultActionGroup = DefaultActionGroup()
     val defaultOptionTitle = if (useAltLabel)
-        "Create ${allViewPaths.defaultViewPath.altLabel}"
+        "Create ${allViewPaths.defaultViewPath.altLabel}".replace("_", "__")
     else
         "Create ${allViewPaths.defaultViewPath.label}"
     defaultActionGroup.add(CreateViewFileAction(
-        title = defaultOptionTitle,
+        title = defaultOptionTitle.mneumonicEscape(),
         destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = false
     ))
     allViewPaths.otherViewPaths.map { otherViewPath ->
         defaultActionGroup.add(CreateViewFileAction(
-            title = "Create ${otherViewPath.label}",
+            title = "Create ${otherViewPath.label}".mneumonicEscape(),
             destinationPath = otherViewPath.fullPath,
             allowEdit = false
         ))
@@ -44,7 +45,7 @@ fun makeCreateViewActionPopup(
     defaultActionGroup.addSeparator()
     allViewPaths.dataViewPaths.map { dataViewPath ->
         defaultActionGroup.add(CreateViewFileAction(
-            title = "Create ${dataViewPath.label} View File",
+            title = "Create ${dataViewPath.label} View File".mneumonicEscape(),
             destinationPath = dataViewPath.fullPath,
             allowEdit = false
         ))
