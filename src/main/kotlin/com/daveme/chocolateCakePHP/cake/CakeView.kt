@@ -49,9 +49,8 @@ data class ViewPath(
 }
 
 fun viewPathFromControllerNameAndActionName(
-    templatesDir: TemplatesDir,
+    templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
-    templatePath: String,
     label: String,
     controllerName: String,
     actionName: ActionName,
@@ -60,19 +59,19 @@ fun viewPathFromControllerNameAndActionName(
 ): ViewPath {
     if (actionName.isAbsolute) {
         return ViewPath(
-            templatePath = templatePath,
+            templatePath = templatesDirWithPath.templatesPath,
             prefix = "",
             label = label,
             altLabel = altLabel,
-            relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
+            relativePath = actionName.getViewFilename(templatesDirWithPath.templatesDir, settings, convertCase)
         )
     } else {
         return ViewPath(
-            templatePath = templatePath,
+            templatePath = templatesDirWithPath.templatesPath,
             prefix = "${controllerName}/",
             label = label,
             altLabel = altLabel,
-            relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
+            relativePath = actionName.getViewFilename(templatesDirWithPath.templatesDir, settings, convertCase)
         )
     }
 }
@@ -83,15 +82,24 @@ data class AllViewPaths(
     val dataViewPaths: List<ViewPath>,
 )
 
+data class TemplatesDirWithPath(
+    val templatesDir: TemplatesDir,
+    val templatesPath: String
+)
+
+fun templatesDirWithPath(project: Project, templatesDir: TemplatesDir): TemplatesDirWithPath? {
+    val templatePath = pathRelativeToProject(project, templatesDir.psiDirectory)
+        ?: return null
+
+    return TemplatesDirWithPath(templatesDir, templatePath)
+}
+
 fun allViewPathsFromController(
-    project: Project,
     controllerName: String,
-    templatesDirectory: TemplatesDir,
+    templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
     actionNames: ActionNames,
-): AllViewPaths? {
-    val templatePath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
-        ?: return null
+): AllViewPaths {
     val dataViewPaths = settings.dataViewExtensions.map {
         val dataViewPrefix = if (actionNames.defaultActionName.isAbsolute)
             actionNames.defaultActionName.pathPrefix
@@ -102,9 +110,8 @@ fun allViewPathsFromController(
             name = actionNames.defaultActionName.name,
         )
         viewPathFromControllerNameAndActionName(
-            templatesDir = templatesDirectory,
+            templatesDirWithPath = templatesDirWithPath,
             settings = settings,
-            templatePath = templatePath,
             label = it.uppercase(),
             controllerName = controllerName,
             actionName = actionName,
@@ -113,9 +120,8 @@ fun allViewPathsFromController(
     }
     val otherViewPaths = actionNames.otherActionNames.map { actionName ->
         viewPathFromControllerNameAndActionName(
-            templatesDir = templatesDirectory,
+            templatesDirWithPath = templatesDirWithPath,
             settings = settings,
-            templatePath = templatePath,
             label = actionName.path,
             controllerName = controllerName,
             actionName = actionName,
@@ -124,9 +130,8 @@ fun allViewPathsFromController(
     }
     return AllViewPaths(
         defaultViewPath = viewPathFromControllerNameAndActionName(
-            templatesDir = templatesDirectory,
+            templatesDirWithPath = templatesDirWithPath,
             settings = settings,
-            templatePath = templatePath,
             label = "Default",
             altLabel = actionNames.defaultActionName.path,
             controllerName = controllerName,

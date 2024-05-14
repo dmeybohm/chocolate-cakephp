@@ -73,14 +73,14 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, psiFile)
             ?: return
-        val templateDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return
         val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
             ?: return
 
         val files = viewFilesFromControllerAction(
             project = project,
-            templatesDirectory = templateDirectory,
+            templatesDirectory = templatesDirectory,
             settings = settings,
             controllerName = controllerName,
             actionNames = actionNames
@@ -88,13 +88,14 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         when (files.size) {
             0 -> {
+                val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
+                    ?: return
                 val allViewPaths = allViewPathsFromController(
-                    project,
                     controllerName,
-                    templateDirectory,
+                    templatesDirWithPath,
                     settings,
                     actionNames
-                ) ?: return
+                )
                 val getContext = DataManager.getInstance().dataContextFromFocusAsync
                 getContext.then { context ->
                     val popup = JBPopupFactory.getInstance()

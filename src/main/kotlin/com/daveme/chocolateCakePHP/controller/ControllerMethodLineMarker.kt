@@ -93,13 +93,14 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             actionNames = actionNames
         )
 
+        val templatesDirWithPath = templatesDirWithPath(relatedLookupInfo.project, templatesDirectory)
+            ?: return null
         val allViewPaths = allViewPathsFromController(
-            relatedLookupInfo.project,
             relatedLookupInfo.controllerName,
-            templatesDirectory,
+            templatesDirWithPath,
             settings,
             actionNames
-        ) ?: return null
+        )
 
         return if (files.isEmpty()) {
             val emptyTargets = listOf<PsiFile>()
