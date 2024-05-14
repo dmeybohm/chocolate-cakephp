@@ -42,6 +42,7 @@ data class ViewPath(
     val templatePath: String,
     val prefix: String,
     val relativePath: String,
+    val altLabel: String = "",
 ) {
     val fullPath: String
         get() = "${templatePath}/${prefix}${relativePath}"
@@ -55,12 +56,14 @@ fun viewPathFromControllerNameAndActionName(
     controllerName: String,
     actionName: ActionName,
     convertCase: Boolean,
+    altLabel: String = ""
 ): ViewPath {
     if (actionName.isAbsolute) {
         return ViewPath(
             templatePath = templatePath,
             prefix = "",
             label = label,
+            altLabel = altLabel,
             relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
         )
     } else {
@@ -68,6 +71,7 @@ fun viewPathFromControllerNameAndActionName(
             templatePath = templatePath,
             prefix = "${controllerName}/",
             label = label,
+            altLabel = altLabel,
             relativePath = actionName.getViewFilename(templatesDir, settings, convertCase)
         )
     }
@@ -89,8 +93,12 @@ fun allViewPathsFromController(
     val templatePath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
         ?: return null
     val dataViewPaths = settings.dataViewExtensions.map {
+        val dataViewPrefix = if (actionNames.defaultActionName.isAbsolute)
+            actionNames.defaultActionName.pathPrefix
+        else
+            "/${controllerName}/"
         val actionName = ActionName(
-            pathPrefix = "/${controllerName}/${it}/",
+            pathPrefix = "${dataViewPrefix}${it}/",
             name = actionNames.defaultActionName.name,
         )
         viewPathFromControllerNameAndActionName(
@@ -120,6 +128,7 @@ fun allViewPathsFromController(
             settings = settings,
             templatePath = templatePath,
             label = "Default",
+            altLabel = actionNames.defaultActionName.path,
             controllerName = controllerName,
             actionName = actionNames.defaultActionName,
             convertCase = true

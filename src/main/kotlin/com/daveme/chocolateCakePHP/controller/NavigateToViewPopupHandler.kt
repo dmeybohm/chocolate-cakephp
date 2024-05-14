@@ -15,10 +15,17 @@ import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
 
-fun makeCreateViewActionPopup(allViewPaths: AllViewPaths): DefaultActionGroup {
+fun makeCreateViewActionPopup(
+    allViewPaths: AllViewPaths,
+    useAltLabel: Boolean = false,
+): DefaultActionGroup {
     val defaultActionGroup = DefaultActionGroup()
+    val defaultOptionTitle = if (useAltLabel)
+        "Create ${allViewPaths.defaultViewPath.altLabel}"
+    else
+        "Create ${allViewPaths.defaultViewPath.label}"
     defaultActionGroup.add(CreateViewFileAction(
-        title = "Create ${allViewPaths.defaultViewPath.label}",
+        title = defaultOptionTitle,
         destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = false
     ))
@@ -47,7 +54,8 @@ fun makeCreateViewActionPopup(allViewPaths: AllViewPaths): DefaultActionGroup {
 
 class NavigateToViewPopupHandler(
     val allViewPaths: AllViewPaths,
-    val targets: List<PsiFile>
+    val targets: List<PsiFile>,
+    val useAltLabel: Boolean = false,
 ) : GutterIconNavigationHandler<PsiElement> {
 
     override fun navigate(e: MouseEvent, elt: PsiElement?) {
@@ -62,7 +70,7 @@ class NavigateToViewPopupHandler(
             val popup = JBPopupFactory.getInstance()
                 .createActionGroupPopup(
                     "Create View File",
-                    makeCreateViewActionPopup(allViewPaths),
+                    makeCreateViewActionPopup(allViewPaths, useAltLabel),
                     context,
                     JBPopupFactory.ActionSelectionAid.NUMBERING,
                     true,

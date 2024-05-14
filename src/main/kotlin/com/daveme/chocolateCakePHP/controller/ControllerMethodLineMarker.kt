@@ -47,7 +47,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     //
     private fun markerForSingleRenderCallInAction(
         relatedLookupInfo: RelatedLookupInfo,
-        element: PsiElement
+        element: PsiElement,
     ): LineMarkerInfo<*>? {
         if (element.firstChild != null) {
             return null
@@ -63,14 +63,16 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         return relatedItemLineMarkerInfo(
             actionNames,
             relatedLookupInfo,
-            element
+            element,
+            useAltLabel = true
         )
     }
 
     private fun relatedItemLineMarkerInfo(
         actionNames: ActionNames,
         relatedLookupInfo: RelatedLookupInfo,
-        element: PsiElement
+        element: PsiElement,
+        useAltLabel: Boolean = false
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
         val topSourceDirectory = topSourceDirectoryFromControllerFile(
@@ -106,20 +108,20 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 .create(AllIcons.Actions.AddFile)
                 .setTargets(emptyTargets)
                 .setTooltipText("Click to create view file")
-                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, emptyTargets))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, emptyTargets, useAltLabel))
         } else {
             val filesList = files.toList()
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
                 .setTooltipText("Click to navigate to view file, right-click to create")
                 .setTargets(filesList)
-                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList))
+                .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList, useAltLabel))
         }
     }
 
     private fun addLineMarkerUnique(
         collection: MutableCollection<in LineMarkerInfo<*>>,
-        newMarker: LineMarkerInfo<*>?
+        newMarker: LineMarkerInfo<*>?,
     ) {
         if (newMarker == null) {
             return
