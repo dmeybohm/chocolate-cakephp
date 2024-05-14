@@ -22,7 +22,7 @@ fun makeCreateViewActionPopup(
 ): DefaultActionGroup {
     val defaultActionGroup = DefaultActionGroup()
     val defaultOptionTitle = if (useAltLabel)
-        "Create ${allViewPaths.defaultViewPath.altLabel}".replace("_", "__")
+        "Create ${allViewPaths.defaultViewPath.altLabel}"
     else
         "Create ${allViewPaths.defaultViewPath.label}"
     defaultActionGroup.add(CreateViewFileAction(

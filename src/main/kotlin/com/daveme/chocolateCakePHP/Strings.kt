@@ -74,4 +74,4 @@ fun String.underscoreToCamelCase(): String {
 }
 
 fun String.mneumonicEscape(): String =
-    this.replace("_", "__")
+    this.replace("_", "____")
