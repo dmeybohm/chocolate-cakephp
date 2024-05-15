@@ -3,7 +3,10 @@ package com.daveme.chocolateCakePHP.controller
 import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.createDirectoriesIfMissing
 import com.daveme.chocolateCakePHP.cake.viewFilePathInfoFromPath
+import com.daveme.chocolateCakePHP.mneumonicAllEscape
+import com.daveme.chocolateCakePHP.mneumonicFirstEscape
 import com.intellij.ide.fileTemplates.FileTemplateManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -21,14 +24,26 @@ import com.intellij.psi.codeStyle.CodeStyleManager
 
 class CreateViewFileAction(
     val destinationPath: String = "",
-    val useCustomPath: Boolean = false,
-) : AnAction(CakeIcons.LOGO) {
+    title: String = "Create Default View File",
+    val allowEdit: Boolean = false,
+) : AnAction(
+    title.mneumonicFirstEscape(),
+    "Create view file",
+    CakeIcons.LOGO
+) {
+
+    private val _title = title.mneumonicFirstEscape()
+    val title: String get() = _title
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
+    }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val baseDir = project.guessProjectDir() ?: return
 
-        val filePath = if (useCustomPath) {
+        val filePath = if (allowEdit) {
             val userInput = Messages.showInputDialog(
                 project,
                 "View file path",
@@ -103,14 +118,11 @@ class CreateViewFileAction(
     override fun update(event: AnActionEvent) {
         val project = event.getData(CommonDataKeys.PROJECT)
         if (project == null || destinationPath == "") {
-            event.presentation.isEnabled = false
+            event.presentation.isEnabledAndVisible = false
             return
         }
         event.presentation.setEnabledAndVisible(true)
-        event.presentation.text = if (useCustomPath)
-            "Create Custom View File"
-        else
-            "Create Default View File"
+        event.presentation.text = title.mneumonicAllEscape()
     }
 
 }

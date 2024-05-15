@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.daveme.chocolateCakePHP.controller.NavigateToViewPopupHandler
+import com.daveme.chocolateCakePHP.controller.makeCreateViewActionPopup
 import com.intellij.codeInsight.navigation.NavigationUtil
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -73,14 +73,14 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, psiFile)
             ?: return
-        val templateDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return
         val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
             ?: return
 
         val files = viewFilesFromControllerAction(
             project = project,
-            templatesDirectory = templateDirectory,
+            templatesDirectory = templatesDirectory,
             settings = settings,
             controllerName = controllerName,
             actionNames = actionNames
@@ -88,10 +88,11 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         when (files.size) {
             0 -> {
-                val defaultViewFile = defaultViewFileFromController(
-                    project,
+                val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
+                    ?: return
+                val allViewPaths = allViewPathsFromController(
                     controllerName,
-                    templateDirectory,
+                    templatesDirWithPath,
                     settings,
                     actionNames
                 )
@@ -100,7 +101,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
                     val popup = JBPopupFactory.getInstance()
                         .createActionGroupPopup(
                             "Create View File",
-                            NavigateToViewPopupHandler.CreateViewFileActionGroup(defaultViewFile),
+                            makeCreateViewActionPopup(allViewPaths),
                             context,
                             JBPopupFactory.ActionSelectionAid.NUMBERING,
                             true,
@@ -151,13 +152,13 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         settings: Settings,
         templatesDir: TemplatesDir,
         potentialControllerName: String,
-        viewFileName: String
+        viewFilename: String
     ) {
         val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
         val phpIndex = PhpIndex.getInstance(project)
         val controllerClasses = phpIndex.phpClassesFromType(controllerType)
-        val actionNames = viewFileNameToActionName(viewFileName, settings, templatesDir)
-        val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName)
+        val actionNames = viewFilenameToActionName(viewFilename, settings, templatesDir)
+        val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName.name)
 
         if (method == null || !method.canNavigate()) {
             val topSrcDir = topSourceDirectoryFromTemplatesDirectory(templatesDir, project, settings)

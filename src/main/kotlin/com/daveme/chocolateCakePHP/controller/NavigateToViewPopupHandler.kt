@@ -1,13 +1,12 @@
 package com.daveme.chocolateCakePHP.controller
 
+import com.daveme.chocolateCakePHP.cake.AllViewPaths
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.codeInsight.navigation.NavigationUtil
 import com.intellij.ide.DataManager
-import com.intellij.openapi.actionSystem.ActionGroup
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -16,19 +15,48 @@ import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
 
-class NavigateToViewPopupHandler(
-    val destinationPath: String,
-    val targets: List<PsiFile>
-) : GutterIconNavigationHandler<PsiElement> {
-
-    class CreateViewFileActionGroup(val destinationPath: String) : ActionGroup() {
-        override fun getChildren(e: AnActionEvent?): Array<AnAction> {
-            return arrayOf(
-                CreateViewFileAction(destinationPath, useCustomPath = false),
-                CreateViewFileAction(destinationPath, useCustomPath = true)
-            )
-        }
+fun makeCreateViewActionPopup(
+    allViewPaths: AllViewPaths,
+    useAltLabel: Boolean = false,
+): DefaultActionGroup {
+    val defaultActionGroup = DefaultActionGroup()
+    val defaultOptionTitle = if (useAltLabel)
+        "Create ${allViewPaths.defaultViewPath.altLabel}"
+    else
+        "Create ${allViewPaths.defaultViewPath.label}"
+    defaultActionGroup.add(CreateViewFileAction(
+        title = defaultOptionTitle,
+        destinationPath = allViewPaths.defaultViewPath.fullPath,
+        allowEdit = false
+    ))
+    allViewPaths.otherViewPaths.map { otherViewPath ->
+        defaultActionGroup.add(CreateViewFileAction(
+            title = "Create ${otherViewPath.label}",
+            destinationPath = otherViewPath.fullPath,
+            allowEdit = false
+        ))
     }
+    defaultActionGroup.addSeparator()
+    defaultActionGroup.add(CreateViewFileAction(
+        title = "Create Custom View File",
+        destinationPath = allViewPaths.defaultViewPath.fullPath,
+        allowEdit = true
+    ))
+    allViewPaths.dataViewPaths.map { dataViewPath ->
+        defaultActionGroup.add(CreateViewFileAction(
+            title = "Create ${dataViewPath.label} View File",
+            destinationPath = dataViewPath.fullPath,
+            allowEdit = false
+        ))
+    }
+    return defaultActionGroup
+}
+
+class NavigateToViewPopupHandler(
+    val allViewPaths: AllViewPaths,
+    val targets: List<PsiFile>,
+    val useAltLabel: Boolean = false,
+) : GutterIconNavigationHandler<PsiElement> {
 
     override fun navigate(e: MouseEvent, elt: PsiElement?) {
         val context = DataManager.getInstance().getDataContext(e.component)
@@ -42,7 +70,7 @@ class NavigateToViewPopupHandler(
             val popup = JBPopupFactory.getInstance()
                 .createActionGroupPopup(
                     "Create View File",
-                    CreateViewFileActionGroup(destinationPath),
+                    makeCreateViewActionPopup(allViewPaths, useAltLabel),
                     context,
                     JBPopupFactory.ActionSelectionAid.NUMBERING,
                     true,

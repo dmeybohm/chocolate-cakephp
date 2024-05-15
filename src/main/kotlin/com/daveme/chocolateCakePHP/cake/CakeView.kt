@@ -22,14 +22,14 @@ fun viewFilesFromControllerAction(
                 settings,
                 templatesDirectory,
                 controllerName,
-                controllerAction
+                controllerAction.path
             )
         ) + fileExtensions.mapNotNull { fileExtension ->
             templatePathToVirtualFile(
                 settings,
                 templatesDirectory,
                 controllerName,
-                "${fileExtension}/${controllerAction}"
+                "${controllerAction.pathPrefix}${fileExtension}/${controllerAction.name}"
             )
         }
     }.flatMap { it }
@@ -37,27 +37,108 @@ fun viewFilesFromControllerAction(
     return virtualFilesToPsiFiles(project, files)
 }
 
-fun defaultViewFileFromController(
-    project: Project,
-    controllerName: String,
-    templatesDirectory: TemplatesDir,
-    settings: Settings,
-    actionNames: ActionNames,
-): String {
-    val defaultViewPath = defaultViewPathFromController(project, controllerName, templatesDirectory)
-    val viewFilename = actionNameToViewFilename(
-        templatesDirectory,
-        settings,
-        actionNames.defaultActionName
-    )
-    return "${defaultViewPath}${viewFilename}"
+data class ViewPath(
+    val label: String,
+    val templatePath: String,
+    val prefix: String,
+    val relativePath: String,
+    val altLabel: String = "",
+) {
+    val fullPath: String
+        get() = "${templatePath}/${prefix}${relativePath}"
 }
 
-fun defaultViewPathFromController(
-    project: Project,
+fun viewPathFromControllerNameAndActionName(
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    label: String,
     controllerName: String,
-    templatesDirectory: TemplatesDir,
-): String {
-    val templateFullPath = pathRelativeToProject(project, templatesDirectory.psiDirectory)
-    return "${templateFullPath}/${controllerName}/"
+    actionName: ActionName,
+    convertCase: Boolean,
+    altLabel: String = ""
+): ViewPath {
+    if (actionName.isAbsolute) {
+        return ViewPath(
+            templatePath = templatesDirWithPath.templatesPath,
+            prefix = "",
+            label = label,
+            altLabel = altLabel,
+            relativePath = actionName.getViewFilename(templatesDirWithPath.templatesDir, settings, convertCase)
+        )
+    } else {
+        return ViewPath(
+            templatePath = templatesDirWithPath.templatesPath,
+            prefix = "${controllerName}/",
+            label = label,
+            altLabel = altLabel,
+            relativePath = actionName.getViewFilename(templatesDirWithPath.templatesDir, settings, convertCase)
+        )
+    }
+}
+
+data class AllViewPaths(
+    val defaultViewPath: ViewPath,
+    val otherViewPaths: List<ViewPath>,
+    val dataViewPaths: List<ViewPath>,
+)
+
+data class TemplatesDirWithPath(
+    val templatesDir: TemplatesDir,
+    val templatesPath: String
+)
+
+fun templatesDirWithPath(project: Project, templatesDir: TemplatesDir): TemplatesDirWithPath? {
+    val templatePath = pathRelativeToProject(project, templatesDir.psiDirectory)
+        ?: return null
+
+    return TemplatesDirWithPath(templatesDir, templatePath)
+}
+
+fun allViewPathsFromController(
+    controllerName: String,
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    actionNames: ActionNames,
+): AllViewPaths {
+    val dataViewPaths = settings.dataViewExtensions.map {
+        val dataViewPrefix = if (actionNames.defaultActionName.isAbsolute)
+            actionNames.defaultActionName.pathPrefix
+        else
+            "/${controllerName}/"
+        val actionName = ActionName(
+            pathPrefix = "${dataViewPrefix}${it}/",
+            name = actionNames.defaultActionName.name,
+        )
+        viewPathFromControllerNameAndActionName(
+            templatesDirWithPath = templatesDirWithPath,
+            settings = settings,
+            label = it.uppercase(),
+            controllerName = controllerName,
+            actionName = actionName,
+            convertCase = true
+        )
+    }
+    val otherViewPaths = actionNames.otherActionNames.map { actionName ->
+        viewPathFromControllerNameAndActionName(
+            templatesDirWithPath = templatesDirWithPath,
+            settings = settings,
+            label = actionName.path,
+            controllerName = controllerName,
+            actionName = actionName,
+            convertCase = false
+        )
+    }
+    return AllViewPaths(
+        defaultViewPath = viewPathFromControllerNameAndActionName(
+            templatesDirWithPath = templatesDirWithPath,
+            settings = settings,
+            label = "Default",
+            altLabel = actionNames.defaultActionName.path,
+            controllerName = controllerName,
+            actionName = actionNames.defaultActionName,
+            convertCase = true
+        ),
+        otherViewPaths = otherViewPaths,
+        dataViewPaths = dataViewPaths
+    )
 }
