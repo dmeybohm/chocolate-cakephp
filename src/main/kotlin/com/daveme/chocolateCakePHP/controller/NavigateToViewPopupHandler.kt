@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.cake.AllViewPaths
-import com.daveme.chocolateCakePHP.mneumonicEscape
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
@@ -26,26 +25,26 @@ fun makeCreateViewActionPopup(
     else
         "Create ${allViewPaths.defaultViewPath.label}"
     defaultActionGroup.add(CreateViewFileAction(
-        title = defaultOptionTitle.mneumonicEscape(),
+        title = defaultOptionTitle,
         destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = false
     ))
     allViewPaths.otherViewPaths.map { otherViewPath ->
         defaultActionGroup.add(CreateViewFileAction(
-            title = "Create ${otherViewPath.label}".mneumonicEscape(),
+            title = "Create ${otherViewPath.label}",
             destinationPath = otherViewPath.fullPath,
             allowEdit = false
         ))
     }
+    defaultActionGroup.addSeparator()
     defaultActionGroup.add(CreateViewFileAction(
         title = "Create Custom View File",
         destinationPath = allViewPaths.defaultViewPath.fullPath,
         allowEdit = true
     ))
-    defaultActionGroup.addSeparator()
     allViewPaths.dataViewPaths.map { dataViewPath ->
         defaultActionGroup.add(CreateViewFileAction(
-            title = "Create ${dataViewPath.label} View File".mneumonicEscape(),
+            title = "Create ${dataViewPath.label} View File",
             destinationPath = dataViewPath.fullPath,
             allowEdit = false
         ))
