@@ -3,37 +3,16 @@ package com.daveme.chocolateCakePHP.model
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.patterns.PatternCondition
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.php.lang.psi.elements.*
+import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 class CustomFinderCompletionContributor : CompletionContributor() {
     init {
-        val methodMatcher = object : PatternCondition<MethodReference>("CustomFinderMethodCondition") {
-            override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
-                if (!"find".equals(methodReference.name, ignoreCase = true)) {
-                    return false
-                }
-                val settings =
-                    Settings.getInstance(methodReference.project)
-                if (!settings.cake3Enabled) {
-                    return false
-                }
-                val classRefType = methodReference.classReference?.type ?: return false
-                val type = if (classRefType.isComplete)
-                    classRefType
-                else {
-                    val phpIndex = PhpIndex.getInstance(methodReference.project)
-                    phpIndex.completeType(methodReference.project, classRefType, null)
-                }
-                return type.types.any { it.isAnyTableClass() || it.isQueryObject() }
-            }
-        }
-
         val completionProvider = CustomFinderCompletionProvider()
 
         // When typing $table->find(' or $this->fetchTable("Movies"->find(', with a quote
@@ -44,10 +23,11 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                         psiElement(ParameterList::class.java)
                             .withParent(
                                 psiElement(MethodReference::class.java)
-                                    .with(methodMatcher)
+                                    .with(FindMethodPattern)
                             )
                     )
             )
+
         extend(
             CompletionType.BASIC,
             stringLiteralPattern,
@@ -80,11 +60,11 @@ class CustomFinderCompletionContributor : CompletionContributor() {
             val project = methodReference.project
             val phpIndex = PhpIndex.getInstance(project)
             val classReference = methodReference.classReference ?: return
-            val type = if (classReference.type.isComplete)
-                classReference.type
-            else
-                phpIndex.completeType(methodReference.project, classReference.type, null)
 
+            val type = classReference.type.lookupCompleteType(project, phpIndex, null)
+            if (!hasRequiredType(type)) {
+                return
+            }
             val tableClasses = type.types.filter {
                 it.startsWith("\\") && it.isAnyTableClass()
             }
@@ -124,6 +104,13 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 }
                 .lastOrNull()
 
+        }
+
+        private fun hasRequiredType(type: PhpType): Boolean {
+            return type.types.any {
+                it.isAnyTableClass() ||
+                        it.isQueryObject()
+            }
         }
     }
 }
