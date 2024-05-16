@@ -81,7 +81,7 @@ class CustomFinderTest : Cake5BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
-        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) });
+        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) })
         assertEquals(1, allInstances)
     }
 
@@ -208,8 +208,6 @@ class CustomFinderTest : Cake5BaseTestCase() {
 
     @Test
     fun `test custom finder from custom Table class name is generated when doing a find`() {
-        prepareTest()
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
