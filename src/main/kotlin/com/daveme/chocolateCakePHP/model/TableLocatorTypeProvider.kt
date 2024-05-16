@@ -112,7 +112,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return when (parameters.size) {
             0 -> null
             1 -> getTableClassFromFirstParam(parameters, settings)
-            else -> getTableClassFromSecondParam(parameters, settings) ?:
+            else -> getTableClassFromSecondParam(parameters) ?:
                     getTableClassFromFirstParam(parameters, settings)
         }
     }
@@ -128,7 +128,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return null
     }
 
-    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
+    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>): PhpType? {
         val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
         for (element in arrayCreationExpr.hashElements) {
             val key = element.key as? StringLiteralExpression ?: continue
@@ -165,13 +165,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
 
         (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
-            val returnType = if (method.type.isComplete)
-                method.type
-            else
-                phpIndex.completeType(project, method.type, null)
-            if (returnType == null) {
-                return@forEach
-            }
+            val returnType = method.type.lookupCompleteType(project, phpIndex, null)
             if (returnType.types.any { it.contains("Query", ignoreCase = true) }) {
                 result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
             }

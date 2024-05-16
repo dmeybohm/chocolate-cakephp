@@ -23,6 +23,9 @@ fun String.isAnyControllerClass(): Boolean =
 fun String.isAnyTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
 
+fun String.isTableLocatorInterface(): Boolean =
+    this.equals("\\Cake\\ORM\\Locator\\LocatorInterface", ignoreCase = true)
+
 fun String.isTopLevelTableClass(): Boolean =
     this.equals("\\Cake\\ORM\\Table", ignoreCase = true)
 
@@ -31,7 +34,7 @@ fun String.isQueryObject(): Boolean =
             this.equals("\\Cake\\ORM\\Query", ignoreCase = true)
 
 fun String.hasGetTableLocatorMethodCall(): Boolean =
-    this.contains(".getTableLocator")
+    this.contains(".getTableLocator", ignoreCase = true)
 
 fun String.absoluteClassName(): String =
     if (this.startsWith("\\"))

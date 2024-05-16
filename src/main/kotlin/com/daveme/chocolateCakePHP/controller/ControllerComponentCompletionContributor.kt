@@ -61,9 +61,9 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
             if (classReference !is Variable) {
                 return
             }
-            val completeType = classReference.type.lookupCompleteType(classReference.project, null)
+            val type = classReference.type.lookupCompleteType(classReference.project, null)
 
-            val controllerClassNames = completeType.types.filter { it.isAnyControllerClass() }
+            val controllerClassNames = type.types.filter { it.isAnyControllerClass() }
             if (controllerClassNames.isNotEmpty()) {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
