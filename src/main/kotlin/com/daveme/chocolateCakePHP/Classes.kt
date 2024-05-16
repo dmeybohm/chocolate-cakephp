@@ -3,8 +3,13 @@ package com.daveme.chocolateCakePHP
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
+import com.jetbrains.php.lang.PhpLangUtil
+import com.jetbrains.php.lang.psi.elements.ClassConstantReference
+import com.jetbrains.php.lang.psi.elements.ClassReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 private const val VIEW_HELPER_CAKE2_PARENT_CLASS = "\\AppHelper"
@@ -244,4 +249,20 @@ fun findParentWithClass(element: PsiElement, clazz: Class<out PsiElement>): PsiE
         iterationElement = parent
     }
     return null
+}
+
+// Get the literal string contents, or ::class reference.
+fun PsiElement.getStringifiedClassOrNull(): String? = when (this) {
+    is StringLiteralExpression -> this.contents.absoluteClassName()
+    is ClassConstantReference -> this.getStaticClassRefOrNull()
+    else -> null
+}
+
+// If the constant is ::class, resolve it, and otherwise null.
+fun ClassConstantReference.getStaticClassRefOrNull(): String? {
+    if (!PhpLangUtil.equalsClassConstantNames(this.name, "class")) {
+        return null
+    }
+    val reference = this.classReference as? ClassReference ?: return null
+    return reference.fqn
 }

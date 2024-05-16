@@ -33,6 +33,12 @@ fun String.isQueryObject(): Boolean =
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator")
 
+fun String.absoluteClassName(): String =
+    if (this.startsWith("\\"))
+        this
+    else
+        "\\${this}"
+
 fun String.controllerBaseName(): String? =
     if (!endsWith("Controller"))
         null

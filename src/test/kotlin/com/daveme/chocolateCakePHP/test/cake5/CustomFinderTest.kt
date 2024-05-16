@@ -81,7 +81,7 @@ class CustomFinderTest : Cake5BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
-        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) });
+        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) })
         assertEquals(1, allInstances)
     }
 
@@ -206,4 +206,30 @@ class CustomFinderTest : Cake5BaseTestCase() {
         assertFalse(result!!.contains("ownedBy"))
     }
 
+    @Test
+    fun `test custom finder from custom Table class name is generated when doing a find`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use App\Model\Table\MoviesTable;
+        
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}myMovies = ${'$'}this->fetchTable('MyMovies', [
+                    'className' => MoviesTable::class,
+                ]);
+                ${'$'}myMovies->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
 }
