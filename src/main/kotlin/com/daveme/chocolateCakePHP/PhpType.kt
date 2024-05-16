@@ -11,6 +11,15 @@ fun PhpType.isProbablyControllerClass(): Boolean =
     else
         this.types.any { it.contains("Controller") }
 
+fun PhpType.isProbablyTableLocatorClass(): Boolean =
+    if (this.isComplete) {
+        this.types.any {
+            it.equals("\\Cake\\ORM\\Locator\\LocatorInterface", ignoreCase = true)
+        }
+    } else {
+        this.types.any { it.contains("Locator") || it.hasGetTableLocatorMethodCall() }
+    }
+
 fun PhpType.lookupCompleteType(
     project: Project,
     phpIndex: PhpIndex,
