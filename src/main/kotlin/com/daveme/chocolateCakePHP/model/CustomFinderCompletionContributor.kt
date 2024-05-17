@@ -87,12 +87,8 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                             !method.name.equals("findAll", ignoreCase = true)
                 }
                 .filter { method ->
-                    val completeType = if (method.type.isComplete)
-                        method.type
-                    else
-                        phpIndex.completeType(project, method.type, null)
-
-                    completeType.types.any { it.contains("Query") }
+                    val methodType = method.type.lookupCompleteType(project, phpIndex, null)
+                    methodType.types.any { it.contains("Query") }
                 }
                 .map { method ->
                         val targetName = method.name

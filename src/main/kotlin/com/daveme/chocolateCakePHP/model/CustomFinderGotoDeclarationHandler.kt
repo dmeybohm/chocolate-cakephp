@@ -43,10 +43,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val phpIndex = PhpIndex.getInstance(sourceElement.project)
         val reference = methodReference.classReference ?: return PsiElement.EMPTY_ARRAY
-        val completedType = if (reference.type.isComplete)
-            reference.type
-        else
-            phpIndex.completeType(sourceElement.project, reference.type, null)
+        val completedType = reference.type.lookupCompleteType(sourceElement.project, phpIndex, null)
         val tableTypes = completedType.types.mapNotNull { type ->
                 when {
                     type.isPluginSpecificTypeForQueryBuilder() -> type.unwrapFromPluginSpecificTypeForQueryBuilder()
