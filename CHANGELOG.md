@@ -3,8 +3,6 @@
 # Chocolate CakePHP Changelog
 
 ## [Unreleased]
-
-## [0.9.0] - 2024-05-17
 ### Added
 - Add ability to create new view files from the controller
 - Show pop-up menu in controller when multiple view files could be associated
