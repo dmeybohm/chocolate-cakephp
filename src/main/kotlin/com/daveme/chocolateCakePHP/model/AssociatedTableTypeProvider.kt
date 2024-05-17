@@ -14,16 +14,21 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class AssociatedTableTypeProvider : PhpTypeProvider4 {
 
     companion object {
-        const val typeProviderChar = '\u8317'
+        const val TYPE_PROVIDER_CHAR = '\u8317'
     }
 
     override fun getKey(): Char {
-        return typeProviderChar
+        return TYPE_PROVIDER_CHAR
     }
 
     override fun getType(psiElement: PsiElement): PhpType? {
         val fieldReference = psiElement as? FieldReference ?: return null
         val fieldName = fieldReference.name ?: return null
+
+        //
+        // Handles:
+        //       $this->Articles->Movies
+        //
         if (fieldName.startsWithUppercaseCharacter() &&
             fieldReference.parent is FieldReference
         ) {
@@ -38,6 +43,12 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             }
             return PhpType().add("#${key}.${fieldName}")
         }
+
+        //
+        // TODO handle:
+        //      $articles = $this->fetchTable('Articles');
+        //      $articles->Movies
+        //
         return null
     }
 
@@ -48,7 +59,11 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             return null
         }
         val phpIndex = PhpIndex.getInstance(project)
-        return getAllPossibleAssociationTableClassesFromName(phpIndex, settings, possibleTableName)
+        return getAllPossibleAssociationTableClassesFromName(
+            phpIndex,
+            settings,
+            possibleTableName
+        )
     }
 
     override fun getBySignature(
@@ -60,9 +75,13 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         return emptyList()
     }
 
-    private fun getAllPossibleAssociationTableClassesFromName(phpIndex: PhpIndex, settings: Settings, possibleTableName: String): PhpType? {
+    private fun getAllPossibleAssociationTableClassesFromName(
+        phpIndex: PhpIndex,
+        settings: Settings,
+        possibleTableName: String
+    ): PhpType? {
         val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
-        if (resultClasses.size > 0) {
+        if (resultClasses.isNotEmpty()) {
             val result = PhpType()
                     .add("\\Cake\\ORM\\Association\\BelongsTo")
                     .add("\\Cake\\ORM\\Association\\BelongsToMany")

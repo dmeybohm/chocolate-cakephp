@@ -61,8 +61,8 @@ class TableLocatorCompletionContributor : CompletionContributor() {
             val project = methodReference.project
             val phpIndex = PhpIndex.getInstance(methodReference.project)
             val classType = methodReference.classReference?.type ?: return
-            val completeType = classType.lookupCompleteType(project, phpIndex, null)
-            if (!hasRequiredType(completeType)) {
+            val type = classType.lookupCompleteType(project, phpIndex, null)
+            if (!hasRequiredType(type)) {
                 return
             }
             val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
@@ -73,8 +73,8 @@ class TableLocatorCompletionContributor : CompletionContributor() {
             )
         }
 
-        private fun hasRequiredType(completeType: PhpType): Boolean {
-            return completeType.types.any {
+        private fun hasRequiredType(type: PhpType): Boolean {
+            return type.types.any {
                 it.isTableLocatorInterface() ||
                         it.isAnyControllerClass() ||
                             it.hasGetTableLocatorMethodCall()
