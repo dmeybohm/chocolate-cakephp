@@ -27,3 +27,4 @@ can be enabled in the settings.
 #### Cake 3 Plugin Config Screen
 
 ![CakePHP 3 Controller](https://github.com/dmeybohm/chocolate-cakephp/blob/main/screenshots/plugin-preferences.gif?raw=true)
+
