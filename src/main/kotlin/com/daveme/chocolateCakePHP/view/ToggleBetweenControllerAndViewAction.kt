@@ -3,7 +3,7 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
 import com.daveme.chocolateCakePHP.controller.makeCreateViewActionPopup
-import com.intellij.codeInsight.navigation.NavigationUtil
+import com.daveme.chocolateCakePHP.controller.showPsiElementPopupFromEditor
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -114,10 +114,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
                 FileEditorManager.getInstance(project).openFile(first, true)
             }
             else -> {
-                NavigationUtil.getPsiElementPopup(
-                    files.sortedBy { it.virtualFile.path }.toTypedArray(),
-                    "Select Target To Navigate"
-                ).showInBestPositionFor(editor)
+                showPsiElementPopupFromEditor(files.toList(), project, editor)
             }
         }
     }

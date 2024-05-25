@@ -4,9 +4,10 @@ import com.daveme.chocolateCakePHP.cake.AllViewPaths
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
-import com.intellij.codeInsight.navigation.NavigationUtil
+import com.intellij.codeInsight.navigation.PsiTargetNavigator
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -14,6 +15,28 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
+
+fun showPsiElementPopup(
+    files: List<PsiFile>,
+    project: Project,
+    point: RelativePoint
+) {
+    PsiTargetNavigator(
+        files.sortedBy { it.virtualFile.path }.toTypedArray(),
+    ).createPopup(project, title="Selec Target to Navigate")
+        .show(point)
+}
+
+fun showPsiElementPopupFromEditor(
+    files: List<PsiFile>,
+    project: Project,
+    editor: Editor
+) {
+    PsiTargetNavigator(
+        files.sortedBy { it.virtualFile.path }.toTypedArray(),
+    ).createPopup(project, title="Selec Target to Navigate")
+        .showInBestPositionFor(editor)
+}
 
 fun makeCreateViewActionPopup(
     allViewPaths: AllViewPaths,
@@ -95,10 +118,7 @@ class NavigateToViewPopupHandler(
                 FileEditorManager.getInstance(project).openFile(first, true)
             }
             else -> {
-                NavigationUtil.getPsiElementPopup(
-                    files.sortedBy { it.virtualFile.path }.toTypedArray(),
-                    "Select Target To Navigate"
-                ).show(point)
+                showPsiElementPopup(files, project, point)
             }
         }
     }
