@@ -82,8 +82,5 @@ fun String.underscoreToCamelCase(): String {
         .joinToString("")
 }
 
-fun String.mneumonicAllEscape(): String =
+fun String.mneumonicEscape(): String =
     this.replace("_", "__")
-
-fun String.mneumonicFirstEscape(): String =
-    this.replaceFirst("_", "__")

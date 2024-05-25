@@ -3,8 +3,7 @@ package com.daveme.chocolateCakePHP.controller
 import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.createDirectoriesIfMissing
 import com.daveme.chocolateCakePHP.cake.viewFilePathInfoFromPath
-import com.daveme.chocolateCakePHP.mneumonicAllEscape
-import com.daveme.chocolateCakePHP.mneumonicFirstEscape
+import com.daveme.chocolateCakePHP.mneumonicEscape
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -27,12 +26,12 @@ class CreateViewFileAction(
     title: String = "Create Default View File",
     val allowEdit: Boolean = false,
 ) : AnAction(
-    title.mneumonicFirstEscape(),
+    title,
     "Create view file",
     CakeIcons.LOGO
 ) {
 
-    private val _title = title.mneumonicFirstEscape()
+    private val _title = title
     val title: String get() = _title
 
     override fun getActionUpdateThread(): ActionUpdateThread {
@@ -122,7 +121,7 @@ class CreateViewFileAction(
             return
         }
         event.presentation.setEnabledAndVisible(true)
-        event.presentation.text = title.mneumonicAllEscape()
+        event.presentation.text = title.mneumonicEscape()
     }
 
 }
