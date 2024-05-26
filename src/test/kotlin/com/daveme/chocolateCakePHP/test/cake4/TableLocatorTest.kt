@@ -1,7 +1,5 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
-import org.junit.Test
-
 class TableLocatorTest : Cake4BaseTestCase() {
 
     override fun prepareTest() {
@@ -12,7 +10,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         )
     }
 
-    @Test
     fun `test fetchTable returns methods from the users custom namespace in a controller`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -35,7 +32,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test TableLocator get returns methods from the users custom namespace`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -64,7 +60,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -94,7 +89,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test static TableLocator get returns methods from the users custom namespace`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -118,7 +112,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test fetchTable argument can be autocompleted with quotes`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -142,7 +135,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
-    @Test
     fun `test TableRegistry static method argument can be autocompleted with quotes`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -166,7 +158,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
-    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -191,7 +182,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
-    @Test
     fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -216,7 +206,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -240,8 +229,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
-
-    @Test
     fun `test types from getTableLocator method can be autocompleted when inline`() {
         myFixture.configureByText("MovieController.php", """
         <?php
