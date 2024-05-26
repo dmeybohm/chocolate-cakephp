@@ -1,7 +1,5 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
-import org.junit.Test
-
 class CustomFinderTest : Cake3BaseTestCase() {
 
     override fun prepareTest() {
@@ -12,7 +10,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         )
     }
 
-    @Test
     fun `test custom finder from Table class is generated when doing a find`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -37,7 +34,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
-    @Test
     fun `test custom finder does not generate an empty completion`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -61,7 +57,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         assertFalse(result!!.contains(""))
     }
 
-    @Test
     fun `test custom finder does not generate two 'all' completions`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -82,11 +77,10 @@ class CustomFinderTest : Cake3BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
-        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) });
+        val allInstances = result!!.count({ it.equals("all", ignoreCase=true) })
         assertEquals(1, allInstances)
     }
 
-    @Test
     fun `test nested custom finder is generated when doing a find`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -110,7 +104,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
-    @Test
     fun `test nested custom finder is generated when doing a find three levels deep`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -134,7 +127,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
-    @Test
     fun `test nested custom finder is generated when doing a find three levels deep with intermediate vars`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -159,7 +151,6 @@ class CustomFinderTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
-    @Test
     fun `test nested custom finder is generated when doing a find three levels deep with other calls inbetween`() {
         myFixture.configureByText("MovieController.php", """
         <?php

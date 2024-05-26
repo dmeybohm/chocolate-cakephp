@@ -1,12 +1,12 @@
-package com.daveme.chocolateCakePHP.test.cake3
+package com.daveme.chocolateCakePHP.test.cake4
 
-class TableLocatorTest : Cake3BaseTestCase() {
+class TableLocatorTest : Cake4BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake4/src4/Controller/AppController.php",
+            "cake4/src4/Model/Table/ArticlesTable.php",
+            "cake4/vendor/cakephp.php"
         )
     }
 
@@ -228,7 +228,6 @@ class TableLocatorTest : Cake3BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("Articles"))
     }
-
 
     fun `test types from getTableLocator method can be autocompleted when inline`() {
         myFixture.configureByText("MovieController.php", """

@@ -2,8 +2,6 @@ package com.daveme.chocolateCakePHP.test.cake2
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.junit.Test
 
 class ControllerTest : Cake2BaseTestCase() {
 
@@ -21,8 +19,7 @@ class ControllerTest : Cake2BaseTestCase() {
         )
     }
 
-    @Test
-    public fun `test completing a cake2 model inside a controller`() {
+    fun `test completing a cake2 model inside a controller`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         App::uses('Controller', 'Controller');
@@ -35,15 +32,14 @@ class ControllerTest : Cake2BaseTestCase() {
         }
         """.trimIndent())
 
-        BasePlatformTestCase.assertTrue(Settings.getInstance(myFixture.project).cake2Enabled)
+        assertTrue(Settings.getInstance(myFixture.project).cake2Enabled)
         myFixture.completeBasic()
 
         val strings = myFixture.lookupElementStrings
-        BasePlatformTestCase.assertTrue(strings!!.contains("Movie"))
+        assertTrue(strings!!.contains("Movie"))
     }
 
-    @Test
-    public fun `test completing cake2 model methods inside a controller`() {
+    fun `test completing cake2 model methods inside a controller`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         App::uses('Controller', 'Controller');
@@ -62,8 +58,7 @@ class ControllerTest : Cake2BaseTestCase() {
         assertTrue(strings!!.contains("findById"))
     }
 
-    @Test
-    public fun `test nested model completion type provider in cake2`() {
+    fun `test nested model completion type provider in cake2`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         App::uses('Controller', 'Controller');
@@ -82,8 +77,7 @@ class ControllerTest : Cake2BaseTestCase() {
         assertTrue(result!!.contains("releaseFilm"))
     }
 
-    @Test
-    public fun `test nested model completion contributor in cake2`() {
+    fun `test nested model completion contributor in cake2`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         App::uses('Controller', 'Controller');
@@ -102,8 +96,7 @@ class ControllerTest : Cake2BaseTestCase() {
         assertTrue(result!!.contains("Director"))
     }
 
-    @Test
-    public fun `test nested model completion contributor in cake2 only if parent is a model`() {
+    fun `test nested model completion contributor in cake2 only if parent is a model`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
         App::uses('Controller', 'Controller');

@@ -25,7 +25,7 @@
 
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-    <idea-version since-build="213.6461.21"/>
+    <idea-version since-build="233.15026"/>
     <extensions defaultExtensionNs="com.intellij">
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
