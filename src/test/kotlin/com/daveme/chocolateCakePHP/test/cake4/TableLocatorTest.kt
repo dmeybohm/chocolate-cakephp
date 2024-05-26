@@ -1,16 +1,14 @@
-package com.daveme.chocolateCakePHP.test.cake3
+package com.daveme.chocolateCakePHP.test.cake4
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.test.BaseTestCase
 import org.junit.Test
 
-class TableLocatorTest : Cake3BaseTestCase() {
+class TableLocatorTest : Cake4BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/ArticlesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake4/src2/Controller/AppController.php",
+            "cake4/src2/Model/Table/ArticlesTable.php",
+            "cake4/vendor/cakephp.php"
         )
     }
 
@@ -26,7 +24,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}result = ${'$'}this->fetchTable('Articles')-><caret>
+                ${'$'}result = ${'$'}this->get('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -55,37 +53,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
         {
             public function artist() {
                 ${'$'}locator = new LocatorTester();
-                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("myCustomArticleMethod"))
-    }
-
-    @Test
-    fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\Locator\LocatorAwareTrait;
-        
-        class LocatorTester {
-            use LocatorAwareTrait;
-        }
-        
-        class MovieController extends Controller
-        {
-            public function artist() {
-                ${'$'}tester = new LocatorTester();
-                ${'$'}locator = ${'$'}tester->getTableLocator();
-                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
+                ${'$'}locator->get('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -169,56 +137,6 @@ class TableLocatorTest : Cake3BaseTestCase() {
     }
 
     @Test
-    fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\TableRegistry;
-        
-        class MovieController extends Controller
-        {
-            public function artist() {
-                ${'$'}locator = ${'$'}this->getTableLocator();
-                ${'$'}result = ${'$'}locator->get('<caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("Articles"))
-    }
-
-    @Test
-    fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\TableRegistry;
-        
-        class MovieController extends Controller
-        {
-            public function artist() {
-                ${'$'}locator = ${'$'}this->getTableLocator();
-                ${'$'}result = ${'$'}locator->get('Articles')-><caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("myCustomArticleMethod"))
-    }
-
-    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -231,7 +149,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}locator = ${'$'}this->getTableLocator()->get('<caret>
+                ${'$'}locator = ${'$'}this->get('<caret>
             }
         }
         """.trimIndent())
@@ -256,7 +174,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}locator = ${'$'}this->getTableLocator()->get('Articles')-><caret>
+                ${'$'}locator = ${'$'}this->get('Articles')-><caret>
             }
         }
         """.trimIndent())
