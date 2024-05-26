@@ -13,7 +13,7 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         val newState = Settings.defaults.state.copy()
         newState.cake3Enabled = true
         newState.cake2Enabled = false
-        newState.appDirectory = "src2"
+        newState.appDirectory = "src4"
         newState.pluginNamespaces = listOf("\\TestPlugin")
         originalSettings.loadState(newState)
 

@@ -1,8 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import org.junit.Test
 
 class ViewTest : Cake2BaseTestCase() {
 
@@ -26,8 +24,7 @@ class ViewTest : Cake2BaseTestCase() {
         )
     }
 
-    @Test
-    public fun `test completing view helper inside a view helper for cake2`() {
+    fun `test completing view helper inside a view helper for cake2`() {
         myFixture.configureByFilePathAndText("cake2/app/View/Helper/MovieFormatterHelper.php", """
         <?php
 
@@ -41,8 +38,8 @@ class ViewTest : Cake2BaseTestCase() {
         myFixture.completeBasic()
 
         val result = myFixture.lookupElementStrings
-        BasePlatformTestCase.assertTrue(result!!.contains("ArtistFormatter"))
-        BasePlatformTestCase.assertFalse(result.contains("MovieFormatter"))
+        assertTrue(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
     }
 
 }

@@ -1,9 +1,8 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
-import org.junit.Test
 
-public class ControllerTest : Cake3BaseTestCase() {
+class ControllerTest : Cake3BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
@@ -15,8 +14,7 @@ public class ControllerTest : Cake3BaseTestCase() {
         )
     }
 
-    @Test
-    public fun `test completing a component inside a controller`() {
+    fun `test completing a component inside a controller`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -38,8 +36,7 @@ public class ControllerTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("MovieMetadata"))
     }
 
-    @Test
-    public fun `test completing component methods inside a controller`() {
+    fun `test completing component methods inside a controller`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -61,8 +58,7 @@ public class ControllerTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("generateMetadata"))
     }
 
-    @Test
-    public fun `test completing a component from a plugin`() {
+    fun `test completing a component from a plugin`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -85,8 +81,7 @@ public class ControllerTest : Cake3BaseTestCase() {
     }
 
 
-    @Test
-    public fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
+    fun `test methods on a component are not magically auto-completed for ViewBuilder`() {
 
         myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
         <?php
@@ -106,7 +101,7 @@ public class ControllerTest : Cake3BaseTestCase() {
         assertFalse(result!!.contains("MovieMetadata"))
     }
 
-    public fun `test nested model completion contributor in cake3 only if parent is a model`() {
+    fun `test nested model completion contributor in cake3 only if parent is a model`() {
         myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
         <?php
         namespace App\Controller;

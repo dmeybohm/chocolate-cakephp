@@ -1,22 +1,16 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.test.BaseTestCase
-import org.junit.Test
-
-
-public class AssociatedTableTest : Cake5BaseTestCase() {
+class AssociatedTableTest : Cake5BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
-                "cake5/src3/Controller/AppController.php",
-                "cake5/src3/Model/Table/MoviesTable.php",
-                "cake5/src3/Model/Table/ArticlesTable.php",
+                "cake5/src5/Controller/AppController.php",
+                "cake5/src5/Model/Table/MoviesTable.php",
+                "cake5/src5/Model/Table/ArticlesTable.php",
                 "cake5/vendor/cakephp.php"
         )
     }
 
-    @Test
     fun `test associated table methods are completed`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -40,7 +34,6 @@ public class AssociatedTableTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test associated table methods are completed 2`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -63,7 +56,6 @@ public class AssociatedTableTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
-    @Test
     fun `test associated tables themselves are completed`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -108,7 +100,6 @@ public class AssociatedTableTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("Articles"))
     }
 
-    @Test
     fun `test custom finders on associated tables are completed`() {
         myFixture.configureByText("MovieController.php", """
         <?php

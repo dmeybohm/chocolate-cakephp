@@ -1,11 +1,8 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
-import org.junit.Test
 
-public class ViewTest() : Cake3BaseTestCase() {
+class ViewTest() : Cake3BaseTestCase() {
 
     override fun prepareTest() {
         myFixture.configureByFiles(
@@ -19,8 +16,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         )
     }
 
-    @Test
-    public fun `test completing view helper inside a view`() {
+    fun `test completing view helper inside a view`() {
         myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
         <?php            
         ${'$'}this-><caret>
@@ -31,8 +27,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         assertTrue(result!!.contains("MovieFormatter"))
     }
 
-    @Test
-    public fun `test completing view helper methods inside a view`() {
+    fun `test completing view helper methods inside a view`() {
         myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
         <?php            
         ${'$'}this->MovieFormatter-><caret>
@@ -43,8 +38,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         assertTrue(result!!.contains("format"))
     }
 
-    @Test
-    public fun `test completing child view helper methods inside a view helper`() {
+    fun `test completing child view helper methods inside a view helper`() {
         myFixture.configureByFilePathAndText("cake3/src/View/Helper/MovieFormatterHelper.php", """
         <?php
         namespace App\View\Helper;
@@ -62,8 +56,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         assertTrue(result!!.contains("format"))
     }
 
-    @Test
-    public fun `test completing from plugin in view helper`() {
+    fun `test completing from plugin in view helper`() {
         myFixture.configureByFilePathAndText("cake3/src/View/Helper/MovieFormatterHelper.php", """
         <?php
         namespace App\View\Helper;
@@ -81,7 +74,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         assertTrue(result!!.contains("helpWithSomething"))
     }
 
-    public fun `test completing view helper inside a view helper for cake3`() {
+    fun `test completing view helper inside a view helper for cake3`() {
         myFixture.configureByFilePathAndText("cake3/src/View/Helper/MovieFormatterHelper.php", """
         <?php
         namespace App\View\Helper;
@@ -100,8 +93,7 @@ public class ViewTest() : Cake3BaseTestCase() {
         assertFalse(result.contains("MovieFormatter"))
     }
 
-    @Test
-    public fun `test does not complete view helper does not apply in irrelevant contexts for cake3`() {
+    fun `test does not complete view helper does not apply in irrelevant contexts for cake3`() {
         myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
         <?php
 
@@ -122,8 +114,7 @@ public class ViewTest() : Cake3BaseTestCase() {
     }
 
 
-    @Test
-    public fun `test does not complete view helper does not apply in irrelevant contexts for cake2`() {
+    fun `test does not complete view helper does not apply in irrelevant contexts for cake2`() {
         myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
         <?php
 

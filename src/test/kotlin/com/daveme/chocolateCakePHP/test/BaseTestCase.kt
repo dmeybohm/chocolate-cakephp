@@ -10,7 +10,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlin.reflect.KClass
 
-public abstract class BaseTestCase : BasePlatformTestCase() {
+abstract class BaseTestCase : BasePlatformTestCase() {
 
     data class RelatedItemInfo(val filename: String, val containingDir: String)
 

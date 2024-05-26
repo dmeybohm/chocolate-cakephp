@@ -13,7 +13,7 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
         val newState = Settings.defaults.state.copy()
         newState.cake3Enabled = true
         newState.cake2Enabled = false
-        newState.appDirectory = "src3"
+        newState.appDirectory = "src5"
         originalSettings.loadState(newState)
 
         prepareTest()
