@@ -24,7 +24,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}result = ${'$'}this->get('Articles')-><caret>
+                ${'$'}result = ${'$'}this->fetchTable('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -53,7 +53,37 @@ class TableLocatorTest : Cake4BaseTestCase() {
         {
             public function artist() {
                 ${'$'}locator = new LocatorTester();
-                ${'$'}locator->get('Articles')-><caret>
+                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
+    @Test
+    fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\Locator\LocatorAwareTrait;
+        
+        class LocatorTester {
+            use LocatorAwareTrait;
+        }
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}tester = new LocatorTester();
+                ${'$'}locator = ${'$'}tester->getTableLocator();
+                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -137,6 +167,56 @@ class TableLocatorTest : Cake4BaseTestCase() {
     }
 
     @Test
+    fun `test TableRegistry from getTableLocator method can be autocompleted with quotes and saved in a variable`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator();
+                ${'$'}result = ${'$'}locator->get('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    @Test
+    fun `test types from TableRegistry from getTableLocator method can be determined when saved in a variable`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}locator = ${'$'}this->getTableLocator();
+                ${'$'}result = ${'$'}locator->get('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
+    @Test
     fun `test TableRegistry from getTableLocator method can be autocompleted with quotes inline`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -149,7 +229,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}locator = ${'$'}this->get('<caret>
+                ${'$'}locator = ${'$'}this->getTableLocator()->get('<caret>
             }
         }
         """.trimIndent())
@@ -174,7 +254,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}locator = ${'$'}this->get('Articles')-><caret>
+                ${'$'}locator = ${'$'}this->getTableLocator()->get('Articles')-><caret>
             }
         }
         """.trimIndent())

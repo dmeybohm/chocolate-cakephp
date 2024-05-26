@@ -1,7 +1,12 @@
 <?php
 
 namespace Cake\Controller {
-    class Controller {}
+    use Cake\ORM\Locator\LocatorAwareTrait;
+
+    class Controller {
+        use LocatorAwareTrait;
+    }
+
     class Component {}
 }
 
@@ -19,4 +24,44 @@ namespace Cake\ORM {
 }
 namespace Cake\Validation {
     class Validator {}
+}
+
+namespace Cake\ORM {
+    class TableRegistry {
+        /**
+         * @return \Cake\ORM\Locator\LocatorInterface
+         */
+        public function getTableLocator() { }
+    }
+}
+
+namespace Cake\ORM\Locator {
+
+    interface LocatorInterface {
+        /**
+         * @param string $alias
+         * @return \Cake\ORM\Table
+         */
+        public function get($alias, array $options = []);
+    }
+
+    class TableLocator implements LocatorInterface {
+        /**
+         * @param string $alias
+         * @return \Cake\ORM\Table
+         */
+        public function get($alias, array $options = []) {
+            return new Table();
+        }
+    }
+
+    trait LocatorAwareTrait {
+        public function fetchTable(): LocatorInteface {
+        }
+
+        public function getTableLocator(): LocatorInterface {
+            return new TableLocator;
+        }
+    }
+
 }
