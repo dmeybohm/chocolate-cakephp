@@ -2,9 +2,13 @@
 
 namespace Cake\Controller {
     use Cake\View\ViewVarsTrait;
+    use Cake\ORM\Locator\LocatorAwareTrait;
+
     class Controller {
         use ViewVarsTrait;
+        use LocatorAwareTrait;
     }
+
     class Component {}
 }
 
@@ -122,7 +126,9 @@ namespace Cake\ORM\Locator {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
-        public function getTableLocator() {}
+        public function getTableLocator() {
+            return new TableLocator;
+        }
     }
 
 }
