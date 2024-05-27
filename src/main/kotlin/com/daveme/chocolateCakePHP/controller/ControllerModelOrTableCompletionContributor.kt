@@ -2,13 +2,18 @@ package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
+import com.intellij.database.psi.DbPsiFacade
+import com.intellij.database.psi.DbTable
+import com.intellij.database.util.DasUtil
+import com.intellij.database.util.DbUtil
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Variable
-import com.intellij.psi.util.PsiTreeUtil
+import java.util.stream.Collectors
 
 
 class ControllerModelOrTableCompletionContributor : CompletionContributor() {
@@ -98,10 +103,19 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
                 val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
+                val dbPsiFacade = DbPsiFacade.getInstance(classReference.project)
                 completionResultSet.completeFromClasses(
                         modelSubclasses,
                         removeFromEnd = "Table",
                         containingClasses = containingClasses,
+                )
+                val tableNames = dbPsiFacade.dataSources.stream()
+                    .flatMap { dataSource -> DasUtil.getTables(dataSource).toStream() }
+                    .map { table -> table.name.latinCapitalize() }
+                    .collect(Collectors.toList())
+                completionResultSet.completeFromString(
+                    tableNames,
+                    typeText = "\\App\\Model\\Table",
                 )
             }
         }
