@@ -89,7 +89,8 @@ class NavigateToViewPopupHandler(
 
         if (e.mouseButton == MouseButton.Left) {
             val project = elt?.project ?: return
-            if (e.isControlDown) {
+            val hasTargets = !validTargets.isEmpty()
+            if (e.isControlDown || !hasTargets) {
                 val popup = JBPopupFactory.getInstance()
                     .createActionGroupPopup(
                         "Create View File",
@@ -99,7 +100,7 @@ class NavigateToViewPopupHandler(
                         true,
                     )
                 popup.show(point)
-            } else if (!validTargets.isEmpty()) {
+            } else if (hasTargets) {
                 navigateToDestination(project, validTargets, point)
             }
         }
