@@ -86,20 +86,22 @@ class NavigateToViewPopupHandler(
         val validTargets = validTargets()
 
         val point = RelativePoint(e)
-        if (e.mouseButton == MouseButton.Left && !validTargets.isEmpty()) {
-            val project = elt?.project ?: return
-            navigateToDestination(project, validTargets, point)
-        } else {
-            val popup = JBPopupFactory.getInstance()
-                .createActionGroupPopup(
-                    "Create View File",
-                    makeCreateViewActionPopup(allViewPaths, useAltLabel),
-                    context,
-                    JBPopupFactory.ActionSelectionAid.NUMBERING,
-                    true,
-                )
 
-            popup.show(point)
+        if (e.mouseButton == MouseButton.Left) {
+            val project = elt?.project ?: return
+            if (e.isControlDown) {
+                val popup = JBPopupFactory.getInstance()
+                    .createActionGroupPopup(
+                        "Create View File",
+                        makeCreateViewActionPopup(allViewPaths, useAltLabel),
+                        context,
+                        JBPopupFactory.ActionSelectionAid.NUMBERING,
+                        true,
+                    )
+                popup.show(point)
+            } else if (!validTargets.isEmpty()) {
+                navigateToDestination(project, validTargets, point)
+            }
         }
     }
 
