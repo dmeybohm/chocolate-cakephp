@@ -11,7 +11,7 @@
 - Show pop-up menu in controller when multiple view files could be associated
 - Add support for data views (JSON or XML by default)
 - Add floating Cake icon in views for navigating back to the controller
-- Add shortcut `Ctrl-Alt-Up` for navigating from view back to controller
+- Add shortcut `Ctrl-Alt-Up` / `Cmd-Option-Up` for navigating from view back to controller
 - Add configuration for adding additional data views types (e.g RSS, CSV etc)
 - Add support for navigating to custom finders in `find` methods on tables
 - Added support for autocompleting tables in CakePHP 3-5
