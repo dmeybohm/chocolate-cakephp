@@ -114,7 +114,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val filesList = files.toList()
             NavigationGutterIconBuilder
                 .create(CakeIcons.LOGO)
-                .setTooltipText("Click to navigate to view file, right-click to create")
+                .setTooltipText("Click to navigate to view file, Ctrl-Click to create")
                 .setTargets(filesList)
                 .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList, useAltLabel))
         }
