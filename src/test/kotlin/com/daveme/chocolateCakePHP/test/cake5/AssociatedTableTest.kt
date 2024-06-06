@@ -121,4 +121,29 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("ownedBy"))
     }
+
+    @Test
+
+    fun `test custom finders on associated tables are completed with table locators`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}articles = ${'$'}this->fetchTable('Articles');
+                ${'$'}articles->Movies->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
 }
