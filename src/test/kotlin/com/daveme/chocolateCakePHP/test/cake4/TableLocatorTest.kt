@@ -6,6 +6,8 @@ class TableLocatorTest : Cake4BaseTestCase() {
         myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
+            "cake4/src4/Model/Entity/Article.php",
+            "cake4/src4/Model/Entity/Movie.php",
             "cake4/vendor/cakephp.php"
         )
     }
@@ -250,5 +252,31 @@ class TableLocatorTest : Cake4BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
+    fun `test entities are returned from finders`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}articles = ${'$'}this->getTableLocator()->get('Articles')->find('all');
+                foreach (${'$'}articles as ${'$'}article) {
+                    echo ${'$'}article-><caret>
+                }
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
     }
 }
