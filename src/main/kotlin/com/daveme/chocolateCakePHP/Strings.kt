@@ -23,6 +23,17 @@ fun String.isAnyControllerClass(): Boolean =
 fun String.isAnyTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
 
+fun String.tableToEntityClass(): String {
+    val parts = this.removeFromEnd("Table", ignoreCase = true)
+        .split('\\')
+    if (parts.size < 2) {
+        return this
+    }
+    val last = parts.last().singularize()
+    val newParts = parts.dropLast(2) + "Entity" + last
+    return newParts.joinToString("\\" )
+}
+
 fun String.isTableLocatorInterface(): Boolean =
     this.equals("\\Cake\\ORM\\Locator\\LocatorInterface", ignoreCase = true)
 
@@ -84,3 +95,7 @@ fun String.underscoreToCamelCase(): String {
 
 fun String.mneumonicEscape(): String =
     this.replace("_", "__")
+
+fun String.singularize(): String {
+    return Inflector.singularize(this)
+}

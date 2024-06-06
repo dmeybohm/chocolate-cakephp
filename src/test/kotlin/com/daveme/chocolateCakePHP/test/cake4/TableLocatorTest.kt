@@ -266,7 +266,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
         class MovieController extends Controller
         {
             public function artist() {
-                ${'$'}articles = ${'$'}this->getTableLocator()->get('Articles')->find('all');
+                ${'$'}articles = ${'$'}this->getTableLocator()->get('Articles')->find()->all();
                 foreach (${'$'}articles as ${'$'}article) {
                     echo ${'$'}article-><caret>
                 }

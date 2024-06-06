@@ -163,6 +163,14 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")
         val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query")
 
+        if (
+            invokingMethodName.equals("all", ignoreCase = true) &&
+            wrappedType.isAnyTableClass()
+        ) {
+            val entityClass = wrappedType.tableToEntityClass()
+            return PhpType().add(entityClass + "[]")
+        }
+
         (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
             val returnType = method.type.lookupCompleteType(project, phpIndex, null)
