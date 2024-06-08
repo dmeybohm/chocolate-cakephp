@@ -47,8 +47,10 @@ class InflectorTest : BaseTestCase() {
 
 
     fun `test String singularize`() {
-        val result = "tests".singularize()
-        assertEquals("test", result)
+        for ((expected, input) in stringsToTest) {
+            val result = input.singularize()
+            assertEquals(expected, result)
+        }
     }
 
 }
