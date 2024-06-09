@@ -9,6 +9,7 @@ package com.daveme.chocolateCakePHP
  */
 object Inflector {
 
+    @Suppress("unused")
     private val plural = listOf(
         "(s)tatus$" to "$1tatuses",
         "(quiz)$" to "$1zes",
