@@ -1,12 +1,15 @@
-package com.daveme.chocolateCakePHP
-
 /**
+ * This file contains comse code derived from Inflector.php in CakePHP.
+ * Here is the original copyright notice for that:
+ *
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  */
+package com.daveme.chocolateCakePHP
+
 object Inflector {
 
     @Suppress("unused")
