@@ -173,8 +173,11 @@ object Inflector {
         if (plural.isEmpty()) {
             return plural
         }
-        val value = irregularInverted.get(plural) ?:
+        val firstChar = plural.get(0)
+        val value = if (firstChar.isUpperCase())
             irregularInvertedCapitalized.get(plural)
+        else
+            irregularInverted.get(plural)
         if (value != null) {
             return value
         }
