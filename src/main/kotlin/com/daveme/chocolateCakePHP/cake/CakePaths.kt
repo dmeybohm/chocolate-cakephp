@@ -242,7 +242,7 @@ fun isCakeViewFile(project: Project, settings: Settings, file: PsiFile): Boolean
         false
 }
 
-fun isCakeControllerFile(project: Project, settings: Settings, file: PsiFile): Boolean {
+fun isCakeControllerFile(file: PsiFile): Boolean {
     return file.virtualFile.nameWithoutExtension.endsWith("Controller")
 }
 
