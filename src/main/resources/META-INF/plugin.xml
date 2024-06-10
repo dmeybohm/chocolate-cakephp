@@ -61,6 +61,7 @@
 
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker" />
 
+        <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.index.ViewFileIndex" />
     </extensions>
 
     <extensions defaultExtensionNs="com.jetbrains.php">
