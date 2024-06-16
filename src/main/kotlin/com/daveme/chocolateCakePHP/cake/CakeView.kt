@@ -1,38 +1,21 @@
 package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.pathRelativeToProject
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 
-fun viewFilesFromControllerAction(
+fun viewFilesFromAllViewPaths(
     project: Project,
     templatesDirectory: TemplatesDir,
-    settings: Settings,
-    controllerName: String,
-    actionNames: ActionNames
+    allViewPaths: AllViewPaths,
 ): Collection<PsiFile> {
-    val fileExtensions = settings.dataViewExtensions
-
-    // Create one file for each of the file extensions that match the naming convention:
-    val files = actionNames.allActionNames.map { controllerAction ->
-        listOfNotNull(
-            templatePathToVirtualFile(
-                settings,
-                templatesDirectory,
-                controllerName,
-                controllerAction.path
-            )
-        ) + fileExtensions.mapNotNull { fileExtension ->
-            templatePathToVirtualFile(
-                settings,
-                templatesDirectory,
-                controllerName,
-                "${controllerAction.pathPrefix}${fileExtension}/${controllerAction.name}"
-            )
-        }
-    }.flatMap { it }
+    val files = allViewPaths.all.mapNotNull { viewPath ->
+        viewPath.toVirtualFile(templatesDirectory)
+    }
 
     return virtualFilesToPsiFiles(project, files)
 }
@@ -44,8 +27,14 @@ data class ViewPath(
     val relativePath: String,
     val altLabel: String = "",
 ) {
+    val pathWithoutTemplate: String
+        get() = "${prefix}${relativePath}"
+
     val fullPath: String
-        get() = "${templatePath}/${prefix}${relativePath}"
+        get() = "${templatePath}/${pathWithoutTemplate}"
+
+    fun toVirtualFile(templatesDir: TemplatesDir): VirtualFile? =
+        findRelativeFile(templatesDir.psiDirectory, this.pathWithoutTemplate)
 }
 
 fun viewPathFromControllerNameAndActionName(
@@ -80,7 +69,10 @@ data class AllViewPaths(
     val defaultViewPath: ViewPath,
     val otherViewPaths: List<ViewPath>,
     val dataViewPaths: List<ViewPath>,
-)
+) {
+    val all: List<ViewPath>
+        get() = listOf(defaultViewPath) + otherViewPaths + dataViewPaths
+}
 
 data class TemplatesDirWithPath(
     val templatesDir: TemplatesDir,

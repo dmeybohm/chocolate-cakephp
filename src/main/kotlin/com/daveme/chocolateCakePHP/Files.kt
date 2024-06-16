@@ -34,7 +34,7 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
         return null
     }
     val pathPartsList = childPath.split("/".toRegex())
-    val pathPartsArray = pathPartsList.dropLastWhile { it.isEmpty() }.toTypedArray()
+    val pathPartsArray = pathPartsList.filter { it.isNotEmpty() }.toTypedArray()
     return VfsUtil.findRelativeFile(dir.virtualFile, *pathPartsArray)
 }
 

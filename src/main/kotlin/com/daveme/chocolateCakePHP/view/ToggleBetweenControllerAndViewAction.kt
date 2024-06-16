@@ -38,7 +38,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         val psiFile = getPsiFile(project, e) ?: return
         val isViewFile = isCakeViewFile(project, settings, psiFile)
-        val isControllerFile = isCakeControllerFile(project, settings, psiFile)
+        val isControllerFile = isCakeControllerFile(psiFile)
 
         e.presentation.isEnabled = isViewFile || isControllerFile
         e.presentation.isVisible = isViewFile
@@ -53,7 +53,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         if (isCakeViewFile(project, settings, psiFile)) {
             tryToNavigateToController(project, settings, virtualFile, psiFile)
-        } else if (isCakeControllerFile(project, settings, psiFile)) {
+        } else if (isCakeControllerFile(psiFile)) {
             tryToNavigateToView(project, settings, virtualFile, psiFile, e)
         }
     }
@@ -78,24 +78,22 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
             ?: return
 
-        val files = viewFilesFromControllerAction(
+        val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
+            ?: return
+        val allViewPaths = allViewPathsFromController(
+            controllerName,
+            templatesDirWithPath,
+            settings,
+            actionNames
+        )
+        val files = viewFilesFromAllViewPaths(
             project = project,
             templatesDirectory = templatesDirectory,
-            settings = settings,
-            controllerName = controllerName,
-            actionNames = actionNames
+            allViewPaths = allViewPaths
         )
 
         when (files.size) {
             0 -> {
-                val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
-                    ?: return
-                val allViewPaths = allViewPathsFromController(
-                    controllerName,
-                    templatesDirWithPath,
-                    settings,
-                    actionNames
-                )
                 val getContext = DataManager.getInstance().dataContextFromFocusAsync
                 getContext.then { context ->
                     val popup = JBPopupFactory.getInstance()
