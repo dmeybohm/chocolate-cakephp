@@ -6,7 +6,7 @@ import com.intellij.util.io.KeyDescriptor
 
 class ViewFileIndex : FileBasedIndexExtension<ViewFileLocation, Void?>() {
 
-    override fun getName(): ID<ViewFileLocation, Void?> = KEY
+    override fun getName(): ID<ViewFileLocation, Void?> = VIEW_FILE_INDEX_KEY
 
     override fun getIndexer(): DataIndexer<ViewFileLocation, Void?, FileContent> =
         ViewFileDataIndexer

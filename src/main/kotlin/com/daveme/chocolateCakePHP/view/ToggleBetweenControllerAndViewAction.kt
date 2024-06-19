@@ -71,7 +71,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val method = PsiTreeUtil.getParentOfType(element, Method::class.java) ?: return
 
         val actionNames = actionNamesFromControllerMethod(method)
-        val topSourceDirectory = topSourceDirectoryFromControllerFile(settings, psiFile)
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
             ?: return
         val templatesDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return

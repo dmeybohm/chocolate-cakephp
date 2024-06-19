@@ -75,7 +75,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         useAltLabel: Boolean = false
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
-        val topSourceDirectory = topSourceDirectoryFromControllerFile(
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             relatedLookupInfo.file
         ) ?: return null
