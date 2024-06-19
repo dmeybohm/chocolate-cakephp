@@ -11,7 +11,7 @@ import com.intellij.psi.PsiFile
 // This represents either:
 //   - the "app" directory in CakePHP 2
 //   - the "src" directory in CakePHP 3+
-//   - the "plugins/MyPlugin/src" directory in CakePHP 3+
+//   - the "plugins/MyPlugin/src" directory in CakePHP 4+
 //
 sealed interface TopSourceDirectory {
     val psiDirectory: PsiDirectory
@@ -69,33 +69,6 @@ fun templatesDirectoryFromTopSourceDirectory(
         }
     }
 
-    return null
-}
-
-fun templatesDirectoryFromTopSourceDirectory(
-    settings: Settings,
-    topSourceDirectory: TopSourceDirectory,
-): TemplatesDir? {
-    if (settings.cake3Enabled) {
-        val cakeFourPsiFile = findRelativeFile(topSourceDirectory.psiDirectory.parentDirectory, "templates")
-        if (cakeFourPsiFile != null && cakeFourPsiFile.isDirectory) {
-            val cakeFourPsiDir = cakeFourPsiFile as PsiDirectory
-            return CakeFourTemplatesDir("templates", cakeFourPsiDir)
-        }
-        val cakeThreePsiFile = findRelativeFile(topSourceDirectory.psiDirectory, "Template")
-        if (cakeThreePsiFile != null && cakeThreePsiFile.isDirectory) {
-            val cakeThreePsiDir = cakeThreePsiFile as PsiDirectory
-            return CakeThreeTemplatesDir("Template", cakeThreePsiDir)
-        }
-    }
-    if (settings.cake2Enabled) {
-        val cakeTwoPsiFile = findRelativeFile(topSourceDirectory.psiDirectory, "View")
-        if (cakeTwoPsiFile != null && cakeTwoPsiFile.isDirectory) {
-            val cakeTwoPsiDir = cakeTwoPsiFile as PsiDirectory
-            return CakeFourTemplatesDir("templates", cakeTwoPsiDir)
-        }
-
-    }
     return null
 }
 

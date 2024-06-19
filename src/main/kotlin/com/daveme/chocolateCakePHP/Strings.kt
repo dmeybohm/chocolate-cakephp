@@ -84,6 +84,12 @@ fun String.latinCapitalize(): String {
     }
 }
 
+fun String.removeQuotes(): String =
+    if (this.length < 2)
+        this
+    else
+        this.substring(1, this.length - 1)
+
 fun String.underscoreToCamelCase(): String {
     return this.split('_')
         .mapIndexed { index, s ->
