@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.9.1] - 2024-06-19
+
 ### Fixed
 - Fix navigation between controller and view when path contains a slash
 
