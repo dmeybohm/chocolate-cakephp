@@ -7,7 +7,7 @@
 ### Fixed
 - Fix navigation between controller and view when path contains a slash
 
-## [0.9.0] - 2024-06-19
+## [0.9.1] - 2024-06-19
 
 ### Fixed
 - Fix navigating to paths with slashes in them
