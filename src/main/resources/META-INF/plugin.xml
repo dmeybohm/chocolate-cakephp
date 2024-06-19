@@ -98,4 +98,5 @@
 
     <depends>com.jetbrains.php</depends>
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.database</depends>
 </idea-plugin>

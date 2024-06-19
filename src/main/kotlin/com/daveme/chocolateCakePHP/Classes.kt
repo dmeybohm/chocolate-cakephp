@@ -3,7 +3,6 @@ package com.daveme.chocolateCakePHP
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
-import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
 import com.jetbrains.php.lang.PhpLangUtil
 import com.jetbrains.php.lang.psi.elements.ClassConstantReference
 import com.jetbrains.php.lang.psi.elements.ClassReference
@@ -46,7 +45,6 @@ fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass
     }
     return result
 }
-
 
 
 fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {

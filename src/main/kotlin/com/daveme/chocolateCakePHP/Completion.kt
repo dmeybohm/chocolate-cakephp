@@ -72,6 +72,20 @@ fun CompletionResultSet.completeFromClasses(
     }
 }
 
+fun CompletionResultSet.completeFromString(
+    names: Collection<String>,
+    typeText: String,
+    removeFromEnd: String = "",
+) {
+    names.map { name ->
+        val targetName = name.removeFromEnd(removeFromEnd, ignoreCase = true)
+        val lookupElement = LookupElementBuilder.create(targetName)
+            .withIcon(PhpIcons.FIELD)
+            .withTypeText(typeText)
+        this.addElement(lookupElement)
+    }
+}
+
 fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
     classes: Collection<PhpClass>,
     removeFromEnd: String = "",
