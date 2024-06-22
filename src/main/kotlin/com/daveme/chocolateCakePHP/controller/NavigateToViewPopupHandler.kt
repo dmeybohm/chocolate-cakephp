@@ -5,6 +5,8 @@ import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.codeInsight.navigation.PsiTargetNavigator
+import com.intellij.codeInsight.navigation.impl.PsiTargetPresentationRenderer
+import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.editor.Editor
@@ -14,16 +16,59 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
+import com.jetbrains.php.PhpIcons
+import com.jetbrains.php.lang.psi.elements.MethodReference
+import java.awt.Point
 import java.awt.event.MouseEvent
+import javax.swing.Icon
+import javax.swing.SwingUtilities
+
+
+class CakePhpNavigationPresentationProvider : PsiTargetPresentationRenderer<PsiElement>() {
+    override fun getContainerText(element: PsiElement): String? {
+        val file = element.containingFile
+        if (file != null) {
+            val virtualFile = file.virtualFile
+            if (virtualFile != null) return virtualFile.presentableName
+        }
+        return super.getContainerText(element)
+    }
+
+    override fun getElementText(element: PsiElement): String {
+        return super.getElementText(element)
+    }
+
+    override fun getIcon(element: PsiElement): Icon {
+        return if (element is MethodReference)
+            PhpIcons.FUNCTION
+        else if (element is PsiFile)
+            AllIcons.Actions.Preview
+        else
+            AllIcons.Ide.ConfigFile
+    }
+}
+
+fun MouseEvent.getScreenPoint(): Point? {
+    // Convert the point relative to the component to a screen point
+    val point = this.point
+    val component = this.component
+    return if (component != null) {
+        SwingUtilities.convertPointToScreen(point, component)
+        point
+    } else {
+        null
+    }
+}
 
 fun showPsiFilePopup(
     files: List<PsiFile>,
     project: Project,
     point: RelativePoint
 ) {
-    PsiTargetNavigator(
-        files.sortedBy { it.virtualFile.path }.toTypedArray(),
-    ).createPopup(project, title="Select Target to Navigate")
+    val elements = files.sortedBy { it.virtualFile.path }.map { it as PsiElement }.toTypedArray()
+    PsiTargetNavigator(elements)
+        .presentationProvider(CakePhpNavigationPresentationProvider())
+        .createPopup(project, title="Select Target to Navigate")
         .show(point)
 }
 
@@ -32,21 +77,27 @@ fun showPsiFilePopupFromEditor(
     project: Project,
     editor: Editor
 ) {
-    PsiTargetNavigator(
-        files.sortedBy { it.virtualFile.path }.toTypedArray(),
-    ).createPopup(project, title="Select Target to Navigate")
+    val elements = files.sortedBy { it.virtualFile.path }.map { it as PsiElement }.toTypedArray()
+    PsiTargetNavigator(elements)
+        .presentationProvider(CakePhpNavigationPresentationProvider())
+        .createPopup(project, title="Select Target to Navigate")
         .showInBestPositionFor(editor)
 }
 
 fun showPsiElementPopupFromEditor(
     places: List<PsiElement>,
     project: Project,
-    editor: Editor
+    editor: Editor,
+    relativePoint: RelativePoint?
 ) {
-    PsiTargetNavigator(
-        places.toTypedArray(),
-    ).createPopup(project, title="Select Target to Navigate")
-        .showInBestPositionFor(editor)
+    val popup = PsiTargetNavigator(places.toTypedArray())
+        .presentationProvider(CakePhpNavigationPresentationProvider())
+        .createPopup(project, title="Select Target to Navigate")
+    if (relativePoint != null) {
+        popup.show(relativePoint)
+    } else {
+        popup.showInBestPositionFor(editor)
+    }
 }
 
 fun createViewActionPopupFromAllViewPaths(

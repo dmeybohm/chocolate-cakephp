@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FileBasedIndex
+import com.jetbrains.php.lang.psi.elements.MethodReference
 
 data class PsiElementAndPath(
     val path: String,
@@ -29,9 +30,8 @@ object ViewFileIndexService {
             { indexedFile, offsets: List<Int>  ->
                 offsets.forEach { offset ->
                     val element = indexedFile.findElementAt(project, offset)
-                    if (element != null) {
-                        result.add(PsiElementAndPath(indexedFile.path, element))
-                    }
+                    val method = element?.parent?.parent as? MethodReference ?: return@forEach
+                    result.add(PsiElementAndPath(indexedFile.path, method))
                 }
                 true
             }, searchScope)

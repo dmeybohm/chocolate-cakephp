@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
 import com.daveme.chocolateCakePHP.controller.createViewActionPopupFromAllViewPaths
+import com.daveme.chocolateCakePHP.controller.getScreenPoint
 import com.daveme.chocolateCakePHP.controller.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.controller.showPsiFilePopupFromEditor
 import com.daveme.chocolateCakePHP.view.index.ViewFileIndexService
@@ -21,7 +22,10 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.lang.psi.elements.Method
+import java.awt.Point
+import java.awt.event.MouseEvent
 
 
 class ToggleBetweenControllerAndViewAction : AnAction() {
@@ -126,9 +130,12 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         settings: Settings,
         virtualFile: VirtualFile,
         psiFile: PsiFile,
-        e: AnActionEvent
+        e: AnActionEvent,
     ) {
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
+        val inputEvent = e.inputEvent as? MouseEvent
+        val point = inputEvent?.getScreenPoint()
+
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
@@ -155,10 +162,20 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         } + listOf(controllerMethod)
             .mapNotNull { it }
 
-        openTargets(project, targets, editor)
+        val relativePoint = if (point != null)
+            RelativePoint(Point(Math.max(0, point.x - 400), point.y))
+        else
+            null
+        openTargets(project, targets, editor, relativePoint)
     }
 
-    private fun openTargets(project: Project, targetList: List<PsiElement>, editor: Editor) {
+
+    private fun openTargets(
+        project: Project,
+        targetList: List<PsiElement>,
+        editor: Editor,
+        relativePoint: RelativePoint?
+    ) {
         when (targetList.size) {
             0 -> {}
             1 -> {
@@ -166,7 +183,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
                 FileEditorManager.getInstance(project).openFile(target, true)
             }
             else -> {
-                showPsiElementPopupFromEditor(targetList, project, editor)
+                showPsiElementPopupFromEditor(targetList, project, editor, relativePoint)
             }
         }
     }
