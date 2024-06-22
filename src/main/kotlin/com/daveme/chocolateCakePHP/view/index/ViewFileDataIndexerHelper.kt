@@ -5,21 +5,8 @@ import com.daveme.chocolateCakePHP.removeQuotes
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.indexing.ID
 
-val VIEW_FILE_INDEX_KEY : ID<ViewFileLocation, Void?> =
+val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
     ID.create("com.daveme.chocolateCakePHP.view.index.ViewFileIndex")
-
-
-fun isControllerFile(file: VirtualFile): Boolean {
-    return file.nameWithoutExtension.endsWith("Controller")
-}
-
-fun isTemplateDir(projectDir: VirtualFile, file: VirtualFile): Boolean {
-    val nameWithoutExtension = file.nameWithoutExtension
-    val parent = file.parent
-    return (nameWithoutExtension == "templates" && parent == projectDir) ||
-            (nameWithoutExtension == "Template" && parent?.parent == projectDir) ||
-            (nameWithoutExtension == "View" && parent?.parent == projectDir)
-}
 
 data class ViewPathPrefix(
     val prefix: String
@@ -28,9 +15,13 @@ data class ViewPathPrefix(
 data class RenderPath(
     val renderPath: String,
 ) {
-    val isAbsolute: Boolean get() = renderPath.startsWith("/")
+    val isAbsolute: Boolean get() = quotesRemoved.startsWith("/")
     val quotesRemoved : String get() =
         renderPath.removeQuotes()
+}
+
+fun isControllerFile(file: VirtualFile): Boolean {
+    return file.nameWithoutExtension.endsWith("Controller")
 }
 
 fun viewPathPrefixFromSourceFile(
@@ -49,8 +40,7 @@ fun viewPathPrefixFromSourceFile(
     var currentDir: VirtualFile? = sourceFile
     while (
         currentDir != null &&
-        sourceFile != projectDir &&
-        isTemplateDir(projectDir, sourceFile)
+        sourceFile != projectDir
     ) {
         paths.add(currentDir.name)
         currentDir = currentDir.parent
@@ -61,8 +51,9 @@ fun viewPathPrefixFromSourceFile(
 fun fullViewPathFromPrefixAndRenderPath(
     viewPathPrefix: ViewPathPrefix,
     renderPath: RenderPath
-): String =
-    if (renderPath.isAbsolute)
+): String {
+    return if (renderPath.isAbsolute)
         renderPath.quotesRemoved.substring(1)
     else
         "${viewPathPrefix.prefix}${renderPath.quotesRemoved}"
+}

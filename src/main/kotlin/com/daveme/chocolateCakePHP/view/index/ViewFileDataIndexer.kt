@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP.view.index
 
-import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
@@ -9,9 +8,10 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
-object ViewFileDataIndexer : DataIndexer<ViewFileLocation, Void?, FileContent> {
-    override fun map(inputData: FileContent): MutableMap<ViewFileLocation, Void?> {
-        val result = mutableMapOf<ViewFileLocation, Void?>()
+object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
+
+    override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
+        val result = mutableMapOf<String, List<Int>>()
         val psiFile = inputData.psiFile
 
         val renderMethods = PsiTreeUtil.findChildrenOfType(psiFile, MethodReference::class.java)
@@ -51,15 +51,13 @@ object ViewFileDataIndexer : DataIndexer<ViewFileLocation, Void?, FileContent> {
                 viewPathPrefix,
                 RenderPath(content)
             )
-
-            val viewFilePathInfo = viewFilePathInfoFromPath(fullViewPath)
-                ?: continue
-            val viewFileLocation = ViewFileLocation(
-                filename = viewFilePathInfo.viewFilename,
-                prefixPath = viewFilePathInfo.templateDirPath,
-                viewType = ViewFileLocation.ViewType.VIEW
-            )
-            result[viewFileLocation] = null
+            if (result.containsKey(fullViewPath)) {
+                val oldList = result[fullViewPath]!!.toMutableList()
+                val newList = oldList + listOf(method.textOffset)
+                result[fullViewPath] = newList
+            } else {
+                result[fullViewPath] = listOf(method.textOffset)
+            }
         }
         return result
     }

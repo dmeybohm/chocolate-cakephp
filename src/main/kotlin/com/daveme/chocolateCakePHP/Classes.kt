@@ -1,9 +1,11 @@
 package com.daveme.chocolateCakePHP
 
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
 import com.jetbrains.php.PhpIndex
-import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
 import com.jetbrains.php.lang.PhpLangUtil
 import com.jetbrains.php.lang.psi.elements.ClassConstantReference
 import com.jetbrains.php.lang.psi.elements.ClassReference
@@ -265,4 +267,9 @@ fun ClassConstantReference.getStaticClassRefOrNull(): String? {
     }
     val reference = this.classReference as? ClassReference ?: return null
     return reference.fqn
+}
+
+fun VirtualFile.findElementAt(project: Project, offset: Int): PsiElement? {
+    val psiFile = PsiManager.getInstance(project).findFile(this) ?: return null
+    return psiFile.findElementAt(offset)
 }

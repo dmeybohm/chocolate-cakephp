@@ -1,9 +1,12 @@
 package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.*
+import com.intellij.openapi.project.Project
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 data class ActionName(
@@ -138,4 +141,26 @@ fun viewFilenameToActionName(
             )
         }
     }
+}
+
+fun getControllerClassesOfPotentialControllerName(
+    project: Project,
+    settings: Settings,
+    potentialControllerName: String
+): Collection<PhpClass> {
+    val phpIndex = PhpIndex.getInstance(project)
+    val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
+    val controllerClasses = phpIndex.phpClassesFromType(controllerType)
+    return controllerClasses
+}
+
+fun controllerMethodFromViewFilename(
+    controllerClasses: Collection<PhpClass>,
+    settings: Settings,
+    viewFilename: String,
+    templatesDir: TemplatesDir
+): Method? {
+    val actionNames = viewFilenameToActionName(viewFilename, settings, templatesDir)
+    val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName.name)
+    return method
 }

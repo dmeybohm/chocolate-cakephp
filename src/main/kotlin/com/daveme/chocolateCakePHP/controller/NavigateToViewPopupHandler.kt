@@ -16,29 +16,40 @@ import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import java.awt.event.MouseEvent
 
-fun showPsiElementPopup(
+fun showPsiFilePopup(
     files: List<PsiFile>,
     project: Project,
     point: RelativePoint
 ) {
     PsiTargetNavigator(
         files.sortedBy { it.virtualFile.path }.toTypedArray(),
-    ).createPopup(project, title="Selec Target to Navigate")
+    ).createPopup(project, title="Select Target to Navigate")
         .show(point)
 }
 
-fun showPsiElementPopupFromEditor(
+fun showPsiFilePopupFromEditor(
     files: List<PsiFile>,
     project: Project,
     editor: Editor
 ) {
     PsiTargetNavigator(
         files.sortedBy { it.virtualFile.path }.toTypedArray(),
-    ).createPopup(project, title="Selec Target to Navigate")
+    ).createPopup(project, title="Select Target to Navigate")
         .showInBestPositionFor(editor)
 }
 
-fun makeCreateViewActionPopup(
+fun showPsiElementPopupFromEditor(
+    places: List<PsiElement>,
+    project: Project,
+    editor: Editor
+) {
+    PsiTargetNavigator(
+        places.toTypedArray(),
+    ).createPopup(project, title="Select Target to Navigate")
+        .showInBestPositionFor(editor)
+}
+
+fun createViewActionPopupFromAllViewPaths(
     allViewPaths: AllViewPaths,
     useAltLabel: Boolean = false,
 ): DefaultActionGroup {
@@ -94,7 +105,7 @@ class NavigateToViewPopupHandler(
                 val popup = JBPopupFactory.getInstance()
                     .createActionGroupPopup(
                         "Create View File",
-                        makeCreateViewActionPopup(allViewPaths, useAltLabel),
+                        createViewActionPopupFromAllViewPaths(allViewPaths, useAltLabel),
                         context,
                         JBPopupFactory.ActionSelectionAid.NUMBERING,
                         true,
@@ -121,7 +132,7 @@ class NavigateToViewPopupHandler(
                 FileEditorManager.getInstance(project).openFile(first, true)
             }
             else -> {
-                showPsiElementPopup(files, project, point)
+                showPsiFilePopup(files, project, point)
             }
         }
     }

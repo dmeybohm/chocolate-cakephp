@@ -72,6 +72,7 @@ data class AllViewPaths(
 ) {
     val all: List<ViewPath>
         get() = listOf(defaultViewPath) + otherViewPaths + dataViewPaths
+
 }
 
 data class TemplatesDirWithPath(
