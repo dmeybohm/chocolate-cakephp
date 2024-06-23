@@ -1,12 +1,12 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.cake.AllViewPaths
+import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.codeInsight.navigation.PsiTargetNavigator
 import com.intellij.codeInsight.navigation.impl.PsiTargetPresentationRenderer
-import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.editor.Editor
@@ -17,7 +17,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.PhpIcons
-import com.jetbrains.php.lang.psi.elements.MethodReference
 import java.awt.Point
 import java.awt.event.MouseEvent
 import javax.swing.Icon
@@ -39,12 +38,14 @@ class CakePhpNavigationPresentationProvider : PsiTargetPresentationRenderer<PsiE
     }
 
     override fun getIcon(element: PsiElement): Icon {
-        return if (element is MethodReference)
+        val path = element.containingFile.virtualFile?.path
+        return if (path == null) {
             PhpIcons.FUNCTION
-        else if (element is PsiFile)
-            AllIcons.Actions.Preview
-        else
-            AllIcons.Ide.ConfigFile
+        } else if (path.contains("Controller")) {
+            CakeIcons.LOGO_SVG
+        } else {
+            PhpIcons.PHP_FILE
+        }
     }
 }
 
