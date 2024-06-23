@@ -42,6 +42,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         val projectDir = project.guessProjectDir()
             ?: return result
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
+            ?: return result
 
         for (method in withThis) {
             val parameterName = method.parameters.first() as StringLiteralExpression

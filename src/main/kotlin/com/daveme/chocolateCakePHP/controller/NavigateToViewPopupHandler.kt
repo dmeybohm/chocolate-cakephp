@@ -66,7 +66,9 @@ fun showPsiFilePopup(
     project: Project,
     point: RelativePoint
 ) {
-    val elements = files.sortedBy { it.virtualFile.path }.map { it as PsiElement }.toTypedArray()
+    val elements = files
+        .sortedBy { it.virtualFile.path }
+        .toTypedArray<PsiElement>()
     PsiTargetNavigator(elements)
         .presentationProvider(CakePhpNavigationPresentationProvider())
         .createPopup(project, title="Select Target to Navigate")
@@ -78,7 +80,9 @@ fun showPsiFilePopupFromEditor(
     project: Project,
     editor: Editor
 ) {
-    val elements = files.sortedBy { it.virtualFile.path }.map { it as PsiElement }.toTypedArray()
+    val elements = files
+        .sortedBy { it.virtualFile.path }
+        .toTypedArray<PsiElement>()
     PsiTargetNavigator(elements)
         .presentationProvider(CakePhpNavigationPresentationProvider())
         .createPopup(project, title="Select Target to Navigate")

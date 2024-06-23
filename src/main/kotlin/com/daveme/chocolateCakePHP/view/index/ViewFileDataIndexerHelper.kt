@@ -24,10 +24,16 @@ fun isControllerFile(file: VirtualFile): Boolean {
     return file.nameWithoutExtension.endsWith("Controller")
 }
 
+fun parentIsTemplateDir(currentDir: VirtualFile): Boolean {
+    return currentDir.parent.name == "templates" ||
+            currentDir.parent.name == "Template" ||
+            currentDir.parent.name == "View"
+}
+
 fun viewPathPrefixFromSourceFile(
     projectDir: VirtualFile,
     sourceFile: VirtualFile,
-): ViewPathPrefix {
+): ViewPathPrefix? {
     // For render() calls inside a controller, we want to append the implicit
     // controller path if the path is not absolute, and otherwise use the render
     // path directly if it is.
@@ -38,14 +44,23 @@ fun viewPathPrefixFromSourceFile(
 
     val paths = mutableListOf<String>()
     var currentDir: VirtualFile? = sourceFile
+    var foundTemplatesDir = false
     while (
         currentDir != null &&
         sourceFile != projectDir
     ) {
+        val found = parentIsTemplateDir(currentDir)
+        if (found) {
+            foundTemplatesDir = true
+            break
+        }
         paths.add(currentDir.name)
         currentDir = currentDir.parent
     }
-    return ViewPathPrefix(paths.joinToString(separator = "/") + "/")
+    if (foundTemplatesDir)
+        return ViewPathPrefix(paths.joinToString(separator = "/") + "/")
+    else
+        return null
 }
 
 fun fullViewPathFromPrefixAndRenderPath(
