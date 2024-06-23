@@ -15,8 +15,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.PhpIcons
+import com.jetbrains.php.PhpPresentationUtil
+import com.jetbrains.php.lang.psi.elements.Method
 import java.awt.Point
 import java.awt.event.MouseEvent
 import javax.swing.Icon
@@ -28,12 +31,27 @@ class CakePhpNavigationPresentationProvider : PsiTargetPresentationRenderer<PsiE
         val file = element.containingFile
         if (file != null) {
             val virtualFile = file.virtualFile
-            if (virtualFile != null) return virtualFile.presentableName
+            if (virtualFile != null)
+                return PhpPresentationUtil.getPresentablePathForFile(virtualFile, element.project) //virtualFile.presentableName
         }
         return super.getContainerText(element)
     }
 
     override fun getElementText(element: PsiElement): String {
+        val file = element.containingFile
+        if (file != null) {
+            val virtualFile = file.virtualFile
+            if (virtualFile != null) {
+                val path = virtualFile.path
+                if (path.contains("/Controller/")) {
+                    // Get containing method if call is inside a controller:
+                    val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
+                    if (method != null) {
+                        return super.getElementText(method)
+                    }
+                }
+            }
+        }
         return super.getElementText(element)
     }
 
@@ -41,7 +59,7 @@ class CakePhpNavigationPresentationProvider : PsiTargetPresentationRenderer<PsiE
         val path = element.containingFile.virtualFile?.path
         return if (path == null) {
             PhpIcons.FUNCTION
-        } else if (path.contains("Controller")) {
+        } else if (path.contains("/Controller/")) {
             CakeIcons.LOGO_SVG
         } else {
             PhpIcons.PHP_FILE
