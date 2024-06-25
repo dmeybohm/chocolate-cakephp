@@ -19,8 +19,7 @@ class ViewFileIndex : FileBasedIndexExtension<String, List<Int>>() {
         ViewFileDataExternalizer
 
     override fun getVersion(): Int {
-        // TODO change this to stable number
-        return kotlin.random.Random.nextInt()
+        return 1
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {

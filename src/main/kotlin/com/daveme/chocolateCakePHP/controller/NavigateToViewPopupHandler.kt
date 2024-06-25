@@ -20,6 +20,7 @@ import com.intellij.ui.awt.RelativePoint
 import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.PhpPresentationUtil
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import java.awt.Point
 import java.awt.event.MouseEvent
 import javax.swing.Icon
@@ -49,6 +50,8 @@ class CakePhpNavigationPresentationProvider : PsiTargetPresentationRenderer<PsiE
                     if (method != null) {
                         return super.getElementText(method)
                     }
+                } else if (element is MethodReference) {
+                    return virtualFile.name
                 }
             }
         }

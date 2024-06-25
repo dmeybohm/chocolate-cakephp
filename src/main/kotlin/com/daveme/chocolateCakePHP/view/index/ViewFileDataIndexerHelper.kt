@@ -24,10 +24,15 @@ fun isControllerFile(file: VirtualFile): Boolean {
     return file.nameWithoutExtension.endsWith("Controller")
 }
 
-fun parentIsTemplateDir(currentDir: VirtualFile): Boolean {
-    return currentDir.parent.name == "templates" ||
-            currentDir.parent.name == "Template" ||
-            currentDir.parent.name == "View"
+private fun isTemplateDir(currentDir: VirtualFile): Boolean {
+    return currentDir.name == "templates" ||
+            currentDir.name == "Template" ||
+            currentDir.name == "View"
+}
+
+private fun findElementDir(currentDir: VirtualFile): VirtualFile? {
+    return currentDir.findChild("element")  ?:
+            currentDir.findChild("Element")
 }
 
 fun viewPathPrefixFromSourceFile(
@@ -42,6 +47,14 @@ fun viewPathPrefixFromSourceFile(
         return ViewPathPrefix("${controllerBaseName}/")
     }
 
+    val containingDir = sourceFile.parent ?: return null
+    return viewPathToTemplatesDirRoot(projectDir, containingDir)
+}
+
+fun viewPathToTemplatesDirRoot(
+    projectDir: VirtualFile,
+    sourceFile: VirtualFile
+): ViewPathPrefix? {
     val paths = mutableListOf<String>()
     var currentDir: VirtualFile? = sourceFile
     var foundTemplatesDir = false
@@ -49,7 +62,7 @@ fun viewPathPrefixFromSourceFile(
         currentDir != null &&
         sourceFile != projectDir
     ) {
-        val found = parentIsTemplateDir(currentDir)
+        val found = isTemplateDir(currentDir)
         if (found) {
             foundTemplatesDir = true
             break
@@ -59,6 +72,29 @@ fun viewPathPrefixFromSourceFile(
     }
     if (foundTemplatesDir)
         return ViewPathPrefix(paths.joinToString(separator = "/") + "/")
+    else
+        return null
+}
+
+fun elementPathPrefixFromSourceFile(
+    projectDir: VirtualFile,
+    sourceFile: VirtualFile,
+): ViewPathPrefix? {
+    var currentDir: VirtualFile? = sourceFile
+    var elementPath : VirtualFile? = null
+    while (
+        currentDir != null &&
+        sourceFile != projectDir
+    ) {
+        val found = isTemplateDir(currentDir)
+        if (found) {
+            elementPath = findElementDir(currentDir)
+            break
+        }
+        currentDir = currentDir.parent
+    }
+    if (elementPath != null)
+        return ViewPathPrefix(elementPath.name + "/")
     else
         return null
 }
