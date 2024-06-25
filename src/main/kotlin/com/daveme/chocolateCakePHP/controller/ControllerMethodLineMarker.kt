@@ -75,7 +75,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         useAltLabel: Boolean = false
     ): LineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
-        val topSourceDirectory = topSourceDirectoryFromControllerFile(
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             relatedLookupInfo.file
         ) ?: return null
@@ -110,7 +110,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         } else {
             val filesList = files.toList()
             NavigationGutterIconBuilder
-                .create(CakeIcons.LOGO)
+                .create(CakeIcons.LOGO_PNG)
                 .setTooltipText("Click to navigate to view file, Ctrl-Click to create")
                 .setTargets(filesList)
                 .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList, useAltLabel))

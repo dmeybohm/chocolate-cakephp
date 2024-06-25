@@ -28,7 +28,7 @@ class CreateViewFileAction(
 ) : AnAction(
     title,
     "Create view file",
-    CakeIcons.LOGO
+    CakeIcons.LOGO_PNG
 ) {
 
     private val _title = title

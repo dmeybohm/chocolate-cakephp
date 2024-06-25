@@ -11,7 +11,7 @@ import com.intellij.psi.PsiFile
 // This represents either:
 //   - the "app" directory in CakePHP 2
 //   - the "src" directory in CakePHP 3+
-//   - the "plugins/MyPlugin/src" directory in CakePHP 3+
+//   - the "plugins/MyPlugin/src" directory in CakePHP 4+
 //
 sealed interface TopSourceDirectory {
     val psiDirectory: PsiDirectory
@@ -31,10 +31,10 @@ data class CakeThreeTemplatesDir(override val dirName: String, override val psiD
 data class CakeTwoTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
 
 
-fun topSourceDirectoryFromControllerFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
-    val originalFile = file.originalFile
-    return pluginSrcDirectoryFromControllerFile(settings, originalFile)
-        ?: appOrSrcDirectoryFromControllerFile(settings, originalFile)
+fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
+    val originalFile = file.parent
+    return pluginSrcDirectoryFromSourceFile(settings, originalFile)
+        ?: appOrSrcDirectoryFromSourceFile(settings, originalFile)
 }
 
 fun templatesDirectoryFromTopSourceDirectory(
@@ -125,6 +125,7 @@ fun topSourceDirectoryFromTemplatesDirectory(templatesDir: TemplatesDir, project
     }
 }
 
+// NOTE: only call this with CakeThreeTemplatesDir or CakeFourTemplatesDir
 private fun pluginSrcDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,
     project: Project,
@@ -187,14 +188,14 @@ private fun srcDirectoryFromTemplatesDir(
     }
 }
 
-fun pluginSrcDirectoryFromControllerFile(
+private fun pluginSrcDirectoryFromSourceFile(
     settings: Settings,
-    file: PsiFile
+    dir: PsiDirectory?
 ): PluginSrcDirectory? {
     if (!settings.cake3Enabled) {
         return null
     }
-    var child: PsiDirectory? = file.containingDirectory
+    var child: PsiDirectory? = dir
     var parent = child?.parent
     var grandparent = parent?.parent
     while (grandparent != null && grandparent.name != settings.pluginPath) {
@@ -208,28 +209,29 @@ fun pluginSrcDirectoryFromControllerFile(
     return null
 }
 
-fun appOrSrcDirectoryFromControllerFile(
+private fun appOrSrcDirectoryFromSourceFile(
     settings: Settings,
-    file: PsiFile
+    dir: PsiDirectory?
 ): AppOrSrcDirectory? {
-    var dir: PsiDirectory? = file.containingDirectory
-    while (dir != null) {
+    var child: PsiDirectory? = dir
+    while (child != null) {
         if (settings.cake3Enabled) {
-            if (dir.name == settings.appDirectory) {
-                return SrcDirectory(dir)
+            if (child.name == settings.appDirectory) {
+                return SrcDirectory(child)
             }
         }
         if (settings.cake2Enabled) {
-            if (dir.name == settings.cake2AppDirectory) {
-                return AppDirectory(dir)
+            if (child.name == settings.cake2AppDirectory) {
+                return AppDirectory(child)
             }
         }
-        dir = dir.parent
+        child = child.parent
     }
     return null
 }
 
 
+@Deprecated("Use TemplatesDir and getViewFilename instead")
 sealed class CakeView(val elementTop: String) {
     abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
     abstract fun elementPath(settings: Settings, elementPath: String): String
@@ -246,6 +248,7 @@ fun isCakeControllerFile(file: PsiFile): Boolean {
     return file.virtualFile.nameWithoutExtension.endsWith("Controller")
 }
 
+@Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeFour : CakeView(elementTop = "element") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/${controllerAction}.php"
@@ -254,6 +257,7 @@ object CakeFour : CakeView(elementTop = "element") {
         "${elementTop}/${elementPath}.php"
 }
 
+@Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeThree : CakeView(elementTop = "Element") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/${controllerAction}.${settings.cakeTemplateExtension}"
@@ -262,6 +266,7 @@ object CakeThree : CakeView(elementTop = "Element") {
         "${elementTop}/${elementPath}.${settings.cakeTemplateExtension}"
 }
 
+@Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeTwo : CakeView(elementTop = "Elements") {
     override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
         "${controllerName}/$controllerAction.${settings.cake2TemplateExtension}"
@@ -270,6 +275,7 @@ object CakeTwo : CakeView(elementTop = "Elements") {
         "${elementTop}/$elementPath.${settings.cake2TemplateExtension}"
 }
 
+@Deprecated("Use AllViewPaths instead")
 fun templatePathToVirtualFile(
     settings: Settings,
     templatesDir: TemplatesDir,
@@ -296,6 +302,7 @@ fun templatePathToVirtualFile(
     return relativeFile
 }
 
+@Deprecated("Rewrite this to use AllViewPaths instead")
 fun elementPathToVirtualFile(
     settings: Settings,
     templatesDir: TemplatesDir,

@@ -1,9 +1,12 @@
 package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.*
+import com.intellij.openapi.project.Project
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 data class ActionName(
@@ -53,10 +56,8 @@ fun actionNameFromMethod(method: Method): ActionName {
 
 data class ActionNames(
     val defaultActionName: ActionName,
-    val allActionNames: List<ActionName>,
+    val otherActionNames: List<ActionName> = listOf(),
 ) {
-    val otherActionNames: List<ActionName>
-        get() = allActionNames.filter { it != defaultActionName }
 }
 
 /**
@@ -72,18 +73,18 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
             as Collection<MethodReference>
 
     val defaultActionName = actionNameFromMethod(method)
-    val actionNames: List<ActionName> = renderCalls.mapNotNull {
+    val otherActionNames: List<ActionName> = renderCalls.mapNotNull {
         if (it.name != "render") {
             return@mapNotNull null
         }
         val firstParameter = it.parameterList?.getParameter(0) as? StringLiteralExpression
             ?: return@mapNotNull null
         return@mapNotNull actionNameFromPath(firstParameter.contents)
-    } + listOf(defaultActionName)
+    }
 
     return ActionNames(
         defaultActionName = defaultActionName,
-        allActionNames = actionNames
+        otherActionNames = otherActionNames
     )
 }
 
@@ -105,7 +106,7 @@ fun actionNamesFromSingleConstantRenderExpression(methodReference: MethodReferen
     val actionName = actionNameFromPath(renderParameter)
     return ActionNames(
         defaultActionName = actionName,
-        allActionNames = listOf(actionName)
+        otherActionNames = listOf()
     )
 }
 
@@ -125,7 +126,6 @@ fun viewFilenameToActionName(
             val actionName = ActionName(camelCaseActionName, "")
             return ActionNames(
                 defaultActionName = actionName,
-                allActionNames = listOf(actionName)
             )
         }
         is CakeTwoTemplatesDir -> {
@@ -134,8 +134,29 @@ fun viewFilenameToActionName(
             val actionName = ActionName(trimmed, "")
             return ActionNames(
                 defaultActionName = actionName,
-                allActionNames = listOf(actionName)
             )
         }
     }
+}
+
+fun getControllerClassesOfPotentialControllerName(
+    project: Project,
+    settings: Settings,
+    potentialControllerName: String
+): Collection<PhpClass> {
+    val phpIndex = PhpIndex.getInstance(project)
+    val controllerType = controllerTypeFromControllerName(settings, potentialControllerName)
+    val controllerClasses = phpIndex.phpClassesFromType(controllerType)
+    return controllerClasses
+}
+
+fun controllerMethodFromViewFilename(
+    controllerClasses: Collection<PhpClass>,
+    settings: Settings,
+    viewFilename: String,
+    templatesDir: TemplatesDir
+): Method? {
+    val actionNames = viewFilenameToActionName(viewFilename, settings, templatesDir)
+    val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName.name)
+    return method
 }
