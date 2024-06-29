@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.controllerBaseName
 import com.daveme.chocolateCakePHP.removeQuotes

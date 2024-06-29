@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -9,7 +9,7 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
-object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
+object ViewVariableDataIndexer : DataIndexer<String, List<Int>, FileContent> {
 
     override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
         val result = mutableMapOf<String, List<Int>>()

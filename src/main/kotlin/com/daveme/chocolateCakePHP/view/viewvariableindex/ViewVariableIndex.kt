@@ -1,22 +1,22 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.intellij.util.indexing.*
 import com.intellij.util.io.DataExternalizer
 import com.intellij.util.io.EnumeratorStringDescriptor
 import com.intellij.util.io.KeyDescriptor
 
-class ViewFileIndex : FileBasedIndexExtension<String, List<Int>>() {
+class ViewVariableIndex : FileBasedIndexExtension<String, List<Int>>() {
 
     override fun getName() = VIEW_FILE_INDEX_KEY
 
     override fun getIndexer(): DataIndexer<String, List<Int>, FileContent> =
-        ViewFileDataIndexer
+        ViewVariableDataIndexer
 
     override fun getKeyDescriptor(): KeyDescriptor<String> =
         EnumeratorStringDescriptor.INSTANCE
 
     override fun getValueExternalizer(): DataExternalizer<List<Int>> =
-        ViewFileDataExternalizer
+        ViewVariableDataExternalizer
 
     override fun getVersion(): Int {
         return 1

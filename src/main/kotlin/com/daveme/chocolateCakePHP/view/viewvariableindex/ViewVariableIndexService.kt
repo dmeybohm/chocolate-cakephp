@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.findElementAt
@@ -14,7 +14,7 @@ data class PsiElementAndPath(
     val psiElement: PsiElement
 )
 
-object ViewFileIndexService {
+object ViewVariableIndexService {
     fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
         return filename
             .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)

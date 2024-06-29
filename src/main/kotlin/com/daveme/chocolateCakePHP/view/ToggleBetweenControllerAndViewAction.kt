@@ -6,7 +6,7 @@ import com.daveme.chocolateCakePHP.controller.createViewActionPopupFromAllViewPa
 import com.daveme.chocolateCakePHP.controller.getScreenPoint
 import com.daveme.chocolateCakePHP.controller.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.controller.showPsiFilePopupFromEditor
-import com.daveme.chocolateCakePHP.view.index.ViewFileIndexService
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -145,11 +145,11 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         }
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(relativePath, settings)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
-
-        val viewFileName = virtualFile.nameWithoutExtension
         val potentialControllerName = pathParts[0]
 
-        val controllerMethod = getControllerMethod(
+        val viewFileName = virtualFile.nameWithoutExtension
+
+        val controllerMethod = findNavigableControllerMethod(
             project,
             settings,
             templatesDir,
@@ -185,23 +185,6 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             else -> {
                 showPsiElementPopupFromEditor(targetList, project, editor, relativePoint)
             }
-        }
-    }
-
-    private fun getControllerMethod(
-        project: Project,
-        settings: Settings,
-        templatesDir: TemplatesDir,
-        potentialControllerName: String,
-        viewFilename: String
-    ): PsiElement? {
-        val controllerClasses = getControllerClassesOfPotentialControllerName(project, settings, potentialControllerName)
-        val method = controllerMethodFromViewFilename(controllerClasses, settings, viewFilename, templatesDir)
-
-        if (method == null || !method.canNavigate()) {
-            return null
-        } else {
-            return method
         }
     }
 
