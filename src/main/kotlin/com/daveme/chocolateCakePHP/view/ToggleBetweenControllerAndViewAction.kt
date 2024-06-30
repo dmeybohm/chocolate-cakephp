@@ -2,10 +2,10 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.daveme.chocolateCakePHP.controller.createViewActionPopupFromAllViewPaths
-import com.daveme.chocolateCakePHP.controller.getScreenPoint
-import com.daveme.chocolateCakePHP.controller.showPsiElementPopupFromEditor
-import com.daveme.chocolateCakePHP.controller.showPsiFilePopupFromEditor
+import com.daveme.chocolateCakePHP.createViewActionPopupFromAllViewPaths
+import com.daveme.chocolateCakePHP.getScreenPoint
+import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
+import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread

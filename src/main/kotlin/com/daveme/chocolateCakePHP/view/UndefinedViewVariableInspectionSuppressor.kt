@@ -15,6 +15,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor
         val project = element.project
         val settings = Settings.getInstance(project)
         val isViewFile = isCakeViewFile(project, settings, element.containingFile)
+
         return isViewFile
     }
 
