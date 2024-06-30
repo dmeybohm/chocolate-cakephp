@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
@@ -27,6 +28,17 @@ data class RenderPath(
     val isAbsolute: Boolean get() = quotesRemoved.startsWith("/")
     val quotesRemoved : String get() =
         renderPath.removeQuotes()
+}
+
+fun elementAndPathFromMethodAndControllerName(
+    controllerMethod: PsiElement,
+    controllerName: String
+): PsiElementAndPath? {
+    val psiMethod = controllerMethod as? Method ?: return null
+    return PsiElementAndPath(
+        controllerName,
+        psiMethod
+    )
 }
 
 object ViewFileIndexService {

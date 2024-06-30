@@ -1,9 +1,11 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
@@ -31,6 +33,20 @@ val VIEW_VARIABLE_INDEX_KEY : ID<ViewVariablesKey, ViewVariables> =
 
 
 object ViewVariableIndexService {
+
+    fun controllerKeyFromElementAndPath(
+        elementAndPath: PsiElementAndPath
+    ): String? {
+        val element = if (elementAndPath.psiElement is Method)
+            elementAndPath.psiElement
+        else
+            PsiTreeUtil.getParentOfType(elementAndPath.psiElement, Method::class.java)
+        if (element == null || !element.isValid) {
+            return null
+        }
+        return "${elementAndPath.path}:${element.name}"
+    }
+
     fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
         return filename
             .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)
@@ -48,10 +64,6 @@ object ViewVariableIndexService {
         }
         return result
     }
-}
-
-fun isControllerFile(file: VirtualFile): Boolean {
-    return file.nameWithoutExtension.endsWith("Controller")
 }
 
 fun controllerMethodKey(

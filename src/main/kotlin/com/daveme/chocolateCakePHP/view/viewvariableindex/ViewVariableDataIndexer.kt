@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
@@ -11,19 +10,20 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
+
 object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, FileContent> {
 
     override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
         val result = mutableMapOf<String, ViewVariables>()
         val psiFile = inputData.psiFile
-        val project = psiFile.project
+//        val project = psiFile.project
 
         val virtualFile = psiFile.virtualFile
         if (virtualFile.nameWithoutExtension.endsWith("Test")) {
             return result
         }
 
-        val projectDir = project.guessProjectDir() ?: return result
+//        val projectDir = project.guessProjectDir() ?: return result
         if (isCakeControllerFile(psiFile)) {
             indexController(result, psiFile)
         }
@@ -64,8 +64,8 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                 //   case 3: $this->set(compact('value'))
                 //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
                 //
-                val firstParam = setCall.parameters.first() as? StringLiteralExpression
-                val secondParam = setCall.parameters.get(1)
+                val firstParam = setCall.parameters.getOrNull(0) as? StringLiteralExpression
+                val secondParam = setCall.parameters.getOrNull(1)
 
                 // case 1:
                 if (firstParam != null && secondParam is Variable) {
