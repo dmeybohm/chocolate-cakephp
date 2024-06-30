@@ -10,9 +10,9 @@ import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
 
-// Maps src/Controller/MovieController:methodName
-//   or templates/Movie/view_file_without_extension
-//   or templates/element/Movie/element_file_without_extension
+// Maps MovieController:methodName
+//   or {templates,src/Template,App/View}/Movie/view_file_without_extension
+//   or {templates/element,src/Template/Element/Movie,app/View/Element}/element_file_without_extension
 typealias ViewVariablesKey = String
 
 // The name of the variable
