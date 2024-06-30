@@ -55,7 +55,7 @@ object ViewFileIndexService {
 
 }
 
-fun isControllerFile(file: VirtualFile): Boolean {
+private fun isControllerFile(file: VirtualFile): Boolean {
     return file.nameWithoutExtension.endsWith("Controller")
 }
 

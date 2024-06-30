@@ -1,18 +1,34 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.findElementAt
-import com.daveme.chocolateCakePHP.removeFromEnd
+import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiElement
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FileBasedIndex
-import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.Method
 
-data class PsiElementAndPath(
-    val path: String,
-    val psiElement: PsiElement
+// Maps src/Controller/MovieController:methodName
+//   or templates/Movie/view_file_without_extension
+//   or templates/element/Movie/element_file_without_extension
+typealias ViewVariablesKey = String
+
+// The name of the variable
+typealias ViewVariableName = String
+
+// The data stored at each key in the index.
+// For controllers, we store the startOffset at the offset inside the `$this->set()` call.
+// For views, we offset of the lvalue in the first assignment statement that defines the var.
+data class ViewVariableValue (
+    val possiblyIncompleteType: String,
+    val startOffset: Int
 )
+
+class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
+
+val VIEW_VARIABLE_INDEX_KEY : ID<ViewVariablesKey, ViewVariables> =
+    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex")
+
 
 object ViewVariableIndexService {
     fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
@@ -21,21 +37,27 @@ object ViewVariableIndexService {
             .removeFromEnd(".php", ignoreCase = true)
     }
 
-    fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
-        val result = mutableListOf<PsiElementAndPath>()
+    fun referencingVariables(project: Project, filenameKey: String): ViewVariables {
+        val result = ViewVariables()
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
 
-        fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
-            { indexedFile, offsets: List<Int>  ->
-                offsets.forEach { offset ->
-                    val element = indexedFile.findElementAt(project, offset)
-                    val method = element?.parent?.parent as? MethodReference ?: return@forEach
-                    result.add(PsiElementAndPath(indexedFile.path, method))
-                }
-                true
-            }, searchScope)
+        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, filenameKey, searchScope)
+        list.forEach { variables ->
+            result += variables
+        }
         return result
     }
+}
 
+fun isControllerFile(file: VirtualFile): Boolean {
+    return file.nameWithoutExtension.endsWith("Controller")
+}
+
+fun controllerMethodKey(
+    sourceFile: VirtualFile,
+    methodCall: Method
+): ViewVariablesKey {
+    val controllerBaseName = sourceFile.nameWithoutExtension.controllerBaseName()
+    return "${controllerBaseName}:${methodCall.name}"
 }

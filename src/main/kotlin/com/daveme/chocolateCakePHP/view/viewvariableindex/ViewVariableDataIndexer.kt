@@ -1,123 +1,89 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
+import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
+import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
-object ViewVariableDataIndexer : DataIndexer<String, List<Int>, FileContent> {
+object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, FileContent> {
 
-    override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
-        val result = mutableMapOf<String, List<Int>>()
+    override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
+        val result = mutableMapOf<String, ViewVariables>()
         val psiFile = inputData.psiFile
         val project = psiFile.project
-        val projectDir = project.guessProjectDir() ?: return result
 
         val virtualFile = psiFile.virtualFile
         if (virtualFile.nameWithoutExtension.endsWith("Test")) {
             return result
         }
 
-        val methods = PsiTreeUtil.findChildrenOfType(psiFile, MethodReference::class.java)
-        val renderCalls = methods
-            .filter {
-                it.name.equals("render", ignoreCase = true)
-            }
-        val elementCalls = methods
-            .filter {
-                it.name.equals("element", ignoreCase = true)
-            }
-
-        if (elementCalls.isEmpty() && renderCalls.isEmpty()) {
-            return result
+        val projectDir = project.guessProjectDir() ?: return result
+        if (isCakeControllerFile(psiFile)) {
+            indexController(result, psiFile)
         }
+        // todo views
 
-        indexRenderCalls(result, projectDir, renderCalls, virtualFile)
-        indexElementCalls(result, projectDir, elementCalls, virtualFile)
         return result
     }
 
-    private fun indexRenderCalls(
-        result: MutableMap<String, List<Int>>,
-        projectDir: VirtualFile,
-        renderCalls: List<MethodReference>,
-        virtualFile: VirtualFile
+    private fun indexController(
+        result: MutableMap<String, ViewVariables>,
+        psiFile: PsiFile
     ) {
-        val withThis = renderCalls.filter { method ->
-            val variable = method.firstChild as? Variable ?: return@filter false
-            variable.name == "this" &&
-                    method.parameters.isNotEmpty() &&
-                    method.parameters.first() is StringLiteralExpression
-        }
-        if (withThis.isEmpty()) {
+        val publicMethodCalls = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
+            .filter { it.access.isPublic }
+        if (publicMethodCalls.isEmpty()) {
             return
         }
+        val virtualFile = psiFile.virtualFile
 
-        val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
-            ?: return
+        // Might need this for compact() support
+//        val assignments = PsiTreeUtil.findChildrenOfType(psiFile, AssignmentExpression::class.java)
+//            .associateBy({ it.variable.name }, { it })
 
-        for (method in withThis) {
-            val parameterName = method.parameters.first() as StringLiteralExpression
-            val content = RenderPath(parameterName.text)
+        publicMethodCalls.forEach { methodCall ->
+            val variables = ViewVariables()
+            val setCalls = PsiTreeUtil.findChildrenOfType(methodCall, MethodReference::class.java)
+                .filter {
+                    it.name.equals("set", ignoreCase = true) &&
+                        (it.firstChild as? Variable)?.name == "this" &&
+                            it.parameters.isNotEmpty()
+                }
 
-            if (content.quotesRemoved.isEmpty()) {
-                continue
+            setCalls.forEach { setCall ->
+                //
+                // There are four different uses to handle of $this->set():
+                //   case 1: $this->set('name', $value)
+                //   case 2: $this->set(['name' => $value])
+                //   case 3: $this->set(compact('value'))
+                //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
+                //
+                val firstParam = setCall.parameters.first() as? StringLiteralExpression
+                val secondParam = setCall.parameters.get(1)
+
+                // case 1:
+                if (firstParam != null && secondParam is Variable) {
+                    val variableName = firstParam.contents
+                    val variableType = secondParam.type
+
+                    variables[variableName] = ViewVariableValue(
+                        variableType.toString(),
+                        firstParam.textRange.startOffset,
+                    )
+                }
+                // todo other cases
             }
-            val fullViewPath = fullViewPathFromPrefixAndRenderPath(
-                viewPathPrefix,
-                content
+            val filenameAndMethodKey = controllerMethodKey(
+                virtualFile,
+                methodCall
             )
-            if (result.containsKey(fullViewPath)) {
-                val oldList = result[fullViewPath]!!.toMutableList()
-                val newList = oldList + listOf(method.textOffset)
-                result[fullViewPath] = newList
-            } else {
-                result[fullViewPath] = listOf(method.textOffset)
-            }
-        }
-    }
-
-    private fun indexElementCalls(
-        result: MutableMap<String, List<Int>>,
-        projectDir: VirtualFile,
-        elementCalls: List<MethodReference>,
-        virtualFile: VirtualFile
-    ) {
-        val withThis = elementCalls.filter { method ->
-            val variable = method.firstChild as? Variable ?: return@filter false
-            variable.name == "this" &&
-                    method.parameters.isNotEmpty() &&
-                    method.parameters.first() is StringLiteralExpression
-        }
-        if (withThis.isEmpty()) {
-            return
-        }
-
-        val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
-            ?: return
-
-        for (method in withThis) {
-            val parameterName = method.parameters.first() as StringLiteralExpression
-            val content = RenderPath(parameterName.text)
-
-            if (content.quotesRemoved.isEmpty()) {
-                continue
-            }
-            val fullViewPath = fullViewPathFromPrefixAndRenderPath(
-                viewPathPrefix,
-                content
-            )
-            if (result.containsKey(fullViewPath)) {
-                val oldList = result[fullViewPath]!!.toMutableList()
-                val newList = oldList + listOf(method.textOffset)
-                result[fullViewPath] = newList
-            } else {
-                result[fullViewPath] = listOf(method.textOffset)
-            }
+            result[filenameAndMethodKey] = variables
         }
     }
 
