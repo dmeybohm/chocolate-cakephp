@@ -5,6 +5,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -58,17 +59,23 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
 
             setCalls.forEach { setCall ->
                 //
-                // There are four different uses to handle of $this->set():
+                // There are a lot of different possible uses to handle of $this->set(), but these are the ones
+                // at most we're going to support:
                 //   case 1: $this->set('name', $value)
                 //   case 2: $this->set(['name' => $value])
                 //   case 3: $this->set(compact('value'))
                 //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
+                //   case 5: $this->set($caseFive); // where there is an assignment $caseFive = compact('var')
+                //   case 6: $this->set($caseSix);  // where there is an assignement $caseSix = ['key' => 'val']
+                //   case 7: $this->set($caseSevenKeys, $caseSevenVals) // .. or where either keys or vals is a in situ array
                 //
-                val firstParam = setCall.parameters.getOrNull(0) as? StringLiteralExpression
+                val firstParam = setCall.parameters.getOrNull(0)
                 val secondParam = setCall.parameters.getOrNull(1)
 
                 // case 1:
-                if (firstParam != null && secondParam is Variable) {
+                if (firstParam is StringLiteralExpression &&
+                    secondParam is Variable
+                ) {
                     val variableName = firstParam.contents
                     val variableType = secondParam.type
 
@@ -77,6 +84,33 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                         firstParam.textRange.startOffset,
                     )
                 }
+                // case 2:
+                else if (firstParam is ArrayCreationExpression &&
+                    secondParam == null
+                ) {
+                    for (hashElement in firstParam.hashElements) {
+                        val key = hashElement.key
+                        val value = hashElement.value
+
+                        if (key is StringLiteralExpression) {
+                            val variableName = key.contents
+                            val variableType : String? = if (value is Variable)
+                                value.type.toString()
+                            else if (value is StringLiteralExpression)
+                                "string"
+                            else
+                                null
+                            if (variableType == null) {
+                                continue
+                            }
+                            variables[variableName] = ViewVariableValue(
+                                variableType.toString(),
+                                key.textRange.startOffset
+                            )
+                        }
+                    }
+                }
+
                 // todo other cases
             }
             val filenameAndMethodKey = controllerMethodKey(
