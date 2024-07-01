@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
@@ -181,9 +180,8 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
             combined.forEach { (keyElement, valueElement) ->
                 val variableName = (keyElement as? StringLiteralExpression)?.contents
                     ?: return@forEach
-                val value = valueElement
-                val variableType = if (value is PhpTypedElement)
-                    value.type.toString()
+                val variableType = if (valueElement is PhpTypedElement)
+                    valueElement.type.toString()
                 else
                     FALLBACK_VIEW_VARIABLE_TYPE
                 result[variableName] = ViewVariableValue(
