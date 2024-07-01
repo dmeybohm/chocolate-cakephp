@@ -5,14 +5,13 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
-import com.jetbrains.php.lang.psi.elements.Method
-import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import com.jetbrains.php.lang.psi.elements.Variable
+import com.jetbrains.php.lang.psi.elements.*
+import org.jetbrains.annotations.Unmodifiable
 
 
 object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, FileContent> {
+
+    const val FALLBACK_VIEW_VARIABLE_TYPE = "mixed"
 
     override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
         val result = mutableMapOf<String, ViewVariables>()
@@ -33,24 +32,26 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
         return result
     }
 
+    private fun isCompactCall(functionRef: FunctionReference): Boolean =
+        functionRef.name.equals("compact", ignoreCase = true)
+
     private fun indexController(
         result: MutableMap<String, ViewVariables>,
         psiFile: PsiFile
     ) {
-        val publicMethodCalls = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
+        val publicMethods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
             .filter { it.access.isPublic }
-        if (publicMethodCalls.isEmpty()) {
+        if (publicMethods.isEmpty()) {
             return
         }
         val virtualFile = psiFile.virtualFile
 
-        // Might need this for compact() support
-//        val assignments = PsiTreeUtil.findChildrenOfType(psiFile, AssignmentExpression::class.java)
-//            .associateBy({ it.variable.name }, { it })
+        // Needed for $this->set(compact('var')) support to lookup the types of the variables:
+        val assignments = PsiTreeUtil.findChildrenOfType(psiFile, AssignmentExpression::class.java)
 
-        publicMethodCalls.forEach { methodCall ->
+        publicMethods.forEach { method ->
             val variables = ViewVariables()
-            val setCalls = PsiTreeUtil.findChildrenOfType(methodCall, MethodReference::class.java)
+            val setCalls = PsiTreeUtil.findChildrenOfType(method, MethodReference::class.java)
                 .filter {
                     it.name.equals("set", ignoreCase = true) &&
                         (it.firstChild as? Variable)?.name == "this" &&
@@ -72,7 +73,7 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                 val firstParam = setCall.parameters.getOrNull(0)
                 val secondParam = setCall.parameters.getOrNull(1)
 
-                // case 1:
+                // case 1: $this->set('name', $value)
                 if (firstParam is StringLiteralExpression &&
                     secondParam is Variable
                 ) {
@@ -84,7 +85,8 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                         firstParam.textRange.startOffset,
                     )
                 }
-                // case 2:
+
+                // case 2: $this->set(['name' => $value])
                 else if (firstParam is ArrayCreationExpression &&
                     secondParam == null
                 ) {
@@ -111,13 +113,65 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                     }
                 }
 
+                // case 3: $this->set(compact('value'))
+                else if (firstParam is FunctionReference &&
+                    isCompactCall(firstParam) &&
+                    secondParam == null
+                ) {
+                    val stringVals = firstParam.parameters.mapNotNull {
+                        (it as? StringLiteralExpression)?.contents
+                    }
+                    stringVals.forEach { variableName ->
+                        handleCompactFunctionInController(
+                            variables,
+                            assignments,
+                            variableName,
+                            firstParam,
+                            method
+                        )
+                    }
+                }
+
                 // todo other cases
             }
             val filenameAndMethodKey = controllerMethodKey(
                 virtualFile,
-                methodCall
+                method
             )
             result[filenameAndMethodKey] = variables
+        }
+    }
+
+    private fun handleCompactFunctionInController(
+        result: ViewVariables,
+        assignments: @Unmodifiable Collection<AssignmentExpression>,
+        variableName: String,
+        compactCall: FunctionReference,
+        controllerMethod: Method
+    ) {
+        val relevantAssignments = assignments.filter { it.variable?.name == variableName }
+        if (relevantAssignments.isNotEmpty()) {
+            relevantAssignments.forEach { assignment ->
+                val variableType = if (assignment.variable is PhpTypedElement)
+                    assignment.type.toString()
+                else
+                    FALLBACK_VIEW_VARIABLE_TYPE
+
+                result[variableName] = ViewVariableValue(
+                    variableType,
+                    compactCall.textRange.startOffset,
+                )
+            }
+        } else {
+            // Check for parameters in the controller method definition itself:
+            val relevantParams = controllerMethod.parameters.filter { it.name == variableName }
+            val param = relevantParams.firstOrNull()
+            if (param != null) {
+                result[variableName] = ViewVariableValue(
+                    param.type.toString(),
+                    param.textRange.startOffset
+                )
+            }
         }
     }
 

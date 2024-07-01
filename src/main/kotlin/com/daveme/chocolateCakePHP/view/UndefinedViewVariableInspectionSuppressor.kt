@@ -48,13 +48,13 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
         val viewFileName = virtualFile.nameWithoutExtension
 
-        // Handle render calls:
+        // Handle render call linkages (all files with `$this->render` and the variable defined
+        // either with $this->set() in controllers or assignments in view files):
         fileList.forEach { elementAndPath ->
             if (elementAndPath.path.isAnyControllerClass()) {
                 val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
                     ?: return@forEach
-                val variables = ViewVariableIndexService.referencingVariables(project, controllerKey)
-                if (variables.contains(variable.name)) {
+                if (ViewVariableIndexService.variableIsDefined(project, controllerKey, variable.name)) {
                     return true
                 }
             } else {
@@ -77,9 +77,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         ) ?: return false
         val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
             ?: return false
-
-        val variables = ViewVariableIndexService.referencingVariables(project, controllerKey)
-        return variables.contains(variable.name)
+        return ViewVariableIndexService.variableIsDefined(project, controllerKey, variable.name)
     }
 
     override fun getSuppressActions(

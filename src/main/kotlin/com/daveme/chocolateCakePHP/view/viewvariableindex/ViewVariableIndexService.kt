@@ -64,6 +64,16 @@ object ViewVariableIndexService {
         }
         return result
     }
+
+    fun variableIsDefined(project: Project, filenameKey: String, variableName: String): Boolean {
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+
+        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, filenameKey, searchScope)
+        return list.any {
+            it.contains(variableName)
+        }
+    }
 }
 
 fun controllerMethodKey(
