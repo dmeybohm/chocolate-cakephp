@@ -59,80 +59,7 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                 }
 
             setCalls.forEach { setCall ->
-                //
-                // There are a lot of different possible uses to handle of $this->set(), but these are the ones
-                // at most we're going to support:
-                //   case 1: $this->set('name', $value)
-                //   case 2: $this->set(['name' => $value])
-                //   case 3: $this->set(compact('value'))
-                //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
-                //   case 5: $this->set($caseFive); // where there is an assignment $caseFive = compact('var')
-                //   case 6: $this->set($caseSix);  // where there is an assignement $caseSix = ['key' => 'val']
-                //   case 7: $this->set($caseSevenKeys, $caseSevenVals) // .. or where either keys or vals is a in situ array
-                //
-                val firstParam = setCall.parameters.getOrNull(0)
-                val secondParam = setCall.parameters.getOrNull(1)
-
-                // case 1: $this->set('name', $value)
-                if (firstParam is StringLiteralExpression &&
-                    secondParam is Variable
-                ) {
-                    val variableName = firstParam.contents
-                    val variableType = secondParam.type
-
-                    variables[variableName] = ViewVariableValue(
-                        variableType.toString(),
-                        firstParam.textRange.startOffset,
-                    )
-                }
-
-                // case 2: $this->set(['name' => $value])
-                else if (firstParam is ArrayCreationExpression &&
-                    secondParam == null
-                ) {
-                    for (hashElement in firstParam.hashElements) {
-                        val key = hashElement.key
-                        val value = hashElement.value
-
-                        if (key is StringLiteralExpression) {
-                            val variableName = key.contents
-                            val variableType : String? = if (value is Variable)
-                                value.type.toString()
-                            else if (value is StringLiteralExpression)
-                                "string"
-                            else
-                                null
-                            if (variableType == null) {
-                                continue
-                            }
-                            variables[variableName] = ViewVariableValue(
-                                variableType.toString(),
-                                key.textRange.startOffset
-                            )
-                        }
-                    }
-                }
-
-                // case 3: $this->set(compact('value'))
-                else if (firstParam is FunctionReference &&
-                    isCompactCall(firstParam) &&
-                    secondParam == null
-                ) {
-                    val stringVals = firstParam.parameters.mapNotNull {
-                        (it as? StringLiteralExpression)?.contents
-                    }
-                    stringVals.forEach { variableName ->
-                        handleCompactFunctionInController(
-                            variables,
-                            assignments,
-                            variableName,
-                            firstParam,
-                            method
-                        )
-                    }
-                }
-
-                // todo other cases
+                setVariablesFromControllerSetCall(variables, setCall, assignments, method)
             }
             val filenameAndMethodKey = controllerMethodKey(
                 virtualFile,
@@ -142,7 +69,138 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
         }
     }
 
-    private fun handleCompactFunctionInController(
+    private fun setVariablesFromControllerSetCall(
+        result: ViewVariables,
+        setCall: MethodReference,
+        assignments: @Unmodifiable Collection<AssignmentExpression>,
+        method: Method
+    ) {
+        //
+        // There are a lot of different possible uses to handle of $this->set(), but these are the ones
+        // at most we're going to support:
+        //   case 1: $this->set('name', $value)
+        //   case 2: $this->set(['name' => $value])
+        //   case 3: $this->set(compact('value'))
+        //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
+        //   case 5: $this->set($caseFive); // where there is an assignment $caseFive = compact('var')
+        //   case 6: $this->set($caseSix);  // where there is an assignment $caseSix = ['key' => 'val']
+        //   case 7: $this->set($caseSevenKeys, $caseSevenVals) // .. or where either keys or vals is a in situ array
+        //
+
+        val firstParam = setCall.parameters.getOrNull(0)
+        val secondParam = setCall.parameters.getOrNull(1)
+
+        // case 1: $this->set('name', $value)
+        if (
+            firstParam is StringLiteralExpression &&
+            secondParam is Variable
+        ) {
+            val variableName = firstParam.contents
+            val variableType = secondParam.type
+
+            result[variableName] = ViewVariableValue(
+                variableType.toString(),
+                firstParam.textRange.startOffset,
+            )
+        }
+
+        // case 2: $this->set(['name' => $value])
+        else if (
+            firstParam is ArrayCreationExpression &&
+            secondParam == null
+        ) {
+            setVariablesFromArrayCreationExpressionInController(result, firstParam)
+        }
+
+        // case 3: $this->set(compact('value'))
+        else if (
+            firstParam is FunctionReference &&
+            isCompactCall(firstParam) &&
+            secondParam == null
+        ) {
+            val stringVals = firstParam.parameters.mapNotNull {
+                (it as? StringLiteralExpression)?.contents
+            }
+            stringVals.forEach { variableName ->
+                setVariablesFromCompactFunctionCallInController(
+                    result,
+                    assignments,
+                    variableName,
+                    firstParam,
+                    method
+                )
+            }
+        }
+
+        // case 5: $this->set($caseFive); // where there is an assignment $caseFive = compact('var')
+        // case 6: $this->set($caseSix);  // where there is an assignement $caseSix = ['key' => 'val']
+        else if (
+            firstParam is Variable &&
+            secondParam == null
+        ) {
+            val indirectSetValueName = firstParam.name
+            val relevantAssignments = assignments.filter { it.name == indirectSetValueName }
+            if (relevantAssignments.isNotEmpty()) {
+                assignments.forEach { assignment ->
+                    // case 5:
+                    val value = assignment.value
+                    if (value is FunctionReference && isCompactCall(value)) {
+                        val stringVals = value.parameters.mapNotNull {
+                            (it as? StringLiteralExpression)?.contents
+                        }
+                        stringVals.forEach { variableName ->
+                            setVariablesFromCompactFunctionCallInController(
+                                result,
+                                assignments,
+                                variableName,
+                                value,
+                                method
+                            )
+                        }
+                    } else if (value is ArrayCreationExpression) {
+                        setVariablesFromArrayCreationExpressionInController(
+                            result,
+                            value
+                        )
+                    }
+                }
+            }
+        }
+        //
+        // todo
+        //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
+        //   case 7: $this->set($caseSevenKeys, $caseSevenVals) // .. or where either keys or vals is a in situ array
+        //
+    }
+
+    private fun setVariablesFromArrayCreationExpressionInController(
+        result: ViewVariables,
+        arrayCreationExpression: ArrayCreationExpression
+    ) {
+        for (hashElement in arrayCreationExpression.hashElements) {
+            val key = hashElement.key
+            val value = hashElement.value
+
+            if (key is StringLiteralExpression) {
+                val variableName = key.contents
+                val variableType: String? = if (value is Variable)
+                    value.type.toString()
+                else if (value is StringLiteralExpression)
+                    "string"
+                else
+                    null
+                if (variableType == null) {
+                    continue
+                }
+                result[variableName] = ViewVariableValue(
+                    variableType.toString(),
+                    key.textRange.startOffset
+                )
+            }
+        }
+    }
+
+    private fun setVariablesFromCompactFunctionCallInController(
         result: ViewVariables,
         assignments: @Unmodifiable Collection<AssignmentExpression>,
         variableName: String,
