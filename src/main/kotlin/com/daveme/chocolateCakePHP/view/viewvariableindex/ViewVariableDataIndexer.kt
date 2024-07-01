@@ -139,30 +139,28 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
             secondParam == null
         ) {
             val indirectSetValueName = firstParam.name
-            val relevantAssignments = assignments.filter { it.name == indirectSetValueName }
-            if (relevantAssignments.isNotEmpty()) {
-                assignments.forEach { assignment ->
-                    // case 5:
-                    val value = assignment.value
-                    if (value is FunctionReference && isCompactCall(value)) {
-                        val stringVals = value.parameters.mapNotNull {
-                            (it as? StringLiteralExpression)?.contents
-                        }
-                        stringVals.forEach { variableName ->
-                            setVariablesFromCompactFunctionCallInController(
-                                result,
-                                assignments,
-                                variableName,
-                                value,
-                                method
-                            )
-                        }
-                    } else if (value is ArrayCreationExpression) {
-                        setVariablesFromArrayCreationExpressionInController(
+            val relevantAssignments = assignments.filter { it.variable?.name == indirectSetValueName }
+            relevantAssignments.forEach { assignment ->
+                // case 5:
+                val value = assignment.value
+                if (value is FunctionReference && isCompactCall(value)) {
+                    val stringVals = value.parameters.mapNotNull {
+                        (it as? StringLiteralExpression)?.contents
+                    }
+                    stringVals.forEach { variableName ->
+                        setVariablesFromCompactFunctionCallInController(
                             result,
-                            value
+                            assignments,
+                            variableName,
+                            value,
+                            method
                         )
                     }
+                } else if (value is ArrayCreationExpression) {
+                    setVariablesFromArrayCreationExpressionInController(
+                        result,
+                        value
+                    )
                 }
             }
         }
