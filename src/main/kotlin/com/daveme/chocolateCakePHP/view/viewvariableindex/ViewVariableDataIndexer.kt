@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
@@ -78,6 +79,7 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
         //
         // There are a lot of different possible uses to handle of $this->set(), but these are the ones
         // at most we're going to support:
+        //
         //   case 1: $this->set('name', $value)
         //   case 2: $this->set(['name' => $value])
         //   case 3: $this->set(compact('value'))
@@ -164,9 +166,34 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                 }
             }
         }
+        // case 4: $this->set(['name1', 'name2'], [$value1, $value2])
+        else if (
+            firstParam is ArrayCreationExpression &&
+            secondParam is ArrayCreationExpression
+        ) {
+            val keys = firstParam.children.mapNotNull {
+                it.firstChild as? StringLiteralExpression
+            }
+        val vals = secondParam.children.mapNotNull {
+                it.firstChild
+            }
+            val combined = keys.zip(vals)
+            combined.forEach { (keyElement, valueElement) ->
+                val variableName = (keyElement as? StringLiteralExpression)?.contents
+                    ?: return@forEach
+                val value = valueElement
+                val variableType = if (value is PhpTypedElement)
+                    value.type.toString()
+                else
+                    FALLBACK_VIEW_VARIABLE_TYPE
+                result[variableName] = ViewVariableValue(
+                    variableType,
+                    firstParam.textRange.startOffset
+                )
+            }
+        }
         //
         // todo
-        //   case 4: $this->set(['name1', 'name2'], [$value1, $value2])
         //   case 7: $this->set($caseSevenKeys, $caseSevenVals) // .. or where either keys or vals is a in situ array
         //
     }
