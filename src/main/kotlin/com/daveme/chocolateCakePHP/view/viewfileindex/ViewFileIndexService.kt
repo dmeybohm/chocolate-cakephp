@@ -15,8 +15,6 @@ import java.io.File
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
     ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
 
-const val MAX_CONTROLLER_LOOKUP_DEPTH = 50
-
 data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
@@ -54,17 +52,6 @@ private fun isCakeThreePlusController(
 
     return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
             topSourceDir.children.any { it.nameWithoutExtension == "Template" }
-}
-
-fun elementAndPathFromMethodAndControllerName(
-    controllerMethod: PsiElement,
-    controllerName: String
-): PsiElementAndPath? {
-    val psiMethod = controllerMethod as? Method ?: return null
-    return PsiElementAndPath(
-        controllerName,
-        psiMethod
-    )
 }
 
 object ViewFileIndexService {
