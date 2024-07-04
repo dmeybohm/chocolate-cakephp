@@ -1,11 +1,9 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.findNavigableControllerMethod
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
-import com.daveme.chocolateCakePHP.view.viewfileindex.elementAndPathFromMethodAndControllerName
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.codeInspection.InspectionSuppressor
 import com.intellij.codeInspection.SuppressQuickFix

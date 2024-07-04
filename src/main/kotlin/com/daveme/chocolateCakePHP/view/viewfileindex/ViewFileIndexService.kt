@@ -39,17 +39,17 @@ data class ControllerInfo(
     val isCakeTwo: Boolean
 )
 
-fun lookupControllerFileInfo(virtualFile: VirtualFile): ControllerInfo {
+fun lookupControllerFileInfo(controllerFile: VirtualFile): ControllerInfo {
     return ControllerInfo(
-        virtualFile,
-        isCakeTwoController(virtualFile)
+        controllerFile,
+        !isCakeThreePlusController(controllerFile)
     )
 }
 
-private fun isCakeTwoController(
-    virtualFile: VirtualFile
+private fun isCakeThreePlusController(
+    controllerFile: VirtualFile
 ): Boolean {
-    val topSourceDir = virtualFile.parent?.parent?.parent ?: return false
+    val topSourceDir = controllerFile.parent?.parent  ?: return false
     val projectDir = topSourceDir.parent ?: return false
 
     return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
