@@ -1,8 +1,6 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.isCakeViewFile
-import com.daveme.chocolateCakePHP.cake.templatesDirWithPath
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.viewType
 import com.intellij.openapi.project.Project
