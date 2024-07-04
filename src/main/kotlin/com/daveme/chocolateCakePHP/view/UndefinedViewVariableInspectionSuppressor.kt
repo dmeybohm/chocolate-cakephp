@@ -54,11 +54,14 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
             if (elementAndPath.path.isAnyControllerClass()) {
                 val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
                     ?: return@forEach
-                if (ViewVariableIndexService.variableIsDefined(project, controllerKey, variable.name)) {
+                if (ViewVariableIndexService.variableIsSetByController(project, controllerKey, variable.name)) {
                     return true
                 }
             } else {
-                // todo look up view key
+                val viewKey = ViewVariableIndexService.viewKeyFromElementAndPath(elementAndPath)
+                if (ViewVariableIndexService.variableIsSetForView(project, viewKey, variable.name)) {
+                    return true
+                }
             }
         }
 
@@ -77,7 +80,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         ) ?: return false
         val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
             ?: return false
-        return ViewVariableIndexService.variableIsDefined(project, controllerKey, variable.name)
+        return ViewVariableIndexService.variableIsSetByController(project, controllerKey, variable.name)
     }
 
     override fun getSuppressActions(

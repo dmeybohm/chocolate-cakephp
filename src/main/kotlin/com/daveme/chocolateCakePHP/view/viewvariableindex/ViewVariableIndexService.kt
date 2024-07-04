@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -47,25 +48,13 @@ object ViewVariableIndexService {
         return "${elementAndPath.path}:${element.name}"
     }
 
-    fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
-        return filename
-            .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)
-            .removeFromEnd(".php", ignoreCase = true)
+    fun viewKeyFromElementAndPath(
+        elementAndPath: PsiElementAndPath
+    ): String {
+        return elementAndPath.path
     }
 
-    fun referencingVariables(project: Project, filenameKey: String): ViewVariables {
-        val result = ViewVariables()
-        val fileIndex = FileBasedIndex.getInstance()
-        val searchScope = GlobalSearchScope.allScope(project)
-
-        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, filenameKey, searchScope)
-        list.forEach { variables ->
-            result += variables
-        }
-        return result
-    }
-
-    fun variableIsDefined(project: Project, filenameKey: String, variableName: String): Boolean {
+    fun variableIsSetByController(project: Project, filenameKey: String, variableName: String): Boolean {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
 
@@ -74,6 +63,14 @@ object ViewVariableIndexService {
             it.contains(variableName)
         }
     }
+
+    fun variableIsSetForView(project: Project, viewKey: String, name: @NlsSafe String): Boolean {
+        // todo get the view paths for this view
+        // todo find all the variables for each of the view paths, recursively and set some limit
+        //      on the number of views to check
+        return false
+    }
+
 }
 
 fun controllerMethodKey(
