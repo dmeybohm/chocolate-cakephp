@@ -22,14 +22,14 @@ typealias ViewVariableName = String
 // The data stored at each key in the index.
 // For controllers, we store the startOffset at the offset inside the `$this->set()` call.
 // For views, we offset of the lvalue in the first assignment statement that defines the var.
-data class ViewVariableValue (
+data class ViewVariableValue(
     val possiblyIncompleteType: String,
     val startOffset: Int
 )
 
 class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 
-val VIEW_VARIABLE_INDEX_KEY : ID<ViewVariablesKey, ViewVariables> =
+val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariables> =
     ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex")
 
 
