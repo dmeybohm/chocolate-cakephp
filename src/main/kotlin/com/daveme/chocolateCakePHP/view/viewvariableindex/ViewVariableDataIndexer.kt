@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Unmodifiable
 
 object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, FileContent> {
 
-    const val FALLBACK_VIEW_VARIABLE_TYPE = "mixed"
+    private const val FALLBACK_VIEW_VARIABLE_TYPE = "mixed"
 
     override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
         val result = mutableMapOf<String, ViewVariables>()

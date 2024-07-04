@@ -5,10 +5,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import java.io.File
 
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
     ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
@@ -16,29 +18,40 @@ val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
 data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
-)
+) {
+    val nameWithoutExtension: String = File(path).nameWithoutExtension
+}
 
 data class ViewPathPrefix(
     val prefix: String
 )
 
 data class RenderPath(
-    val renderPath: String,
+    val path: String,
 ) {
-    val isAbsolute: Boolean get() = quotesRemoved.startsWith("/")
-    val quotesRemoved : String get() =
-        renderPath.removeQuotes()
+    val isAbsolute: Boolean get() = path.startsWith("/")
 }
 
-fun elementAndPathFromMethodAndControllerName(
-    controllerMethod: PsiElement,
-    controllerName: String
-): PsiElementAndPath? {
-    val psiMethod = controllerMethod as? Method ?: return null
-    return PsiElementAndPath(
-        controllerName,
-        psiMethod
+data class ControllerInfo(
+    val virtualFile: VirtualFile,
+    val isCakeTwo: Boolean
+)
+
+fun lookupControllerFileInfo(controllerFile: VirtualFile): ControllerInfo {
+    return ControllerInfo(
+        controllerFile,
+        !isCakeThreePlusController(controllerFile)
     )
+}
+
+private fun isCakeThreePlusController(
+    controllerFile: VirtualFile
+): Boolean {
+    val topSourceDir = controllerFile.parent?.parent  ?: return false
+    val projectDir = topSourceDir.parent ?: return false
+
+    return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
+            topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
 
 object ViewFileIndexService {
@@ -57,12 +70,22 @@ object ViewFileIndexService {
             { indexedFile, offsets: List<Int>  ->
                 offsets.forEach { offset ->
                     val element = indexedFile.findElementAt(project, offset)
-                    val method = element?.parent?.parent as? MethodReference ?: return@forEach
-                    result.add(PsiElementAndPath(indexedFile.path, method))
+
+                    val methodOrReference = PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
+                        ?: PsiTreeUtil.getParentOfType(element, Method::class.java)
+                        ?: return@forEach
+                    result.add(PsiElementAndPath(indexedFile.path, methodOrReference))
                 }
                 true
             }, searchScope)
         return result
+    }
+
+    fun controllerElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
+        val elements = referencingElements(project, filenameKey).toMutableList()
+        val resultElements = mutableListOf<PsiElementAndPath>()
+        // todo
+        return resultElements
     }
 
 }
@@ -146,12 +169,21 @@ fun elementPathPrefixFromSourceFile(
         return null
 }
 
-fun fullViewPathFromPrefixAndRenderPath(
+fun fullExplicitViewPath(
     viewPathPrefix: ViewPathPrefix,
     renderPath: RenderPath
 ): String {
     return if (renderPath.isAbsolute)
-        renderPath.quotesRemoved.substring(1)
+        renderPath.path.substring(1)
     else
-        "${viewPathPrefix.prefix}${renderPath.quotesRemoved}"
+        "${viewPathPrefix.prefix}${renderPath.path}"
+}
+
+fun fullImplicitViewPath(
+    viewPathPrefix: ViewPathPrefix,
+    controllerInfo: ControllerInfo,
+    methodName: String
+): String {
+    val viewPath = methodName.conditionalCamelCaseToUnderscore(!controllerInfo.isCakeTwo)
+    return "${viewPathPrefix.prefix}${viewPath}"
 }
