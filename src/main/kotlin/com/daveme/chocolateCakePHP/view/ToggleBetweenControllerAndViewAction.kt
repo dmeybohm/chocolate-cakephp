@@ -139,28 +139,14 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
-        val pathParts = relativePath.split("/")
-        if (pathParts.size <= 1) {
-            return
-        }
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(relativePath, settings)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
-        val potentialControllerName = pathParts[0]
 
-        val viewFileName = virtualFile.nameWithoutExtension
-
-        val controllerMethod = findNavigableControllerMethod(
-            project,
-            settings,
-            templatesDir,
-            potentialControllerName,
-            viewFileName
-        )
-
-        val targets = fileList.map {
+        val targets = fileList.filter {
+            it.psiElement.isValid
+        }.map {
             it.psiElement
-        } + listOf(controllerMethod)
-            .mapNotNull { it }
+        }
 
         val relativePoint = if (point != null)
             RelativePoint(Point(Math.max(0, point.x - 400), point.y))

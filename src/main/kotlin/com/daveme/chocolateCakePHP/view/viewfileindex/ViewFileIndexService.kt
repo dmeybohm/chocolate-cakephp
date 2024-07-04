@@ -5,10 +5,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import java.io.File
 
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
     ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
@@ -18,7 +20,9 @@ const val MAX_CONTROLLER_LOOKUP_DEPTH = 50
 data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
-)
+) {
+    val nameWithoutExtension: String = File(path).nameWithoutExtension
+}
 
 data class ViewPathPrefix(
     val prefix: String
@@ -79,8 +83,11 @@ object ViewFileIndexService {
             { indexedFile, offsets: List<Int>  ->
                 offsets.forEach { offset ->
                     val element = indexedFile.findElementAt(project, offset)
-                    val method = element?.parent?.parent as? MethodReference ?: return@forEach
-                    result.add(PsiElementAndPath(indexedFile.path, method))
+
+                    val methodOrReference = PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
+                        ?: PsiTreeUtil.getParentOfType(element, Method::class.java)
+                        ?: return@forEach
+                    result.add(PsiElementAndPath(indexedFile.path, methodOrReference))
                 }
                 true
             }, searchScope)

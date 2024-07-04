@@ -45,7 +45,7 @@ object ViewVariableIndexService {
         if (element == null || !element.isValid) {
             return null
         }
-        return "${elementAndPath.path}:${element.name}"
+        return "${elementAndPath.nameWithoutExtension.controllerBaseName()}:${element.name}"
     }
 
     fun viewKeyFromElementAndPath(

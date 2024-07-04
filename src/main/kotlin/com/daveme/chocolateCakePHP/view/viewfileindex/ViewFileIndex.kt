@@ -20,8 +20,7 @@ class ViewFileIndex : FileBasedIndexExtension<String, List<Int>>() {
         ViewFileDataExternalizer
 
     override fun getVersion(): Int {
-        // todo
-        return Random.nextInt(1, Int.MAX_VALUE)
+        return 2
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {
