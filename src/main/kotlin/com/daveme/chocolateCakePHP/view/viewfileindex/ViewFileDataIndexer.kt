@@ -1,15 +1,42 @@
 package com.daveme.chocolateCakePHP.view.viewfileindex
 
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
+import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
+import org.jetbrains.annotations.Unmodifiable
 
 object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
+
+    private val SKIP_INDEXING_METHODS = listOf(
+        "beforeFilter",
+        "beforeRender",
+        "beforeRedirect",
+        "afterFilter",
+        "afterRender",
+        "__construct",
+        "initialize",
+        "components",
+        "setPlugin",
+        "getPlugin",
+        "enableAutoRender",
+        "invokeAction",
+        "startupProcess",
+        "shutdownProcess",
+        "redirect",
+        "setAction",
+        "render",
+        "viewClasses",
+        "paginate",
+        "isAction",
+    )
 
     override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
         val result = mutableMapOf<String, List<Int>>()
@@ -22,22 +49,34 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
             return result
         }
 
-        val methods = PsiTreeUtil.findChildrenOfType(psiFile, MethodReference::class.java)
-        val renderCalls = methods
+        val methodCalls = PsiTreeUtil.findChildrenOfType(psiFile, MethodReference::class.java)
+        val renderCalls = methodCalls
             .filter {
                 it.name.equals("render", ignoreCase = true)
             }
-        val elementCalls = methods
+        val elementCalls = methodCalls
             .filter {
                 it.name.equals("element", ignoreCase = true)
             }
 
-        if (elementCalls.isEmpty() && renderCalls.isEmpty()) {
+        val isController = isCakeControllerFile(psiFile)
+        if (
+            elementCalls.isEmpty() &&
+            renderCalls.isEmpty() &&
+            !isController
+        ) {
             return result
         }
 
         indexRenderCalls(result, projectDir, renderCalls, virtualFile)
         indexElementCalls(result, projectDir, elementCalls, virtualFile)
+
+        if (isController) {
+            val methods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
+            val settings = Settings.getInstance(project)
+            indexImplicitRender(result, projectDir, methods, virtualFile)
+        }
+
         return result
     }
 
@@ -47,12 +86,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         renderCalls: List<MethodReference>,
         virtualFile: VirtualFile
     ) {
-        val withThis = renderCalls.filter { method ->
-            val variable = method.firstChild as? Variable ?: return@filter false
-            variable.name == "this" &&
-                    method.parameters.isNotEmpty() &&
-                    method.parameters.first() is StringLiteralExpression
-        }
+        val withThis = filterRenderOrElementCalls(renderCalls)
         if (withThis.isEmpty()) {
             return
         }
@@ -60,25 +94,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        for (method in withThis) {
-            val parameterName = method.parameters.first() as StringLiteralExpression
-            val content = RenderPath(parameterName.text)
-
-            if (content.quotesRemoved.isEmpty()) {
-                continue
-            }
-            val fullViewPath = fullViewPathFromPrefixAndRenderPath(
-                viewPathPrefix,
-                content
-            )
-            if (result.containsKey(fullViewPath)) {
-                val oldList = result[fullViewPath]!!.toMutableList()
-                val newList = oldList + listOf(method.textOffset)
-                result[fullViewPath] = newList
-            } else {
-                result[fullViewPath] = listOf(method.textOffset)
-            }
-        }
+        setViewPath(withThis, viewPathPrefix, result)
     }
 
     private fun indexElementCalls(
@@ -87,12 +103,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         elementCalls: List<MethodReference>,
         virtualFile: VirtualFile
     ) {
-        val withThis = elementCalls.filter { method ->
-            val variable = method.firstChild as? Variable ?: return@filter false
-            variable.name == "this" &&
-                    method.parameters.isNotEmpty() &&
-                    method.parameters.first() is StringLiteralExpression
-        }
+        val withThis = filterRenderOrElementCalls(elementCalls)
         if (withThis.isEmpty()) {
             return
         }
@@ -100,24 +111,72 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
+        setViewPath(withThis, viewPathPrefix, result)
+    }
+
+    private fun filterRenderOrElementCalls(methodCalls: List<MethodReference>): List<MethodReference> {
+        val withThis = methodCalls.filter { method ->
+            val variable = method.firstChild as? Variable ?: return@filter false
+            variable.name == "this" &&
+                    method.parameters.isNotEmpty() &&
+                    method.parameters.first() is StringLiteralExpression
+        }
+        return withThis
+    }
+
+    private fun isRelevantMethod(method: Method): Boolean {
+        return method.access.isPublic &&
+            !SKIP_INDEXING_METHODS.any { method.name.equals(it, ignoreCase = true)}
+    }
+
+    private fun indexImplicitRender(
+        result: MutableMap<String, List<Int>>,
+        projectDir: VirtualFile,
+        methods: @Unmodifiable Collection<Method>,
+        controllerFile: VirtualFile
+    ) {
+        // todo check for $this->autoRender = false
+        val relevantMethods = methods.filter(this::isRelevantMethod)
+        if (relevantMethods.isEmpty()) {
+            return
+        }
+
+        val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, controllerFile)
+            ?: return
+
+        val controllerInfo = lookupControllerFileInfo(controllerFile)
+
+        relevantMethods.forEach { method ->
+            val fullViewPath = fullImplicitViewPath(
+                viewPathPrefix,
+                controllerInfo,
+                method.name
+            )
+            val oldList = result.getOrDefault(fullViewPath, emptyList())
+            val newList = oldList + listOf(method.textOffset)
+            result[fullViewPath] = newList
+        }
+    }
+
+    private fun setViewPath(
+        withThis: List<MethodReference>,
+        viewPathPrefix: ViewPathPrefix,
+        result: MutableMap<String, List<Int>>
+    ) {
         for (method in withThis) {
             val parameterName = method.parameters.first() as StringLiteralExpression
-            val content = RenderPath(parameterName.text)
+            val content = RenderPath(parameterName.contents)
 
-            if (content.quotesRemoved.isEmpty()) {
+            if (content.path.isEmpty()) {
                 continue
             }
-            val fullViewPath = fullViewPathFromPrefixAndRenderPath(
+            val fullViewPath = fullExplicitViewPath(
                 viewPathPrefix,
                 content
             )
-            if (result.containsKey(fullViewPath)) {
-                val oldList = result[fullViewPath]!!.toMutableList()
-                val newList = oldList + listOf(method.textOffset)
-                result[fullViewPath] = newList
-            } else {
-                result[fullViewPath] = listOf(method.textOffset)
-            }
+            val oldList = result.getOrDefault(fullViewPath, emptyList())
+            val newList = oldList + listOf(method.textOffset)
+            result[fullViewPath] = newList
         }
     }
 

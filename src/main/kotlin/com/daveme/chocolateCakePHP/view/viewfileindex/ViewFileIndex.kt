@@ -4,6 +4,7 @@ import com.intellij.util.indexing.*
 import com.intellij.util.io.DataExternalizer
 import com.intellij.util.io.EnumeratorStringDescriptor
 import com.intellij.util.io.KeyDescriptor
+import kotlin.random.Random
 
 class ViewFileIndex : FileBasedIndexExtension<String, List<Int>>() {
 
@@ -19,7 +20,8 @@ class ViewFileIndex : FileBasedIndexExtension<String, List<Int>>() {
         ViewFileDataExternalizer
 
     override fun getVersion(): Int {
-        return 1
+        // todo
+        return Random.nextInt(1, Int.MAX_VALUE)
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {

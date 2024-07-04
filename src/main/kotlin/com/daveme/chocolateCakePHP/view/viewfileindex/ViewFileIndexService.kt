@@ -13,6 +13,8 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
     ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
 
+const val MAX_CONTROLLER_LOOKUP_DEPTH = 50
+
 data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
@@ -23,11 +25,31 @@ data class ViewPathPrefix(
 )
 
 data class RenderPath(
-    val renderPath: String,
+    val path: String,
 ) {
-    val isAbsolute: Boolean get() = quotesRemoved.startsWith("/")
-    val quotesRemoved : String get() =
-        renderPath.removeQuotes()
+    val isAbsolute: Boolean get() = path.startsWith("/")
+}
+
+data class ControllerInfo(
+    val virtualFile: VirtualFile,
+    val isCakeTwo: Boolean
+)
+
+fun lookupControllerFileInfo(virtualFile: VirtualFile): ControllerInfo {
+    return ControllerInfo(
+        virtualFile,
+        isCakeTwoController(virtualFile)
+    )
+}
+
+private fun isCakeTwoController(
+    virtualFile: VirtualFile
+): Boolean {
+    val topSourceDir = virtualFile.parent?.parent?.parent ?: return false
+    val projectDir = topSourceDir.parent ?: return false
+
+    return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
+            topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
 
 fun elementAndPathFromMethodAndControllerName(
@@ -63,6 +85,13 @@ object ViewFileIndexService {
                 true
             }, searchScope)
         return result
+    }
+
+    fun controllerElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
+        val elements = referencingElements(project, filenameKey).toMutableList()
+        val resultElements = mutableListOf<PsiElementAndPath>()
+        // todo
+        return resultElements
     }
 
 }
@@ -146,12 +175,21 @@ fun elementPathPrefixFromSourceFile(
         return null
 }
 
-fun fullViewPathFromPrefixAndRenderPath(
+fun fullExplicitViewPath(
     viewPathPrefix: ViewPathPrefix,
     renderPath: RenderPath
 ): String {
     return if (renderPath.isAbsolute)
-        renderPath.quotesRemoved.substring(1)
+        renderPath.path.substring(1)
     else
-        "${viewPathPrefix.prefix}${renderPath.quotesRemoved}"
+        "${viewPathPrefix.prefix}${renderPath.path}"
+}
+
+fun fullImplicitViewPath(
+    viewPathPrefix: ViewPathPrefix,
+    controllerInfo: ControllerInfo,
+    methodName: String
+): String {
+    val viewPath = methodName.conditionalCamelCaseToUnderscore(!controllerInfo.isCakeTwo)
+    return "${viewPathPrefix.prefix}${viewPath}"
 }
