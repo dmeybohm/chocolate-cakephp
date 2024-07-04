@@ -2,8 +2,11 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
+import com.daveme.chocolateCakePHP.cake.templatesDirWithPath
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.viewType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.Variable
@@ -16,8 +19,6 @@ class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
         return '\u8313'
     }
 
-    override fun complete(p0: String?, p1: Project?): PhpType? = null
-
     override fun getType(psiElement: PsiElement): PhpType? {
         if (psiElement !is Variable) {
             return null
@@ -26,13 +27,27 @@ class ThisVariableInViewTypeProvider : PhpTypeProvider4 {
         if (!settings.enabled) {
             return null
         }
-        if (!psiElement.textMatches("\$this")) {
+        val psiFile = psiElement.containingFile ?: return null
+        val templateDir = templatesDirectoryFromViewFile(psiElement.project, settings, psiFile)
+            ?: return null
+
+        if (psiElement.textMatches("\$this")) {
+            return viewType(settings)
+        }
+
+        val relativePath = VfsUtil.getRelativePath(psiFile.virtualFile, templateDir.psiDirectory.virtualFile)
+            ?: return null
+        return PhpType().add("#${getKey()}.${relativePath}")
+    }
+
+    override fun complete(expression: String, project: Project): PhpType? {
+        val relativePath = expression.substring(2)
+        if (relativePath.contains(getKey())) {
+            // ensure no recursion:
             return null
         }
-        if (!isCakeViewFile(psiElement.project, settings, psiElement.containingFile)) {
-            return null
-        }
-        return viewType(settings)
+
+        return null
     }
 
     override fun getBySignature(
