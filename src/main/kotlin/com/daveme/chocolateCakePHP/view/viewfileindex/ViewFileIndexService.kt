@@ -1,12 +1,22 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewfileindex
 
-import com.daveme.chocolateCakePHP.controllerBaseName
-import com.daveme.chocolateCakePHP.removeQuotes
+import com.daveme.chocolateCakePHP.*
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.elements.MethodReference
 
 val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
-    ID.create("com.daveme.chocolateCakePHP.view.index.ViewFileIndex")
+    ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
+
+data class PsiElementAndPath(
+    val path: String,
+    val psiElement: PsiElement
+)
 
 data class ViewPathPrefix(
     val prefix: String
@@ -20,7 +30,44 @@ data class RenderPath(
         renderPath.removeQuotes()
 }
 
-fun isControllerFile(file: VirtualFile): Boolean {
+fun elementAndPathFromMethodAndControllerName(
+    controllerMethod: PsiElement,
+    controllerName: String
+): PsiElementAndPath? {
+    val psiMethod = controllerMethod as? Method ?: return null
+    return PsiElementAndPath(
+        controllerName,
+        psiMethod
+    )
+}
+
+object ViewFileIndexService {
+    fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
+        return filename
+            .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)
+            .removeFromEnd(".php", ignoreCase = true)
+    }
+
+    fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
+        val result = mutableListOf<PsiElementAndPath>()
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+
+        fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
+            { indexedFile, offsets: List<Int>  ->
+                offsets.forEach { offset ->
+                    val element = indexedFile.findElementAt(project, offset)
+                    val method = element?.parent?.parent as? MethodReference ?: return@forEach
+                    result.add(PsiElementAndPath(indexedFile.path, method))
+                }
+                true
+            }, searchScope)
+        return result
+    }
+
+}
+
+private fun isControllerFile(file: VirtualFile): Boolean {
     return file.nameWithoutExtension.endsWith("Controller")
 }
 

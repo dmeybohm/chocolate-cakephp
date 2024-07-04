@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile

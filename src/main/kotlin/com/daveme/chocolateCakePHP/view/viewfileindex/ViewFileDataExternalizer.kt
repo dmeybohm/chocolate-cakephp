@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.view.index
+package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.intellij.util.io.DataExternalizer
 import java.io.DataInput

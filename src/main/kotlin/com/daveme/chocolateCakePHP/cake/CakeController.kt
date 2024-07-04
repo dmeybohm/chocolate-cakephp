@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.Method
@@ -159,4 +160,21 @@ fun controllerMethodFromViewFilename(
     val actionNames = viewFilenameToActionName(viewFilename, settings, templatesDir)
     val method = controllerClasses.findFirstMethodWithName(actionNames.defaultActionName.name)
     return method
+}
+
+fun findNavigableControllerMethod(
+    project: Project,
+    settings: Settings,
+    templatesDir: TemplatesDir,
+    potentialControllerName: String,
+    viewFilename: String
+): PsiElement? {
+    val controllerClasses = getControllerClassesOfPotentialControllerName(project, settings, potentialControllerName)
+    val method = controllerMethodFromViewFilename(controllerClasses, settings, viewFilename, templatesDir)
+
+    if (method == null || !method.canNavigate()) {
+        return null
+    } else {
+        return method
+    }
 }
