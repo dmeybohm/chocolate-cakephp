@@ -18,7 +18,7 @@ class ViewVariableTest : Cake4BaseTestCase() {
     }
 
     fun `test type is communicated from controller to view`() {
-        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/film_director.php", """
             
         <?php
         echo ${'$'}moviesTable-><caret>

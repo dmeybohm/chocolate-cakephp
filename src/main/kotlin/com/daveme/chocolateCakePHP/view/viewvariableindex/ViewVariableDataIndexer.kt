@@ -16,18 +16,15 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
     override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
         val result = mutableMapOf<String, ViewVariables>()
         val psiFile = inputData.psiFile
-//        val project = psiFile.project
 
         val virtualFile = psiFile.virtualFile
         if (virtualFile.nameWithoutExtension.endsWith("Test")) {
             return result
         }
 
-//        val projectDir = project.guessProjectDir() ?: return result
         if (isCakeControllerFile(psiFile)) {
             indexController(result, psiFile)
         }
-        // todo views
 
         return result
     }

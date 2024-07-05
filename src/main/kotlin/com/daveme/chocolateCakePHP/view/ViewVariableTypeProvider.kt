@@ -1,6 +1,9 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.CakeFourTemplatesDir
+import com.daveme.chocolateCakePHP.cake.CakeThreeTemplatesDir
+import com.daveme.chocolateCakePHP.cake.CakeTwoTemplatesDir
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
@@ -42,8 +45,15 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             templateDir.psiDirectory.virtualFile
         ) ?: return null
 
+        val cakeVersion = when (templateDir) {
+            is CakeFourTemplatesDir -> 4
+            is CakeThreeTemplatesDir -> 3
+            is CakeTwoTemplatesDir -> 2
+        }
         val name = psiElement.name
-        val incompleteType = "#${getKey()}${relativePath.substringBeforeLast(".")}${SEPARATOR}${name}"
+        val incompleteType = "#${getKey()}v$cakeVersion" + SEPARATOR +
+            relativePath.substringBeforeLast(".") + SEPARATOR +
+            name
         return PhpType().add(incompleteType)
     }
 
@@ -52,15 +62,19 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             return null
         }
         val encoded = expression.substring(2)
-        val (relativePath, varName) = encoded.split(SEPARATOR)
+        val (cakeVersion, relativePath, varName) = encoded.split(SEPARATOR)
         if (relativePath.contains(getKey())) {
             // ensure no recursion:
             return null
         }
+        val cakeVersionInt = when (cakeVersion) {
+            "v2" -> 2
+            "v3" -> 3
+            else -> 4
+        }
 
         // TODO Implicit lookup - should use ViewFileIndex to get the relevant controllers instead:
-        // TODO need to camelCase the view name here
-        val controllerKey = ViewVariableIndexService.controllerKeyFromRelativePath(relativePath)
+        val controllerKey = ViewVariableIndexService.controllerKeyFromRelativePath(relativePath, cakeVersionInt)
             ?: return null
 
         val type = ViewVariableIndexService.lookupVariableTypeFromControllerKey(project, controllerKey, varName)

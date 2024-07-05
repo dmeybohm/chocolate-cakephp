@@ -75,6 +75,7 @@ fun String.conditionalCamelCaseToUnderscore(convert: Boolean): String =
     else
         this
 
+
 fun String.latinCapitalize(): String {
     return replaceFirstChar {
         if (it.isLowerCase())
@@ -92,6 +93,12 @@ fun String.underscoreToCamelCase(): String {
         }
         .joinToString("")
 }
+
+fun String.underscoreToCamelCaseViewFile(cakeVersion: Int): String =
+    if (cakeVersion > 2)
+        this.underscoreToCamelCase()
+    else
+        this
 
 fun String.mneumonicEscape(): String =
     this.replace("_", "__")

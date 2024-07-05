@@ -50,9 +50,18 @@ object ViewVariableIndexService {
     }
 
     fun controllerKeyFromRelativePath(
-        relativePathWithViewFilename: String
+        relativePathWithViewFilename: String,
+        cakeVersion: Int
     ): String? {
-        return relativePathWithViewFilename.replace('/', ':')
+        val parts = relativePathWithViewFilename
+            .replace('/', ':')
+            .split(":")
+            .toMutableList()
+        if (parts.size < 2) {
+            return null
+        }
+        parts[parts.size - 1] = parts[parts.size - 1].underscoreToCamelCaseViewFile(cakeVersion)
+        return parts.joinToString(separator = ":")
     }
 
     fun viewKeyFromElementAndPath(
