@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -55,10 +56,17 @@ private fun isCakeThreePlusController(
 }
 
 object ViewFileIndexService {
-    fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
-        return filename
-            .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)
-            .removeFromEnd(".php", ignoreCase = true)
+    fun canonicalizeFilenameToKey(
+        templatesDirectory: TemplatesDir,
+        settings: Settings,
+        filename: String
+    ): String {
+        val extension = when (templatesDirectory) {
+            is CakeTwoTemplatesDir -> ".${settings.cake2TemplateExtension}"
+            is CakeThreeTemplatesDir -> ".${settings.cakeTemplateExtension}"
+            is CakeFourTemplatesDir -> ".php"
+        }
+        return filename.removeFromEnd(extension, ignoreCase = true)
     }
 
     fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {

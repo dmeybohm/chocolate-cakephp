@@ -139,14 +139,15 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(relativePath, settings)
+        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
 
-        val targets = fileList.filter {
-            it.psiElement.isValid
-        }.map {
-            it.psiElement
-        }
+        val targets = fileList.asSequence()
+            .filter {
+                it.psiElement.isValid
+            }.map {
+                it.psiElement
+            }.toList()
 
         val relativePoint = if (point != null)
             RelativePoint(Point(Math.max(0, point.x - 400), point.y))
@@ -154,7 +155,6 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             null
         openTargets(project, targets, editor, relativePoint)
     }
-
 
     private fun openTargets(
         project: Project,

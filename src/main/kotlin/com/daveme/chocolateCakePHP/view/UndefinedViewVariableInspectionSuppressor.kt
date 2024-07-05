@@ -37,7 +37,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
 
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(relativePath, settings)
+        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
 
         // Handle render call linkages (all files with `$this->render` and the variable defined

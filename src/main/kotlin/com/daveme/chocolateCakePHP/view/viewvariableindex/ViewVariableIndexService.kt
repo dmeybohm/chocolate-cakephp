@@ -1,7 +1,9 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.TemplatesDir
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.vfs.VirtualFile
@@ -68,6 +70,19 @@ object ViewVariableIndexService {
         elementAndPath: PsiElementAndPath
     ): String {
         return elementAndPath.path
+    }
+
+    fun lookupVariableFromViewPath(
+        project: Project,
+        settings: Settings,
+        templatesDir: TemplatesDir,
+        relativePath: String,
+    ): ViewVariableValue? {
+        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
+        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+
+        // todo
+        return null
     }
 
     fun lookupVariableTypeFromControllerKey(project: Project, controllerKey: String, variableName: String): PhpType? {
