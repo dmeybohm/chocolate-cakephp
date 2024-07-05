@@ -80,8 +80,28 @@ object ViewVariableIndexService {
     ): ViewVariableValue? {
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+        val toProcess = fileList.toMutableList()
+        val visited = mutableSetOf<String>() // paths
 
-        // todo
+        while (toProcess.isNotEmpty()) {
+            val elementAndPath = toProcess.removeAt(0)
+            if (visited.contains(elementAndPath.path)) {
+                continue
+            }
+            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
+                    ?: continue
+//                if (ViewVariableIndexService.variableIsSetByController(project, controllerKey, variable.name)) {
+//                    return true
+//                }
+            } else {
+                val viewKey = ViewVariableIndexService.viewKeyFromElementAndPath(elementAndPath)
+//                if (ViewVariableIndexService.variableIsSetForView(project, viewKey, variable.name)) {
+//                    return true
+//                }
+            }
+        }
+
         return null
     }
 
