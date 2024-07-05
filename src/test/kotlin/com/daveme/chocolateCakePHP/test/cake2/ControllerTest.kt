@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ControllerTest : Cake2BaseTestCase() {
 
-    override fun prepareTest() {
+    override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",

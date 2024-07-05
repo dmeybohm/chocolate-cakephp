@@ -4,7 +4,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ViewTest() : Cake3BaseTestCase() {
 
-    override fun prepareTest() {
+    override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",

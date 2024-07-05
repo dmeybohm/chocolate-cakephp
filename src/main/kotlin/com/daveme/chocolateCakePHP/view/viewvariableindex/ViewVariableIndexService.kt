@@ -10,6 +10,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 // Maps MovieController:methodName
 //   or {templates,src/Template,App/View}/Movie/view_file_without_extension
@@ -48,10 +49,37 @@ object ViewVariableIndexService {
         return "${elementAndPath.nameWithoutExtension.controllerBaseName()}:${element.name}"
     }
 
+    fun controllerKeyFromRelativePath(
+        relativePathWithViewFilename: String
+    ): String? {
+        return relativePathWithViewFilename.replace('/', ':')
+    }
+
     fun viewKeyFromElementAndPath(
         elementAndPath: PsiElementAndPath
     ): String {
         return elementAndPath.path
+    }
+
+    fun lookupVariableTypeFromControllerKey(project: Project, controllerKey: String, variableName: String): PhpType? {
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+
+        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
+        val vars = list.mapNotNull {
+            it.getOrDefault(variableName, null)
+        }
+        if (vars.isEmpty()) {
+            return null
+        }
+        val result = PhpType()
+        vars.map {
+            val types = it.possiblyIncompleteType.split('|')
+            for (type in types) {
+                result.add(type)
+            }
+        }
+        return result
     }
 
     fun variableIsSetByController(project: Project, filenameKey: String, variableName: String): Boolean {
@@ -70,6 +98,7 @@ object ViewVariableIndexService {
         //      on the number of views to check
         return false
     }
+
 
 }
 

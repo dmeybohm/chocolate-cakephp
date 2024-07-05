@@ -15,8 +15,8 @@ abstract class Cake2BaseTestCase : BaseTestCase() {
         newState.cake2AppDirectory = "app"
         originalSettings.loadState(newState)
 
-        prepareTest()
+        setUpTestFiles()
     }
 
-    abstract fun prepareTest()
+    abstract fun setUpTestFiles()
 }

@@ -16,9 +16,9 @@ abstract class Cake3BaseTestCase : BaseTestCase() {
         newState.pluginNamespaces = listOf("\\TestPlugin")
         originalSettings.loadState(newState)
 
-        prepareTest()
+        setUpTestFiles()
     }
 
-    abstract fun prepareTest()
+    abstract fun setUpTestFiles()
 
 }
