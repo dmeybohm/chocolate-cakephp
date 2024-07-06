@@ -23,6 +23,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.awt.RelativePoint
+import com.intellij.util.PsiNavigateUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import java.awt.Point
 import java.awt.event.MouseEvent
@@ -136,6 +137,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
 
+
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
@@ -165,8 +167,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         when (targetList.size) {
             0 -> {}
             1 -> {
-                val target = targetList.first().containingFile.virtualFile
-                FileEditorManager.getInstance(project).openFile(target, true)
+                PsiNavigateUtil.navigate(targetList.first())
             }
             else -> {
                 showPsiElementPopupFromEditor(targetList, project, editor, relativePoint)
