@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.TemplatesDir
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
@@ -62,7 +61,6 @@ object ViewVariableIndexService {
         val visited = mutableSetOf<String>() // paths
         val result = PhpType()
         var maxLookups = 15
-        var templatesDir: TemplatesDir? = null
 
         while (toProcess.isNotEmpty()) {
             if (maxLookups == 0) {
@@ -79,10 +77,8 @@ object ViewVariableIndexService {
                 result.add(variableType)
                 continue
             }
-            if (templatesDir == null) {
-                templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
-                    ?: continue
-            }
+            val templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+               ?: continue
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,
                 settings,
