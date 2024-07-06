@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.test.cake3
 
 class CustomFinderTest : Cake3BaseTestCase() {
 
-    override fun prepareTest() {
+    override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/MoviesTable.php",

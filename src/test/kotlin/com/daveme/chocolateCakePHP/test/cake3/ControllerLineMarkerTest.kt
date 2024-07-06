@@ -9,7 +9,7 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 
 class ControllerLineMarkerTest : Cake3BaseTestCase() {
 
-    override fun prepareTest() {
+    override fun setUpTestFiles() {
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = originalSettings.state.copy()

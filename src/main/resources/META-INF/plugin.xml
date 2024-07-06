@@ -72,7 +72,7 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.controller.ControllerFieldTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewHelperInViewTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewHelperInViewHelperTypeProvider" />
-        <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ThisVariableInViewTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewVariableTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.TableLocatorTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.AssociatedTableTypeProvider" />
 

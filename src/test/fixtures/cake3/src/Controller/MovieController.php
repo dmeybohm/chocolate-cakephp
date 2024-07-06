@@ -12,6 +12,13 @@ class MovieController extends Controller
 		$this->set(compact('metadata'));
 	}
 
+	public function filmDirector() {
+		$this->Auth->allow();
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$moviesTable = $this->getTableLocator()->get('Movies');
+		$this->set(compact('metadata', 'moviesTable'));
+	}
+
 	public function meta() {
 
     }

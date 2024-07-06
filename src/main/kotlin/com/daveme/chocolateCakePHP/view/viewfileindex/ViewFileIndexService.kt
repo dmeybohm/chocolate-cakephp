@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -55,10 +56,20 @@ private fun isCakeThreePlusController(
 }
 
 object ViewFileIndexService {
-    fun canonicalizeFilenameToKey(filename: String, settings: Settings): String {
+    fun canonicalizeFilenameToKey(
+        templatesDirectory: TemplatesDir,
+        settings: Settings,
+        filename: String
+    ): String {
+        val extension = when (templatesDirectory) {
+            is CakeTwoTemplatesDir -> ".${settings.cake2TemplateExtension}"
+            is CakeThreeTemplatesDir -> ".${settings.cakeTemplateExtension}"
+            is CakeFourTemplatesDir -> ".php"
+        }
         return filename
-            .removeFromEnd(settings.cakeTemplateExtension, ignoreCase = true)
-            .removeFromEnd(".php", ignoreCase = true)
+            .removeFromStart(templatesDirectory.psiDirectory.virtualFile.path)
+            .removeFromStart("/")
+            .removeFromEnd(extension, ignoreCase = true)
     }
 
     fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
@@ -81,13 +92,6 @@ object ViewFileIndexService {
         return result
     }
 
-    fun controllerElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
-        val elements = referencingElements(project, filenameKey).toMutableList()
-        val resultElements = mutableListOf<PsiElementAndPath>()
-        // todo
-        return resultElements
-    }
-
 }
 
 private fun isControllerFile(file: VirtualFile): Boolean {
@@ -102,7 +106,8 @@ private fun isTemplateDir(currentDir: VirtualFile): Boolean {
 
 private fun findElementDir(currentDir: VirtualFile): VirtualFile? {
     return currentDir.findChild("element")  ?:
-            currentDir.findChild("Element")
+            currentDir.findChild("Element") ?:
+           currentDir.findChild("Elements")
 }
 
 fun viewPathPrefixFromSourceFile(

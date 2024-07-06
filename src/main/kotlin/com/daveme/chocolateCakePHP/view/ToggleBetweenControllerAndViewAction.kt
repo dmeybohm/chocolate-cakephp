@@ -23,6 +23,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.awt.RelativePoint
+import com.intellij.util.PsiNavigateUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import java.awt.Point
 import java.awt.event.MouseEvent
@@ -136,17 +137,19 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
 
+
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(relativePath, settings)
+        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
 
-        val targets = fileList.filter {
-            it.psiElement.isValid
-        }.map {
-            it.psiElement
-        }
+        val targets = fileList.asSequence()
+            .filter {
+                it.psiElement.isValid
+            }.map {
+                it.psiElement
+            }.toList()
 
         val relativePoint = if (point != null)
             RelativePoint(Point(Math.max(0, point.x - 400), point.y))
@@ -154,7 +157,6 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             null
         openTargets(project, targets, editor, relativePoint)
     }
-
 
     private fun openTargets(
         project: Project,
@@ -165,8 +167,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         when (targetList.size) {
             0 -> {}
             1 -> {
-                val target = targetList.first().containingFile.virtualFile
-                FileEditorManager.getInstance(project).openFile(target, true)
+                PsiNavigateUtil.navigate(targetList.first())
             }
             else -> {
                 showPsiElementPopupFromEditor(targetList, project, editor, relativePoint)

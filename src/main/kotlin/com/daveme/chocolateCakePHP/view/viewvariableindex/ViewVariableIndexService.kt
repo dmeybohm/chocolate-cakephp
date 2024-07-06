@@ -1,15 +1,17 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 // Maps MovieController:methodName
 //   or {templates,src/Template,App/View}/Movie/view_file_without_extension
@@ -48,27 +50,78 @@ object ViewVariableIndexService {
         return "${elementAndPath.nameWithoutExtension.controllerBaseName()}:${element.name}"
     }
 
-    fun viewKeyFromElementAndPath(
-        elementAndPath: PsiElementAndPath
-    ): String {
-        return elementAndPath.path
+    fun lookupVariableTypeFromViewPath(
+        project: Project,
+        settings: Settings,
+        filenameKey: String,
+        variableName: String,
+    ): PhpType {
+        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+        val toProcess = fileList.toMutableList()
+        val visited = mutableSetOf<String>() // paths
+        val result = PhpType()
+        var maxLookups = 15
+
+        while (toProcess.isNotEmpty()) {
+            if (maxLookups == 0) {
+                break
+            }
+            maxLookups -= 1
+            val elementAndPath = toProcess.removeAt(0)
+            visited.add(elementAndPath.path)
+            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
+                    ?: continue
+                val variableType = lookupVariableTypeFromControllerKey(project, controllerKey, variableName)
+                    ?: continue
+                result.add(variableType)
+                continue
+            }
+            val templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+               ?: continue
+            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+                templatesDir,
+                settings,
+                elementAndPath.path
+            )
+            val newFileList = ViewFileIndexService.referencingElements(
+                project,
+                newFilenameKey
+            )
+            for (newPsiElementAndPath in newFileList) {
+                if (visited.contains(newPsiElementAndPath.path)) {
+                    continue
+                }
+                toProcess.add(newPsiElementAndPath)
+            }
+        }
+
+        return result
     }
 
-    fun variableIsSetByController(project: Project, filenameKey: String, variableName: String): Boolean {
+    fun lookupVariableTypeFromControllerKey(
+        project: Project,
+        controllerKey: String,
+        variableName: String
+    ): PhpType? {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
 
-        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, filenameKey, searchScope)
-        return list.any {
-            it.contains(variableName)
+        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
+        val vars = list.mapNotNull {
+            it.getOrDefault(variableName, null)
         }
-    }
-
-    fun variableIsSetForView(project: Project, viewKey: String, name: @NlsSafe String): Boolean {
-        // todo get the view paths for this view
-        // todo find all the variables for each of the view paths, recursively and set some limit
-        //      on the number of views to check
-        return false
+        if (vars.isEmpty()) {
+            return null
+        }
+        val result = PhpType()
+        vars.map {
+            val types = it.possiblyIncompleteType.split('|')
+            for (type in types) {
+                result.add(type)
+            }
+        }
+        return result
     }
 
 }

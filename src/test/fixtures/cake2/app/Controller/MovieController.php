@@ -15,4 +15,15 @@ class MovieController extends AppController
 	    $this->set(compact('movies', 'artist', 'metadata'));
 	}
 
+    public function film_director($artistId)
+	{
+	    $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
+	    $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
+	    $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
+
+        $movieModel = ClassRegistry::init('Movie');
+	    ClassRegistry::init('Movie')->saveScreening();
+	    $this->set(compact('movies', 'artist', 'metadata', 'movieModel'));
+	}
+
 }

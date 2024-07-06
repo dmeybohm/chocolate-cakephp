@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.test.cake4
 
 class TableLocatorTest : Cake4BaseTestCase() {
 
-    override fun prepareTest() {
+    override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Model/Table/ArticlesTable.php",

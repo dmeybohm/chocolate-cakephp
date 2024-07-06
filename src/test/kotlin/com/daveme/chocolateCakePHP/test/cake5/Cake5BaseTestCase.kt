@@ -16,9 +16,9 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
         newState.appDirectory = "src5"
         originalSettings.loadState(newState)
 
-        prepareTest()
+        setUpTestFiles()
     }
 
-    abstract fun prepareTest()
+    abstract fun setUpTestFiles()
 
 }
