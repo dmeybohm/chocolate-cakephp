@@ -37,32 +37,19 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
 
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
-        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
-
-        // Handle render call linkages (all files with `$this->render` and the variable defined
-        // either with $this->set() in controllers or assignments in view files):
         try {
-            fileList.forEach { elementAndPath ->
-                if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                    val controllerKey = ViewVariableIndexService.controllerKeyFromElementAndPath(elementAndPath)
-                        ?: return@forEach
-                    if (ViewVariableIndexService.variableIsSetByController(project, controllerKey, variable.name)) {
-                        return true
-                    }
-                } else {
-                    val viewKey = ViewVariableIndexService.viewKeyFromElementAndPath(elementAndPath)
-                    if (ViewVariableIndexService.variableIsSetForView(project, viewKey, variable.name)) {
-                        return true
-                    }
-                }
-            }
+            val resultType = ViewVariableIndexService.lookupVariableTypeFromViewPath(
+                project,
+                settings,
+                templatesDir,
+                relativePath,
+                variable.name
+            )
+            return resultType.types.size > 0
         } catch (e: Exception) {
             println("Exception: ${e.message}")
             return false
         }
-
-        return false
     }
 
     override fun getSuppressActions(

@@ -66,7 +66,10 @@ object ViewFileIndexService {
             is CakeThreeTemplatesDir -> ".${settings.cakeTemplateExtension}"
             is CakeFourTemplatesDir -> ".php"
         }
-        return filename.removeFromEnd(extension, ignoreCase = true)
+        return filename
+            .removeFromStart(templatesDirectory.psiDirectory.virtualFile.path)
+            .removeFromStart("/")
+            .removeFromEnd(extension, ignoreCase = true)
     }
 
     fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
@@ -87,13 +90,6 @@ object ViewFileIndexService {
                 true
             }, searchScope)
         return result
-    }
-
-    fun controllerElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
-        val elements = referencingElements(project, filenameKey).toMutableList()
-        val resultElements = mutableListOf<PsiElementAndPath>()
-        // todo
-        return resultElements
     }
 
 }
