@@ -1,13 +1,8 @@
 package com.daveme.chocolateCakePHP.view
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.CakeFourTemplatesDir
-import com.daveme.chocolateCakePHP.cake.CakeThreeTemplatesDir
-import com.daveme.chocolateCakePHP.cake.CakeTwoTemplatesDir
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
-import com.daveme.chocolateCakePHP.lookupCompleteType
+import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.*
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
-import com.daveme.chocolateCakePHP.viewType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
@@ -73,13 +68,18 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             else -> 4
         }
 
-        // TODO Implicit lookup - should use ViewFileIndex to get the relevant controllers instead:
-        val controllerKey = ViewVariableIndexService.controllerKeyFromRelativePath(relativePath, cakeVersionInt)
-            ?: return null
+        val settings = Settings.getInstance(project)
 
-        val type = ViewVariableIndexService.lookupVariableTypeFromControllerKey(project, controllerKey, varName)
-            ?: return null
-        return type.lookupCompleteType(project, null)
+        val type = ViewVariableIndexService.lookupVariableTypeFromViewPath(
+            project,
+            settings,
+            relativePath,
+            varName
+        )
+        if (type.types.size > 0) {
+            return type
+        }
+        return null
     }
 
     override fun getBySignature(

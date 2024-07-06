@@ -113,18 +113,6 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     return null
 }
 
-fun topSourceDirectoryFromTemplatesDirectory(templatesDir: TemplatesDir, project: Project, settings: Settings): TopSourceDirectory? {
-    return when (templatesDir) {
-        is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
-            pluginSrcDirectoryFromTemplatesDir(templatesDir, project, settings)
-            ?: srcDirectoryFromTemplatesDir(templatesDir, project, settings)
-        }
-        is CakeTwoTemplatesDir -> {
-            appDirectoryFromTemplatesDir(templatesDir, settings)
-        }
-    }
-}
-
 // NOTE: only call this with CakeThreeTemplatesDir or CakeFourTemplatesDir
 private fun pluginSrcDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,

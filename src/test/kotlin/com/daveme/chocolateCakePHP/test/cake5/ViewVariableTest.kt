@@ -29,4 +29,21 @@ class ViewVariableTest: Cake5BaseTestCase() {
         assertTrue(result!!.contains("findOwnedBy"))
     }
 
+    fun `test type is communicated from controller to elements`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        
+        echo ${'$'}this->element('Director/filmography');
+        """.trimIndent())
+
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        
+        echo ${'$'}moviesTable-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("findOwnedBy"))
+    }
 }

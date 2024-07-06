@@ -106,7 +106,8 @@ private fun isTemplateDir(currentDir: VirtualFile): Boolean {
 
 private fun findElementDir(currentDir: VirtualFile): VirtualFile? {
     return currentDir.findChild("element")  ?:
-            currentDir.findChild("Element")
+            currentDir.findChild("Element") ?:
+           currentDir.findChild("Elements")
 }
 
 fun viewPathPrefixFromSourceFile(

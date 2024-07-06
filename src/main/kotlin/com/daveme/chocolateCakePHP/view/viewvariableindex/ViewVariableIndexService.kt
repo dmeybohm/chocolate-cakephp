@@ -2,11 +2,10 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.TemplatesDir
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -52,35 +51,18 @@ object ViewVariableIndexService {
         return "${elementAndPath.nameWithoutExtension.controllerBaseName()}:${element.name}"
     }
 
-    fun controllerKeyFromRelativePath(
-        relativePathWithViewFilename: String,
-        cakeVersion: Int
-    ): String? {
-        val parts = relativePathWithViewFilename
-            .replace('/', ':')
-            .split(":")
-            .toMutableList()
-        if (parts.size < 2) {
-            return null
-        }
-        parts[parts.size - 1] = parts[parts.size - 1].underscoreToCamelCaseViewFile(cakeVersion)
-        return parts.joinToString(separator = ":")
-    }
-
     fun lookupVariableTypeFromViewPath(
         project: Project,
         settings: Settings,
-        templatesDir: TemplatesDir,
-        relativePath: String,
-        variableName: String
+        filenameKey: String,
+        variableName: String,
     ): PhpType {
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
         val toProcess = fileList.toMutableList()
         val visited = mutableSetOf<String>() // paths
         val result = PhpType()
         var maxLookups = 15
-        val projectDir = project.guessProjectDir() ?: return result
+        var templatesDir: TemplatesDir? = null
 
         while (toProcess.isNotEmpty()) {
             if (maxLookups == 0) {
@@ -96,6 +78,10 @@ object ViewVariableIndexService {
                     ?: continue
                 result.add(variableType)
                 continue
+            }
+            if (templatesDir == null) {
+                templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+                    ?: continue
             }
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,

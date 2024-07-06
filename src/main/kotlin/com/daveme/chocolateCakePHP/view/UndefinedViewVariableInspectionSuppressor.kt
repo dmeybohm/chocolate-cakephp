@@ -2,7 +2,6 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
-import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.codeInspection.InspectionSuppressor
@@ -38,11 +37,11 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
 
         try {
+            val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
             val resultType = ViewVariableIndexService.lookupVariableTypeFromViewPath(
                 project,
                 settings,
-                templatesDir,
-                relativePath,
+                filenameKey,
                 variable.name
             )
             return resultType.types.size > 0
