@@ -78,7 +78,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
             public function artist() {
                 ${'$'}tester = new LocatorTester();
                 ${'$'}locator = ${'$'}tester->getTableLocator();
-                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
+                ${'$'}locator->get('Articles')-><caret>
             }
         }
         """.trimIndent())

@@ -80,7 +80,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
             public function artist() {
                 ${'$'}tester = new LocatorTester();
                 ${'$'}locator = ${'$'}tester->getTableLocator();
-                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
+                ${'$'}locator->get('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -135,6 +135,30 @@ class TableLocatorTest : Cake4BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test fetchTable argument can be autocompleted with quotes when stored in a var`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}articles = ${'$'}this->fetchTable('Articles');
+                ${'$'}articles-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
     }
 
     fun `test TableRegistry static method argument can be autocompleted with quotes`() {

@@ -45,7 +45,7 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}this->Movie->Articles-><caret>
+                ${'$'}this->Movies->Articles-><caret>
             }
         }
         """.trimIndent())
@@ -89,7 +89,7 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}this->Movie-><caret>
+                ${'$'}this->Movies-><caret>
             }
         }
         """.trimIndent())
@@ -112,6 +112,29 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         {
             public function ownedBy() {
                 ${'$'}this->Movies->Articles->Movies->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
+
+    fun `test custom finders on associated tables are completed with table locators`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}articles = ${'$'}this->fetchTable('Articles');
+                ${'$'}articles->Movies->find('<caret>
             }
         }
         """.trimIndent())
