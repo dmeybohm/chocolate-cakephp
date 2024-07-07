@@ -27,7 +27,16 @@ typealias ViewVariableName = String
 data class ViewVariableValue(
     val possiblyIncompleteType: String,
     val startOffset: Int
-)
+) {
+    val phpType: PhpType
+        get() {
+            val result = PhpType()
+            possiblyIncompleteType.split("|").forEach {
+                result.add(it)
+            }
+            return result
+        }
+}
 
 class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 
@@ -116,9 +125,63 @@ object ViewVariableIndexService {
         }
         val result = PhpType()
         vars.map {
-            val types = it.possiblyIncompleteType.split('|')
-            for (type in types) {
-                result.add(type)
+            val types = it.phpType
+            result.add(types)
+        }
+        return result
+    }
+
+    fun lookupVariablesFromControllerKey(
+        project: Project,
+        controllerKey: String,
+    ): List<ViewVariables> {
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+
+        return fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
+    }
+
+    fun lookupVariablesFromViewPath(
+        project: Project,
+        settings: Settings,
+        filenameKey: String,
+    ): ViewVariables {
+        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+        val toProcess = fileList.toMutableList()
+        val visited = mutableSetOf<String>() // paths
+        val result = ViewVariables()
+        var maxLookups = 15
+
+        while (toProcess.isNotEmpty()) {
+            if (maxLookups == 0) {
+                break
+            }
+            maxLookups -= 1
+            val elementAndPath = toProcess.removeAt(0)
+            visited.add(elementAndPath.path)
+            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
+                    ?: continue
+                val variables = lookupVariablesFromControllerKey(project, controllerKey)
+                variables.forEach { v -> result += v }
+                continue
+            }
+            val templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+                ?: continue
+            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+                templatesDir,
+                settings,
+                elementAndPath.path
+            )
+            val newFileList = ViewFileIndexService.referencingElements(
+                project,
+                newFilenameKey
+            )
+            for (newPsiElementAndPath in newFileList) {
+                if (visited.contains(newPsiElementAndPath.path)) {
+                    continue
+                }
+                toProcess.add(newPsiElementAndPath)
             }
         }
         return result

@@ -46,5 +46,61 @@ class ViewVariableTest : Cake2BaseTestCase() {
         assertTrue(result!!.contains("saveScreening"))
     }
 
+    fun `test variable list is communicated from controller to view`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+            
+        <?php
+        echo <caret>
+        """.trimIndent())
+        myFixture.completeBasic()
 
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable list is communicated from controller to view within a variable`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+            
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable list is communicated from controller to elements`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        
+        echo ${'$'}this->element('Director/filmography');
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        
+        echo <caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable list is communicated from controller to elements within a variable`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        
+        echo ${'$'}this->element('Director/filmography');
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
 }
