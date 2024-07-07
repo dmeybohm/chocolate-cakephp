@@ -45,7 +45,7 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}this->Movie->Articles-><caret>
+                ${'$'}this->Movies->Articles-><caret>
             }
         }
         """.trimIndent())
@@ -89,7 +89,7 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}this->Movie-><caret>
+                ${'$'}this->Movies-><caret>
             }
         }
         """.trimIndent())

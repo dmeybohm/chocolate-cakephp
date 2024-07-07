@@ -1,10 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
-import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
-import com.daveme.chocolateCakePHP.isDefinitelyTableClass
-import com.daveme.chocolateCakePHP.isProbablyQueryObject
-import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -107,16 +104,24 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         val signature = expression.substring(tableEnd + 5, signatureEnd + tableEnd + 5)
         val phpIndex = PhpIndex.getInstance(project)
 
-        val elements = phpIndex.getBySignature(signature, set, depth)
-        for (element in elements) {
-            if (element.type.isDefinitelyTableClass()) {
-                val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
-                if (resultClasses.isNotEmpty()) {
-                    // todo add association classes?
-                    return resultClasses
-                }
+        //
+        // TODO I think we can't use getBySignature here because getBySignature() isn't
+        //      implemented on the TableLocatorTypeProvider, but that may work bette, but that may work better
+        //
+        val varType = PhpType()
+        signature.split("|").forEach { sigPart -> varType.add(sigPart) }
+        val completeType = varType.lookupCompleteType(project, phpIndex, set)
+        if (completeType.types.isEmpty()) {
+            return emptyList()
+        }
 
+        if (completeType.isDefinitelyTableClass()) {
+            val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
+            if (resultClasses.isNotEmpty()) {
+                // todo add association classes?
+                return resultClasses
             }
+
         }
         return emptyList()
     }
