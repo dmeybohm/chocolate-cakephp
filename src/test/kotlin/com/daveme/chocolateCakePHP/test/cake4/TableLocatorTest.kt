@@ -80,7 +80,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
             public function artist() {
                 ${'$'}tester = new LocatorTester();
                 ${'$'}locator = ${'$'}tester->getTableLocator();
-                ${'$'}locator->getTableLocator()->get('Articles')-><caret>
+                ${'$'}locator->get('Articles')-><caret>
             }
         }
         """.trimIndent())
