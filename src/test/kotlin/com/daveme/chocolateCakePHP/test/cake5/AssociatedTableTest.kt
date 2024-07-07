@@ -122,8 +122,6 @@ class AssociatedTableTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
-    @Test
-
     fun `test custom finders on associated tables are completed with table locators`() {
         myFixture.configureByText("MovieController.php", """
         <?php

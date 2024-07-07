@@ -22,6 +22,9 @@ fun PhpType.isProbablyTableLocatorClass(): Boolean =
         }
     }
 
+fun PhpType.isDefinitelyTableClass(): Boolean =
+    this.isComplete && this.types.any { it.isAnyTableClass() }
+
 fun PhpType.isProbablyTableClass(): Boolean =
     if (this.isComplete)
         this.types.any { it.isAnyTableClass() }
