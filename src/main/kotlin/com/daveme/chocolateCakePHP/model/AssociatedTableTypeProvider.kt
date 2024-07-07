@@ -109,7 +109,10 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         //      implemented on the TableLocatorTypeProvider, but that may work bette, but that may work better
         //
         val varType = PhpType()
-        signature.split("|").forEach { sigPart -> varType.add(sigPart) }
+        signature.split("|")
+            .filter { !it.contains(TYPE_PROVIDER_CHAR) } // avoid recursion
+            .forEach { varType.add(it) }
+
         val completeType = varType.lookupCompleteType(project, phpIndex, set)
         if (completeType.types.isEmpty()) {
             return emptyList()
