@@ -50,7 +50,6 @@ fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass
 }
 
 
-
 fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
     val result = arrayListOf<PhpClass>()
     if (settings.cake2Enabled) {
