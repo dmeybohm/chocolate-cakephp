@@ -208,6 +208,7 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
     if (settings.cake3Enabled) {
         result = result.add("\\Cake\\Controller\\Component\\${fieldName}Component")
             .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
+            .add("${settings.appNamespace}\\Model\\Table\\${fieldName}Table")
         for (pluginEntry in settings.pluginEntries) {
             result = result.add("${pluginEntry.namespace}\\Controller\\Component\\${fieldName}Component")
         }
