@@ -3,6 +3,10 @@ package com.daveme.chocolateCakePHP
 import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
+import java.io.File
+import java.lang.ref.WeakReference
+
 
 data class SettingsState(
     var cakeTemplateExtension: String = "ctp",
@@ -14,14 +18,32 @@ data class SettingsState(
     var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = false,
     var cake3Enabled: Boolean = true,
+    var cake3ForceEnabled: Boolean = false,
     var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
-    var dataViewExtensions: List<String> = arrayListOf("json", "xml")
+    var dataViewExtensions: List<String> = arrayListOf("json", "xml"),
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
 fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 
-@Service
+@Service(Service.Level.PROJECT)
+class CakeThreeAutoDetector(project: Project)
+{
+    val projectRef = WeakReference(project)
+    val isAutoDetected by lazy { checkCakephp() }
+
+    private fun checkCakephp(): Boolean {
+        val project = projectRef.get() ?: return false
+
+        val topDir = project.guessProjectDir() ?: return false
+        val composerJson = topDir.findFileByRelativePath("composer.json")
+            ?: return false
+        val contents = composerJson.contentsToByteArray().toString(Charsets.UTF_8)
+        return contents.contains("\"cakephp/cakephp\"")
+    }
+}
+
+@Service(Service.Level.PROJECT)
 @State(
     name = "ChocolateCakePHPSettings",
     storages = [Storage( "ChocolateCakePHP.xml")]
@@ -45,7 +67,8 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
     val cake2Enabled get() = state.cake2Enabled
-    val cake3Enabled get() = state.cake3Enabled
+    val cake3Enabled get() = state.cake3Enabled && cake3Autodetected
+    var cake3Autodetected = false
 
     val pluginEntries: List<PluginEntry>
         get() {
@@ -87,6 +110,10 @@ class Settings : PersistentStateComponent<SettingsState> {
         @JvmStatic
         fun getInstance(project: Project): Settings {
             val settings = project.getService(Settings::class.java)
+            if (settings.state.cake3Enabled) {
+                val autodetector = project.getService(CakeThreeAutoDetector::class.java)
+                settings.cake3Autodetected = autodetector.isAutoDetected
+            }
             return settings
         }
 

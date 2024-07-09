@@ -8,6 +8,10 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
     override fun setUp() {
         super.setUp()
 
+        myFixture.configureByFiles(
+            "composer.json"
+        )
+
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.defaults.state.copy()

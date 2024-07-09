@@ -1,0 +1,6 @@
+{
+  "name": "cakephp/app",
+  "require": {
+    "cakephp/cakephp": "4.4.*"
+  }
+}

@@ -8,6 +8,10 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
     override fun setUp() {
         super.setUp()
 
+        myFixture.configureByFiles(
+            "composer.json"
+        )
+
         // change app directory:
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.defaults.state.copy()
