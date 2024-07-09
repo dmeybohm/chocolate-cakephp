@@ -15,19 +15,43 @@ namespace Cake\View {
     class Helper {}
 }
 
-namespace Cake\ORM\Query {
-    class SelectQuery {}
-}
-namespace Cake\ORM {
-    class RulesChecker {}
-    class Table {}
-}
 namespace Cake\Validation {
     class Validator {}
 }
 
 namespace Cake\ORM {
+    class RulesChecker {}
     class Table {
+        public function findThreaded(): Query {
+            return new Query();
+        }
+        public function findList(): Query {
+            return new Query();
+        }
+        public function findAll(): Query {
+            return new Query();
+        }
+        /**
+         * @param string $type
+         */
+        public function find(string $type = 'all', ... $args): Query {
+            return new Query();
+        }
+    }
+    class Query {
+        /**
+         * @param string $type
+         */
+        public function find(string $type = 'all', ... $args): static {
+            return new Query();
+        }
+
+        public function toArray(): array {
+            return [];
+        }
+
+        public function where(): static {
+        }
     }
 
     class TableRegistry {
