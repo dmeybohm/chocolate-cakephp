@@ -26,12 +26,12 @@ data class SettingsState(
 fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 
 @Service(Service.Level.PROJECT)
-class CakeThreeAutoDetector(project: Project)
+class CakePhpAutoDetector(project: Project)
 {
     val projectRef = WeakReference(project)
-    val isAutoDetected by lazy { checkCakephp() }
+    val isAutoDetected by lazy { checkCakePhpInComposerJson() }
 
-    private fun checkCakephp(): Boolean {
+    private fun checkCakePhpInComposerJson(): Boolean {
         val project = projectRef.get() ?: return false
 
         val topDir = project.guessProjectDir() ?: return false
@@ -67,8 +67,8 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake2TemplateExtension get() = state.cake2TemplateExtension
     val cake2Enabled get() = state.cake2Enabled
     val cake3Enabled get() = state.cake3ForceEnabled ||
-            (state.cake3Enabled && cake3Autodetected)
-    var cake3Autodetected = false
+            (state.cake3Enabled && cake3AutoDetected)
+    var cake3AutoDetected = false
 
     val pluginEntries: List<PluginEntry>
         get() {
@@ -110,9 +110,9 @@ class Settings : PersistentStateComponent<SettingsState> {
         @JvmStatic
         fun getInstance(project: Project): Settings {
             val settings = project.getService(Settings::class.java)
-            if (settings.state.cake3Enabled) {
-                val autodetector = project.getService(CakeThreeAutoDetector::class.java)
-                settings.cake3Autodetected = autodetector.isAutoDetected
+            if (settings.state.cake3Enabled && !settings.state.cake3ForceEnabled) {
+                val autodetector = project.getService(CakePhpAutoDetector::class.java)
+                settings.cake3AutoDetected = autodetector.isAutoDetected
             }
             return settings
         }
