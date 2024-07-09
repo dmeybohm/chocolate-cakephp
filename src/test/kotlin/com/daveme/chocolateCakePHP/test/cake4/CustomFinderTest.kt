@@ -1,37 +1,13 @@
-package com.daveme.chocolateCakePHP.test.cake3
+package com.daveme.chocolateCakePHP.test.cake4
 
-class CustomFinderTest : Cake3BaseTestCase() {
+class CustomFinderTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
-            "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake4/src4/Controller/AppController.php",
+            "cake4/src4/Model/Table/MoviesTable.php",
+            "cake4/vendor/cakephp.php"
         )
-    }
-
-    fun `test custom finder from Table class is generated when doing a find`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\TableRegistry;
-        
-        class MovieController extends Controller
-        {
-            public function ownedBy() {
-                ${'$'}moviesTable = TableRegistry::getTableLocator()->get('Movies');
-                ${'$'}moviesTable->find('<caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("ownedBy"))
     }
 
     fun `test custom finder class is generated when doing a find from a dynamic property`() {
@@ -41,6 +17,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
         
         class MovieController extends Controller
         {

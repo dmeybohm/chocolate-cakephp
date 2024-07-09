@@ -33,6 +33,28 @@ class CustomFinderTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("ownedBy"))
     }
 
+    fun `test custom finder class is generated when doing a find from a dynamic property`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function ownedBy() {
+                ${'$'}this->Movies->find('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("ownedBy"))
+    }
+
     fun `test custom finder does not generate an empty completion`() {
         myFixture.configureByText("MovieController.php", """
         <?php
