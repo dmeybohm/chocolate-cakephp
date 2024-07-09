@@ -7,15 +7,12 @@ abstract class Cake3BaseTestCase : BaseTestCase() {
     override fun setUp() {
         super.setUp()
 
-        myFixture.configureByFiles(
-            "composer.json"
-        )
-
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.defaults.state.copy()
-        newState.cake3Enabled = true
+        newState.cake3ForceEnabled = true
         newState.cake2Enabled = false
+        newState.cake3ForceEnabled = true
         newState.appDirectory = "src"
         newState.pluginNamespaces = listOf("\\TestPlugin")
         originalSettings.loadState(newState)

@@ -4,7 +4,6 @@ import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import java.io.File
 import java.lang.ref.WeakReference
 
 
@@ -67,7 +66,8 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
     val cake2Enabled get() = state.cake2Enabled
-    val cake3Enabled get() = state.cake3Enabled && cake3Autodetected
+    val cake3Enabled get() = state.cake3ForceEnabled ||
+            (state.cake3Enabled && cake3Autodetected)
     var cake3Autodetected = false
 
     val pluginEntries: List<PluginEntry>
