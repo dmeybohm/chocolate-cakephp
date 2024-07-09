@@ -67,7 +67,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}moviesTable->find('<caret>
             }
         }
@@ -90,7 +90,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}moviesTable->find('<caret>
             }
         }
@@ -114,7 +114,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}moviesTable->find('ownedBy')->find('<caret>
             }
         }
@@ -137,7 +137,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}moviesTable->find('ownedBy')->find('list')->find('<caret>
             }
         }
@@ -160,7 +160,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->find('list');
                 ${'$'}foo->find('<caret>
             }
@@ -184,7 +184,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->find('list')->where('foo', 'bar');
                 ${'$'}foo->find('<caret>
             }
@@ -208,7 +208,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
+                ${'$'}moviesTable = ${'$'}this->getTableLocator()->get('Movies');
                 ${'$'}foo = ${'$'}moviesTable->find('ownedBy')->toArray();
                 ${'$'}foo->find('<caret>
             }

@@ -27,6 +27,9 @@ namespace Cake\Validation {
 }
 
 namespace Cake\ORM {
+    class Table {
+    }
+
     class TableRegistry {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
@@ -56,7 +59,7 @@ namespace Cake\ORM\Locator {
     }
 
     trait LocatorAwareTrait {
-        public function fetchTable(): LocatorInteface {
+        public function fetchTable(): \Cake\ORM\Table {
         }
 
         public function getTableLocator(): LocatorInterface {
