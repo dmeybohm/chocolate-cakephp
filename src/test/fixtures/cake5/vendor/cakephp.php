@@ -39,6 +39,7 @@ namespace Cake\ORM\Query {
         }
     }
 }
+
 namespace Cake\ORM {
     use Cake\ORM\Query\SelectQuery;
 

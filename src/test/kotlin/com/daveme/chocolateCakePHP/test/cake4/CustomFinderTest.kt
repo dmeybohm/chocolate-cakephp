@@ -1,36 +1,13 @@
-package com.daveme.chocolateCakePHP.test.cake5
+package com.daveme.chocolateCakePHP.test.cake4
 
-class CustomFinderTest : Cake5BaseTestCase() {
+class CustomFinderTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
-            "cake5/src5/Controller/AppController.php",
-            "cake5/src5/Model/Table/MoviesTable.php",
-            "cake5/vendor/cakephp.php"
+            "cake4/src4/Controller/AppController.php",
+            "cake4/src4/Model/Table/MoviesTable.php",
+            "cake4/vendor/cakephp.php"
         )
-    }
-
-    fun `test custom finder from Table class is generated when doing a find`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-
-        class MovieController extends Controller
-        {
-            public function ownedBy() {
-                ${'$'}moviesTable = ${'$'}this->fetchTable('Movies');
-                ${'$'}moviesTable->find('<caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("ownedBy"))
     }
 
     fun `test custom finder class is generated when doing a find from a dynamic property`() {
@@ -40,6 +17,7 @@ class CustomFinderTest : Cake5BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
         
         class MovieController extends Controller
         {
@@ -217,31 +195,5 @@ class CustomFinderTest : Cake5BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertFalse(result!!.contains("ownedBy"))
-    }
-
-    fun `test custom finder from custom Table class name is generated when doing a find`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use App\Model\Table\MoviesTable;
-        
-        class MovieController extends Controller
-        {
-            public function ownedBy() {
-                ${'$'}myMovies = ${'$'}this->fetchTable('MyMovies', [
-                    'className' => MoviesTable::class,
-                ]);
-                ${'$'}myMovies->find('<caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("ownedBy"))
     }
 }
