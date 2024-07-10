@@ -13,7 +13,8 @@ import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
     private JPanel topPanel;
-    private JCheckBox enableCake3SupportCheckBox;
+    private JCheckBox enableAutoDetectCake3CheckBox;
+    private JCheckBox forceEnableCakePHP3CheckBox;
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
     private JButton templateExtensionDefaultButton;
@@ -35,12 +36,15 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void loadSettingsToUI(@NotNull Settings settings) {
-        toggleCake3State(settings.getCake3Enabled());
+        forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
+        enableAutoDetectCake3CheckBox.setSelected(settings.getCake3Enabled());
+        updateCake3SettingsVisibility();
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
-        toggleCake2State(settings.getCake2Enabled());
+        enableCake2SupportCheckBox.setSelected(settings.getCake2Enabled());
+        updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
@@ -49,7 +53,8 @@ class ConfigForm implements SearchableConfigurable {
         SettingsState origState = settings.getState();
         SettingsState newState = copySettingsState(origState);
 
-        newState.setCake3Enabled(enableCake3SupportCheckBox.isSelected());
+        newState.setCake3Enabled(enableAutoDetectCake3CheckBox.isSelected());
+        newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
         newState.setAppDirectory(appDirectoryTextField.getText());
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());
@@ -98,26 +103,35 @@ class ConfigForm implements SearchableConfigurable {
                 this.cake2TemplateExtensionTextField.setText(defaults.getCake2TemplateExtension())
         );
 
-        // Toggle enabled/disabled for panels based on checkboxes:
-        enableCake3SupportCheckBox.addActionListener(e ->
-            this.toggleCake3State(enableCake3SupportCheckBox.isSelected())
+        forceEnableCakePHP3CheckBox.addActionListener(e ->
+            this.updateCake3SettingsVisibility()
+        );
+
+        enableAutoDetectCake3CheckBox.addActionListener(e ->
+            this.updateCake3SettingsVisibility()
         );
 
         enableCake2SupportCheckBox.addActionListener(e ->
-            this.toggleCake2State(enableCake2SupportCheckBox.isSelected())
+            this.updateCake2SettingsVisibility()
         );
 
         return topPanel;
     }
 
-    private void toggleCake3State(boolean enabled) {
-        cake3Panel.setVisible(enabled);
-        enableCake3SupportCheckBox.setSelected(enabled);
+    private void updateCake3SettingsVisibility() {
+        boolean visible = enableAutoDetectCake3CheckBox.isSelected() ||
+                forceEnableCakePHP3CheckBox.isSelected();
+        cake3Panel.setVisible(visible);
+        updateAppNamespaceEditability();
+        enableAutoDetectCake3CheckBox.setEnabled(!forceEnableCakePHP3CheckBox.isSelected());
     }
 
-    private void toggleCake2State(boolean enabled) {
-        cake2Panel.setVisible(enabled);
-        enableCake2SupportCheckBox.setSelected(enabled);
+    private void updateCake2SettingsVisibility() {
+        cake2Panel.setVisible(enableCake2SupportCheckBox.isSelected());
+    }
+
+    private void updateAppNamespaceEditability() {
+        appNamespaceTextField.setEnabled(forceEnableCakePHP3CheckBox.isSelected());
     }
 
     @Override

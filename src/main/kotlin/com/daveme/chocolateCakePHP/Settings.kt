@@ -64,7 +64,7 @@ class CakePhpAutoDetector(project: Project)
         val namespaces = PhpCodeInsightUtil.collectNamespaces(psiFile)
         return if (namespaces.size > 0)
             namespaces.first()
-                .toString()
+                .fqn
                 .removeFromEnd("\\Controller")
                 .absoluteClassName()
         else
@@ -95,8 +95,9 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
     val cake2Enabled get() = state.cake2Enabled
-    val cake3Enabled get() = state.cake3ForceEnabled ||
+    val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && autoDetectedValues.cake3OrLaterPresent)
+    val cake3ForceEnabled get() = state.cake3ForceEnabled
     var autoDetectedValues = CakeAutoDetectedValues()
 
     val pluginEntries: List<PluginEntry>
