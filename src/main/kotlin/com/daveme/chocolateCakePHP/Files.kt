@@ -15,6 +15,11 @@ fun virtualFileToPsiDirectory(project: Project, file: VirtualFile): PsiDirectory
     return psiManager.findDirectory(file)
 }
 
+fun virtualFileToPsiFile(project: Project, file: VirtualFile): PsiFile? {
+    val psiManager = PsiManager.getInstance(project)
+    return psiManager.findFile(file)
+}
+
 fun virtualFilesToPsiFiles(project: Project, files: Collection<VirtualFile>): Collection<PsiFile> {
     val psiFiles = HashSet<PsiFile>()
     val psiManager = PsiManager.getInstance(project)
