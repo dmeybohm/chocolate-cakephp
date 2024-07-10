@@ -122,8 +122,8 @@ class ConfigForm implements SearchableConfigurable {
         boolean visible = enableAutoDetectCake3CheckBox.isSelected() ||
                 forceEnableCakePHP3CheckBox.isSelected();
         cake3Panel.setVisible(visible);
-        updateAppNamespaceEditability();
         enableAutoDetectCake3CheckBox.setEnabled(!forceEnableCakePHP3CheckBox.isSelected());
+        updateAppNamespaceEditability();
     }
 
     private void updateCake2SettingsVisibility() {
@@ -132,6 +132,7 @@ class ConfigForm implements SearchableConfigurable {
 
     private void updateAppNamespaceEditability() {
         appNamespaceTextField.setEnabled(forceEnableCakePHP3CheckBox.isSelected());
+        appNamespaceDefaultButton.setEnabled(forceEnableCakePHP3CheckBox.isSelected());
     }
 
     @Override
