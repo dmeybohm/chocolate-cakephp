@@ -11,7 +11,7 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         // Add plugin namespace to state.
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.defaults.state.copy()
-        newState.cake3Enabled = true
+        newState.cake3ForceEnabled = true
         newState.cake2Enabled = false
         newState.appDirectory = "src4"
         newState.pluginNamespaces = listOf("\\TestPlugin")
