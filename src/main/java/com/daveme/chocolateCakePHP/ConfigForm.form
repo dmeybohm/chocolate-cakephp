@@ -101,8 +101,8 @@
               <component id="3e6f0" class="javax.swing.JTextField" binding="templateExtensionTextField">
                 <constraints>
                   <grid row="6" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                    <preferred-size width="150" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties/>
@@ -118,8 +118,8 @@
               <component id="f88da" class="javax.swing.JTextField" binding="appNamespaceTextField">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties/>
@@ -135,8 +135,8 @@
               <component id="96b34" class="javax.swing.JTextField" binding="appDirectoryTextField">
                 <constraints>
                   <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                    <preferred-size width="150" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties/>
@@ -152,8 +152,8 @@
               <component id="ec7df" class="javax.swing.JLabel">
                 <constraints>
                   <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties>
@@ -163,8 +163,8 @@
               <component id="f6357" class="javax.swing.JLabel">
                 <constraints>
                   <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties>
@@ -174,8 +174,8 @@
               <component id="c9513" class="javax.swing.JLabel">
                 <constraints>
                   <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="0" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties>
@@ -289,8 +289,8 @@
               <component id="bf92d" class="javax.swing.JTextField" binding="cake2TemplateExtensionTextField">
                 <constraints>
                   <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties/>
@@ -306,8 +306,8 @@
               <component id="b4c7d" class="javax.swing.JTextField" binding="cake2AppDirectoryTextField">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                    <preferred-size width="500" height="-1"/>
-                    <maximum-size width="500" height="-1"/>
+                    <preferred-size width="400" height="-1"/>
+                    <maximum-size width="400" height="-1"/>
                   </grid>
                 </constraints>
                 <properties/>
