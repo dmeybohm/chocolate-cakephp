@@ -5,15 +5,23 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
+import com.intellij.testFramework.fixtures.BasePlatformTestCase.assertEquals
+import com.intellij.testFramework.fixtures.BasePlatformTestCase.assertNotNull
 import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
+import com.jetbrains.php.composer.configData.ComposerJsonConfigService
+import java.io.File
 import java.lang.ref.WeakReference
 
 
 private const val DEFAULT_NAMESPACE = "\\App"
 
+private const val DEFAULT_APP_DIRECTORY = "src"
+
 data class SettingsState(
     var cakeTemplateExtension: String = "ctp",
-    var appDirectory: String = "src",
+    var appDirectory: String = DEFAULT_APP_DIRECTORY,
     var appNamespace: String = DEFAULT_NAMESPACE,
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
@@ -31,7 +39,8 @@ fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 
 data class CakeAutoDetectedValues(
     val cake3OrLaterPresent: Boolean = false,
-    val namespace: String = DEFAULT_NAMESPACE
+    val namespace: String = DEFAULT_NAMESPACE,
+    val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
 
 @Service(Service.Level.PROJECT)
@@ -44,10 +53,34 @@ class CakePhpAutoDetector(project: Project)
         val project = projectRef.get() ?: return CakeAutoDetectedValues()
 
         val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
+        val namespace = checkNamespaceInAppController(project, topDir)
         return CakeAutoDetectedValues(
             cake3OrLaterPresent = checkCakePhpInComposerJson(topDir),
-            namespace = checkNamespaceInAppController(project, topDir)
+            namespace = checkNamespaceInAppController(project, topDir),
+            appDirectory = extractAppDirFromComposerJson(topDir, project, namespace)
         )
+    }
+
+    private fun extractAppDirFromComposerJson(topDir: VirtualFile, project: Project, namespace: String): String {
+        val composerJson = topDir.findFileByRelativePath("composer.json")
+            ?: return DEFAULT_APP_DIRECTORY
+        val fullPath = composerJson.path ?: return DEFAULT_APP_DIRECTORY
+        val composerContents = File(fullPath).readText()
+
+        try {
+            val json = JsonParser(composerContents).parse() as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val autoloadObj = json["autoload"] as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val psr4 = autoloadObj["psr-4"] as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val targetNamespace = "${namespace}\\".removeFromStart("\\")
+            val directory = psr4[targetNamespace] as? String
+                ?: return DEFAULT_APP_DIRECTORY
+            return directory.removeFromEnd("/")
+        } catch (e: Exception) {
+            return DEFAULT_APP_DIRECTORY
+        }
     }
 
     private fun checkCakePhpInComposerJson(topDir: VirtualFile): Boolean {
@@ -82,10 +115,16 @@ class Settings : PersistentStateComponent<SettingsState> {
     private var state = SettingsState()
 
     val cakeTemplateExtension get() = state.cakeTemplateExtension
-    val appDirectory get() = state.appDirectory
+
+    val appDirectory get(): String {
+        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+            autoDetectedValues.appDirectory
+        else
+            state.appDirectory
+    }
 
     val appNamespace get(): String {
-        return if (autoDetectedValues.cake3OrLaterPresent && !state.cake3ForceEnabled)
+        return if (state.cake3Enabled && !state.cake3ForceEnabled)
             autoDetectedValues.namespace
         else
             return state.appNamespace.absoluteClassName()
