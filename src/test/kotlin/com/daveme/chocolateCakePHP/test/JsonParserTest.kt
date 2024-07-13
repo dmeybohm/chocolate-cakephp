@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.JsonParser
+import com.daveme.chocolateCakePHP.jsonParse
 
 class JsonParserTest : BaseTestCase() {
 
@@ -434,6 +435,426 @@ class JsonParserTest : BaseTestCase() {
         assertEquals(listOf(3.0, 4.0, 5.0), nestedArray)
     }
 
+    fun `test empty string parses`() {
+        val jsonString = ""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test whitespace only string parses`() {
+        val jsonString = "   "
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test string with escaped backslash parses`() {
+        val jsonString = """"This is a backslash: \\""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("This is a backslash: \\", result)
+    }
+
+    fun `test string with escaped forward slash parses`() {
+        val jsonString = """"This is a forward slash: \/""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("This is a forward slash: /", result)
+    }
+
+    fun `test string with escaped double quote parses`() {
+        val jsonString = """"He said, \"Hello!\"""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("He said, \"Hello!\"", result)
+    }
+
+    fun `test string with escaped unicode character parses`() {
+        val jsonString = """"Unicode test: \u263A""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Unicode test: \u263A", result)
+    }
+
+    fun `test string with mixed escapes parses`() {
+        val jsonString = """"Mixed: \\ \/ \" \b \f \n \r \t \u263A""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Mixed: \\ / \" \b \u000C \n \r \t \u263A", result)
+    }
+
+    fun `test string with consecutive escape sequences parses`() {
+        val jsonString = """"Consecutive: \\\\ \"\" \u263A\u263A""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Consecutive: \\\\ \"\" \u263A\u263A", result)
+    }
+
+    fun `test empty array parses`() {
+        val jsonString = "[]"
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        assertTrue((result as List<*>).isEmpty())
+    }
+
+    fun `test array with mixed types parses`() {
+        val jsonString = "[1, \"two\", false, null, {\"key\": \"value\"}]"
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertEquals(1.0, array[0])
+        assertEquals("two", array[1])
+        assertEquals(false, array[2])
+        assertNull(array[3])
+        val nested = array[4]
+        assertTrue(nested is Map<*, *>)
+        assertEquals("value", (nested as Map<*, *>)["key"])
+    }
+
+    fun `test array with nested arrays parses`() {
+        val jsonString = "[[1, 2], [3, 4]]"
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertTrue(array[0] is List<*>)
+        assertTrue(array[1] is List<*>)
+        assertEquals(listOf(1.0, 2.0), array[0])
+        assertEquals(listOf(3.0, 4.0), array[1])
+    }
+
+    fun `test array with nested objects parses`() {
+        val jsonString = "[{\"key1\": \"value1\"}, {\"key2\": \"value2\"}]"
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertTrue(array[0] is Map<*, *>)
+        assertTrue(array[1] is Map<*, *>)
+        assertEquals("value1", (array[0] as Map<*, *>)["key1"])
+        assertEquals("value2", (array[1] as Map<*, *>)["key2"])
+    }
+
+    fun `test object with empty key parses`() {
+        val jsonString = """{"": "empty key"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("empty key", (result as Map<*, *>)[""])
+    }
+
+    fun `test object with empty string value parses`() {
+        val jsonString = """{"key": ""}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("", (result as Map<*, *>)["key"])
+    }
+
+    fun `test object with nested empty object parses`() {
+        val jsonString = """{"key": {}}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val nested = (result as Map<*, *>)["key"]
+        assertTrue(nested is Map<*, *>)
+        assertTrue((nested as Map<*, *>).isEmpty())
+    }
+
+    fun `test object with boolean keys parses`() {
+        val jsonString = """{"true": "trueKey", "false": "falseKey"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals("trueKey", mapResult["true"])
+        assertEquals("falseKey", mapResult["false"])
+    }
+
+    fun `test object with numeric keys parses`() {
+        val jsonString = """{"1": "one", "2": "two"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals("one", mapResult["1"])
+        assertEquals("two", mapResult["2"])
+    }
+
+    fun `test object with special character keys parses`() {
+        val jsonString = """{"!@#$%^&*()": "special"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("special", (result as Map<*, *>)["!@#$%^&*()"])
+    }
+
+    fun `test deeply nested arrays and objects parses`() {
+        val jsonString = """{"key": [[[{"nestedKey": [1, 2, 3]}]]]}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val nestedArray = (result as Map<*, *>)["key"]
+        assertTrue(nestedArray is List<*>)
+        val level1 = nestedArray as List<*>
+        val level2 = level1[0] as List<*>
+        val level3 = level2[0] as List<*>
+        val level4 = level3[0] as Map<*, *>
+        val nestedKey = level4["nestedKey"]
+        assertEquals(listOf(1.0, 2.0, 3.0), nestedKey)
+    }
+
+    fun `test object with duplicate keys parses`() {
+        val jsonString = """{"key": "value1", "key": "value2"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value2", (result as Map<*, *>)["key"])
+    }
+
+    fun `test array with null elements parses`() {
+        val jsonString = "[null, null, null]"
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertNull(array[0])
+        assertNull(array[1])
+        assertNull(array[2])
+    }
+
+    fun `test object with null values parses`() {
+        val jsonString = """{"key1": null, "key2": null}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertNull((result as Map<*, *>)["key1"])
+        assertNull(result["key2"])
+    }
+
+    fun `test string with control characters parses`() {
+        val jsonString = """"Control characters: \b \f \n \r \t""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Control characters: \b \u000C \n \r \t", result)
+    }
+
+    fun `test object with floating point numbers parses`() {
+        val jsonString = """{"float1": 0.1, "float2": -0.1, "float3": 3.14159}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals(0.1, mapResult["float1"])
+        assertEquals(-0.1, mapResult["float2"])
+        assertEquals(3.14159, mapResult["float3"])
+    }
+
+    fun `test object with very large integers parses`() {
+        val jsonString = """{"largeInt": 9223372036854775807}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals(9223372036854775807.0, (result as Map<*, *>)["largeInt"])
+    }
+
+    fun `test object with very small integers parses`() {
+        val jsonString = """{"smallInt": -9223372036854775808}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals(-9223372036854775808.0, (result as Map<*, *>)["smallInt"])
+    }
+
+    fun `test object with floating point numbers in exponential notation parses`() {
+        val jsonString = """{"exp1": 1.23e4, "exp2": -1.23e-4}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals(12300.0, mapResult["exp1"])
+        assertEquals(-0.000123, mapResult["exp2"])
+    }
+
+    fun `test object with mixed case true false null parses`() {
+        val jsonString = """{"True": true, "False": false, "Null": null}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals(true, mapResult["True"])
+        assertEquals(false, mapResult["False"])
+        assertNull(mapResult["Null"])
+    }
+
+    fun `test object with leading and trailing whitespace parses`() {
+        val jsonString = """   {"key": "value"}   """
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value", (result as Map<*, *>)["key"])
+    }
+
+    fun `test array with leading and trailing whitespace parses`() {
+        val jsonString = """   [1, 2, 3]   """
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        assertEquals(listOf(1.0, 2.0, 3.0), result)
+    }
+
+    fun `test complex object with mixed whitespace parses`() {
+        val jsonString = """
+            {
+                "key1" : "value1",
+                "key2":    "value2"   ,
+                "key3" :{ "nestedKey" : [ 1 ,  2 , 3  ] } 
+            }
+        """
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals("value1", mapResult["key1"])
+        assertEquals("value2", mapResult["key2"])
+        val nested = mapResult["key3"]
+        assertTrue(nested is Map<*, *>)
+        assertEquals(listOf(1.0, 2.0, 3.0), (nested as Map<*, *>)["nestedKey"])
+    }
+
+    fun `test object with special unicode characters parses`() {
+        val jsonString = """{"key": "value\u263A"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value\u263A", (result as Map<*, *>)["key"])
+    }
+
+    fun `test string with only unicode characters parses`() {
+        val jsonString = """"\u263A\u263B\u263C""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("\u263A\u263B\u263C", result)
+    }
+
+    fun `test string with invalid unicode escape sequence throws exception`() {
+        val jsonString = """"Invalid unicode: \u263""""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test object with multiple nested levels and mixed content parses`() {
+        val jsonString = """
+            {
+                "level1": {
+                    "level2": {
+                        "level3": {
+                            "name": "deepNested",
+                            "value": 42
+                        },
+                        "array": [1, 2, 3]
+                    },
+                    "boolean": true
+                },
+                "rootValue": "test"
+            }
+        """
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val level1 = (result as Map<*, *>)["level1"]
+        assertTrue(level1 is Map<*, *>)
+        val level2 = (level1 as Map<*, *>)["level2"]
+        assertTrue(level2 is Map<*, *>)
+        val level3 = (level2 as Map<*, *>)["level3"]
+        assertTrue(level3 is Map<*, *>)
+        assertEquals("deepNested", (level3 as Map<*, *>)["name"])
+        assertEquals(42.0, level3["value"])
+        val array = level2["array"]
+        assertTrue(array is List<*>)
+        assertEquals(listOf(1.0, 2.0, 3.0), array)
+        assertEquals(true, level1["boolean"])
+        assertEquals("test", result["rootValue"])
+    }
+
+    fun `test object with single-character keys and values parses`() {
+        val jsonString = """{"a": "b", "c": "d"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val mapResult = result as Map<*, *>
+        assertEquals("b", mapResult["a"])
+        assertEquals("d", mapResult["c"])
+    }
+
+    fun `test string with escaped single quote parses`() {
+        val jsonString = """"This is a single quote: \'""""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception because single quote escape is not valid in JSON
+        }
+    }
+
+    fun `test string with multiple unicode escape sequences parses`() {
+        val jsonString = """"Unicode: \u263A \u263B \u263C""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Unicode: \u263A \u263B \u263C", result)
+    }
+
+    fun `test object with deeply nested mixed content and large array parses`() {
+        val jsonString = """
+            {
+                "level1": {
+                    "level2": {
+                        "level3": {
+                            "name": "deepNested",
+                            "value": 42,
+                            "array": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                        },
+                        "boolean": true
+                    },
+                    "rootValue": "test"
+                }
+            }
+        """
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        val level1 = (result as Map<*, *>)["level1"]
+        assertTrue(level1 is Map<*, *>)
+        val level2 = (level1 as Map<*, *>)["level2"]
+        assertTrue(level2 is Map<*, *>)
+        val level3 = (level2 as Map<*, *>)["level3"]
+        assertTrue(level3 is Map<*, *>)
+        assertEquals("deepNested", (level3 as Map<*, *>)["name"])
+        assertEquals(42.0, level3["value"])
+        val array = level3["array"]
+        assertTrue(array is List<*>)
+        assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0), array)
+        assertEquals(true, level2["boolean"])
+        assertEquals("test", level1["rootValue"])
+    }
+
     fun `test composer json`() {
         val jsonString = """
             {
@@ -495,7 +916,7 @@ class JsonParserTest : BaseTestCase() {
                 }
             }
         """.trimIndent()
-        val parsed = JsonParser(jsonString).parse() as? Map<*, *>
+        val parsed = jsonParse(jsonString) as? Map<*, *>
         assertNotNull(parsed)
         val autoloadObj = parsed!!["autoload"] as? Map<*, *>
         assertNotNull(autoloadObj)

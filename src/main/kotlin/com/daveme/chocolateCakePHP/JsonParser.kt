@@ -2,12 +2,32 @@ package com.daveme.chocolateCakePHP
 
 import java.lang.StringBuilder
 
+fun jsonParse(json: String): Any? {
+    return JsonParser(json).parse()
+}
+
 class JsonParser(val json: String) {
     private var index = 0
     private val end = json.length
 
     fun parse(): Any? {
         return parseValue()
+    }
+
+    private fun parseValue(): Any? {
+        skipWhitespace()
+        if (index >= end) {
+            throw IllegalArgumentException("No value found")
+        }
+        return when (json[index]) {
+            '{' -> parseObject()
+            '[' -> parseArray()
+            '"' -> parseString()
+            in '0'..'9', '-' -> parseNumber()
+            't', 'f' -> parseBoolean()
+            'n' -> parseNull()
+            else -> throw IllegalArgumentException("Unexpected character: ${json[index]}")
+        }
     }
 
     private fun skipWhitespace() {
@@ -77,19 +97,6 @@ class JsonParser(val json: String) {
         }
         index++ // Skip '}'
         return obj
-    }
-
-    private fun parseValue(): Any? {
-        skipWhitespace()
-        return when (json[index]) {
-            '{' -> parseObject()
-            '[' -> parseArray()
-            '"' -> parseString()
-            in '0'..'9', '-' -> parseNumber()
-            't', 'f' -> parseBoolean()
-            'n' -> parseNull()
-            else -> throw IllegalArgumentException("Unexpected character: ${json[index]}")
-        }
     }
 
     private fun parseArray(): List<Any?> {

@@ -67,7 +67,7 @@ class CakePhpAutoDetector(project: Project)
         namespace: String
     ): String {
         try {
-            val json = JsonParser(composerContents).parse() as? Map<*, *>
+            val json = jsonParse(composerContents) as? Map<*, *>
                 ?: return DEFAULT_APP_DIRECTORY
             val autoloadObj = json["autoload"] as? Map<*, *>
                 ?: return DEFAULT_APP_DIRECTORY
