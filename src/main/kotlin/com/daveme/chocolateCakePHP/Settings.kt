@@ -5,7 +5,6 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
-import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
 import java.io.File
 import java.lang.ref.WeakReference
 
@@ -48,20 +47,23 @@ class CakePhpAutoDetector(project: Project)
         val project = projectRef.get() ?: return CakeAutoDetectedValues()
 
         val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
-        val namespace = checkNamespaceInAppController(project, topDir)
+        val composerJson = topDir.findFileByRelativePath("composer.json")
+            ?: return CakeAutoDetectedValues()
+        val fullPath = composerJson.canonicalPath ?: return CakeAutoDetectedValues()
+        val composerContents = File(fullPath).readText()
+
+        val namespace = checkNamespaceInAppController(topDir)
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = checkCakePhpInComposerJson(topDir),
-            namespace = checkNamespaceInAppController(project, topDir),
-            appDirectory = extractAppDirFromComposerJson(topDir, namespace)
+            cake3OrLaterPresent = checkCakePhpInComposerJson(composerContents),
+            namespace = checkNamespaceInAppController(topDir),
+            appDirectory = extractAppDirFromComposerJson(composerContents, namespace)
         )
     }
 
-    private fun extractAppDirFromComposerJson(topDir: VirtualFile, namespace: String): String {
-        val composerJson = topDir.findFileByRelativePath("composer.json")
-            ?: return DEFAULT_APP_DIRECTORY
-        val fullPath = composerJson.canonicalPath ?: return DEFAULT_APP_DIRECTORY
-        val composerContents = File(fullPath).readText()
-
+    private fun extractAppDirFromComposerJson(
+        composerContents: String,
+        namespace: String
+    ): String {
         try {
             val json = JsonParser(composerContents).parse() as? Map<*, *>
                 ?: return DEFAULT_APP_DIRECTORY
@@ -78,25 +80,22 @@ class CakePhpAutoDetector(project: Project)
         }
     }
 
-    private fun checkCakePhpInComposerJson(topDir: VirtualFile): Boolean {
-        val composerJson = topDir.findFileByRelativePath("composer.json")
-            ?: return false
-        val contents = composerJson.contentsToByteArray().toString(Charsets.UTF_8)
-        return contents.contains("\"cakephp/cakephp\"")
+    private fun checkCakePhpInComposerJson(composerContents: String): Boolean {
+        return composerContents.contains("\"cakephp/cakephp\"")
     }
 
-    private fun checkNamespaceInAppController(project: Project, topDir: VirtualFile): String {
+    private fun checkNamespaceInAppController(topDir: VirtualFile): String {
         val appController = topDir.findFileByRelativePath("src/Controller/AppController.php")
             ?: return DEFAULT_NAMESPACE
-        val psiFile = virtualFileToPsiFile(project, appController) ?: return DEFAULT_NAMESPACE
-        val namespaces = PhpCodeInsightUtil.collectNamespaces(psiFile)
-        return if (namespaces.size > 0)
-            namespaces.first()
-                .fqn
-                .removeFromEnd("\\Controller")
-                .absoluteClassName()
-        else
-            DEFAULT_NAMESPACE
+        val fullPath = appController.canonicalPath ?: return DEFAULT_APP_DIRECTORY
+        val regex = Regex("^\\s*namespace\\s+([\\w\\\\]+);")
+
+        val lines = File(fullPath).readLines()
+        for (line in lines) {
+            val namespace = regex.find(line)?.groupValues?.get(1) ?: continue
+            return namespace.removeFromEnd("\\Controller").absoluteClassName()
+        }
+        return DEFAULT_NAMESPACE
     }
 }
 
