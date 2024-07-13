@@ -29,17 +29,17 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         ) {
             return PsiElement.EMPTY_ARRAY
         }
+        val method = findParentWithClass(psiElement, MethodReference::class.java)
+            as? MethodReference ?: return PsiElement.EMPTY_ARRAY
+        if (method.name != "render") {
+            return PsiElement.EMPTY_ARRAY
+        }
+
         val containingFile = psiElement.containingFile
         val virtualFile = containingFile.virtualFile
         val filename = virtualFile.nameWithoutExtension
 
         if (!isCakeControllerFile(containingFile)) {
-            return PsiElement.EMPTY_ARRAY
-        }
-
-        val method = findParentWithClass(psiElement, MethodReference::class.java)
-            as? MethodReference ?: return PsiElement.EMPTY_ARRAY
-        if (method.name != "render") {
             return PsiElement.EMPTY_ARRAY
         }
 
