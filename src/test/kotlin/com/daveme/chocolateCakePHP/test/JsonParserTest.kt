@@ -986,6 +986,13 @@ class JsonParserTest : BaseTestCase() {
         assertEquals("Invalid unicode: \u0263", result)
     }
 
+    fun `test invalid unicode escape sequence returns valid part including any text after the literal`() {
+        val jsonString = """"Invalid unicode: \u263 with additional text afterwards.""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Invalid unicode: \u0263 with additional text afterwards.", result)
+    }
+
     fun `test invalid character outside of JSON structure returns valid object`() {
         val jsonString = """{"key": "value"} invalid"""
         val parser = JsonParser(jsonString)
