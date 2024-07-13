@@ -5,12 +5,7 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiManager
-import com.intellij.testFramework.fixtures.BasePlatformTestCase.assertEquals
-import com.intellij.testFramework.fixtures.BasePlatformTestCase.assertNotNull
 import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
-import com.jetbrains.php.composer.configData.ComposerJsonConfigService
 import java.io.File
 import java.lang.ref.WeakReference
 
@@ -57,14 +52,14 @@ class CakePhpAutoDetector(project: Project)
         return CakeAutoDetectedValues(
             cake3OrLaterPresent = checkCakePhpInComposerJson(topDir),
             namespace = checkNamespaceInAppController(project, topDir),
-            appDirectory = extractAppDirFromComposerJson(topDir, project, namespace)
+            appDirectory = extractAppDirFromComposerJson(topDir, namespace)
         )
     }
 
-    private fun extractAppDirFromComposerJson(topDir: VirtualFile, project: Project, namespace: String): String {
+    private fun extractAppDirFromComposerJson(topDir: VirtualFile, namespace: String): String {
         val composerJson = topDir.findFileByRelativePath("composer.json")
             ?: return DEFAULT_APP_DIRECTORY
-        val fullPath = composerJson.path ?: return DEFAULT_APP_DIRECTORY
+        val fullPath = composerJson.canonicalPath ?: return DEFAULT_APP_DIRECTORY
         val composerContents = File(fullPath).readText()
 
         try {
