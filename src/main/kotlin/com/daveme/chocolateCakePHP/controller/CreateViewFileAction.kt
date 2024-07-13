@@ -90,6 +90,13 @@ class CreateViewFileAction(
                         return
                     }
 
+                    // Check if file exists already:
+                    val child = parentDirVirtualFile.findChild(filename)
+                    if (child != null && child.exists()) {
+                        showError("File already exists")
+                        return
+                    }
+
                     val psiFile = PsiFileFactory.getInstance(project)
                         .createFileFromText(
                             filename,
