@@ -96,7 +96,7 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
  *
  * @param methodReference The method reference to search for the action name.
  */
-fun actionNamesFromSingleConstantRenderExpression(methodReference: MethodReference): ActionNames? {
+fun actionNamesFromRenderCall(methodReference: MethodReference): ActionNames? {
     if (methodReference.name != "render") {
         return null
     }

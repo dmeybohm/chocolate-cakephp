@@ -57,7 +57,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return null
         }
         val methodReference = variable.parent as? MethodReference ?: return null
-        val actionNames = actionNamesFromSingleConstantRenderExpression(methodReference)
+        val actionNames = actionNamesFromRenderCall(methodReference)
             ?: return null
 
         return relatedItemLineMarkerInfo(

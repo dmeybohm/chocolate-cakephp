@@ -221,7 +221,6 @@ private fun appOrSrcDirectoryFromSourceFile(
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
 sealed class CakeView(val elementTop: String) {
-    abstract fun templatePath(settings: Settings, controllerName: String, controllerAction: String): String
     abstract fun elementPath(settings: Settings, elementPath: String): String
 }
 
@@ -238,8 +237,6 @@ fun isCakeControllerFile(file: PsiFile): Boolean {
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeFour : CakeView(elementTop = "element") {
-    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-        "${controllerName}/${controllerAction}.php"
 
     override fun elementPath(settings: Settings, elementPath: String): String =
         "${elementTop}/${elementPath}.php"
@@ -247,8 +244,6 @@ object CakeFour : CakeView(elementTop = "element") {
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeThree : CakeView(elementTop = "Element") {
-    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-        "${controllerName}/${controllerAction}.${settings.cakeTemplateExtension}"
 
     override fun elementPath(settings: Settings, elementPath: String): String =
         "${elementTop}/${elementPath}.${settings.cakeTemplateExtension}"
@@ -256,38 +251,9 @@ object CakeThree : CakeView(elementTop = "Element") {
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
 object CakeTwo : CakeView(elementTop = "Elements") {
-    override fun templatePath(settings: Settings, controllerName: String, controllerAction: String) =
-        "${controllerName}/$controllerAction.${settings.cake2TemplateExtension}"
 
     override fun elementPath(settings: Settings, elementPath: String): String =
         "${elementTop}/$elementPath.${settings.cake2TemplateExtension}"
-}
-
-@Deprecated("Use AllViewPaths instead")
-fun templatePathToVirtualFile(
-    settings: Settings,
-    templatesDir: TemplatesDir,
-    controllerName: String,
-    controllerAction: String
-): VirtualFile? {
-    var relativeFile: VirtualFile? = null
-    val directory = templatesDir.psiDirectory
-    if (settings.cake3Enabled) {
-        val underscored = controllerAction.camelCaseToUnderscore()
-        val cakeThreeTemplatePath = CakeThree.templatePath(settings, controllerName, underscored)
-        relativeFile = findRelativeFile(directory, cakeThreeTemplatePath)
-        if (relativeFile == null) {
-            val cakeFourTemplatePath = CakeFour.templatePath(settings, controllerName, underscored)
-            relativeFile = findRelativeFile(directory, cakeFourTemplatePath)
-        }
-    }
-    if (relativeFile == null) {
-        if (settings.cake2Enabled) {
-            val cakeTwoTemplatePath = CakeTwo.templatePath(settings, controllerName, controllerAction)
-            relativeFile = findRelativeFile(directory, cakeTwoTemplatePath)
-        }
-    }
-    return relativeFile
 }
 
 @Deprecated("Rewrite this to use AllViewPaths instead")

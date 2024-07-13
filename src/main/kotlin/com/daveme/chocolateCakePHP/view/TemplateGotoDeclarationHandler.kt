@@ -5,12 +5,11 @@ import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.PhpLanguage
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import java.util.HashSet
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -34,16 +33,43 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val virtualFile = containingFile.virtualFile
         val filename = virtualFile.nameWithoutExtension
 
+        if (!isCakeControllerFile(containingFile)) {
+            return PsiElement.EMPTY_ARRAY
+        }
+
+        val method = findParentWithClass(psiElement, MethodReference::class.java)
+            as? MethodReference ?: return PsiElement.EMPTY_ARRAY
+        if (method.name != "render") {
+            return PsiElement.EMPTY_ARRAY
+        }
+
         val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
-
-        val templatesDir = templatesDirectoryFromViewFile(psiElement.project, settings, containingFile)
+        val actionNames = actionNamesFromRenderCall(method)
             ?: return PsiElement.EMPTY_ARRAY
-        val relativeFile = templatePathToVirtualFile(settings, templatesDir, controllerName, psiElement.text)
-            ?: return PsiElement.EMPTY_ARRAY
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(
+            settings,
+            containingFile
+        ) ?: return null
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
+            project,
+            settings,
+            topSourceDirectory
+        ) ?: return null
 
-        val files = HashSet<VirtualFile>()
-        files.add(relativeFile)
-        return virtualFilesToPsiFiles(project, files).toTypedArray()
+        val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
+            ?: return null
+        val allViewPaths = allViewPathsFromController(
+            controllerName,
+            templatesDirWithPath,
+            settings,
+            actionNames
+        )
+        val files = viewFilesFromAllViewPaths(
+            project = project,
+            templatesDirectory = templatesDirectory,
+            allViewPaths = allViewPaths
+        )
+        return files.toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
