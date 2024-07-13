@@ -122,16 +122,22 @@ class ConfigForm implements SearchableConfigurable {
         boolean visible = enableAutoDetectCake3CheckBox.isSelected() ||
                 forceEnableCakePHP3CheckBox.isSelected();
         cake3Panel.setVisible(visible);
-        updateAppNamespaceEditability();
         enableAutoDetectCake3CheckBox.setEnabled(!forceEnableCakePHP3CheckBox.isSelected());
+        updateCake3SettingEditability();
     }
 
     private void updateCake2SettingsVisibility() {
         cake2Panel.setVisible(enableCake2SupportCheckBox.isSelected());
     }
 
-    private void updateAppNamespaceEditability() {
-        appNamespaceTextField.setEnabled(forceEnableCakePHP3CheckBox.isSelected());
+    private void updateCake3SettingEditability() {
+        var cake3SettingsEnabled = forceEnableCakePHP3CheckBox.isSelected();
+        appNamespaceTextField.setEnabled(cake3SettingsEnabled);
+        appNamespaceDefaultButton.setEnabled(cake3SettingsEnabled);
+        appDirectoryTextField.setEnabled(cake3SettingsEnabled);
+        appDirectoryDefaultButton.setEnabled(cake3SettingsEnabled);
+        templateExtensionTextField.setEnabled(cake3SettingsEnabled);
+        templateExtensionDefaultButton.setEnabled(cake3SettingsEnabled);
     }
 
     @Override

@@ -48,8 +48,8 @@ class ViewVariableTest : Cake2BaseTestCase() {
 
     fun `test variable list is communicated from controller to view`() {
         myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
-            
         <?php
+
         echo <caret>
         """.trimIndent())
         myFixture.completeBasic()
@@ -60,8 +60,8 @@ class ViewVariableTest : Cake2BaseTestCase() {
 
     fun `test variable list is communicated from controller to view within a variable`() {
         myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
-            
         <?php
+
         echo ${'$'}<caret>
         """.trimIndent())
         myFixture.completeBasic()

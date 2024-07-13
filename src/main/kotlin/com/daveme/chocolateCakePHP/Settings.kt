@@ -5,15 +5,19 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
-import com.jetbrains.php.codeInsight.PhpCodeInsightUtil
+import java.io.File
 import java.lang.ref.WeakReference
 
 
 private const val DEFAULT_NAMESPACE = "\\App"
 
+private const val DEFAULT_APP_DIRECTORY = "src"
+
+private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
+
 data class SettingsState(
-    var cakeTemplateExtension: String = "ctp",
-    var appDirectory: String = "src",
+    var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
+    var appDirectory: String = DEFAULT_APP_DIRECTORY,
     var appNamespace: String = DEFAULT_NAMESPACE,
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
@@ -31,7 +35,8 @@ fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 
 data class CakeAutoDetectedValues(
     val cake3OrLaterPresent: Boolean = false,
-    val namespace: String = DEFAULT_NAMESPACE
+    val namespace: String = DEFAULT_NAMESPACE,
+    val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
 
 @Service(Service.Level.PROJECT)
@@ -44,31 +49,61 @@ class CakePhpAutoDetector(project: Project)
         val project = projectRef.get() ?: return CakeAutoDetectedValues()
 
         val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
+        val composerJson = topDir.findFileByRelativePath("composer.json")
+            ?: return CakeAutoDetectedValues()
+        val fullPath = composerJson.canonicalPath ?: return CakeAutoDetectedValues()
+        val composerContents = File(fullPath).readText()
+        val composerParsed = jsonParse(composerContents)
+
+        val namespace = checkNamespaceInAppController(topDir)
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = checkCakePhpInComposerJson(topDir),
-            namespace = checkNamespaceInAppController(project, topDir)
+            cake3OrLaterPresent = checkCakePhpInComposerJson(composerParsed),
+            namespace = checkNamespaceInAppController(topDir),
+            appDirectory = extractAppDirFromComposerJson(composerContents, namespace)
         )
     }
 
-    private fun checkCakePhpInComposerJson(topDir: VirtualFile): Boolean {
-        val composerJson = topDir.findFileByRelativePath("composer.json")
-            ?: return false
-        val contents = composerJson.contentsToByteArray().toString(Charsets.UTF_8)
-        return contents.contains("\"cakephp/cakephp\"")
+    private fun extractAppDirFromComposerJson(
+        composerContents: String,
+        namespace: String
+    ): String {
+        try {
+            val json = jsonParse(composerContents) as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val autoloadObj = json["autoload"] as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val psr4 = autoloadObj["psr-4"] as? Map<*, *>
+                ?: return DEFAULT_APP_DIRECTORY
+            val targetNamespace = "${namespace}\\".removeFromStart("\\")
+            val directory = psr4[targetNamespace] as? String
+                ?: return DEFAULT_APP_DIRECTORY
+            return directory.removeFromEnd("/")
+        } catch (e: Exception) {
+            return DEFAULT_APP_DIRECTORY
+        }
     }
 
-    private fun checkNamespaceInAppController(project: Project, topDir: VirtualFile): String {
+    private fun checkCakePhpInComposerJson(composerParsed: Any?): Boolean {
+        val asMap = composerParsed as? Map<*, *> ?: return false
+        val required = asMap["require"] as? Map<*, *> ?: return false
+        if (required["cakephp/cakephp"] != null) {
+            return true
+        }
+        return false
+    }
+
+    private fun checkNamespaceInAppController(topDir: VirtualFile): String {
         val appController = topDir.findFileByRelativePath("src/Controller/AppController.php")
             ?: return DEFAULT_NAMESPACE
-        val psiFile = virtualFileToPsiFile(project, appController) ?: return DEFAULT_NAMESPACE
-        val namespaces = PhpCodeInsightUtil.collectNamespaces(psiFile)
-        return if (namespaces.size > 0)
-            namespaces.first()
-                .fqn
-                .removeFromEnd("\\Controller")
-                .absoluteClassName()
-        else
-            DEFAULT_NAMESPACE
+        val fullPath = appController.canonicalPath ?: return DEFAULT_APP_DIRECTORY
+        val regex = Regex("^\\s*namespace\\s+([\\w\\\\]+);")
+
+        val lines = File(fullPath).readLines()
+        for (line in lines) {
+            val namespace = regex.find(line)?.groupValues?.get(1) ?: continue
+            return namespace.removeFromEnd("\\Controller").absoluteClassName()
+        }
+        return DEFAULT_NAMESPACE
     }
 }
 
@@ -81,11 +116,23 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     private var state = SettingsState()
 
-    val cakeTemplateExtension get() = state.cakeTemplateExtension
-    val appDirectory get() = state.appDirectory
+    val cakeTemplateExtension get(): String {
+        return if (state.cake3Enabled && !state.cake3ForceEnabled) {
+            DEFAULT_CAKE3_TEMPLATE_EXTENSION
+        } else {
+            state.cakeTemplateExtension
+        }
+    }
+
+    val appDirectory get(): String {
+        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+            autoDetectedValues.appDirectory
+        else
+            state.appDirectory
+    }
 
     val appNamespace get(): String {
-        return if (autoDetectedValues.cake3OrLaterPresent && !state.cake3ForceEnabled)
+        return if (state.cake3Enabled && !state.cake3ForceEnabled)
             autoDetectedValues.namespace
         else
             return state.appNamespace.absoluteClassName()
@@ -94,6 +141,7 @@ class Settings : PersistentStateComponent<SettingsState> {
     val pluginPath get() = state.pluginPath
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
+
     val cake2Enabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && autoDetectedValues.cake3OrLaterPresent)
@@ -112,7 +160,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val enabled: Boolean
         get() {
-            return cake2Enabled || cake3Enabled
+            return cake3Enabled || cake2Enabled
         }
 
     override fun equals(other: Any?): Boolean {
