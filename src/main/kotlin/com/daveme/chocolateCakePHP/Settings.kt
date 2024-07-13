@@ -13,8 +13,10 @@ private const val DEFAULT_NAMESPACE = "\\App"
 
 private const val DEFAULT_APP_DIRECTORY = "src"
 
+private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
+
 data class SettingsState(
-    var cakeTemplateExtension: String = "ctp",
+    var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
     var appDirectory: String = DEFAULT_APP_DIRECTORY,
     var appNamespace: String = DEFAULT_NAMESPACE,
     var pluginPath: String = "plugins",
@@ -108,7 +110,13 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     private var state = SettingsState()
 
-    val cakeTemplateExtension get() = state.cakeTemplateExtension
+    val cakeTemplateExtension get(): String {
+        return if (state.cake3Enabled && !state.cake3ForceEnabled) {
+            DEFAULT_CAKE3_TEMPLATE_EXTENSION
+        } else {
+            state.cakeTemplateExtension
+        }
+    }
 
     val appDirectory get(): String {
         return if (state.cake3Enabled && !state.cake3ForceEnabled)
@@ -127,6 +135,7 @@ class Settings : PersistentStateComponent<SettingsState> {
     val pluginPath get() = state.pluginPath
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
+
     val cake2Enabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && autoDetectedValues.cake3OrLaterPresent)
@@ -145,7 +154,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val enabled: Boolean
         get() {
-            return cake2Enabled || cake3Enabled
+            return cake3Enabled || cake2Enabled
         }
 
     override fun equals(other: Any?): Boolean {
