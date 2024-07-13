@@ -53,10 +53,11 @@ class CakePhpAutoDetector(project: Project)
             ?: return CakeAutoDetectedValues()
         val fullPath = composerJson.canonicalPath ?: return CakeAutoDetectedValues()
         val composerContents = File(fullPath).readText()
+        val composerParsed = jsonParse(composerContents)
 
         val namespace = checkNamespaceInAppController(topDir)
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = checkCakePhpInComposerJson(composerContents),
+            cake3OrLaterPresent = checkCakePhpInComposerJson(composerParsed),
             namespace = checkNamespaceInAppController(topDir),
             appDirectory = extractAppDirFromComposerJson(composerContents, namespace)
         )
@@ -82,8 +83,13 @@ class CakePhpAutoDetector(project: Project)
         }
     }
 
-    private fun checkCakePhpInComposerJson(composerContents: String): Boolean {
-        return composerContents.contains("\"cakephp/cakephp\"")
+    private fun checkCakePhpInComposerJson(composerParsed: Any?): Boolean {
+        val asMap = composerParsed as? Map<*, *> ?: return false
+        val required = asMap["require"] as? Map<*, *> ?: return false
+        if (required["cakephp/cakephp"] != null) {
+            return true
+        }
+        return false
     }
 
     private fun checkNamespaceInAppController(topDir: VirtualFile): String {
