@@ -748,17 +748,6 @@ class JsonParserTest : BaseTestCase() {
         assertEquals("\u263A\u263B\u263C", result)
     }
 
-    fun `test string with invalid unicode escape sequence throws exception`() {
-        val jsonString = """"Invalid unicode: \u263""""
-        val parser = JsonParser(jsonString)
-        try {
-            parser.parse()
-            fail("Expected IllegalArgumentException")
-        } catch (e: IllegalArgumentException) {
-            // Expected exception
-        }
-    }
-
     fun `test object with multiple nested levels and mixed content parses`() {
         val jsonString = """
             {
@@ -853,6 +842,163 @@ class JsonParserTest : BaseTestCase() {
         assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0), array)
         assertEquals(true, level2["boolean"])
         assertEquals("test", level1["rootValue"])
+    }
+
+    fun `test missing comma between elements throws exception`() {
+        val jsonString = """["value1" "value2"]"""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException for missing comma between elements")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test missing colon throws exception`() {
+        val jsonString = """{"key" "value"}"""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException for missing colon between key and value")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test trailing comma in object is allowed`() {
+        val jsonString = """{"key": "value",}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse() as? Map<*, *>
+        assertNotNull(result)
+        assertEquals(1, result!!.size)
+        assertEquals("value", result["key"])
+    }
+
+    fun `test trailing comma in array is allowed`() {
+        val jsonString = """["value1", "value2",]"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse() as? List<*>
+        assertNotNull(result)
+        assertEquals(2, result!!.size)
+        assertEquals(listOf("value1", "value2"), result)
+    }
+
+    fun `test missing value in array throws exception`() {
+        val jsonString = """["value1", , "value2"]"""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException for missing value in array")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test missing value in object throws exception`() {
+        val jsonString = """{"key1": "value1", "key2": }"""
+        val parser = JsonParser(jsonString)
+        try {
+            parser.parse()
+            fail("Expected IllegalArgumentException for missing value in object")
+        } catch (e: IllegalArgumentException) {
+            // Expected exception
+        }
+    }
+
+    fun `test missing closing brace returns partial object`() {
+        val jsonString = """{"string": "value""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value", (result as Map<*, *>)["string"])
+    }
+
+    fun `test missing closing bracket returns partial array`() {
+        val jsonString = """["value1", "value2""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertEquals(2, array.size)
+        assertEquals("value1", array[0])
+        assertEquals("value2", array[1])
+    }
+
+    fun `test unterminated string returns partial object`() {
+        val jsonString = """{"key": "unterminated}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("unterminated}", (result as Map<*, *>)["key"])
+    }
+
+    fun `test trailing comma in object returns valid part`() {
+        val jsonString = """{"key": "value",}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value", (result as Map<*, *>)["key"])
+    }
+
+    fun `test trailing comma in array returns valid part`() {
+        val jsonString = """["value1", "value2",]"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertEquals(2, array.size)
+        assertEquals("value1", array[0])
+        assertEquals("value2", array[1])
+    }
+
+    fun `test extra closing brace returns valid part`() {
+        val jsonString = """{"key": "value"}}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value", (result as Map<*, *>)["key"])
+    }
+
+    fun `test extra closing bracket returns valid part`() {
+        val jsonString = """["value1", "value2"]]"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is List<*>)
+        val array = result as List<*>
+        assertEquals(2, array.size)
+        assertEquals("value1", array[0])
+        assertEquals("value2", array[1])
+    }
+
+    fun `test unescaped control character returns partial object`() {
+        val jsonString = """{"key": "value with unescaped \u0001 control character"}"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value with unescaped \u0001 control character", (result as Map<*, *>)["key"])
+    }
+
+    fun `test invalid unicode escape sequence returns valid part`() {
+        val jsonString = """"Invalid unicode: \u263""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("Invalid unicode: \u0263", result)
+    }
+
+    fun `test invalid character outside of JSON structure returns valid object`() {
+        val jsonString = """{"key": "value"} invalid"""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertTrue(result is Map<*, *>)
+        assertEquals("value", (result as Map<*, *>)["key"])
+    }
+
+    fun `test single value without container returns value`() {
+        val jsonString = """"value""""
+        val parser = JsonParser(jsonString)
+        val result = parser.parse()
+        assertEquals("value", result)
     }
 
     fun `test composer json`() {

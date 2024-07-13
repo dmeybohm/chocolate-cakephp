@@ -53,8 +53,13 @@ class JsonParser(val json: String) {
                     'r' -> sb.append('\r')
                     't' -> sb.append('\t')
                     'u' -> {
-                        val hex = json.substring(index + 1, index + 5)
-                        sb.append(hex.toInt(16).toChar())
+                        try {
+                            val unicodeLiteralLength = lookaheadUnicodeLiteral()
+                            val hex = json.substring(index + 1, index + unicodeLiteralLength + 1)
+                            sb.append(hex.toInt(16).toChar())
+                        } catch (e: Exception) {
+                            throw IllegalArgumentException("Incomplete unicode escape sequence")
+                        }
                         index += 4 // Skip the 4 hex digits
                     }
                     else -> throw IllegalArgumentException("Unexpected escape sequence: \\$esc")
@@ -66,6 +71,23 @@ class JsonParser(val json: String) {
         }
         index++ // Skip closing '"'
         return sb.toString()
+    }
+
+    private fun lookaheadUnicodeLiteral(): Int {
+        var nextIndex = index + 1
+        var literalLength = 0
+        while (
+            nextIndex < end && (
+                    json[nextIndex] in '0'..'9' ||
+                            json[nextIndex] in 'A'..'F' ||
+                            json[nextIndex] in 'a'..'f'
+                    ) &&
+            literalLength < 4
+        ) {
+            nextIndex++
+            literalLength++
+        }
+        return literalLength
     }
 
     private fun parseObject(): Map<String, Any?> {
