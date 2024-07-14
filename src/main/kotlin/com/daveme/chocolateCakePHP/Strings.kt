@@ -47,6 +47,9 @@ fun String.isQueryObject(): Boolean =
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator", ignoreCase = true)
 
+fun String.hasFetchTableMethodCall(): Boolean =
+    this.contains(".fetchTable", ignoreCase = true)
+
 fun String.absoluteClassName(): String =
     if (this.startsWith("\\"))
         this
@@ -105,4 +108,8 @@ fun String.mneumonicEscape(): String =
 
 fun String.singularize(): String {
     return Inflector.singularize(this)
+}
+
+fun String.pluralize(): String {
+    return Inflector.pluralize(this)
 }

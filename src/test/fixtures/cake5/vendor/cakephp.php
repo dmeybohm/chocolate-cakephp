@@ -2,7 +2,10 @@
 
 namespace Cake\Controller {
     use Cake\View\ViewVarsTrait;
+    use Cake\ORM\Locator\LocatorAwareTrait;
+
     class Controller {
+        use LocatorAwareTrait;
         use ViewVarsTrait;
     }
     class Component {}
@@ -96,6 +99,8 @@ namespace Cake\Validation {
 }
 
 namespace Cake\ORM\Locator {
+    use Cake\ORM\Table;
+
     interface LocatorInterface {
 
         /**
@@ -108,9 +113,12 @@ namespace Cake\ORM\Locator {
 
     trait LocatorAwareTrait {
 
+
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
         public function getTableLocator() {}
+
+        public function fetchTable(?string $alias = null, array $optoins = []): Table {}
     }
 }

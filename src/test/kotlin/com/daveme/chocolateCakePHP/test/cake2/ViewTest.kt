@@ -42,4 +42,23 @@ class ViewTest : Cake2BaseTestCase() {
         assertFalse(result.contains("MovieFormatter"))
     }
 
+    fun `test does not complete view helper does not apply in irrelevant contexts for cake2`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController
+        {
+            public function index() {
+                return ${'$'}this-><caret>;
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertFalse(result!!.contains("ArtistFormatter"))
+        assertFalse(result.contains("MovieFormatter"))
+    }
+
+
 }

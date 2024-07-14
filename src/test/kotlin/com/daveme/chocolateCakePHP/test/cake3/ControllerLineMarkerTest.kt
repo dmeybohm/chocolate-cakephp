@@ -1,6 +1,5 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
-import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker
 import com.intellij.icons.AllIcons
 import com.intellij.psi.util.PsiTreeUtil
@@ -10,11 +9,6 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 class ControllerLineMarkerTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        // change app directory:
-        val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = originalSettings.state.copy()
-        newState.appDirectory = "src"
-        originalSettings.loadState(newState)
     }
 
     fun `test that line markers contain one entry for each type of view`() {

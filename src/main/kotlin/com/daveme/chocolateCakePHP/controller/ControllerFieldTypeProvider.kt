@@ -15,8 +15,12 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
 class ControllerFieldTypeProvider : PhpTypeProvider4 {
 
+    companion object {
+        const val TYPE_PROVIDER_CHAR = '\u8312'
+    }
+
     override fun getKey(): Char {
-        return '\u8312'
+        return TYPE_PROVIDER_CHAR
     }
 
     override fun getType(psiElement: PsiElement): PhpType? {
