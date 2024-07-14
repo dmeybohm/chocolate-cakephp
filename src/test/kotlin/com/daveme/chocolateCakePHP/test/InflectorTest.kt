@@ -1,11 +1,12 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.Inflector
+import com.daveme.chocolateCakePHP.pluralize
 import com.daveme.chocolateCakePHP.singularize
 
 class InflectorTest : BaseTestCase() {
 
-    val stringsToTest = listOf(
+    val singularizeStringsToTest = listOf(
         "categoria" to "categorias",
         "menu" to "menus",
         "news" to "news",
@@ -38,8 +39,83 @@ class InflectorTest : BaseTestCase() {
         "syllabus" to "syllabi",
     )
 
+    val pluralizeStringsToTest = listOf(
+        "axmen" to "axman",
+        "men" to "man",
+        "women" to "woman",
+        "humans" to "human",
+        "axmen" to "axman",
+        "men" to "man",
+        "women" to "woman",
+        "humans" to "human",
+        "categorias" to "categoria",
+        "houses" to "house",
+        "powerhouses" to "powerhouse",
+        "Buses" to "Bus",
+        "buses" to "bus",
+        "menus" to "menu",
+        "news" to "news",
+        "food_menus" to "food_menu",
+        "Menus" to "Menu",
+        "FoodMenus" to "FoodMenu",
+        "quizzes" to "quiz",
+        "matrix_rows" to "matrix_row",
+        "matrices" to "matrix",
+        "vertices" to "vertex",
+        "indexes" to "index",
+        "Aliases" to "Alias",
+        "Aliases" to "Aliases",
+        "Media" to "Media",
+        "NodeMedia" to "NodeMedia",
+        "alumni" to "alumnus",
+        "bacilli" to "bacillus",
+        "cacti" to "cactus",
+        "foci" to "focus",
+        "fungi" to "fungus",
+        "nuclei" to "nucleus",
+        "octopuses" to "octopus",
+        "radii" to "radius",
+        "stimuli" to "stimulus",
+        "syllabi" to "syllabus",
+        "termini" to "terminus",
+        "viruses" to "virus",
+        "people" to "person",
+        "people" to "people",
+        "gloves" to "glove",
+        "crises" to "crisis",
+        "taxes" to "tax",
+        "waves" to "wave",
+        "bureaus" to "bureau",
+        "cafes" to "cafe",
+        "roofs" to "roof",
+        "foes" to "foe",
+        "cookies" to "cookie",
+        "wolves" to "wolf",
+        "thieves" to "thief",
+        "potatoes" to "potato",
+        "heroes" to "hero",
+        "buffaloes" to "buffalo",
+        "teeth" to "tooth",
+        "geese" to "goose",
+        "feet" to "foot",
+        "objectives" to "objective",
+        "briefs" to "brief",
+        "quotas" to "quota",
+        "curves" to "curve",
+        "body_curves" to "body_curve",
+        "metadata" to "metadata",
+        "files_metadata" to "files_metadata",
+        "stadia" to "stadia",
+        "Addresses" to "Address",
+        "sieves" to "sieve",
+        "blue_octopuses" to "blue_octopus",
+        "chefs" to "chef",
+        "" to "",
+        "pokemon" to "pokemon",
+    )
+
     fun `test singularize`() {
-        for ((expected, input) in stringsToTest) {
+        for ((expected, input) in singularizeStringsToTest) {
             val result = Inflector.singularize(input)
             assertEquals(expected, result)
         }
@@ -47,10 +123,24 @@ class InflectorTest : BaseTestCase() {
 
 
     fun `test String singularize`() {
-        for ((expected, input) in stringsToTest) {
+        for ((expected, input) in singularizeStringsToTest) {
             val result = input.singularize()
             assertEquals(expected, result)
         }
     }
 
+    fun `test pluralize`() {
+        for ((expected, input) in pluralizeStringsToTest) {
+            val result = Inflector.pluralize(input)
+            assertEquals(expected, result)
+        }
+    }
+
+    fun `test String pluralize`() {
+        for ((expected, input) in pluralizeStringsToTest) {
+            val result = input.pluralize()
+            assertEquals(expected, result)
+        }
+
+    }
 }

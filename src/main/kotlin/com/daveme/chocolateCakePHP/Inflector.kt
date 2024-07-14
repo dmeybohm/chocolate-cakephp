@@ -12,11 +12,10 @@ package com.daveme.chocolateCakePHP
 
 object Inflector {
 
-    @Suppress("unused")
     private val plural = listOf(
         "(s)tatus$" to "$1tatuses",
         "(quiz)$" to "$1zes",
-        "^(ox)$" to "$1$2en",
+        "^(ox)$" to "$1en",
         "([m|l])ouse$" to "$1ice",
         "(matr|vert)(ix|ex)$" to "$1ices",
         "(x|ch|ss|sh)$" to "$1es",
@@ -156,6 +155,10 @@ object Inflector {
         "cache" to "caches",
     )
 
+    private val irregularCapitalized = irregular.map {
+        it.key.latinCapitalize() to it.value.latinCapitalize()
+    }.toMap()
+
     private val irregularInverted = irregular.map {
         it.value to it.key
     }.toMap()
@@ -165,6 +168,10 @@ object Inflector {
     }.toMap()
 
     private val singularRegex : List<Pair<Regex, String>> = singular.map {
+        Regex(it.first, RegexOption.IGNORE_CASE) to it.second
+    }
+
+    private val pluralRegex : List<Pair<Regex, String>> = plural.map {
         Regex(it.first, RegexOption.IGNORE_CASE) to it.second
     }
 
@@ -194,6 +201,29 @@ object Inflector {
             }
         }
         return plural
+    }
+
+    fun pluralize(singular: String): String {
+        if (singular.isEmpty()) {
+            return singular
+        }
+        val firstChar = singular[0]
+        val value = if (firstChar.isUpperCase())
+            irregularCapitalized[singular]
+        else
+            irregular[singular]
+        if (value != null) {
+            return value
+        }
+        if (uninflectedRegex.matches(singular)) {
+            return singular
+        }
+        for ((pattern, replacement) in pluralRegex) {
+            if (pattern.containsMatchIn(singular)) {
+                return pattern.replace(singular, replacement)
+            }
+        }
+        return singular
     }
 
 }

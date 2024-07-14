@@ -106,3 +106,7 @@ fun String.mneumonicEscape(): String =
 fun String.singularize(): String {
     return Inflector.singularize(this)
 }
+
+fun String.pluralize(): String {
+    return Inflector.pluralize(this)
+}
