@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.controller.ControllerFieldTypeProvider
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -61,9 +63,15 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     if (tableClass != null) {
                         return tableClass
                     }
-                } else if (type.startsWith("\\") && type.isAnyTableClass()) {
+                }
+                else if (type.startsWith("\\") && type.isAnyTableClass()) {
                     // $this->Movies->get():
                     return PhpType().add(type.tableToEntityClass())
+                }
+                else if (type.startsWith("#${ControllerFieldTypeProvider.TYPE_PROVIDER_CHAR}")) {
+                    // $this->Movies->Articles->get():
+                    val wrappedType = type.split(ControllerFieldTypeProvider.TYPE_PROVIDER_CHAR).last()
+                    return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
             }
             return result
@@ -89,7 +97,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
             }
-            if (name.equals("find")) {
+            if (name.equals("find", ignoreCase = true)) {
                 val classRefType = classReference.type.filterUnknown()
 
                 // TODO: handle incomplete types here by deferring lookup to
@@ -159,25 +167,26 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         //
 
         val result = PhpType()
-
-        if (
-            invokingMethodName.equals("all", ignoreCase = true) &&
-            wrappedType.isAnyTableClass()
-        ) {
-            val entityClass = wrappedType.tableToEntityClass()
-            return PhpType().add(entityClass + "[]")
-        } else if (
-            invokingMethodName.equals("get", ignoreCase = true) &&
-            wrappedType.isAnyTableClass()
-        ) {
-            val entityClass = wrappedType.tableToEntityClass()
-            return PhpType().add(entityClass)
-        }
+        val settings = Settings.getInstance(project)
 
         //
         // For non-find methods, check the return type is "SelectQuery".
         //
         val phpIndex = PhpIndex.getInstance(project)
+        if (
+            invokingMethodName.equals("all", ignoreCase = true) &&
+            wrappedType.isAnyTableClass()
+        ) {
+            val entityClass = wrappedType.tableToEntityClass()
+            return PhpType().add("$entityClass[]")
+        } else if (
+            invokingMethodName.equals("get", ignoreCase = true)
+        ) {
+            val classes = phpIndex.getPossibleTableClasses(settings, wrappedType)
+            classes.forEach { klass -> result.add(klass.fqn.tableToEntityClass()) }
+            return result
+        }
+
 
         // todo: cache method lists
         val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")

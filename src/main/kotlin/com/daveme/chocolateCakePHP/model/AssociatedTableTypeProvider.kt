@@ -14,7 +14,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class AssociatedTableTypeProvider : PhpTypeProvider4 {
 
     private val TYPE_PROVIDER_CHAR = '\u8317'
-    private val TYPE_PROVIDER_END_CHAR = '\u8312'
+    private val TYPE_PROVIDER_END_CHAR = '\u8301'
 
     override fun getKey(): Char {
         return TYPE_PROVIDER_CHAR
@@ -106,7 +106,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
 
         //
         // TODO I think we can't use getBySignature here because getBySignature() isn't
-        //      implemented on the TableLocatorTypeProvider, but that may work bette, but that may work better
+        //      implemented on the TableLocatorTypeProvider, but that may work better
         //
         val varType = PhpType()
         signature.split("|")
