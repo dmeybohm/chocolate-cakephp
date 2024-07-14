@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -31,6 +32,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         if (fieldName.startsWithUppercaseCharacter() &&
             fieldReference.parent is FieldReference
         ) {
+            // $this->Movies->Articles
             val settings = Settings.getInstance(fieldReference.project)
             if (!settings.cake3Enabled) {
                 return null
@@ -47,6 +49,8 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             fieldName.startsWithUppercaseCharacter() &&
             fieldReference.firstChild is Variable
         ) {
+            // $movies = $this->fetchTable("Movies");
+            // $movies->Articles
             val variable = fieldReference.firstChild as Variable
             val variableSignature = variable.signature
             val hasFetchTable = variableSignature.contains("fetchTable")
@@ -54,6 +58,19 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             if (hasFetchTable)  {
                 return PhpType().add("#${key}.v2.${fieldName}.${variableSignature}${endChar}")
             }
+        }
+        if (
+            fieldName.startsWithUppercaseCharacter() &&
+            fieldReference.firstChild is MethodReference
+        ) {
+            // $this->fetchTable("Movies")->Articles
+            val methodReference = fieldReference.firstChild as MethodReference
+            if (!methodReference.name.equals("fetchTable", ignoreCase = true)) {
+                return null
+            }
+            val methodSignature = methodReference.signature
+            val endChar = TYPE_PROVIDER_END_CHAR
+            return PhpType().add("#${key}.v2.${fieldName}.${methodSignature}${endChar}")
         }
 
         return null

@@ -329,7 +329,6 @@ class TableLocatorTest : Cake4BaseTestCase() {
     }
 
     fun `test get returns entity from associated table`() {
-
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -341,6 +340,53 @@ class TableLocatorTest : Cake4BaseTestCase() {
         {
             public function view(${'$'}id) {
                 ${'$'}article = ${'$'}this->Movies->Articles->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    fun `test get returns entity from associated table through fetchTable`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}article = ${'$'}this->fetchTable('Movies')->Articles->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    fun `test get returns entity from associated table through fetchTable with intermediate var`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}movies = ${'$'}this->fetchTable('Movies');
+                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
                 ${'$'}article-><caret>
             }
         }
