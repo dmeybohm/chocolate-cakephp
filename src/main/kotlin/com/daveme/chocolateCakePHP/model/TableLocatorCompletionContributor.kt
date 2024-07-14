@@ -77,7 +77,8 @@ class TableLocatorCompletionContributor : CompletionContributor() {
             return type.types.any {
                 it.isTableLocatorInterface() ||
                         it.isAnyControllerClass() ||
-                            it.hasGetTableLocatorMethodCall()
+                            it.hasGetTableLocatorMethodCall() ||
+                                it.isTableRegistryClass()
             }
         }
     }

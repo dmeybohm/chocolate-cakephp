@@ -1,8 +1,6 @@
 package com.daveme.chocolateCakePHP.model
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.isProbablyControllerClass
-import com.daveme.chocolateCakePHP.isProbablyTableLocatorClass
+import com.daveme.chocolateCakePHP.*
 import com.intellij.patterns.PatternCondition
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -10,6 +8,10 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 object TableLocatorMethodPattern :
     PatternCondition<MethodReference>("TableLocatorMethodPattern")
 {
+    // $this->getTableLocator()->get("Movies")
+    // $this->fetchTable("Movies")
+    // TableRegistry::getTableLocator()->get("Movies")
+    // TableRegistry::get("Movies")
     override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
         if (!"get".equals(methodReference.name, ignoreCase = true) &&
             !"fetchTable".equals(methodReference.name, ignoreCase = true)
@@ -23,6 +25,7 @@ object TableLocatorMethodPattern :
         }
         val type = methodReference.classReference?.type ?: return false
         return type.isProbablyTableLocatorClass() ||
-                type.isProbablyControllerClass()
+                type.isProbablyControllerClass() ||
+                type.isProbablyTableRegistryClass()
     }
 }
