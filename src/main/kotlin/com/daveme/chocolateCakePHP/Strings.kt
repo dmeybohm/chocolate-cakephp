@@ -23,6 +23,9 @@ fun String.isAnyControllerClass(): Boolean =
 fun String.isAnyTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
 
+fun String.isTableRegistryClass(): Boolean =
+    this.equals("\\Cake\\ORM\\TableRegistry", ignoreCase = true)
+
 fun String.tableToEntityClass(): String {
     val parts = this.removeFromEnd("Table", ignoreCase = true)
         .split('\\')
@@ -49,6 +52,9 @@ fun String.hasGetTableLocatorMethodCall(): Boolean =
 
 fun String.hasFetchTableMethodCall(): Boolean =
     this.contains(".fetchTable", ignoreCase = true)
+
+fun String.hasTableRegistryGetCall(): Boolean =
+    this.contains("TableRegistry.get", ignoreCase = true)
 
 fun String.absoluteClassName(): String =
     if (this.startsWith("\\"))

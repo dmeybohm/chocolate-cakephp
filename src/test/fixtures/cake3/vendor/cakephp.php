@@ -76,6 +76,15 @@ namespace Cake\ORM {
          * @return \Cake\ORM\Locator\LocatorInterface
          */
         public function getTableLocator() { }
+
+        /**
+         * @param string $alias
+         * @param array $options
+         * @return \Cake\ORM\Table
+         * @deprecated 3.6.0 Use \Cake\ORM\Locator\TableLocator::get() instead
+         */
+        public function get($alias, array $options = [])
+        {}
     }
 }
 

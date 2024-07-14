@@ -57,8 +57,12 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val result = PhpType()
             for (type in classReference.type.types) {
-                if (type.hasGetTableLocatorMethodCall()) {
-                    // getTableLocator()->get():
+                if (
+                    type.hasGetTableLocatorMethodCall() ||
+                    (psiElement.isStatic && type.isTableRegistryClass())
+                ) {
+                    // $this->getTableLocator()->get("Movies")
+                    // TableRegistry::get("Movies")
                     val tableClass = getTableClass(psiElement, settings)
                     if (tableClass != null) {
                         return tableClass

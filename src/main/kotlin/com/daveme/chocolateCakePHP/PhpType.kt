@@ -22,8 +22,18 @@ fun PhpType.isProbablyTableLocatorClass(): Boolean =
         }
     }
 
+fun PhpType.isProbablyTableRegistryClass(): Boolean =
+    if (this.isComplete) {
+        this.isDefinitelyTableRegistryClass()
+    } else {
+        this.types.any { it.contains("TableRegistry", ignoreCase = true) }
+    }
+
 fun PhpType.isDefinitelyTableClass(): Boolean =
     this.isComplete && this.types.any { it.isAnyTableClass() }
+
+fun PhpType.isDefinitelyTableRegistryClass(): Boolean =
+    this.isComplete && this.types.any { it.isTableRegistryClass() }
 
 fun PhpType.isProbablyTableClass(): Boolean =
     if (this.isComplete)
