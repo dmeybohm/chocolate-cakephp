@@ -29,7 +29,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             return null
         }
         val settings = Settings.getInstance(psiElement.project)
-        if (!settings.enabled) {
+        if (!settings.cake3Enabled) {
             return null
         }
 

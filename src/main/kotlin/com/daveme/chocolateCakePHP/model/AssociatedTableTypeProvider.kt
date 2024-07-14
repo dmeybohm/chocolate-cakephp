@@ -27,6 +27,11 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         val fieldReference = psiElement as? FieldReference ?: return null
         val fieldName = fieldReference.name ?: return null
 
+        val settings = Settings.getInstance(fieldReference.project)
+        if (!settings.cake3Enabled) {
+            return null
+        }
+
         //
         // Handles:
         //       $this->Articles->Movies
@@ -35,10 +40,6 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             fieldReference.parent is FieldReference
         ) {
             // $this->Movies->Articles
-            val settings = Settings.getInstance(fieldReference.project)
-            if (!settings.cake3Enabled) {
-                return null
-            }
             val parent = fieldReference.parent as? FieldReference ?: return null
             val parentFieldName = parent.name ?: return null
             if (!parentFieldName.startsWithUppercaseCharacter()) {

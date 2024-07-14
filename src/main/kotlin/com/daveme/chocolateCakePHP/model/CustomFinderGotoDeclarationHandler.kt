@@ -24,7 +24,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
         val settings = Settings.getInstance(sourceElement.project)
-        if (!settings.enabled) {
+        if (!settings.cake3Enabled) {
             return PsiElement.EMPTY_ARRAY
         }
         if (!psiElement(StringLiteralExpression::class.java)
