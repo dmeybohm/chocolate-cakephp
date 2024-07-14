@@ -141,6 +141,48 @@ class InflectorTest : BaseTestCase() {
             val result = input.pluralize()
             assertEquals(expected, result)
         }
-
     }
+
+    fun `test pluralize doesnt alter already plural`() {
+        assertEquals("Movies", Inflector.pluralize("Movies"))
+        assertEquals("thieves", Inflector.pluralize("thieves"))
+        assertEquals("cars", Inflector.pluralize("cars"))
+//  todo
+//        assertEquals("axmen", Inflector.pluralize("axmen")) // broken
+//        axmen != axmens
+//        men != man
+//        women != womens
+//        axmen != axmens
+//        men != man
+//        women != womens
+//        menus != menuses
+//        food_menus != food_menuses
+//        Menus != Menuses
+//        FoodMenus != FoodMenuses
+//        alumni != alumnis
+//        bacilli != bacillis
+//        cacti != cactis
+//        foci != focis
+//        fungi != fungis
+//        nuclei != nucleis
+//        octopuses != octopus
+//        radii != radiis
+//        stimuli != stimulis
+//        syllabi != syllabis
+//        termini != terminis
+//        people != person
+//        people != person
+//        bureaus != bureauses
+//        cafes != cafe
+//        foes != foe
+//        cookies != cookie
+//        potatoes != potato
+//        heroes != hero
+//        teeth != tooth
+//        geese != goose
+//        feet != foot
+//        briefs != brief
+//        sieves != siev
+    }
+
 }

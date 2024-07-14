@@ -215,6 +215,7 @@ object Inflector {
         if (value != null) {
             return value
         }
+
         if (uninflectedRegex.matches(singular)) {
             return singular
         }
