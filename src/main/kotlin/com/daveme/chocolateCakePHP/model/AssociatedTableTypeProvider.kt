@@ -48,37 +48,45 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             return PhpType().add("#${key}.v1.${fieldName}")
         }
 
-        if (
-            fieldName.startsWithUppercaseCharacter() &&
-            fieldReference.firstChild is Variable
-        ) {
-            // $movies = $this->fetchTable("Movies");
-            // $movies->Articles
-            val variable = fieldReference.firstChild as Variable
-            val variableSignature = variable.signature
-            val hasFetchTable = variableSignature.hasFetchTableMethodCall() ||
-                    variableSignature.hasGetTableLocatorMethodCall()
-            val endChar = TYPE_PROVIDER_END_CHAR
-            if (hasFetchTable)  {
-                return PhpType().add("#${key}.v2.${fieldName}.${variableSignature}${endChar}")
-            }
+        if (!fieldName.startsWithUppercaseCharacter()) {
+            return null
         }
-        if (
-            fieldName.startsWithUppercaseCharacter() &&
-            fieldReference.firstChild is MethodReference
-        ) {
-            // $this->fetchTable("Movies")->Articles
-            // this->getTableLocator()->get("Movies")->Articles
-            val methodReference = fieldReference.firstChild as MethodReference
-            if (
-                !methodReference.name.equals("fetchTable", ignoreCase = true) &&
-                !isTableLocatorCall(methodReference)
-            ) {
-                return null
+        when (fieldReference.firstChild) {
+            is Variable -> {
+                // $movies = $this->fetchTable("Movies");
+                // $movies->Articles
+                //
+                // $movies = TableRegistry::get("Movies");
+                // $movies->Articles
+                //
+                // $movies = $this->getTableLocator()->get("Movies");
+                // $movies->Articles
+                val variable = fieldReference.firstChild as Variable
+                val variableSignature = variable.signature
+                val hasFetchTable = variableSignature.hasFetchTableMethodCall() ||
+                        variableSignature.hasGetTableLocatorMethodCall() ||
+                        variableSignature.hasTableRegistryGetCall()
+                val endChar = TYPE_PROVIDER_END_CHAR
+                if (hasFetchTable)  {
+                    return PhpType().add("#${key}.v2.${fieldName}.${variableSignature}${endChar}")
+                }
             }
-            val methodSignature = methodReference.signature
-            val endChar = TYPE_PROVIDER_END_CHAR
-            return PhpType().add("#${key}.v2.${fieldName}.${methodSignature}${endChar}")
+            is MethodReference -> {
+                // $this->fetchTable("Movies")->Articles
+                // $this->getTableLocator()->get("Movies")->Articles
+                // TableRegistry::get("Movies")->Articles
+                val methodReference = fieldReference.firstChild as MethodReference
+                if (
+                    methodReference.name.equals("fetchTable", ignoreCase = true) ||
+                    isTableLocatorCall(methodReference) ||
+                    isTableRegistryGetCall(methodReference)
+                ) {
+                    val methodSignature = methodReference.signature
+                    val endChar = TYPE_PROVIDER_END_CHAR
+                    return PhpType().add("#${key}.v2.${fieldName}.${methodSignature}${endChar}")
+                }
+
+            }
         }
 
         return null
@@ -177,5 +185,11 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     private fun isTableLocatorCall(methodReference: MethodReference): Boolean {
         val child = methodReference.firstChild as? MethodReference ?: return false
         return child.name.equals("getTableLocator", ignoreCase = true)
+    }
+
+    private fun isTableRegistryGetCall(methodReference: MethodReference): Boolean {
+        val classReference = methodReference.classReference ?: return false
+        return methodReference.name.equals("get", ignoreCase = true) &&
+                classReference.type.isProbablyTableRegistryClass()
     }
 }

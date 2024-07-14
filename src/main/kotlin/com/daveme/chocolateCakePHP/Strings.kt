@@ -53,6 +53,9 @@ fun String.hasGetTableLocatorMethodCall(): Boolean =
 fun String.hasFetchTableMethodCall(): Boolean =
     this.contains(".fetchTable", ignoreCase = true)
 
+fun String.hasTableRegistryGetCall(): Boolean =
+    this.contains("TableRegistry.get", ignoreCase = true)
+
 fun String.absoluteClassName(): String =
     if (this.startsWith("\\"))
         this

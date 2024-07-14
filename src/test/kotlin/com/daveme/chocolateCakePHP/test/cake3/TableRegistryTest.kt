@@ -147,7 +147,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
-                ${'$'}article = TableRegistry::get('Movies')->>Articles->get(${'$'}id);
+                ${'$'}article = TableRegistry::get('Movies')->Articles->get(${'$'}id);
                 ${'$'}article-><caret>
             }
         }
@@ -242,11 +242,12 @@ class TableRegistryTest : Cake3BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
         
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
-                ${'$'}movies = ${'$'}this->get('Movies');
+                ${'$'}movies = TableRegistry::get('Movies');
                 ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
                 ${'$'}article-><caret>
             }
