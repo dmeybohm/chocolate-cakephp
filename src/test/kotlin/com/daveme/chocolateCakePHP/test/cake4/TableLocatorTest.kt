@@ -436,7 +436,7 @@ class TableLocatorTest : Cake4BaseTestCase() {
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
-                ${'$'}movies = TableRegistry::getTableLocator()->get('Movies')
+                ${'$'}movies = TableRegistry::getTableLocator()->get('Movies');
                 ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
                 ${'$'}article-><caret>
             }

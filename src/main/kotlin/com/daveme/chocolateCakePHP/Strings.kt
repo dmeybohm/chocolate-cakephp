@@ -47,6 +47,9 @@ fun String.isQueryObject(): Boolean =
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator", ignoreCase = true)
 
+fun String.hasFetchTableMethodCall(): Boolean =
+    this.contains(".fetchTable", ignoreCase = true)
+
 fun String.absoluteClassName(): String =
     if (this.startsWith("\\"))
         this

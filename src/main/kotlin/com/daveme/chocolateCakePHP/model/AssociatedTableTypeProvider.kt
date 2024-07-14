@@ -55,7 +55,8 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             // $movies->Articles
             val variable = fieldReference.firstChild as Variable
             val variableSignature = variable.signature
-            val hasFetchTable = variableSignature.contains("fetchTable")
+            val hasFetchTable = variableSignature.hasFetchTableMethodCall() ||
+                    variableSignature.hasGetTableLocatorMethodCall()
             val endChar = TYPE_PROVIDER_END_CHAR
             if (hasFetchTable)  {
                 return PhpType().add("#${key}.v2.${fieldName}.${variableSignature}${endChar}")
