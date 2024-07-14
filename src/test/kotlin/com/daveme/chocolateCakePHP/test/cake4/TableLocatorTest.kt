@@ -303,4 +303,28 @@ class TableLocatorTest : Cake4BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("someArticleMethod"))
     }
+
+    fun `test get returns entity`() {
+
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}movie = ${'$'}this->Movies->get(${'$'}id);
+                ${'$'}movie-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someMovieMethod"))
+    }
 }

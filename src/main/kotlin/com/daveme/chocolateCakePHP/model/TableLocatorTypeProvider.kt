@@ -48,19 +48,25 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 }
             }
         }
-        else if (name.equals("get")) {
+        else if (name.equals("get", ignoreCase = true)) {
             //
             // Find the first argument to the method:
             //
             val classReference = psiElement.classReference ?: return null
+            val result = PhpType()
             for (type in classReference.type.types) {
                 if (type.hasGetTableLocatorMethodCall()) {
+                    // getTableLocator()->get():
                     val tableClass = getTableClass(psiElement, settings)
                     if (tableClass != null) {
                         return tableClass
                     }
+                } else if (type.startsWith("\\") && type.isAnyTableClass()) {
+                    // $this->Movies->get():
+                    return PhpType().add(type.tableToEntityClass())
                 }
             }
+            return result
         }
         else {
 
@@ -154,6 +160,20 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
 
         val result = PhpType()
 
+        if (
+            invokingMethodName.equals("all", ignoreCase = true) &&
+            wrappedType.isAnyTableClass()
+        ) {
+            val entityClass = wrappedType.tableToEntityClass()
+            return PhpType().add(entityClass + "[]")
+        } else if (
+            invokingMethodName.equals("get", ignoreCase = true) &&
+            wrappedType.isAnyTableClass()
+        ) {
+            val entityClass = wrappedType.tableToEntityClass()
+            return PhpType().add(entityClass)
+        }
+
         //
         // For non-find methods, check the return type is "SelectQuery".
         //
@@ -162,14 +182,6 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         // todo: cache method lists
         val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")
         val cakeFourClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query")
-
-        if (
-            invokingMethodName.equals("all", ignoreCase = true) &&
-            wrappedType.isAnyTableClass()
-        ) {
-            val entityClass = wrappedType.tableToEntityClass()
-            return PhpType().add(entityClass + "[]")
-        }
 
         (cakeFourClasses + cakeFiveClasses).forEach { klass ->
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach

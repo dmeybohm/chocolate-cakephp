@@ -206,8 +206,13 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
             .add("\\" + fieldName + "Component")
     }
     if (settings.cake3Enabled) {
+        // todo defer lookup to `complete()` in typeProviders and only use either
+        //      the singular or plural, whichever is available.
+        val pluralFieldName = Inflector.pluralize(fieldName)
+
         result = result.add("\\Cake\\Controller\\Component\\${fieldName}Component")
             .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
+            .add("${settings.appNamespace}\\Model\\Table\\${pluralFieldName}Table")
             .add("${settings.appNamespace}\\Model\\Table\\${fieldName}Table")
         for (pluginEntry in settings.pluginEntries) {
             result = result.add("${pluginEntry.namespace}\\Controller\\Component\\${fieldName}Component")
