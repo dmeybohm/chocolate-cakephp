@@ -14,8 +14,10 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
 class AssociatedTableTypeProvider : PhpTypeProvider4 {
 
-    private val TYPE_PROVIDER_CHAR = '\u8317'
-    private val TYPE_PROVIDER_END_CHAR = '\u8301'
+    companion object {
+        const val TYPE_PROVIDER_CHAR = '\u8317'
+        const val TYPE_PROVIDER_END_CHAR = '\u8301'
+    }
 
     override fun getKey(): Char {
         return TYPE_PROVIDER_CHAR
@@ -64,8 +66,12 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             fieldReference.firstChild is MethodReference
         ) {
             // $this->fetchTable("Movies")->Articles
+            // this->getTableLocator()->get("Movies")->Articles
             val methodReference = fieldReference.firstChild as MethodReference
-            if (!methodReference.name.equals("fetchTable", ignoreCase = true)) {
+            if (
+                !methodReference.name.equals("fetchTable", ignoreCase = true) &&
+                !isTableLocatorCall(methodReference)
+            ) {
                 return null
             }
             val methodSignature = methodReference.signature
@@ -164,5 +170,10 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         }
 
         return null
+    }
+
+    private fun isTableLocatorCall(methodReference: MethodReference): Boolean {
+        val child = methodReference.firstChild as? MethodReference ?: return false
+        return child.name.equals("getTableLocator", ignoreCase = true)
     }
 }
