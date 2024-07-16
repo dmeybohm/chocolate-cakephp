@@ -57,9 +57,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val result = PhpType()
             for (type in classReference.type.types) {
-                val tableClass = extractTableFromIncompleteTableLocatorExpression(type)
-                if (tableClass != null) {
-                    return PhpType().add("#${key}.${name}.${tableClass}")
+                val tableExpressionClass = extractTableFromIncompleteTableLocatorExpression(type)
+                if (tableExpressionClass != null) {
+                    return PhpType().add("#${key}.${name}.${tableExpressionClass}")
                 }
                 else if (
                     type.hasGetTableLocatorMethodCall() ||
@@ -130,7 +130,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
     }
 
     private fun extractTableFromIncompleteTableLocatorExpression(type: String): String? {
-        val regex = Regex("""^#P#C\\App\\Model\\Table\\(?:[A-Za-z]+Table(?:\.[A-Za-z]+)*\.([A-Za-z]+))$""")
+        val regex = Regex("""^#P#C\\App\\Model\\Table\\[A-Za-z]+Table(?:\.[A-Za-z]+)*\.([A-Za-z]+)$""")
         val match = regex.find(type)
         if (match != null) {
             return match.groups[1]?.value

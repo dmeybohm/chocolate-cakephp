@@ -162,9 +162,9 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         val resultClasses = phpIndex.getPossibleTableClassesWithDefault(settings, possibleTableName)
         if (resultClasses.isNotEmpty()) {
             val result = PhpType()
-            if (resultClasses.size == 1) {
-                result.add(EncodedType.encodeForDynamicTable(possibleTableName))
-            }
+//            if (resultClasses.size == 1) {
+//                result.add(EncodedType.encodeForDynamicTable(possibleTableName))
+//            }
             result.add("\\Cake\\ORM\\Association\\BelongsTo")
                 .add("\\Cake\\ORM\\Association\\BelongsToMany")
                 .add("\\Cake\\ORM\\Association\\HasOne")

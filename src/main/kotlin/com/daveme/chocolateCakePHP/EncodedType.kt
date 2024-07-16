@@ -23,13 +23,13 @@ object EncodedType {
     // The app-specific namespace for dynamic tables - for tables without a definition
     // in the class. This allows attaching metadata to tables that don't have a definition.
     //
-    private const val DYNAMIC_TABLE_PREFIX = "${ENCODED_TYPE_NAMESPACE}\\Model\\Table\\"
+//    private const val DYNAMIC_TABLE_PREFIX = "${ENCODED_TYPE_NAMESPACE}\\Model\\Table\\"
 
     //
     // The app-specific namespace for dynamic tables - for tables without a definition
     // in the class. This allows attaching metadata to entities that don't have a definition.
     //
-    private const val DYNAMIC_ENTITY_PREFIX = "${ENCODED_TYPE_NAMESPACE}\\Model\\Entity\\"
+//    private const val DYNAMIC_ENTITY_PREFIX = "${ENCODED_TYPE_NAMESPACE}\\Model\\Entity\\"
 
     fun encodeForQueryBuilder(source: String): String =
         QUERY_BUILDER_PREFIX + source
@@ -43,22 +43,14 @@ object EncodedType {
     fun isEncodedForQueryBuilder(wrapped: String): Boolean =
         wrapped.startsWith(QUERY_BUILDER_PREFIX)
 
-    fun encodeForDynamicTable(source: String): String =
-        DYNAMIC_TABLE_PREFIX + source
+//    fun encodeForDynamicTable(source: String): String =
+//        DYNAMIC_TABLE_PREFIX + source
+//
+//    fun decodeDynamicTable(encoded: String): String =
+//        if (encoded.startsWith(DYNAMIC_TABLE_PREFIX))
+//            encoded.substring(DYNAMIC_TABLE_PREFIX.length)
+//        else
+//            encoded
 
-    fun decodeDynamicTable(encoded: String): String =
-        if (encoded.startsWith(DYNAMIC_TABLE_PREFIX))
-            encoded.substring(DYNAMIC_TABLE_PREFIX.length)
-        else
-            encoded
-
-    fun encodeForDynamicEntity(source: String): String =
-        DYNAMIC_ENTITY_PREFIX + source
-
-    fun decodeDynamicEntity(encoded: String): String =
-        if (encoded.startsWith(DYNAMIC_ENTITY_PREFIX))
-            encoded.substring(DYNAMIC_ENTITY_PREFIX.length)
-        else
-            encoded
 }
 
