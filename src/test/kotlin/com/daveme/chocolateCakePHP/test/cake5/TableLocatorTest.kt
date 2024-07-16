@@ -675,7 +675,7 @@ class TableLocatorTest : Cake5BaseTestCase() {
         assertTrue(result.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
     }
 
-    fun `test get returns entity through dynamic prop with tableless entity`() {
+    fun `test get returns entity through dynamic prop with imaginary entity`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -686,7 +686,7 @@ class TableLocatorTest : Cake5BaseTestCase() {
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
-                ${'$'}entity = ${'$'}this->TablelessEntities->get(${'$'}id);
+                ${'$'}entity = ${'$'}this->ImaginaryEntities->get(${'$'}id);
                 ${'$'}entity-><caret>
             }
         }
@@ -695,8 +695,7 @@ class TableLocatorTest : Cake5BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
-        assertTrue(result!!.contains("someTablelessEntityMethod"))
-        assertTrue(result.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
+        assertTrue(result!!.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
     }
 
     fun `test get returns entity through associated table via dynamic prop with tableless entity`() {
@@ -711,6 +710,29 @@ class TableLocatorTest : Cake5BaseTestCase() {
         {
             public function view(${'$'}id) {
                 ${'$'}entity = ${'$'}this->AnotherTablelessEntities->TablelessEntities->get(${'$'}id);
+                ${'$'}entity-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
+    }
+
+    fun `test get returns entity through associated table via dynamic prop with imaginary entity`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}entity = ${'$'}this->FirstImaginaryEntities->SecondImaginaryEntities->get(${'$'}id);
                 ${'$'}entity-><caret>
             }
         }
@@ -746,5 +768,29 @@ class TableLocatorTest : Cake5BaseTestCase() {
         assertNotEmpty(result)
         assertTrue(result!!.contains("someTablelessEntityMethod"))
         assertTrue(result.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
+    }
+
+    fun `test get returns entity through associated table via dynamic prop through intermediate var with imaginary entities`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}entities = ${'$'}this->FirstImaginaryEntities;
+                ${'$'}entity = ${'$'}entities->SecondImaginaryEntities->get(${'$'}id);
+                ${'$'}entity-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
     }
 }
