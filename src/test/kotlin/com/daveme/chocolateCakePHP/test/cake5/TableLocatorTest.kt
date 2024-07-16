@@ -8,6 +8,7 @@ class TableLocatorTest : Cake5BaseTestCase() {
             "cake5/src5/Model/Table/ArticlesTable.php",
             "cake5/src5/Model/Entity/Article.php",
             "cake5/src5/Model/Entity/Movie.php",
+            "cake5/src5/Model/Entity/TablelessEntity.php",
             "cake5/vendor/cakephp.php"
         )
     }
@@ -89,6 +90,35 @@ class TableLocatorTest : Cake5BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
+    fun `test TableLocator get returns Table methods when stored in a variable with a nonexistent model`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\Locator\LocatorAwareTrait;
+        
+        class LocatorTester {
+            use LocatorAwareTrait;
+        }
+        
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}tester = new LocatorTester();
+                ${'$'}locator = ${'$'}tester->getTableLocator();
+                ${'$'}locator->get('Nonexistent')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("find"))
     }
 
     fun `test static TableLocator get returns methods from the users custom namespace`() {
@@ -396,6 +426,30 @@ class TableLocatorTest : Cake5BaseTestCase() {
         assertTrue(result!!.contains("someArticleMethod"))
     }
 
+    fun `test get returns entity from associated table through fetchTable with intermediate var and nonexistent model`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}movies = ${'$'}this->fetchTable('NonExistent');
+                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+
     fun `test get returns entity from associated table through TableRegistry`() {
         myFixture.configureByText("MovieController.php", """
         <?php
@@ -519,5 +573,30 @@ class TableLocatorTest : Cake5BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    fun `test get returns entity from associated table through getTableLocator with tableless entity and intermediate var`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}movies = ${'$'}this->getTableLocator()->get('Movies');
+                ${'$'}entity = ${'$'}movies->TablelessEntities->get(${'$'}id);
+                ${'$'}entity-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someTablelessEntityMethod"))
+        assertTrue(result.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
     }
 }

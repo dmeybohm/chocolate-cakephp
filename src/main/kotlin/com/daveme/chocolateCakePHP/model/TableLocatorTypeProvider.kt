@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClassesWithDefault
 import com.daveme.chocolateCakePHP.controller.ControllerFieldTypeProvider
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -57,7 +57,11 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val result = PhpType()
             for (type in classReference.type.types) {
-                if (
+                val tableClass = extractTableFromIncompleteTableLocatorExpression(type)
+                if (tableClass != null) {
+                    return PhpType().add("#${key}.${name}.${tableClass}")
+                }
+                else if (
                     type.hasGetTableLocatorMethodCall() ||
                     (psiElement.isStatic && type.isTableRegistryClass())
                 ) {
@@ -92,8 +96,8 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             // return it.
             //
             for (type in classReference.type.types) {
-                if (type.isPluginSpecificTypeForQueryBuilder()) {
-                    val unwrappedType = type.unwrapFromPluginSpecificTypeForQueryBuilder()
+                if (EncodedType.isEncodedForQueryBuilder(type)) {
+                    val unwrappedType = EncodedType.decodeQueryBuilder(type)
                     return PhpType().add("#${key}.${name}.${unwrappedType}")
                 }
                 else if (type.startsWith(RECURSIVE_START)) {
@@ -115,13 +119,22 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     if (eachClassRefType.startsWith("\\") &&
                         eachClassRefType.isAnyTableClass()
                     ) {
-                        result.add(eachClassRefType.wrapInPluginSpecificTypeForQueryBuilder())
+                        result.add(EncodedType.encodeForQueryBuilder(eachClassRefType))
                     }
                 }
                 return result
             }
         }
 
+        return null
+    }
+
+    private fun extractTableFromIncompleteTableLocatorExpression(type: String): String? {
+        val regex = Regex("""^#P#C\\App\\Model\\Table\\(?:[A-Za-z]+Table(?:\.[A-Za-z]+)*\.([A-Za-z]+))$""")
+        val match = regex.find(type)
+        if (match != null) {
+            return match.groups[1]?.value
+        }
         return null
     }
 
@@ -186,11 +199,14 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         } else if (
             invokingMethodName.equals("get", ignoreCase = true)
         ) {
-            val classes = phpIndex.getPossibleTableClasses(settings, wrappedType)
+            val classes = phpIndex.getPossibleTableClassesWithDefault(settings, wrappedType)
             classes.forEach { klass -> result.add(klass.fqn.tableToEntityClass()) }
+            if (classes.size == 1 && classes.first().fqn == "\\Cake\\ORM\\Table") {
+                val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Entity\\${wrappedType}"
+                result.add(possibleAppNamespaceClass.tableToEntityClass())
+            }
             return result
         }
-
 
         // todo: cache method lists
         val cakeFiveClasses = phpIndex.getClassesByFQN("\\Cake\\ORM\\Query\\SelectQuery")
@@ -200,7 +216,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val method = klass.findMethodByName(invokingMethodName) ?: return@forEach
             val returnType = method.type.lookupCompleteType(project, phpIndex, null)
             if (returnType.types.any { it.contains("Query", ignoreCase = true) }) {
-                result.add(wrappedType.wrapInPluginSpecificTypeForQueryBuilder())
+                result.add(EncodedType.encodeForQueryBuilder(wrappedType))
             }
         }
 
