@@ -205,6 +205,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Entity\\${wrappedType}"
                 result.add(possibleAppNamespaceClass.tableToEntityClass())
             }
+            result.add("\\Cake\\ORM\\Entity")
             return result
         }
 

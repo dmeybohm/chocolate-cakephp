@@ -6,6 +6,7 @@ class TableLocatorTest : Cake5BaseTestCase() {
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Model/Table/ArticlesTable.php",
+            "cake5/src5/Model/Table/NoEntitiesTable.php",
             "cake5/src5/Model/Entity/Article.php",
             "cake5/src5/Model/Entity/Movie.php",
             "cake5/src5/Model/Entity/TablelessEntity.php",
@@ -783,6 +784,31 @@ class TableLocatorTest : Cake5BaseTestCase() {
             public function view(${'$'}id) {
                 ${'$'}entities = ${'$'}this->FirstImaginaryEntities;
                 ${'$'}entity = ${'$'}entities->SecondImaginaryEntities->get(${'$'}id);
+                ${'$'}entity-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("getAccessible")) // \Cake\Datasource\EntityTrait method
+
+    }
+
+    fun `test get returns entity through noentities associated table via dynamic prop through intermediate var with imaginary entities`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}imaginaryEntities = ${'$'}this->ImaginaryEntities;
+                ${'$'}entity = ${'$'}imaginaryEntities->NoEntities->get(${'$'}id);
                 ${'$'}entity-><caret>
             }
         }
