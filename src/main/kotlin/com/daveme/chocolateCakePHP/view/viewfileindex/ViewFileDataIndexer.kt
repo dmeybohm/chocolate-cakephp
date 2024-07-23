@@ -43,6 +43,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         val psiFile = inputData.psiFile
         val project = psiFile.project
         val projectDir = project.guessProjectDir() ?: return result
+        val settings = Settings.getInstance(project)
+
+        if (!settings.enabled) {
+            return result
+        }
 
         val virtualFile = psiFile.virtualFile
         if (virtualFile.nameWithoutExtension.endsWith("Test")) {
@@ -73,7 +78,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
 
         if (isController) {
             val methods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
-            val settings = Settings.getInstance(project)
             indexImplicitRender(result, projectDir, methods, virtualFile)
         }
 
