@@ -66,10 +66,14 @@ object ViewFileIndexService {
             is CakeThreeTemplatesDir -> ".${settings.cakeTemplateExtension}"
             is CakeFourTemplatesDir -> ".php"
         }
-        return filename
+        var result = filename
             .removeFromStart(templatesDirectory.psiDirectory.virtualFile.path)
             .removeFromStart("/")
             .removeFromEnd(extension, ignoreCase = true)
+        for (dataViewExtension in settings.dataViewExtensions) {
+            result = result.replace("/$dataViewExtension/", "/")
+        }
+        return result
     }
 
     fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
