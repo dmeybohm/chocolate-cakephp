@@ -53,7 +53,7 @@ class CakePhpAutoDetector(project: Project)
             ?: return CakeAutoDetectedValues()
         val fullPath = composerJson.canonicalPath ?: return CakeAutoDetectedValues()
         val composerContents = File(fullPath).readText()
-        val namespace = checkNamespaceInAppController(topDir)
+        val namespace = checkNamespaceInAppConfig(topDir)
 
         val (cake3OrLaterPresent: Boolean, appDirectory: String) = try {
             val composerJsonParsed = jsonParse(composerContents)
@@ -95,16 +95,16 @@ class CakePhpAutoDetector(project: Project)
         return false
     }
 
-    private fun checkNamespaceInAppController(topDir: VirtualFile): String {
-        val appController = topDir.findFileByRelativePath("src/Controller/AppController.php")
+    private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {
+        val appConfig = topDir.findFileByRelativePath("config/app.php")
             ?: return DEFAULT_NAMESPACE
-        val fullPath = appController.canonicalPath ?: return DEFAULT_APP_DIRECTORY
-        val regex = Regex("^\\s*namespace\\s+([\\w\\\\]+);")
-
+        val fullPath = appConfig.canonicalPath ?: return DEFAULT_NAMESPACE
+        val regex = Regex("""^\s*['"]namespace['"]\s*=>\s*['"]([^']*)['"]\s*,\s*$""")
         val lines = File(fullPath).readLines()
         for (line in lines) {
             val namespace = regex.find(line)?.groupValues?.get(1) ?: continue
-            return namespace.removeFromEnd("\\Controller").absoluteClassName()
+            return namespace.replace("\\\\", "\\")
+                .absoluteClassName()
         }
         return DEFAULT_NAMESPACE
     }
