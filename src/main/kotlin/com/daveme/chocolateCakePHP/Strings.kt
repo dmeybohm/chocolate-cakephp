@@ -119,3 +119,15 @@ fun String.singularize(): String {
 fun String.pluralize(): String {
     return Inflector.pluralize(this)
 }
+
+fun String.removeImmediateParentDir(dirName: String): String {
+    val parts = this.split('/')
+    if (parts.size < 2) {
+        return this
+    }
+    val filename = parts.last()
+    if (parts[parts.size - 2] != dirName) {
+        return this
+    }
+    return parts.dropLast(2).joinToString("/") + "/$filename"
+}
