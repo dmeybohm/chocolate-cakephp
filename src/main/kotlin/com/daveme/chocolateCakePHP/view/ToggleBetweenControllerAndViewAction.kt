@@ -42,6 +42,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         val settings = Settings.getInstance(project)
         if (!settings.enabled) {
+            e.presentation.isEnabledAndVisible = false
             return
         }
 
