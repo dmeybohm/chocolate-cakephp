@@ -6,8 +6,10 @@ import com.daveme.chocolateCakePHP.controller.CreateViewFileAction
 import com.intellij.codeInsight.navigation.PsiTargetNavigator
 import com.intellij.codeInsight.navigation.impl.PsiTargetPresentationRenderer
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
@@ -21,6 +23,12 @@ import java.awt.event.MouseEvent
 import javax.swing.Icon
 import javax.swing.SwingUtilities
 
+
+fun showErrorDialog(error: String, dialogTitle: String) {
+    ApplicationManager.getApplication().invokeLater {
+        Messages.showErrorDialog(error, dialogTitle)
+    }
+}
 
 fun MouseEvent.getScreenPoint(): Point? {
     // Convert the point relative to the component to a screen point

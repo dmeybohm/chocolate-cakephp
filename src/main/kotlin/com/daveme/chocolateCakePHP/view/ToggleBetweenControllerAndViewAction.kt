@@ -166,7 +166,9 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         relativePoint: RelativePoint?
     ) {
         when (targetList.size) {
-            0 -> {}
+            0 -> {
+                showErrorDialog("No related file found", "Chocolate CakePHP")
+            }
             1 -> {
                 PsiNavigateUtil.navigate(targetList.first())
             }
