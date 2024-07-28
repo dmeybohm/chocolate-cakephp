@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.createDirectoriesIfMissing
 import com.daveme.chocolateCakePHP.cake.viewFilePathInfoFromPath
 import com.daveme.chocolateCakePHP.mneumonicEscape
+import com.daveme.chocolateCakePHP.showErrorDialog
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -112,9 +113,7 @@ class CreateViewFileAction(
                 }
 
                 fun showError(error: String) {
-                    ApplicationManager.getApplication().invokeLater {
-                        Messages.showErrorDialog(error, "Create View File")
-                    }
+                    showErrorDialog(error, "Create View File")
                 }
             }
 

@@ -71,7 +71,11 @@ object ViewFileIndexService {
             .removeFromStart("/")
             .removeFromEnd(extension, ignoreCase = true)
         for (dataViewExtension in settings.dataViewExtensions) {
-            result = result.replace("/$dataViewExtension/", "/")
+            val next = result.removeImmediateParentDir(dataViewExtension)
+            if (next != result) {
+                result = next
+                break
+            }
         }
         return result
     }
