@@ -43,11 +43,33 @@ fun findRelativeFile(dir: PsiDirectory?, childPath: String): VirtualFile? {
     return VfsUtil.findRelativeFile(dir.virtualFile, *pathPartsArray)
 }
 
+fun findRelativeFile(dir: VirtualFile?, childPath: String): VirtualFile? {
+    if (dir == null) {
+        return null
+    }
+    val pathPartsList = childPath.split("/".toRegex())
+    val pathPartsArray = pathPartsList.filter { it.isNotEmpty() }.toTypedArray()
+    return VfsUtil.findRelativeFile(dir, *pathPartsArray)
+}
+
 fun pathRelativeToProject(project: Project, psiDirectory: PsiDirectory): String? {
     val projectVirtualFile = project.guessProjectDir() ?: return null
     val projectPsiDirectory = virtualFileToPsiDirectory(project, projectVirtualFile) ?: return null
     var dir = psiDirectory.parent
     val pathNames = mutableListOf(psiDirectory.name)
+    while (dir != null && dir != projectPsiDirectory) {
+        pathNames.add(dir.name)
+        dir = dir.parent
+    }
+    pathNames.reverse()
+    return pathNames.joinToString("/")
+}
+
+fun pathRelativeToProject(project: Project, virtualFile: VirtualFile): String? {
+    val projectVirtualFile = project.guessProjectDir() ?: return null
+    val projectPsiDirectory = virtualFileToPsiDirectory(project, projectVirtualFile) ?: return null
+    var dir : VirtualFile? = virtualFile.parent
+    val pathNames = mutableListOf(virtualFile.name)
     while (dir != null && dir != projectPsiDirectory) {
         pathNames.add(dir.name)
         dir = dir.parent

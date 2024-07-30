@@ -140,7 +140,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
 
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
-        val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
+        val templateDirVirtualFile = templatesDir.directory
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)

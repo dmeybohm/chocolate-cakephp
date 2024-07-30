@@ -34,7 +34,7 @@ data class ViewPath(
         get() = "${templatePath}/${pathWithoutTemplate}"
 
     fun toVirtualFile(templatesDir: TemplatesDir): VirtualFile? =
-        findRelativeFile(templatesDir.psiDirectory, this.pathWithoutTemplate)
+        findRelativeFile(templatesDir.directory, this.pathWithoutTemplate)
 }
 
 fun viewPathFromControllerNameAndActionName(
@@ -81,7 +81,7 @@ data class TemplatesDirWithPath(
 )
 
 fun templatesDirWithPath(project: Project, templatesDir: TemplatesDir): TemplatesDirWithPath? {
-    val templatePath = pathRelativeToProject(project, templatesDir.psiDirectory)
+    val templatePath = pathRelativeToProject(project, templatesDir.directory)
         ?: return null
 
     return TemplatesDirWithPath(templatesDir, templatePath)
