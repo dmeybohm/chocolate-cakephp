@@ -51,7 +51,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             containingFile
         ) ?: return null
         val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
-            project,
             settings,
             topSourceDirectory
         ) ?: return null

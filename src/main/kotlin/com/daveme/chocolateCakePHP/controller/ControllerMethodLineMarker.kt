@@ -80,7 +80,6 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             relatedLookupInfo.file
         ) ?: return null
         val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
-            relatedLookupInfo.project,
             settings,
             topSourceDirectory
         ) ?: return null

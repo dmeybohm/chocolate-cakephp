@@ -21,13 +21,12 @@ class AppDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 class SrcDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 
 sealed interface TemplatesDir {
-    val dirName: String
     val directory: VirtualFile
 }
 
-data class CakeFourTemplatesDir(override val dirName: String, override val directory: VirtualFile): TemplatesDir
-data class CakeThreeTemplatesDir(override val dirName: String, override val directory: VirtualFile): TemplatesDir
-data class CakeTwoTemplatesDir(override val dirName: String, override val directory: VirtualFile): TemplatesDir
+data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
+data class CakeThreeTemplatesDir(override val directory: VirtualFile): TemplatesDir
+data class CakeTwoTemplatesDir(override val directory: VirtualFile): TemplatesDir
 
 
 fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
@@ -37,7 +36,6 @@ fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSour
 }
 
 fun templatesDirectoryFromTopSourceDirectory(
-    project: Project,
     settings: Settings,
     topDir: TopSourceDirectory
 ): TemplatesDir? {
@@ -45,17 +43,17 @@ fun templatesDirectoryFromTopSourceDirectory(
         val projectDir = topDir.directory.parent
         val cakeFourViewDir = findRelativeFile(projectDir, "templates")
         if (cakeFourViewDir != null) {
-            return CakeFourTemplatesDir("templates", cakeFourViewDir)
+            return CakeFourTemplatesDir(cakeFourViewDir)
         }
         val cakeThreeViewDir = findRelativeFile(topDir.directory, "Template")
         if (cakeThreeViewDir != null) {
-            return CakeThreeTemplatesDir("Template", cakeThreeViewDir)
+            return CakeThreeTemplatesDir(cakeThreeViewDir)
         }
     }
     if (settings.cake2Enabled) {
         val cakeTwoViewDir = findRelativeFile(topDir.directory, "View")
         if (cakeTwoViewDir != null) {
-            return CakeTwoTemplatesDir("View", cakeTwoViewDir)
+            return CakeTwoTemplatesDir(cakeTwoViewDir)
         }
     }
 
@@ -88,13 +86,13 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     val projectDir = project.guessProjectDir() ?: return null
     while (child != null && child != projectDir && child.name != settings.pluginPath) {
         if (hasCakeFour && parent?.name == "templates") {
-            return CakeFourTemplatesDir(parent.name, parent)
+            return CakeFourTemplatesDir(parent)
         }
         else if (hasCakeThree && parent?.name == settings.appDirectory && child.name == "Template") {
-            return CakeThreeTemplatesDir(child.name, child)
+            return CakeThreeTemplatesDir(child)
         }
         else if (hasCakeTwo && parent?.name == settings.cake2AppDirectory && child.name == "View") {
-            return CakeTwoTemplatesDir(child.name, child)
+            return CakeTwoTemplatesDir(child)
         }
         child = parent
         parent = parent?.parent
@@ -106,7 +104,6 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
 // NOTE: only call this with CakeThreeTemplatesDir or CakeFourTemplatesDir
 private fun pluginSrcDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,
-    project: Project,
     settings: Settings
 ): TopSourceDirectory? {
     assert(templatesDir is CakeFourTemplatesDir || templatesDir is CakeThreeTemplatesDir)
@@ -139,7 +136,6 @@ fun appDirectoryFromTemplatesDir(
 
 private fun srcDirectoryFromTemplatesDir(
     templatesDir: TemplatesDir,
-    project: Project,
     settings: Settings
 ): TopSourceDirectory? {
     assert(templatesDir is CakeFourTemplatesDir || templatesDir is CakeThreeTemplatesDir)

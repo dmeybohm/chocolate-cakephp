@@ -83,7 +83,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
             ?: return
-        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(project, settings, topSourceDirectory)
+        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(settings, topSourceDirectory)
             ?: return
         val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
             ?: return
