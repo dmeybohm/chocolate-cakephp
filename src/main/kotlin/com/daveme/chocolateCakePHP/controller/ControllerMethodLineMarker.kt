@@ -148,18 +148,23 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
 
+            val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
+                ?: continue
+
             val relatedLookupInfo = RelatedLookupInfo(
                 project = project,
                 file = file,
                 settings = settings,
-                controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue,
+                controllerName = controllerName
             )
-
-            val allViewFilesMarker = markerForAllViewFilesInAction(relatedLookupInfo, element)
-            addLineMarkerUnique(result, allViewFilesMarker)
 
             val renderViewMarker = markerForSingleRenderCallInAction(relatedLookupInfo, element)
             addLineMarkerUnique(result, renderViewMarker)
-        }
+
+            if (virtualFile.parent?.name == "Controller") {
+                val allViewFilesMarker = markerForAllViewFilesInAction(relatedLookupInfo, element)
+                addLineMarkerUnique(result, allViewFilesMarker)
+            }
+       }
     }
 }

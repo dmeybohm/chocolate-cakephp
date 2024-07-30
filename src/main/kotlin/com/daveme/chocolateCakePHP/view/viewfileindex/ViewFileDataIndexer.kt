@@ -139,6 +139,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         methods: @Unmodifiable Collection<Method>,
         controllerFile: VirtualFile
     ) {
+        val parentDir = controllerFile.parent ?: return
+
+        // only do implicit route on direct controller descendants:
+        if (parentDir.name != "Controller") {
+            return
+        }
+
         // todo check for $this->autoRender = false
         val relevantMethods = methods.filter(this::isRelevantMethod)
         if (relevantMethods.isEmpty()) {
