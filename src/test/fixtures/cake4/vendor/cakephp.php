@@ -10,6 +10,17 @@ namespace Cake\Controller {
     class Component {}
 }
 
+namespace Cake\Datasource {
+    trait EntityTrait {
+        /**
+         * @return bool[]
+         */
+        public function getAccessible() {
+            return ['foo' => true];
+        }
+    }
+}
+
 namespace Cake\View {
     class View {}
     class Helper {}
@@ -20,6 +31,8 @@ namespace Cake\Validation {
 }
 
 namespace Cake\ORM {
+    use Cake\Datasource\EntityTrait;
+
     class RulesChecker {}
     class Table {
         public function findThreaded(): Query {
@@ -52,6 +65,10 @@ namespace Cake\ORM {
 
         public function where(): static {
         }
+    }
+
+    class Entity {
+        use EntityTrait;
     }
 
     class TableRegistry {

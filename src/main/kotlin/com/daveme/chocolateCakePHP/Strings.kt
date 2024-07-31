@@ -27,6 +27,9 @@ fun String.isTableRegistryClass(): Boolean =
     this.equals("\\Cake\\ORM\\TableRegistry", ignoreCase = true)
 
 fun String.tableToEntityClass(): String {
+    if (this.equals("\\Cake\\ORM\\Table", ignoreCase = true)) {
+        return "\\Cake\\ORM\\Entity"
+    }
     val parts = this.removeFromEnd("Table", ignoreCase = true)
         .split('\\')
     if (parts.size < 2) {

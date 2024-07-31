@@ -46,7 +46,8 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         val completedType = reference.type.lookupCompleteType(sourceElement.project, phpIndex, null)
         val tableTypes = completedType.types.mapNotNull { type ->
                 when {
-                    type.isPluginSpecificTypeForQueryBuilder() -> type.unwrapFromPluginSpecificTypeForQueryBuilder()
+                    EncodedType.isEncodedForQueryBuilder(type) ->
+                        EncodedType.decodeQueryBuilder(type)
                     type.isAnyTableClass() -> type
                     else -> null
                 }

@@ -45,6 +45,7 @@ namespace Cake\ORM\Query {
 
 namespace Cake\ORM {
     use Cake\ORM\Query\SelectQuery;
+    use Cake\Datasource\EntityTrait;
 
     class RulesChecker {}
     class Table {
@@ -65,16 +66,24 @@ namespace Cake\ORM {
         }
     }
 
+    class Entity {
+        use EntityTrait;
+    }
+
     class TableRegistry {
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
         public function getTableLocator() {}
     }
+
 }
+
 namespace Cake\ORM\Query {
     class SelectQuery extends \Cake\Database\SelectQuery {}
 }
+
+
 namespace Cake\Database {
     abstract class Query {
         /**
@@ -91,6 +100,17 @@ namespace Cake\Database {
 
     }
 }
+
+namespace Cake\Datasource {
+    trait EntityTrait {
+        /**
+         * @return bool[]
+         */
+        public function getAccessible() {
+        }
+    }
+}
+
 namespace Cake\Database\Query {
     class SelectQuery extends \Cake\Database\Query {}
 }

@@ -8,7 +8,11 @@ fun isCakeTwoModelClass(classes: Collection<PhpClass>): Boolean {
     return classes.any { phpClass -> phpClass.superFQN == "\\AppModel" }
 }
 
-fun PhpIndex.getPossibleTableClasses(settings: Settings, possibleTableName: String): Collection<PhpClass> {
+fun PhpIndex.getPossibleTableClassesWithDefault(
+    settings: Settings,
+    possibleTableName: String,
+    defaultClass: String = "\\Cake\\ORM\\Table"
+): Collection<PhpClass> {
     val resultClasses = mutableListOf<PhpClass>()
     val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
     resultClasses += this.getClassesByFQN(possibleAppNamespaceClass)
@@ -16,5 +20,9 @@ fun PhpIndex.getPossibleTableClasses(settings: Settings, possibleTableName: Stri
     settings.pluginEntries.forEach { pluginEntry ->
         resultClasses += this.getClassesByFQN("${pluginEntry.namespace}\\Model\\Table\\${possibleTableName}Table")
     }
+    if (resultClasses.size == 0) {
+        resultClasses += this.getClassesByFQN(defaultClass)
+    }
+
     return resultClasses
 }

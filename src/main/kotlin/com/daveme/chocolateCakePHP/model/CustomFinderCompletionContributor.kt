@@ -70,7 +70,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
             }
             tableClasses.asSequence()
                 .map { className ->
-                    val replacedName = className.unwrapFromPluginSpecificTypeForQueryBuilder()
+                    val replacedName = EncodedType.decodeQueryBuilder(className)
                     replacedName
                 }
                 .flatMap { className ->
