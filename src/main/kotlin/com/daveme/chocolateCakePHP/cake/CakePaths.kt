@@ -30,7 +30,6 @@ data class CakeFourTemplatesDir(override val dirName: String, override val psiDi
 data class CakeThreeTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
 data class CakeTwoTemplatesDir(override val dirName: String, override val psiDirectory: PsiDirectory): TemplatesDir
 
-
 fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
     val originalFile = file.parent
     return pluginSrcDirectoryFromSourceFile(settings, originalFile)
@@ -231,8 +230,12 @@ fun isCakeViewFile(project: Project, settings: Settings, file: PsiFile): Boolean
         false
 }
 
+fun isCakeControllerFile(file: VirtualFile): Boolean {
+   return file.nameWithoutExtension.endsWith("Controller")
+}
+
 fun isCakeControllerFile(file: PsiFile): Boolean {
-    return file.virtualFile.nameWithoutExtension.endsWith("Controller")
+    return isCakeControllerFile(file.virtualFile)
 }
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")

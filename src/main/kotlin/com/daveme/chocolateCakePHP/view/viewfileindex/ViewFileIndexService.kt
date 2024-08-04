@@ -125,9 +125,9 @@ fun viewPathPrefixFromSourceFile(
     // For render() calls inside a controller, we want to append the implicit
     // controller path if the path is not absolute, and otherwise use the render
     // path directly if it is.
-    if (isControllerFile(sourceFile)) {
-        val controllerBaseName = sourceFile.nameWithoutExtension.controllerBaseName()
-        return ViewPathPrefix("${controllerBaseName}/")
+    val controllerPath = controllerPathFromControllerFile(sourceFile)
+    if (controllerPath != null) {
+        return ViewPathPrefix(controllerPath.viewPath)
     }
 
     val containingDir = sourceFile.parent ?: return null
