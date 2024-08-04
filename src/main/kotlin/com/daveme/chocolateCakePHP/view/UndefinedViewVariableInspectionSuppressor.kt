@@ -33,7 +33,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
         val psiFile = variable.containingFile
         val virtualFile = psiFile?.virtualFile ?: return false
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return false
-        val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile
+        val templateDirVirtualFile = templatesDir.directory
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
 
         try {

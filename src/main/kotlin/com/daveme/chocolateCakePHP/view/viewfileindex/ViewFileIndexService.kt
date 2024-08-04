@@ -95,7 +95,7 @@ object ViewFileIndexService {
             is CakeFourTemplatesDir -> ".php"
         }
         var result = filename
-            .removeFromStart(templatesDirectory.psiDirectory.virtualFile.path)
+            .removeFromStart(templatesDirectory.directory.path)
             .removeFromStart("/")
             .removeFromEnd(extension, ignoreCase = true)
         for (dataViewExtension in settings.dataViewExtensions) {

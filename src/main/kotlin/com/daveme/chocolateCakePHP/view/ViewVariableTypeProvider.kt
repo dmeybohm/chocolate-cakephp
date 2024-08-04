@@ -37,7 +37,7 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
 
         val relativePath = VfsUtil.getRelativePath(
             psiFile.originalFile.virtualFile,
-            templateDir.psiDirectory.virtualFile
+            templateDir.directory
         ) ?: return null
 
         val cakeVersion = when (templateDir) {
