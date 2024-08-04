@@ -14,6 +14,7 @@ abstract class BaseTestCase : BasePlatformTestCase() {
 
     data class RelatedItemInfo(val filename: String, val containingDir: String)
 
+
     override fun getTestDataPath(): String {
         return "src/test/fixtures"
     }

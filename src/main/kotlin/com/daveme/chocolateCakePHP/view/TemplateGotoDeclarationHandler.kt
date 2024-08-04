@@ -32,10 +32,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val containingFile = psiElement.containingFile
         val virtualFile = containingFile.virtualFile
         val filename = virtualFile.nameWithoutExtension
-
-        if (!isCakeControllerFile(containingFile)) {
-            return PsiElement.EMPTY_ARRAY
-        }
+        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return PsiElement.EMPTY_ARRAY
 
         val method = findParentWithClass(psiElement, MethodReference::class.java)
                 as? MethodReference ?: return PsiElement.EMPTY_ARRAY
@@ -43,7 +40,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
-        val controllerName = filename.controllerBaseName() ?: return PsiElement.EMPTY_ARRAY
         val actionNames = actionNamesFromRenderCall(method)
             ?: return PsiElement.EMPTY_ARRAY
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
@@ -59,7 +55,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
             ?: return null
         val allViewPaths = allViewPathsFromController(
-            controllerName,
+            controllerPath,
             templatesDirWithPath,
             settings,
             actionNames

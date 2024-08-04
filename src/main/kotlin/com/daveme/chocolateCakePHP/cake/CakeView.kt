@@ -1,12 +1,37 @@
 package com.daveme.chocolateCakePHP.cake
 
-import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.findRelativeFile
-import com.daveme.chocolateCakePHP.pathRelativeToProject
-import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
+import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
+
+data class ControllerPath(
+    val name: String,
+    val prefix: String
+) {
+    val viewPath: String get() =
+        if (prefix.isEmpty())
+            "${name}/"
+        else
+            "${prefix}/${name}/"
+}
+
+fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPath? {
+    val baseName = controllerFile.nameWithoutExtension.controllerBaseName()
+    if (baseName.isNullOrEmpty()) {
+        return null
+    }
+    var parent : VirtualFile? = controllerFile.parent
+    val prefix = mutableListOf<String>()
+    while (parent != null && parent.name != "Controller") {
+        prefix.add(parent.name)
+        parent = parent.parent
+    }
+    return ControllerPath(
+        prefix = prefix.reversed().joinToString("/"),
+        name = baseName
+    )
+}
 
 fun viewFilesFromAllViewPaths(
     project: Project,
@@ -41,7 +66,7 @@ fun viewPathFromControllerNameAndActionName(
     templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
     label: String,
-    controllerName: String,
+    controllerPath: ControllerPath,
     actionName: ActionName,
     convertCase: Boolean,
     altLabel: String = ""
@@ -57,7 +82,7 @@ fun viewPathFromControllerNameAndActionName(
     } else {
         return ViewPath(
             templatePath = templatesDirWithPath.templatesPath,
-            prefix = "${controllerName}/",
+            prefix = controllerPath.viewPath,
             label = label,
             altLabel = altLabel,
             relativePath = actionName.getViewFilename(templatesDirWithPath.templatesDir, settings, convertCase)
@@ -88,7 +113,7 @@ fun templatesDirWithPath(project: Project, templatesDir: TemplatesDir): Template
 }
 
 fun allViewPathsFromController(
-    controllerName: String,
+    controllerPath: ControllerPath,
     templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
     actionNames: ActionNames,
@@ -97,7 +122,7 @@ fun allViewPathsFromController(
         val dataViewPrefix = if (actionNames.defaultActionName.isAbsolute)
             actionNames.defaultActionName.pathPrefix
         else
-            "/${controllerName}/"
+            "/${controllerPath.viewPath}"
         val actionName = ActionName(
             pathPrefix = "${dataViewPrefix}${it}/",
             name = actionNames.defaultActionName.name,
@@ -106,7 +131,7 @@ fun allViewPathsFromController(
             templatesDirWithPath = templatesDirWithPath,
             settings = settings,
             label = it.uppercase(),
-            controllerName = controllerName,
+            controllerPath = controllerPath,
             actionName = actionName,
             convertCase = true
         )
@@ -116,7 +141,7 @@ fun allViewPathsFromController(
             templatesDirWithPath = templatesDirWithPath,
             settings = settings,
             label = actionName.path,
-            controllerName = controllerName,
+            controllerPath = controllerPath,
             actionName = actionName,
             convertCase = false
         )
@@ -127,7 +152,7 @@ fun allViewPathsFromController(
             settings = settings,
             label = "Default",
             altLabel = actionNames.defaultActionName.path,
-            controllerName = controllerName,
+            controllerPath = controllerPath,
             actionName = actionNames.defaultActionName,
             convertCase = true
         ),

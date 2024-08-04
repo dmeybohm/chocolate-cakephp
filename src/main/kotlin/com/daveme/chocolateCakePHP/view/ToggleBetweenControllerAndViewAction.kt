@@ -79,6 +79,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val offset = editor.caretModel.offset
         val element = psiFile.findElementAt(offset)
         val method = PsiTreeUtil.getParentOfType(element, Method::class.java) ?: return
+        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
 
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
@@ -91,7 +92,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
             ?: return
         val allViewPaths = allViewPathsFromController(
-            controllerName,
+            controllerPath,
             templatesDirWithPath,
             settings,
             actionNames
@@ -137,7 +138,6 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
-
 
         val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.psiDirectory.virtualFile

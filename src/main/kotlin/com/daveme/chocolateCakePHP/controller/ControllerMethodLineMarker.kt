@@ -88,7 +88,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         val templatesDirWithPath = templatesDirWithPath(relatedLookupInfo.project, templatesDirectory)
             ?: return null
         val allViewPaths = allViewPathsFromController(
-            relatedLookupInfo.controllerName,
+            relatedLookupInfo.controllerPath,
             templatesDirWithPath,
             settings,
             actionNames
@@ -148,11 +148,12 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
 
+            val controllerPath = controllerPathFromControllerFile(virtualFile) ?: continue
             val relatedLookupInfo = RelatedLookupInfo(
                 project = project,
                 file = file,
                 settings = settings,
-                controllerName = virtualFile.nameWithoutExtension.controllerBaseName() ?: continue,
+                controllerPath = controllerPath
             )
 
             val allViewFilesMarker = markerForAllViewFilesInAction(relatedLookupInfo, element)

@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 
 abstract class Cake3BaseTestCase : BaseTestCase() {
+
     override fun setUp() {
         super.setUp()
 

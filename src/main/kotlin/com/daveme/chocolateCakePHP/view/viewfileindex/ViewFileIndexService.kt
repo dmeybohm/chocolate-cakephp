@@ -20,8 +20,28 @@ data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
 ) {
-    val nameWithoutExtension: String = File(path).nameWithoutExtension
+    val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
+    val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
+
+    private fun controllerPathFromPsiElementAndPath(): ControllerPath? {
+        val parts = path.split("/")
+        if (parts.size < 2) {
+            return null
+        }
+        return if ("Controller" in parts) {
+            ControllerPath(
+                prefix = parts.reversed()
+                    .drop(1)
+                    .takeWhile { it != "Controller" }
+                    .joinToString("/"),
+                name = nameWithoutExtension.controllerBaseName() ?: return null
+            )
+        } else {
+            null
+        }
+    }
 }
+
 
 data class ViewPathPrefix(
     val prefix: String
@@ -38,21 +58,29 @@ data class ControllerInfo(
     val isCakeTwo: Boolean
 )
 
-fun lookupControllerFileInfo(controllerFile: VirtualFile): ControllerInfo {
+fun lookupControllerFileInfo(controllerFile: VirtualFile, settings: Settings): ControllerInfo {
     return ControllerInfo(
         controllerFile,
-        !isCakeThreePlusController(controllerFile)
+        isCakeTwoController(controllerFile, settings)
     )
 }
 
-private fun isCakeThreePlusController(
-    controllerFile: VirtualFile
+private fun isCakeTwoController(
+    controllerFile: VirtualFile,
+    settings: Settings
 ): Boolean {
-    val topSourceDir = controllerFile.parent?.parent  ?: return false
-    val projectDir = topSourceDir.parent ?: return false
-
-    return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
-            topSourceDir.children.any { it.nameWithoutExtension == "Template" }
+    var controllerDir: VirtualFile? = controllerFile.parent
+    while (controllerDir != null && controllerDir.name != "Controller") {
+        controllerDir = controllerDir.parent
+    }
+    if (controllerDir == null) {
+        return false
+    }
+    val topSourceDir = controllerDir.parent ?: return false
+    val topDir = topSourceDir.parent ?: return false
+    return topSourceDir.name == settings.cake2AppDirectory &&
+        !topDir.children.any { it.nameWithoutExtension == "templates" } &&
+            !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
 
 object ViewFileIndexService {
@@ -102,10 +130,6 @@ object ViewFileIndexService {
 
 }
 
-private fun isControllerFile(file: VirtualFile): Boolean {
-    return file.nameWithoutExtension.endsWith("Controller")
-}
-
 private fun isTemplateDir(currentDir: VirtualFile): Boolean {
     return currentDir.name == "templates" ||
             currentDir.name == "Template" ||
@@ -125,9 +149,9 @@ fun viewPathPrefixFromSourceFile(
     // For render() calls inside a controller, we want to append the implicit
     // controller path if the path is not absolute, and otherwise use the render
     // path directly if it is.
-    if (isControllerFile(sourceFile)) {
-        val controllerBaseName = sourceFile.nameWithoutExtension.controllerBaseName()
-        return ViewPathPrefix("${controllerBaseName}/")
+    val controllerPath = controllerPathFromControllerFile(sourceFile)
+    if (controllerPath != null) {
+        return ViewPathPrefix(controllerPath.viewPath)
     }
 
     val containingDir = sourceFile.parent ?: return null
@@ -154,7 +178,7 @@ fun viewPathToTemplatesDirRoot(
         currentDir = currentDir.parent
     }
     if (foundTemplatesDir)
-        return ViewPathPrefix(paths.joinToString(separator = "/") + "/")
+        return ViewPathPrefix(paths.reversed().joinToString(separator = "/") + "/")
     else
         return null
 }

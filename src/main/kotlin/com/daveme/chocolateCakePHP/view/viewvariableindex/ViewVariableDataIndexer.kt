@@ -1,6 +1,9 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
+import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.isCustomizableViewMethod
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
@@ -23,7 +26,7 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
         }
 
         if (isCakeControllerFile(psiFile)) {
-            indexController(result, psiFile)
+            indexController(result, psiFile, virtualFile)
         }
 
         return result
@@ -34,14 +37,15 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
 
     private fun indexController(
         result: MutableMap<String, ViewVariables>,
-        psiFile: PsiFile
+        psiFile: PsiFile,
+        virtualFile: VirtualFile
     ) {
+        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
         val publicMethods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
-            .filter { it.access.isPublic }
+            .filter { it.isCustomizableViewMethod() }
         if (publicMethods.isEmpty()) {
             return
         }
-        val virtualFile = psiFile.virtualFile
 
         // Needed for $this->set(compact('var')) support to lookup the types of the variables:
         val assignments = PsiTreeUtil.findChildrenOfType(psiFile, AssignmentExpression::class.java)
@@ -59,8 +63,8 @@ object ViewVariableDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, Fi
                 setVariablesFromControllerSetCall(variables, setCall, assignments, method)
             }
             val filenameAndMethodKey = controllerMethodKey(
-                virtualFile,
-                method
+                controllerPath,
+                method.name
             )
             result[filenameAndMethodKey] = variables
         }
