@@ -8,6 +8,7 @@ class ViewVariableTest : Cake3BaseTestCase() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/MovieController.php",
+            "cake3/src/Controller/Nested/MyNestedController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
             "cake3/src/View/Helper/MovieFormatterHelper.php",
             "cake3/src/View/Helper/ArtistFormatterHelper.php",
@@ -58,8 +59,32 @@ class ViewVariableTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("${'$'}moviesTable"))
     }
 
+    fun `test variable list is communicated from nested controller to view`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Nested/MyNested/some_nested_action.ctp", """
+            
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
     fun `test variable list is communicated from controller to view within a variable`() {
         myFixture.configureByFilePathAndText("cake3/src/Template/Movie/film_director.ctp", """
+            
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable list is communicated from nested controller to view within a variable`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Nested/MyNested/some_nested_action.ctp", """
             
         <?php
         echo ${'$'}<caret>
@@ -87,8 +112,42 @@ class ViewVariableTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("${'$'}moviesTable"))
     }
 
+    fun `test variable list is communicated from nested controller to elements`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Nested/MyNested/some_nested_action.ctp", """
+        <?php
+        
+        echo ${'$'}this->element('Director/filmography');
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        
+        echo <caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
     fun `test variable list is communicated from controller to elements within a variable`() {
         myFixture.configureByFilePathAndText("cake3/src/Template/Movie/film_director.ctp", """
+        <?php
+        
+        echo ${'$'}this->element('Director/filmography');
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable list is communicated from nested controller to elements within a variable`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Nested/MyNested/some_nested_action.ctp", """
         <?php
         
         echo ${'$'}this->element('Director/filmography');
