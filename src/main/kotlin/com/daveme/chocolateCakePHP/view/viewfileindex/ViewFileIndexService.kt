@@ -75,9 +75,10 @@ private fun isCakeTwoController(
     if (controllerDir == null) {
         return false
     }
-    val topSourceDir = controllerDir.parent?.parent ?: return false
-    return !topSourceDir.children.any { it.nameWithoutExtension == "templates" ||
-            it.nameWithoutExtension == "Template" }
+    val topSourceDir = controllerDir.parent ?: return false
+    val topDir = topSourceDir.parent ?: return false
+    return !topDir.children.any { it.nameWithoutExtension == "templates" } &&
+            !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
 
 object ViewFileIndexService {

@@ -37,7 +37,7 @@ private val cake2HelperBlackList = hashSetOf(
 )
 
 private val cakeSkipRenderingMethods : HashSet<String> = listOf(
-    "beforefilter",
+    "beforeFilter",
     "beforeRender",
     "beforeRedirect",
     "afterFilter",
@@ -78,8 +78,6 @@ fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass
     }
     return result
 }
-
-
 
 fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
     val result = arrayListOf<PhpClass>()

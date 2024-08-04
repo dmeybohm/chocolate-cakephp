@@ -13,7 +13,7 @@ class ViewVariableTest: Cake5BaseTestCase() {
             "cake5/src5/View/Helper/ArtistFormatterHelper.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/Model/Table/MoviesTable.php",
-            "cake5/vendor/cakephp.php"
+            "cake5/vendor/cakephp.php",
         )
     }
 
