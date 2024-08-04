@@ -154,7 +154,7 @@ fun viewPathToTemplatesDirRoot(
         currentDir = currentDir.parent
     }
     if (foundTemplatesDir)
-        return ViewPathPrefix(paths.joinToString(separator = "/") + "/")
+        return ViewPathPrefix(paths.reversed().joinToString(separator = "/") + "/")
     else
         return null
 }
