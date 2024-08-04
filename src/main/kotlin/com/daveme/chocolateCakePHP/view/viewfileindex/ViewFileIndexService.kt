@@ -58,15 +58,16 @@ data class ControllerInfo(
     val isCakeTwo: Boolean
 )
 
-fun lookupControllerFileInfo(controllerFile: VirtualFile): ControllerInfo {
+fun lookupControllerFileInfo(controllerFile: VirtualFile, settings: Settings): ControllerInfo {
     return ControllerInfo(
         controllerFile,
-        isCakeTwoController(controllerFile)
+        isCakeTwoController(controllerFile, settings)
     )
 }
 
 private fun isCakeTwoController(
-    controllerFile: VirtualFile
+    controllerFile: VirtualFile,
+    settings: Settings
 ): Boolean {
     var controllerDir: VirtualFile? = controllerFile.parent
     while (controllerDir != null && controllerDir.name != "Controller") {
@@ -77,7 +78,8 @@ private fun isCakeTwoController(
     }
     val topSourceDir = controllerDir.parent ?: return false
     val topDir = topSourceDir.parent ?: return false
-    return !topDir.children.any { it.nameWithoutExtension == "templates" } &&
+    return topSourceDir.name == settings.cake2AppDirectory &&
+        !topDir.children.any { it.nameWithoutExtension == "templates" } &&
             !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
 

@@ -56,7 +56,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
 
         if (isController) {
             val methods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
-            indexImplicitRender(result, projectDir, methods, virtualFile)
+            indexImplicitRender(result, projectDir, settings, methods, virtualFile)
         }
 
         return result
@@ -109,6 +109,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
     private fun indexImplicitRender(
         result: MutableMap<String, List<Int>>,
         projectDir: VirtualFile,
+        settings: Settings,
         methods: @Unmodifiable Collection<Method>,
         controllerFile: VirtualFile
     ) {
@@ -121,7 +122,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, controllerFile)
             ?: return
 
-        val controllerInfo = lookupControllerFileInfo(controllerFile)
+        val controllerInfo = lookupControllerFileInfo(controllerFile, settings)
 
         relevantMethods.forEach { method ->
             val fullViewPath = fullImplicitViewPath(
