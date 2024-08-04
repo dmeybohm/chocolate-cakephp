@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.isCustomizableViewMethod
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.PsiTreeUtil
@@ -14,29 +15,6 @@ import com.jetbrains.php.lang.psi.elements.Variable
 import org.jetbrains.annotations.Unmodifiable
 
 object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
-
-    private val SKIP_INDEXING_METHODS = listOf(
-        "beforeFilter",
-        "beforeRender",
-        "beforeRedirect",
-        "afterFilter",
-        "afterRender",
-        "__construct",
-        "initialize",
-        "components",
-        "setPlugin",
-        "getPlugin",
-        "enableAutoRender",
-        "invokeAction",
-        "startupProcess",
-        "shutdownProcess",
-        "redirect",
-        "setAction",
-        "render",
-        "viewClasses",
-        "paginate",
-        "isAction",
-    )
 
     override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
         val result = mutableMapOf<String, List<Int>>()
@@ -128,11 +106,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         return withThis
     }
 
-    private fun isRelevantMethod(method: Method): Boolean {
-        return method.access.isPublic &&
-            !SKIP_INDEXING_METHODS.any { method.name.equals(it, ignoreCase = true)}
-    }
-
     private fun indexImplicitRender(
         result: MutableMap<String, List<Int>>,
         projectDir: VirtualFile,
@@ -140,7 +113,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
         controllerFile: VirtualFile
     ) {
         // todo check for $this->autoRender = false
-        val relevantMethods = methods.filter(this::isRelevantMethod)
+        val relevantMethods = methods.filter { it.isCustomizableViewMethod() }
         if (relevantMethods.isEmpty()) {
             return
         }

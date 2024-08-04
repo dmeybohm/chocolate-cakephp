@@ -20,8 +20,28 @@ data class PsiElementAndPath(
     val path: String,
     val psiElement: PsiElement
 ) {
-    val nameWithoutExtension: String = File(path).nameWithoutExtension
+    val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
+    val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
+
+    private fun controllerPathFromPsiElementAndPath(): ControllerPath? {
+        val parts = path.split("/")
+        if (parts.size < 2) {
+            return null
+        }
+        return if ("Controller" in parts) {
+            ControllerPath(
+                prefix = parts.reversed()
+                    .drop(1)
+                    .takeWhile { it != "Controller" }
+                    .joinToString("/"),
+                name = nameWithoutExtension.controllerBaseName() ?: return null
+            )
+        } else {
+            null
+        }
+    }
 }
+
 
 data class ViewPathPrefix(
     val prefix: String
@@ -41,18 +61,23 @@ data class ControllerInfo(
 fun lookupControllerFileInfo(controllerFile: VirtualFile): ControllerInfo {
     return ControllerInfo(
         controllerFile,
-        !isCakeThreePlusController(controllerFile)
+        isCakeTwoController(controllerFile)
     )
 }
 
-private fun isCakeThreePlusController(
+private fun isCakeTwoController(
     controllerFile: VirtualFile
 ): Boolean {
-    val topSourceDir = controllerFile.parent?.parent  ?: return false
-    val projectDir = topSourceDir.parent ?: return false
-
-    return projectDir.children.any { it.nameWithoutExtension == "templates"} ||
-            topSourceDir.children.any { it.nameWithoutExtension == "Template" }
+    var controllerDir: VirtualFile? = controllerFile.parent
+    while (controllerDir != null && controllerDir.name != "Controller") {
+        controllerDir = controllerDir.parent
+    }
+    if (controllerDir == null) {
+        return false
+    }
+    val topSourceDir = controllerDir.parent?.parent ?: return false
+    return !topSourceDir.children.any { it.nameWithoutExtension == "templates" ||
+            it.nameWithoutExtension == "Template" }
 }
 
 object ViewFileIndexService {
@@ -100,10 +125,6 @@ object ViewFileIndexService {
         return result
     }
 
-}
-
-private fun isControllerFile(file: VirtualFile): Boolean {
-    return file.nameWithoutExtension.endsWith("Controller")
 }
 
 private fun isTemplateDir(currentDir: VirtualFile): Boolean {

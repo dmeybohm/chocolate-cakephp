@@ -18,7 +18,7 @@ data class ControllerPath(
 
 fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPath? {
     val baseName = controllerFile.nameWithoutExtension.controllerBaseName()
-    if (baseName == null) {
+    if (baseName.isNullOrEmpty()) {
         return null
     }
     var parent : VirtualFile? = controllerFile.parent

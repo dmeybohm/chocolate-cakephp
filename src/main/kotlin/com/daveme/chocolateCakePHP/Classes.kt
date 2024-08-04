@@ -36,6 +36,36 @@ private val cake2HelperBlackList = hashSetOf(
     "TextHelperTestObject"
 )
 
+private val cakeSkipRenderingMethods : HashSet<String> = listOf(
+    "beforefilter",
+    "beforeRender",
+    "beforeRedirect",
+    "afterFilter",
+    "afterRender",
+    "__construct",
+    "initialize",
+    "components",
+    "setPlugin",
+    "getPlugin",
+    "enableAutoRender",
+    "invokeAction",
+    "startupProcess",
+    "shutdownProcess",
+    "redirect",
+    "setAction",
+    "render",
+    "viewClasses",
+    "paginate",
+    "isAction",
+    "loadComponent",
+    "setRequest",
+).map { it.lowercase() }.toHashSet()
+
+fun Method.isCustomizableViewMethod(): Boolean {
+    return this.access.isPublic &&
+                !cakeSkipRenderingMethods.contains(this.name.lowercase())
+}
+
 fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass> {
     val result = arrayListOf<PhpClass>()
     if (settings.cake2Enabled) {

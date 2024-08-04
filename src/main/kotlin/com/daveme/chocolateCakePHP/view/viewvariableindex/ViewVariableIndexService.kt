@@ -1,11 +1,11 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.ControllerPath
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
@@ -56,7 +56,8 @@ object ViewVariableIndexService {
         if (element == null || !element.isValid) {
             return null
         }
-        return "${elementAndPath.nameWithoutExtension.controllerBaseName()}:${element.name}"
+        val controllerPath = elementAndPath.controllerPath ?: return null
+        return controllerMethodKey(controllerPath, element.name)
     }
 
     fun lookupVariableTypeFromViewPath(
@@ -190,9 +191,8 @@ object ViewVariableIndexService {
 }
 
 fun controllerMethodKey(
-    sourceFile: VirtualFile,
-    methodCall: Method
+    controllerPath: ControllerPath,
+    methodName: String
 ): ViewVariablesKey {
-    val controllerBaseName = sourceFile.nameWithoutExtension.controllerBaseName()
-    return "${controllerBaseName}:${methodCall.name}"
+    return "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
 }
