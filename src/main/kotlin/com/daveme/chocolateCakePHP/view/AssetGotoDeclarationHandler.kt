@@ -47,6 +47,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         val method = sourceElement.context?.parent?.parent as? MethodReference ?: return null
         val stringLiteralArg = sourceElement.context as? StringLiteralExpression ?: return null
         val assetDir = assetDirectoryFromViewFile(
+            sourceElement.project,
             settings,
             sourceElement.containingFile.virtualFile
         ) ?: return null
@@ -71,6 +72,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             "image" -> "img"
             else -> return null
         }
-        return findRelativeFile(assetDir.directory, "${prefix}/${stringArg.contents}")
+        val extension = if (prefix == "img") "" else prefix
+        return findRelativeFile(assetDir.directory, "${prefix}/${stringArg.contents}.${extension}")
     }
 }
