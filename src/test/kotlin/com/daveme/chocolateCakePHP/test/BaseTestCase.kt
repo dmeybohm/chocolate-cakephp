@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.daemon.LineMarkerProviders
@@ -45,5 +46,19 @@ abstract class BaseTestCase : BasePlatformTestCase() {
                 containingDir = file.containingDirectory.name
             )
         }.toSet()
+    }
+
+    protected fun assertCurrentCaretGoesFilename(filename: String) {
+        val offset = myFixture.editor.caretModel.offset
+        val sourceElement = myFixture.file.findElementAt(offset)
+        val myHandler = AssetGotoDeclarationHandler()
+        val targets = myHandler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
+
+        assertNotNull(targets)
+        assertTrue(targets!!.size > 0)
+        val target = targets.filter {
+            (it as? PsiFile)?.virtualFile?.name == filename
+        }
+        assertNotNull(target)
     }
 }

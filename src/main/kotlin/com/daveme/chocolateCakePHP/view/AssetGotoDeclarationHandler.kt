@@ -72,7 +72,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             "image" -> "img"
             else -> return null
         }
-        val extension = if (prefix == "img") "" else prefix
-        return findRelativeFile(assetDir.directory, "${prefix}/${stringArg.contents}.${extension}")
+        val extension = if (prefix == "img") "" else ".${prefix}"
+        return findRelativeFile(assetDir.directory, "${prefix}/${stringArg.contents}${extension}")
     }
 }
