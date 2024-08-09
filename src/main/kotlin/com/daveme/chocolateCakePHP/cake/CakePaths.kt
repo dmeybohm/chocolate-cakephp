@@ -38,7 +38,7 @@ fun topSourceDirectoryFromSourceFile(settings: Settings, virtualFile: VirtualFil
 }
 
 fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
-    return topSourceDirectoryFromSourceFile(settings, file.virtualFile)
+    return topSourceDirectoryFromSourceFile(settings, file.virtualFile ?: return null)
 }
 
 fun templatesDirectoryFromTopSourceDirectory(
@@ -267,7 +267,8 @@ fun isCakeControllerFile(file: VirtualFile): Boolean {
 }
 
 fun isCakeControllerFile(file: PsiFile): Boolean {
-    return isCakeControllerFile(file.virtualFile)
+    val virtualFile = file.virtualFile ?: return false
+    return isCakeControllerFile(virtualFile)
 }
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
