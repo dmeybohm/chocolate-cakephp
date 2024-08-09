@@ -15,7 +15,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
     init {
         val completionProvider = CustomFinderCompletionProvider()
 
-        // When typing $table->find(' or $this->fetchTable("Movies"->find(', with a quote
+        // When typing $table->find(' or $this->fetchTable("Movies")->find(', with a quote
         val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
             .withParent(
                 psiElement(StringLiteralExpression::class.java)
