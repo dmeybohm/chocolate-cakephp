@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.AssetDirectory
-import com.daveme.chocolateCakePHP.cake.assetDirectoryFromSourceFile
+import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -46,7 +46,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val method = sourceElement.context?.parent?.parent as? MethodReference ?: return null
         val stringLiteralArg = sourceElement.context as? StringLiteralExpression ?: return null
-        val assetDir = assetDirectoryFromSourceFile(
+        val assetDir = assetDirectoryFromViewFile(
             settings,
             sourceElement.containingFile.virtualFile
         ) ?: return null

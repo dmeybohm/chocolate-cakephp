@@ -106,7 +106,7 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     return null
 }
 
-fun assetDirectoryFromSourceFile(
+fun assetDirectoryFromViewFile(
     settings: Settings,
     virtualFile: VirtualFile
 ): AssetDirectory? {
