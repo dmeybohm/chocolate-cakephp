@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+import com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler
 
 class AssetGotoDeclarationTest : Cake2BaseTestCase() {
     override fun setUpTestFiles() {
@@ -24,7 +25,8 @@ class AssetGotoDeclarationTest : Cake2BaseTestCase() {
         <?php
         ${'$'}this->Html->css('<caret>movie');
         """.trimIndent())
-        assertCurrentCaretNavigatesToFilename("movie.css")
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "movie.css")
     }
 
     fun `test can go to js assets`() {
@@ -32,7 +34,8 @@ class AssetGotoDeclarationTest : Cake2BaseTestCase() {
         <?php
         ${'$'}this->Html->script('<caret>movie');
         """.trimIndent())
-        assertCurrentCaretNavigatesToFilename("movie.js")
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "movie.js")
     }
 
     fun `test can go to img assets`() {
@@ -40,7 +43,8 @@ class AssetGotoDeclarationTest : Cake2BaseTestCase() {
         <?php
         ${'$'}this->Html->image('<caret>pluginIcon.svg');
         """.trimIndent())
-        assertCurrentCaretNavigatesToFilename("pluginIcon.svg")
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "pluginIcon.svg")
     }
 
 }
