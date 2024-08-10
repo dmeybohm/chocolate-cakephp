@@ -32,7 +32,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
-        // When typing $table->find(' or $this->fetchTable("Movies"->find(', with a quote
+        // When typing $this->Html->css('some_css_file.css')
         val stringLiteralPattern = psiElement(StringLiteralExpression::class.java)
             .withParent(
                 psiElement(ParameterList::class.java)
