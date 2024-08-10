@@ -64,4 +64,13 @@ abstract class BaseTestCase : BasePlatformTestCase() {
         assertNotNull(target)
         assertNotEmpty(target)
     }
+
+    protected fun gotoDeclarationHandlerTargets(
+        handler: GotoDeclarationHandler
+    ): Array<PsiElement>? {
+        val offset = myFixture.editor.caretModel.offset
+        val sourceElement = myFixture.file.findElementAt(offset)
+        val targets = handler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
+        return targets
+    }
 }

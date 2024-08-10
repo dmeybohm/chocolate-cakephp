@@ -31,6 +31,17 @@ class AssetGotoDeclarationTest : Cake4BaseTestCase() {
         assertGotoDeclarationHandlerGoesToFilename(handler, "movie.css")
     }
 
+    fun `test other methods are not affected`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        <?php
+        ${'$'}this->Html->notCss('<caret>movie');
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        val targets = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(targets)
+        assertEmpty(targets!!)
+    }
+
     fun `test can go to js assets`() {
         myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
         <?php
