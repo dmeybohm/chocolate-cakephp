@@ -60,5 +60,6 @@ abstract class BaseTestCase : BasePlatformTestCase() {
             (it as? PsiFile)?.virtualFile?.name == filename
         }
         assertNotNull(target)
+        assertNotEmpty(target)
     }
 }
