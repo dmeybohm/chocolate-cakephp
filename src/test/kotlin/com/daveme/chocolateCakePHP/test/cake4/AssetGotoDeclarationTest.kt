@@ -16,7 +16,7 @@ class AssetGotoDeclarationTest : Cake4BaseTestCase() {
             "cake4/templates/Movie/artist.php",
             "cake4/webroot/css/movie.css",
             "cake4/webroot/js/movie.js",
-            "cake4/webroot/img/movie.jpg",
+            "cake4/webroot/img/pluginIcon.svg",
             "cake4/vendor/cakephp.php",
         )
     }
@@ -40,9 +40,9 @@ class AssetGotoDeclarationTest : Cake4BaseTestCase() {
     fun `test can go to img assets`() {
         myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
         <?php
-        ${'$'}this->Html->image('<caret>movie.jpg');
+        ${'$'}this->Html->image('<caret>pluginIcon.svg');
         """.trimIndent())
-        assertCurrentCaretNavigatesToFilename("movie.jpg")
+        assertCurrentCaretNavigatesToFilename("pluginIcon.svg")
     }
 
 }

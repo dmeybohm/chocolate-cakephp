@@ -14,7 +14,7 @@ class AssetGotoDeclarationTest : Cake2BaseTestCase() {
             "cake2/app/View/Movie/artist.ctp",
             "cake2/app/webroot/css/movie.css",
             "cake2/app/webroot/js/movie.js",
-            "cake2/app/webroot/img/movie.jpg",
+            "cake2/app/webroot/img/pluginIcon.svg",
             "cake2/vendor/cakephp.php",
         )
     }
@@ -38,9 +38,9 @@ class AssetGotoDeclarationTest : Cake2BaseTestCase() {
     fun `test can go to img assets`() {
         myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
         <?php
-        ${'$'}this->Html->image('<caret>movie.jpg');
+        ${'$'}this->Html->image('<caret>pluginIcon.svg');
         """.trimIndent())
-        assertCurrentCaretNavigatesToFilename("movie.jpg")
+        assertCurrentCaretNavigatesToFilename("pluginIcon.svg")
     }
 
 }
