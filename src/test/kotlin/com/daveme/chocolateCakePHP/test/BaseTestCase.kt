@@ -48,7 +48,7 @@ abstract class BaseTestCase : BasePlatformTestCase() {
         }.toSet()
     }
 
-    protected fun assertCurrentCaretGoesFilename(filename: String) {
+    protected fun assertCurrentCaretNavigatesToFilename(filename: String) {
         val offset = myFixture.editor.caretModel.offset
         val sourceElement = myFixture.file.findElementAt(offset)
         val myHandler = AssetGotoDeclarationHandler()

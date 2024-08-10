@@ -26,7 +26,7 @@ class AssetGotoDeclarationTest : Cake5BaseTestCase() {
         <?php
         ${'$'}this->Html->css('<caret>movie');
         """.trimIndent())
-        assertCurrentCaretGoesFilename("movie.css")
+        assertCurrentCaretNavigatesToFilename("movie.css")
     }
 
     fun `test can go to js assets`() {
@@ -34,7 +34,7 @@ class AssetGotoDeclarationTest : Cake5BaseTestCase() {
         <?php
         ${'$'}this->Html->script('<caret>movie');
         """.trimIndent())
-        assertCurrentCaretGoesFilename("movie.js")
+        assertCurrentCaretNavigatesToFilename("movie.js")
     }
 
     fun `test can go to img assets`() {
@@ -42,7 +42,7 @@ class AssetGotoDeclarationTest : Cake5BaseTestCase() {
         <?php
         ${'$'}this->Html->image('<caret>movie.jpg');
         """.trimIndent())
-        assertCurrentCaretGoesFilename("movie.jpg")
+        assertCurrentCaretNavigatesToFilename("movie.jpg")
     }
 
 }

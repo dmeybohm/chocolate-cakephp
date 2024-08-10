@@ -142,9 +142,16 @@ fun assetDirectoryFromViewFile(
 ): AssetDirectory? {
     val templatesDir = templatesDirectoryFromViewFile(project, settings, virtualFile)
         ?: return null
-    val rootDirectory = rootDirectoryFromTemplatesDir(templatesDir)
-        ?: return null
-    val webroot = findRelativeFile(rootDirectory.directory, "webroot") ?: return null
+    val startingDir = when (templatesDir) {
+        is CakeTwoTemplatesDir ->
+            templatesDir.directory.parent ?: return null
+        is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
+            val rootDirectory = rootDirectoryFromTemplatesDir(templatesDir)
+                ?: return null
+            rootDirectory.directory
+        }
+    }
+    val webroot = findRelativeFile(startingDir, "webroot") ?: return null
     return AssetDirectory(webroot)
 }
 
