@@ -4,6 +4,7 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.daemon.LineMarkerProviders
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
+import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -45,5 +46,31 @@ abstract class BaseTestCase : BasePlatformTestCase() {
                 containingDir = file.containingDirectory.name
             )
         }.toSet()
+    }
+
+    protected fun assertGotoDeclarationHandlerGoesToFilename(
+        handler: GotoDeclarationHandler,
+        filename: String
+    ) {
+        val offset = myFixture.editor.caretModel.offset
+        val sourceElement = myFixture.file.findElementAt(offset)
+        val targets = handler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
+
+        assertNotNull(targets)
+        assertTrue(targets!!.size > 0)
+        val target = targets.filter {
+            (it as? PsiFile)?.virtualFile?.name == filename
+        }
+        assertNotNull(target)
+        assertNotEmpty(target)
+    }
+
+    protected fun gotoDeclarationHandlerTargets(
+        handler: GotoDeclarationHandler
+    ): Array<PsiElement>? {
+        val offset = myFixture.editor.caretModel.offset
+        val sourceElement = myFixture.file.findElementAt(offset)
+        val targets = handler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
+        return targets
     }
 }

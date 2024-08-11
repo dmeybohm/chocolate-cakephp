@@ -28,10 +28,17 @@ data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesD
 data class CakeThreeTemplatesDir(override val directory: VirtualFile): TemplatesDir
 data class CakeTwoTemplatesDir(override val directory: VirtualFile): TemplatesDir
 
-fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
-    val originalFile = file.virtualFile.parent
+data class AssetDirectory(val directory: VirtualFile)
+data class RootDirectory(val directory: VirtualFile)
+
+fun topSourceDirectoryFromSourceFile(settings: Settings, virtualFile: VirtualFile): TopSourceDirectory? {
+    val originalFile = virtualFile.parent
     return pluginSrcDirectoryFromSourceFile(settings, originalFile)
         ?: appOrSrcDirectoryFromSourceFile(settings, originalFile)
+}
+
+fun topSourceDirectoryFromSourceFile(settings: Settings, file: PsiFile): TopSourceDirectory? {
+    return topSourceDirectoryFromSourceFile(settings, file.virtualFile ?: return null)
 }
 
 fun templatesDirectoryFromTopSourceDirectory(
@@ -59,7 +66,11 @@ fun templatesDirectoryFromTopSourceDirectory(
     return null
 }
 
-fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: PsiFile): TemplatesDir? {
+fun templatesDirectoryFromViewFile(
+    project: Project,
+    settings: Settings,
+    file: VirtualFile
+): TemplatesDir? {
     if (!settings.enabled) {
         return null
     }
@@ -79,7 +90,7 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     else
         false
 
-    val originalFile = file.originalFile.virtualFile ?: return null
+    val originalFile = file
     var child: VirtualFile? = originalFile.parent ?: return null
     var parent: VirtualFile? = child?.parent
     val projectDir = project.guessProjectDir() ?: return null
@@ -98,6 +109,50 @@ fun templatesDirectoryFromViewFile(project: Project, settings: Settings, file: P
     }
 
     return null
+}
+
+fun templatesDirectoryFromViewFile(
+    project: Project,
+    settings: Settings,
+    file: PsiFile
+): TemplatesDir? {
+    return templatesDirectoryFromViewFile(
+        project,
+        settings,
+        file.originalFile.virtualFile ?: return null
+    )
+}
+
+fun rootDirectoryFromTemplatesDir(templatesDir: TemplatesDir): RootDirectory? {
+    val rootVirtualFile =  when (templatesDir) {
+        is CakeFourTemplatesDir -> {
+            templatesDir.directory.parent ?: return null
+        }
+        is CakeThreeTemplatesDir, is CakeTwoTemplatesDir -> {
+            templatesDir.directory.parent?.parent ?: return null
+        }
+    }
+    return RootDirectory(rootVirtualFile)
+}
+
+fun assetDirectoryFromViewFile(
+    project: Project,
+    settings: Settings,
+    virtualFile: VirtualFile
+): AssetDirectory? {
+    val templatesDir = templatesDirectoryFromViewFile(project, settings, virtualFile)
+        ?: return null
+    val startingDir = when (templatesDir) {
+        is CakeTwoTemplatesDir ->
+            templatesDir.directory.parent ?: return null
+        is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
+            val rootDirectory = rootDirectoryFromTemplatesDir(templatesDir)
+                ?: return null
+            rootDirectory.directory
+        }
+    }
+    val webroot = findRelativeFile(startingDir, "webroot") ?: return null
+    return AssetDirectory(webroot)
 }
 
 // NOTE: only call this with CakeThreeTemplatesDir or CakeFourTemplatesDir
@@ -219,7 +274,8 @@ fun isCakeControllerFile(file: VirtualFile): Boolean {
 }
 
 fun isCakeControllerFile(file: PsiFile): Boolean {
-    return isCakeControllerFile(file.virtualFile)
+    val virtualFile = file.virtualFile ?: return false
+    return isCakeControllerFile(virtualFile)
 }
 
 @Deprecated("Use TemplatesDir and getViewFilename instead")
