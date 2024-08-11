@@ -6,14 +6,20 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
-    override fun getGotoDeclarationTargets(psiElement: PsiElement?, i: Int, editor: Editor): Array<PsiElement>? {
+    override fun getGotoDeclarationTargets(
+        psiElement: PsiElement?,
+        i: Int,
+        editor: Editor
+    ): Array<PsiElement>? {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
@@ -22,17 +28,22 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         if (!settings.enabled) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (!PlatformPatterns
-                .psiElement(StringLiteralExpression::class.java)
-                .withLanguage(PhpLanguage.INSTANCE)
-                .accepts(psiElement.context)
-        ) {
+
+        val stringLiteralPattern = psiElement(StringLiteralExpression::class.java)
+            .withParent(
+                psiElement(ParameterList::class.java)
+                    .withParent(
+                        psiElement(MethodReference::class.java)
+                            .with(RenderMethodPattern)
+                    )
+            )
+        if (!stringLiteralPattern.accepts(psiElement.context)) {
             return PsiElement.EMPTY_ARRAY
         }
         val containingFile = psiElement.containingFile
         val virtualFile = containingFile.virtualFile
-        val filename = virtualFile.nameWithoutExtension
-        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return PsiElement.EMPTY_ARRAY
+        val controllerPath = controllerPathFromControllerFile(virtualFile)
+            ?: return PsiElement.EMPTY_ARRAY
 
         val method = findParentWithClass(psiElement, MethodReference::class.java)
                 as? MethodReference ?: return PsiElement.EMPTY_ARRAY
