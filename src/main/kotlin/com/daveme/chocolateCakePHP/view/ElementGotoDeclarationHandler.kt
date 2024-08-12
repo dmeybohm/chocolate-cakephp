@@ -8,8 +8,11 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.PhpLanguage
+import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import java.util.*
 
@@ -25,13 +28,18 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
-        if (!PlatformPatterns
-                .psiElement(StringLiteralExpression::class.java)
-                .withLanguage(PhpLanguage.INSTANCE)
-                .accepts(psiElement.context)
-        ) {
+        val stringLiteralPattern = psiElement(StringLiteralExpression::class.java)
+            .withParent(
+                psiElement(ParameterList::class.java)
+                    .withParent(
+                        psiElement(MethodReference::class.java)
+                            .with(ElementMethodPattern)
+                    )
+            )
+        if (!stringLiteralPattern.accepts(psiElement.context)) {
             return PsiElement.EMPTY_ARRAY
         }
+
         val containingFile = psiElement.containingFile
         val templatesDir = templatesDirectoryFromViewFile(psiElement.project, settings, containingFile)
             ?: return PsiElement.EMPTY_ARRAY
