@@ -160,3 +160,43 @@ fun allViewPathsFromController(
         dataViewPaths = dataViewPaths
     )
 }
+
+private fun elementPathFromTemplatesDirWithPathAndElementPath(
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    elementPath: String,
+): ViewPath {
+    val elementPrefix = when (templatesDirWithPath.templatesDir) {
+        is CakeFourTemplatesDir -> "element/"
+        is CakeThreeTemplatesDir -> "Element/"
+        is CakeTwoTemplatesDir -> "Elements/"
+    }
+    return ViewPath(
+        label = elementPath,
+        templatePath = templatesDirWithPath.templatesPath,
+        prefix = elementPrefix,
+        altLabel = elementPath,
+        relativePath = addViewFilenameExtension(
+            templatesDirectory = templatesDirWithPath.templatesDir,
+            name = elementPath,
+            settings = settings,
+            convertCase = false,
+        )
+    )
+}
+
+fun allViewPathsFromElementPath(
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    elementPath: String,
+): AllViewPaths {
+    return AllViewPaths(
+        defaultViewPath = elementPathFromTemplatesDirWithPathAndElementPath(
+            templatesDirWithPath = templatesDirWithPath,
+            settings = settings,
+            elementPath = elementPath
+        ),
+        otherViewPaths = listOf(),
+        dataViewPaths = listOf()
+    )
+}
