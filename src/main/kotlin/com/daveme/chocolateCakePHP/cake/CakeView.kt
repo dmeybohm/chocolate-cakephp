@@ -161,7 +161,7 @@ fun allViewPathsFromController(
     )
 }
 
-private fun elementPathFromTemplatesDirWithPathAndElementPath(
+private fun elementViewPath(
     templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
     elementPath: String,
@@ -191,7 +191,7 @@ fun allViewPathsFromElementPath(
     elementPath: String,
 ): AllViewPaths {
     return AllViewPaths(
-        defaultViewPath = elementPathFromTemplatesDirWithPathAndElementPath(
+        defaultViewPath = elementViewPath(
             templatesDirWithPath = templatesDirWithPath,
             settings = settings,
             elementPath = elementPath
