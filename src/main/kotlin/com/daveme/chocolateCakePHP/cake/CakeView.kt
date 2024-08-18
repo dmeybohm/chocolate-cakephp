@@ -160,3 +160,38 @@ fun allViewPathsFromController(
         dataViewPaths = dataViewPaths
     )
 }
+
+private fun elementViewPath(
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    elementPath: String,
+): ViewPath {
+    return ViewPath(
+        label = elementPath,
+        templatePath = templatesDirWithPath.templatesPath,
+        prefix = templatesDirWithPath.templatesDir.elementDirName + "/",
+        altLabel = elementPath,
+        relativePath = addViewFilenameExtension(
+            templatesDirectory = templatesDirWithPath.templatesDir,
+            name = elementPath,
+            settings = settings,
+            convertCase = false,
+        )
+    )
+}
+
+fun allViewPathsFromElementPath(
+    templatesDirWithPath: TemplatesDirWithPath,
+    settings: Settings,
+    elementPath: String,
+): AllViewPaths {
+    return AllViewPaths(
+        defaultViewPath = elementViewPath(
+            templatesDirWithPath = templatesDirWithPath,
+            settings = settings,
+            elementPath = elementPath
+        ),
+        otherViewPaths = listOf(),
+        dataViewPaths = listOf()
+    )
+}

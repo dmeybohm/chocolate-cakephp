@@ -22,11 +22,26 @@ class SrcDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 
 sealed interface TemplatesDir {
     val directory: VirtualFile
+    val elementDirName: String
 }
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "element"
+}
+
 data class CakeThreeTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "Element"
+}
+
 data class CakeTwoTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "Elements"
+}
 
 data class AssetDirectory(val directory: VirtualFile)
 data class RootDirectory(val directory: VirtualFile)
@@ -257,11 +272,6 @@ private fun appOrSrcDirectoryFromSourceFile(
 }
 
 
-@Deprecated("Use TemplatesDir and getViewFilename instead")
-sealed class CakeView(val elementTop: String) {
-    abstract fun elementPath(settings: Settings, elementPath: String): String
-}
-
 fun isCakeViewFile(project: Project, settings: Settings, file: PsiFile): Boolean {
     return if (templatesDirectoryFromViewFile(project, settings, file) != null)
         true
@@ -276,52 +286,6 @@ fun isCakeControllerFile(file: VirtualFile): Boolean {
 fun isCakeControllerFile(file: PsiFile): Boolean {
     val virtualFile = file.virtualFile ?: return false
     return isCakeControllerFile(virtualFile)
-}
-
-@Deprecated("Use TemplatesDir and getViewFilename instead")
-object CakeFour : CakeView(elementTop = "element") {
-
-    override fun elementPath(settings: Settings, elementPath: String): String =
-        "${elementTop}/${elementPath}.php"
-}
-
-@Deprecated("Use TemplatesDir and getViewFilename instead")
-object CakeThree : CakeView(elementTop = "Element") {
-
-    override fun elementPath(settings: Settings, elementPath: String): String =
-        "${elementTop}/${elementPath}.${settings.cakeTemplateExtension}"
-}
-
-@Deprecated("Use TemplatesDir and getViewFilename instead")
-object CakeTwo : CakeView(elementTop = "Elements") {
-
-    override fun elementPath(settings: Settings, elementPath: String): String =
-        "${elementTop}/$elementPath.${settings.cake2TemplateExtension}"
-}
-
-@Deprecated("Rewrite this to use AllViewPaths instead")
-fun elementPathToVirtualFile(
-    settings: Settings,
-    templatesDir: TemplatesDir,
-    elementPath: String
-): VirtualFile? {
-    var relativeFile: VirtualFile? = null
-    val directory = templatesDir.directory
-    if (settings.cake3Enabled) {
-        val cakeThreeElementFilename = CakeThree.elementPath(settings, elementPath)
-        relativeFile = findRelativeFile(directory, cakeThreeElementFilename)
-       if (relativeFile == null) {
-            val cakeFourElementFilename = CakeFour.elementPath(settings, elementPath)
-            relativeFile = findRelativeFile(directory, cakeFourElementFilename)
-        }
-    }
-    if (relativeFile == null) {
-        if (settings.cake2Enabled) {
-            val cakeTwoElementFilename = CakeTwo.elementPath(settings, elementPath)
-            relativeFile = findRelativeFile(directory, cakeTwoElementFilename)
-        }
-    }
-    return relativeFile
 }
 
 data class ViewFilePathInfo(

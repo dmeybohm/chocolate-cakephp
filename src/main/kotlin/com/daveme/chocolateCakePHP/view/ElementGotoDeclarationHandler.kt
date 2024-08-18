@@ -1,18 +1,15 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.elementPathToVirtualFile
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import java.util.*
 
 class ElementGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -38,15 +35,17 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
+        val contents = (psiElement.context as? StringLiteralExpression)?.contents
+            ?: return PsiElement.EMPTY_ARRAY
         val containingFile = psiElement.containingFile
         val templatesDir = templatesDirectoryFromViewFile(psiElement.project, settings, containingFile)
             ?: return PsiElement.EMPTY_ARRAY
-        val relativeFile = elementPathToVirtualFile(settings, templatesDir, psiElement.text)
+        val templatesDirWithPath = templatesDirWithPath(psiElement.project, templatesDir)
             ?: return PsiElement.EMPTY_ARRAY
+        val allViewPaths = allViewPathsFromElementPath(templatesDirWithPath, settings, contents)
+        val files = viewFilesFromAllViewPaths(project, templatesDir, allViewPaths)
 
-        val files = HashSet<VirtualFile>()
-        files.add(relativeFile)
-        return virtualFilesToPsiFiles(project, files).toTypedArray()
+        return files.toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null

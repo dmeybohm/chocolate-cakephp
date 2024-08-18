@@ -25,15 +25,30 @@ data class ActionName(
         settings: Settings,
         convertCase: Boolean
     ): String {
-        return when (templatesDirectory) {
-            is CakeFourTemplatesDir ->
-                "${pathPrefix}${name.conditionalCamelCaseToUnderscore(convertCase)}.php" // cake 4+
-            is CakeThreeTemplatesDir ->
-                "${pathPrefix}${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cakeTemplateExtension}"
-            is CakeTwoTemplatesDir ->
-                "${pathPrefix}${name}.${settings.cake2TemplateExtension}"
-        }
+        return pathPrefix + addViewFilenameExtension(
+            templatesDirectory,
+            name,
+            settings,
+            convertCase
+        )
     }
+}
+
+fun addViewFilenameExtension(
+    templatesDirectory: TemplatesDir,
+    name: String,
+    settings: Settings,
+    convertCase: Boolean
+): String {
+    return when (templatesDirectory) {
+        is CakeFourTemplatesDir ->
+            "${name.conditionalCamelCaseToUnderscore(convertCase)}.php" // cake 4+
+        is CakeThreeTemplatesDir ->
+            "${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cakeTemplateExtension}"
+        is CakeTwoTemplatesDir ->
+            "${name}.${settings.cake2TemplateExtension}"
+    }
+
 }
 
 fun actionNameFromPath(path: String): ActionName {
