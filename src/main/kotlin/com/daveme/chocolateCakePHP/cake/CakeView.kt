@@ -166,15 +166,10 @@ private fun elementViewPath(
     settings: Settings,
     elementPath: String,
 ): ViewPath {
-    val elementPrefix = when (templatesDirWithPath.templatesDir) {
-        is CakeFourTemplatesDir -> "element/"
-        is CakeThreeTemplatesDir -> "Element/"
-        is CakeTwoTemplatesDir -> "Elements/"
-    }
     return ViewPath(
         label = elementPath,
         templatePath = templatesDirWithPath.templatesPath,
-        prefix = elementPrefix,
+        prefix = templatesDirWithPath.templatesDir.elementDirName + "/",
         altLabel = elementPath,
         relativePath = addViewFilenameExtension(
             templatesDirectory = templatesDirWithPath.templatesDir,

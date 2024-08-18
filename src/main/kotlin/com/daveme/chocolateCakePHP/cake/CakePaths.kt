@@ -22,11 +22,26 @@ class SrcDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 
 sealed interface TemplatesDir {
     val directory: VirtualFile
+    val elementDirName: String
 }
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "element"
+}
+
 data class CakeThreeTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "Element"
+}
+
 data class CakeTwoTemplatesDir(override val directory: VirtualFile): TemplatesDir
+{
+    override val elementDirName: String
+        get() = "Elements"
+}
 
 data class AssetDirectory(val directory: VirtualFile)
 data class RootDirectory(val directory: VirtualFile)
