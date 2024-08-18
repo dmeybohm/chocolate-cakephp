@@ -6,10 +6,10 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.Variable
 
-private val assetMethods = listOf("css", "script", "image")
-
 object AssetMethodPattern :
     PatternCondition<MethodReference>("AssetMethodPattern") {
+
+    private val assetMethods = listOf("css", "script", "image")
 
     override fun accepts(
         methodReference: MethodReference,
