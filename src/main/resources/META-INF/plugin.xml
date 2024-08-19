@@ -65,6 +65,7 @@
 
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex" />
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex" />
+        <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.elementvariableindex.ElementVariableIndex" />
 
         <lang.inspectionSuppressor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.UndefinedViewVariableInspectionSuppressor" />
 

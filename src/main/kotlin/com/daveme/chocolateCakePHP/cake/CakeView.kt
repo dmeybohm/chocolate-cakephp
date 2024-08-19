@@ -92,12 +92,11 @@ fun viewPathFromControllerNameAndActionName(
 
 data class AllViewPaths(
     val defaultViewPath: ViewPath,
-    val otherViewPaths: List<ViewPath>,
-    val dataViewPaths: List<ViewPath>,
+    val otherViewPaths: List<ViewPath> = listOf(),
+    val dataViewPaths: List<ViewPath> = listOf(),
 ) {
     val all: List<ViewPath>
         get() = listOf(defaultViewPath) + otherViewPaths + dataViewPaths
-
 }
 
 data class TemplatesDirWithPath(
@@ -191,7 +190,5 @@ fun allViewPathsFromElementPath(
             settings = settings,
             elementPath = elementPath
         ),
-        otherViewPaths = listOf(),
-        dataViewPaths = listOf()
     )
 }
