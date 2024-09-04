@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClassesWithDefault
 import com.daveme.chocolateCakePHP.cake.isCakeTwoModelClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -86,7 +86,7 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         val result = PhpType()
 
         if (settings.cake3Enabled) {
-            val cakeThreeClasses = getCakeThreeClasses(index, settings, firstFieldName, targetFieldName)
+            val cakeThreeClasses = getCakeThreeClasses(index, settings, targetFieldName)
             if (cakeThreeClasses.size > 0) {
                 cakeThreeClasses.forEach { result.add(it.fqn) }
             }
@@ -119,13 +119,12 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
         return "\\" + targetFieldName
     }
 
-    private fun getCakeThreeClasses(phpIndex: PhpIndex, settings: Settings,
-                                    firstFieldName: String, targetFieldName: String): Collection<PhpClass> {
-        val firstClasses = phpIndex.getPossibleTableClasses(settings, firstFieldName)
-        if (firstClasses.size == 0) {
-            return listOf()
-        }
-        return phpIndex.getPossibleTableClasses(settings, targetFieldName)
+    private fun getCakeThreeClasses(
+        phpIndex: PhpIndex,
+        settings: Settings,
+        targetFieldName: String
+    ): Collection<PhpClass> {
+        return phpIndex.getPossibleTableClassesWithDefault(settings, targetFieldName)
     }
 
     override fun getBySignature(

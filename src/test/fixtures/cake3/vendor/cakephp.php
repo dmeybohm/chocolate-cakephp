@@ -12,6 +12,17 @@ namespace Cake\Controller {
     class Component {}
 }
 
+namespace Cake\Datasource {
+    trait EntityTrait {
+        /**
+         * @return bool[]
+         */
+        public function getAccessible() {
+        }
+    }
+}
+
+
 namespace Cake\View {
     class View {}
     class Helper {}
@@ -34,9 +45,8 @@ namespace Cake\View {
 
 
 namespace Cake\ORM {
-}
 
-namespace Cake\ORM {
+    use Cake\Datasource\EntityTrait;
 
     class Query {
         public function find(string $finder, mixed ... $args): static {
@@ -69,6 +79,10 @@ namespace Cake\ORM {
         public function find(string $type = 'all', ... $args): Query {
             return new Query();
         }
+    }
+
+    class Entity {
+        use EntityTrait;
     }
 
     class TableRegistry {

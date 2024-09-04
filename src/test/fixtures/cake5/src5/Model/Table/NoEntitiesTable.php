@@ -8,7 +8,7 @@ use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
-class ArticlesTable extends Table
+class NoEntitiesTable extends Table
 {
     /**
      * Initialize method
@@ -20,7 +20,7 @@ class ArticlesTable extends Table
     {
         parent::initialize($config);
 
-        $this->setTable('articles');
+        $this->setTable('no_entities');
         $this->setDisplayField('name');
         $this->setPrimaryKey('id');
     }
@@ -42,7 +42,7 @@ class ArticlesTable extends Table
         return $validator;
     }
 
-    public function myCustomArticleMethod(): string
+    public function myNoEntitiesCustomMethod(): string
     {
         return 'test';
     }

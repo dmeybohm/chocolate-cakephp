@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.getPossibleTableClassesWithDefault
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -94,20 +94,55 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
 
     override fun complete(expression: String, project: Project): PhpType? {
         val version = expression.substring(3, 5)
-        val possibleTableName = expression.substring(6)
-        if (version != "v1") {
-            return null
-        }
         val settings = Settings.getInstance(project)
         if (!settings.cake3Enabled) {
             return null
         }
-        val phpIndex = PhpIndex.getInstance(project)
-        return getAllPossibleAssociationTableClassesFromName(
-            phpIndex,
-            settings,
-            possibleTableName
-        )
+        when (version) {
+            "v1" -> {
+                val phpIndex = PhpIndex.getInstance(project)
+                val possibleTableName = expression.substring(6)
+                return getAllPossibleAssociationTableClassesFromName(
+                    phpIndex,
+                    settings,
+                    possibleTableName
+                )
+            }
+            "v2" -> {
+                val start = expression.substring(2)
+                val tableEnd = start.substring(4).indexOf('.')
+                if (tableEnd <= 0) {
+                    return null
+                }
+                val possibleTableName = start.substring(4, tableEnd + 4)
+                val endChar = TYPE_PROVIDER_END_CHAR
+                val signatureEnd = start.substring(tableEnd + 5).indexOf(endChar)
+                if (signatureEnd <= 0) {
+                    return null
+                }
+                val signature = start.substring(tableEnd + 5, signatureEnd + tableEnd + 5)
+                val phpIndex = PhpIndex.getInstance(project)
+
+                val varType = PhpType()
+                signature.split("|")
+                    .filter { !it.contains(TYPE_PROVIDER_CHAR) } // avoid recursion
+                    .forEach { varType.add(it) }
+
+                val completeType = varType.lookupCompleteType(project, phpIndex, null)
+                if (completeType.types.isEmpty()) {
+                    return null
+                }
+
+                if (!completeType.isDefinitelyTableClass()) {
+                    return null
+                }
+
+                return getAllPossibleAssociationTableClassesFromName(phpIndex, settings, possibleTableName)
+            }
+            else -> {
+                return null
+            }
+        }
     }
 
     override fun getBySignature(
@@ -116,49 +151,6 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         depth: Int,
         project: Project
     ): Collection<PhpNamedElement?> {
-        val settings = Settings.getInstance(project)
-        if (!settings.cake3Enabled) {
-            return emptyList()
-        }
-        val version = expression.substring(1, 3)
-        if (version != "v2") {
-            return emptyList()
-        }
-        val tableEnd = expression.substring(4).indexOf('.')
-        if (tableEnd <= 0) {
-            return emptyList()
-        }
-        val possibleTableName = expression.substring(4, tableEnd + 4)
-        val endChar = TYPE_PROVIDER_END_CHAR
-        val signatureEnd = expression.substring(tableEnd + 5).indexOf(endChar)
-        if (signatureEnd <= 0) {
-            return emptyList()
-        }
-        val signature = expression.substring(tableEnd + 5, signatureEnd + tableEnd + 5)
-        val phpIndex = PhpIndex.getInstance(project)
-
-        //
-        // TODO I think we can't use getBySignature here because getBySignature() isn't
-        //      implemented on the TableLocatorTypeProvider, but that may work better
-        //
-        val varType = PhpType()
-        signature.split("|")
-            .filter { !it.contains(TYPE_PROVIDER_CHAR) } // avoid recursion
-            .forEach { varType.add(it) }
-
-        val completeType = varType.lookupCompleteType(project, phpIndex, set)
-        if (completeType.types.isEmpty()) {
-            return emptyList()
-        }
-
-        if (completeType.isDefinitelyTableClass()) {
-            val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
-            if (resultClasses.isNotEmpty()) {
-                // todo add association classes?
-                return resultClasses
-            }
-
-        }
         return emptyList()
     }
 
@@ -167,18 +159,20 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         settings: Settings,
         possibleTableName: String
     ): PhpType? {
-        val resultClasses = phpIndex.getPossibleTableClasses(settings, possibleTableName)
+        val resultClasses = phpIndex.getPossibleTableClassesWithDefault(settings, possibleTableName)
         if (resultClasses.isNotEmpty()) {
             val result = PhpType()
-                    .add("\\Cake\\ORM\\Association\\BelongsTo")
-                    .add("\\Cake\\ORM\\Association\\BelongsToMany")
-                    .add("\\Cake\\ORM\\Association\\HasOne")
-                    .add("\\Cake\\ORM\\Association\\HasMany")
+//            if (resultClasses.size == 1) {
+//                result.add(EncodedType.encodeForDynamicTable(possibleTableName))
+//            }
+            result.add("\\Cake\\ORM\\Association\\BelongsTo")
+                .add("\\Cake\\ORM\\Association\\BelongsToMany")
+                .add("\\Cake\\ORM\\Association\\HasOne")
+                .add("\\Cake\\ORM\\Association\\HasMany")
 
             resultClasses.forEach { result.add(it.fqn) }
             return result
         }
-
         return null
     }
 
