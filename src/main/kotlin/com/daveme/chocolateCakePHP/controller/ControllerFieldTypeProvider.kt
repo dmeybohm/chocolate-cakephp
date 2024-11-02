@@ -73,8 +73,10 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
     override fun complete(expression: String, project: Project): PhpType? {
         val indexOfSign  = expression.indexOf(getKey())
         val indexOfDelimiter = expression.indexOf(getKey(), indexOfSign + 1)
-        val firstFieldName = expression.substring(indexOfSign + 1, indexOfDelimiter)
-        val targetFieldName = expression.substring(indexOfDelimiter + 1)
+        val firstFieldName = expression.substringOrNull(indexOfSign + 1, indexOfDelimiter)
+            ?: return null
+        val targetFieldName = expression.substringOrNull(indexOfDelimiter + 1)
+            ?: return null
 
         val index = PhpIndex.getInstance(project)
         val settings = Settings.getInstance(project)
