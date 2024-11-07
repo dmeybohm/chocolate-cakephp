@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.9.2] - 2024-11-07
+
+### Fixed
+- Fix exception thrown during indexing
+
 ## [0.9.1] - 2024-06-19
 
 ### Fixed
