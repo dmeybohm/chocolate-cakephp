@@ -2,6 +2,8 @@ package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.substringOrNull
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -26,6 +28,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     override fun getType(psiElement: PsiElement): PhpType? {
         val fieldReference = psiElement as? FieldReference ?: return null
         val fieldName = fieldReference.name ?: return null
+        if (fieldName.isEmpty()) return null
 
         val settings = Settings.getInstance(fieldReference.project)
         if (!settings.cake3Enabled) {
@@ -93,8 +96,8 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
-        val version = expression.substring(3, 5)
-        val possibleTableName = expression.substring(6)
+        val version = expression.substringOrNull(3, 5) ?: return null
+        val possibleTableName = expression.substringOrNull(6) ?: return null
         if (version != "v1") {
             return null
         }
@@ -120,12 +123,13 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         if (!settings.cake3Enabled) {
             return emptyList()
         }
-        val version = expression.substring(1, 3)
+        val version = expression.substringOrNull(1, 3)
+            ?: return emptyList()
         if (version != "v2") {
             return emptyList()
         }
-        val tableEnd = expression.substring(4).indexOf('.')
-        if (tableEnd <= 0) {
+        val tableEnd = expression.substringOrNull(4)?.indexOf('.')
+        if (tableEnd == null || tableEnd <= 0) {
             return emptyList()
         }
         val possibleTableName = expression.substring(4, tableEnd + 4)
