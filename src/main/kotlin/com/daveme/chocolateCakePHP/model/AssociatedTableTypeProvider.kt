@@ -132,9 +132,11 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         if (tableEnd == null || tableEnd <= 0) {
             return emptyList()
         }
-        val possibleTableName = expression.substring(4, tableEnd + 4)
+        val possibleTableName = expression.substringOrNull(4, tableEnd + 4)
+            ?: return emptyList()
         val endChar = TYPE_PROVIDER_END_CHAR
-        val signatureEnd = expression.substring(tableEnd + 5).indexOf(endChar)
+        val signatureEnd = expression.substringOrNull(tableEnd + 5)?.indexOf(endChar)
+            ?: return emptyList()
         if (signatureEnd <= 0) {
             return emptyList()
         }
