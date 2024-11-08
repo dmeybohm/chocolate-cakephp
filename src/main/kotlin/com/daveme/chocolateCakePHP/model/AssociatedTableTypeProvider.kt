@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.model
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.substringOrNull
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -24,6 +25,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     override fun getType(psiElement: PsiElement): PhpType? {
         val fieldReference = psiElement as? FieldReference ?: return null
         val fieldName = fieldReference.name ?: return null
+        if (fieldName.isEmpty()) return null
 
         //
         // Handles:
@@ -53,7 +55,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
-        val possibleTableName = expression.substring(3)
+        val possibleTableName = expression.substringOrNull(3) ?: return null
         val settings = Settings.getInstance(project)
         if (!settings.cake3Enabled) {
             return null

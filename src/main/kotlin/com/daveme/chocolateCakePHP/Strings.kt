@@ -5,6 +5,14 @@ import java.util.*
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 
+fun String.substringOrNull(startIndex: Int, endIndex: Int = length): String? {
+    return if (startIndex in 0..length && endIndex in startIndex..length) {
+        substring(startIndex, endIndex)
+    } else {
+        null
+    }
+}
+
 fun String.removeFromEnd(end: String, ignoreCase: Boolean = false): String =
     if (end == "" || !this.endsWith(end, ignoreCase))
         this
@@ -84,3 +92,4 @@ fun String.underscoreToCamelCase(): String {
 
 fun String.mneumonicEscape(): String =
     this.replace("_", "__")
+
