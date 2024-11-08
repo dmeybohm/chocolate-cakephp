@@ -56,16 +56,12 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         if (expression.length < 3) {
             return null
         }
-        val encoded = expression.substring(2)
-        val (cakeVersion, relativePath, varName) = encoded.split(SEPARATOR)
+        val encoded = expression.substringOrNull(2)
+            ?: return null
+        val (_, relativePath, varName) = encoded.split(SEPARATOR)
         if (relativePath.contains(getKey())) {
             // ensure no recursion:
             return null
-        }
-        val cakeVersionInt = when (cakeVersion) {
-            "v2" -> 2
-            "v3" -> 3
-            else -> 4
         }
 
         val settings = Settings.getInstance(project)
