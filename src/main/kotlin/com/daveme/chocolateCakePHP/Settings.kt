@@ -192,7 +192,7 @@ class Settings : PersistentStateComponent<SettingsState> {
             result.set(pluginConfig.namespace,
                 PluginEntry(
                     namespace = pluginConfig.namespace,
-                    templatePath = pluginConfig.pluginPath
+                    pluginPath = pluginConfig.pluginPath
                 )
             )
         }
@@ -201,7 +201,7 @@ class Settings : PersistentStateComponent<SettingsState> {
             if (!result.containsKey(pluginNamespace)) {
                 result.set(pluginNamespace, PluginEntry(
                     namespace = pluginNamespace,
-                    templatePath = null)
+                    pluginPath = null)
                 )
             }
         }
@@ -270,7 +270,7 @@ class Settings : PersistentStateComponent<SettingsState> {
         @JvmStatic
         fun pluginConfigsFromEntryList(list: List<PluginEntry>): List<PluginConfig> {
             val result = arrayListOf<PluginConfig>()
-            list.forEach { result.add(PluginConfig(it.namespace, it.templatePath)) }
+            list.forEach { result.add(PluginConfig(it.namespace, it.pluginPath)) }
             return result
         }
 

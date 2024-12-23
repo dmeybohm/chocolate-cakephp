@@ -73,7 +73,7 @@ public class PluginForm implements SearchableConfigurable {
                     EDIT_ENTRY_TITLE,
                     project,
                     selected.getNamespace(),
-                    selected.getTemplatePath()
+                    selected.getPluginPath()
             );
             dialog.addPluginConfigListener(pluginConfig -> {
                 setPluginConfig(pluginConfig, selectedRow);

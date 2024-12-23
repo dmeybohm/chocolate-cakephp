@@ -55,7 +55,7 @@ class PluginTableModel private constructor(
             0 ->
                 pluginEntries[i].namespace
             1 ->
-                pluginEntries[i].templatePath ?: ""
+                pluginEntries[i].pluginPath ?: ""
             else ->
                 throw RuntimeException("Invalid column")
         }
@@ -67,7 +67,7 @@ class PluginTableModel private constructor(
             0 ->
                 existingEntry.namespace = o.toString()
             1 ->
-                existingEntry.templatePath = o.toString()
+                existingEntry.pluginPath = o.toString()
             else ->
                 throw RuntimeException("Invalid column")
         }
