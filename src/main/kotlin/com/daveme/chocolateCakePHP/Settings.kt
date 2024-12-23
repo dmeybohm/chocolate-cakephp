@@ -26,7 +26,7 @@ data class PluginConfig(
     val namespace: String = "",
 
     @Property
-    val templatePath: String? = null
+    val pluginPath: String? = null
 )
 
 data class SettingsState(
@@ -36,7 +36,6 @@ data class SettingsState(
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
-    var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = false,
     var cake3Enabled: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
@@ -180,7 +179,7 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val pluginTemplatePaths: List<String>
         get() {
-            return state.pluginConfigs.map { it.templatePath }.filterNotNull() +
+            return state.pluginConfigs.map { it.pluginPath }.filterNotNull() +
                 state.themeTemplatePaths
         }
 
@@ -193,7 +192,7 @@ class Settings : PersistentStateComponent<SettingsState> {
             result.set(pluginConfig.namespace,
                 PluginEntry(
                     namespace = pluginConfig.namespace,
-                    templatePath = pluginConfig.templatePath
+                    templatePath = pluginConfig.pluginPath
                 )
             )
         }

@@ -28,7 +28,6 @@ public class PluginForm implements SearchableConfigurable {
     private JPanel headlinePanelForPlugins;
 
     private static final String EDIT_ENTRY_TITLE = "Edit Plugin Namespace";
-    private static final String EDIT_ENTRY_LABEL = "Plugin namespace";
 
     public PluginForm(Project project) {
         this.project = project;
@@ -54,7 +53,7 @@ public class PluginForm implements SearchableConfigurable {
         final Settings defaults = Settings.getDefaults();
 
         this.tableView = new TableView<>(pluginTableModel);
-        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<PluginEntry>() {
+        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
             @Override
             public PluginEntry createElement() {
                 return null;
@@ -115,8 +114,8 @@ public class PluginForm implements SearchableConfigurable {
     private void setPluginConfig(PluginConfig pluginConfig, int selectedRow) {
         String withBackslash = pluginConfig.getNamespace().startsWith("\\") ?
                 pluginConfig.getNamespace() : "\\" + pluginConfig.getNamespace();
-        String templatePath = pluginConfig.getTemplatePath() == null ? "" :
-                pluginConfig.getTemplatePath();
+        String templatePath = pluginConfig.getPluginPath() == null ? "" :
+                pluginConfig.getPluginPath();
         pluginTableModel.setValueAt(withBackslash, selectedRow, 0);
         pluginTableModel.setValueAt(templatePath, selectedRow, 1);
     }
