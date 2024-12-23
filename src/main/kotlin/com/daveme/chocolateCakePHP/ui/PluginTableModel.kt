@@ -90,7 +90,7 @@ class PluginTableModel private constructor(
         private val myColumns =
             arrayOf(
                 NamespaceColumn("Namespace"),
-                TemplatePathColumn("Template Path")
+                PluginPathColumn("Plugin Path")
             )
 
         @JvmStatic
