@@ -5,6 +5,10 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.Property
+import com.intellij.util.xmlb.annotations.Tag
+import com.intellij.util.xmlb.annotations.XCollection
 import java.io.File
 import java.lang.ref.WeakReference
 
@@ -14,6 +18,16 @@ private const val DEFAULT_NAMESPACE = "\\App"
 private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
+
+@Tag("PluginConfig")
+data class PluginConfig(
+
+    @Property
+    val namespace: String = "",
+
+    @Property
+    val templatePath: String? = null
+)
 
 data class SettingsState(
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
@@ -26,8 +40,16 @@ data class SettingsState(
     var cake2Enabled: Boolean = false,
     var cake3Enabled: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
-    var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
+
+    // deprecated: superseded by pluginConfigs
+    var pluginNamespaces: List<String> = listOf(),
+
     var dataViewExtensions: List<String> = arrayListOf("json", "xml"),
+
+    @XCollection
+    var pluginConfigs: List<PluginConfig> = listOf(),
+    var themeTemplatePaths: List<String> = listOf(),
+
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
@@ -153,12 +175,49 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val pluginEntries: List<PluginEntry>
         get() {
-            return pluginEntryListFromNamespaceList(state.pluginNamespaces)
+            return synthesizePluginEntries(state.pluginNamespaces, state.pluginConfigs)
         }
+
+    val pluginTemplatePaths: List<String>
+        get() {
+            return state.pluginConfigs.map { it.templatePath }.filterNotNull() +
+                state.themeTemplatePaths
+        }
+
+    private fun synthesizePluginEntries(
+        pluginNamespaces: List<String>,
+        pluginConfigs: List<PluginConfig>
+    ): List<PluginEntry> {
+        val result = hashMapOf<String, PluginEntry>()
+        for (pluginConfig in pluginConfigs) {
+            result.set(pluginConfig.namespace,
+                PluginEntry(
+                    namespace = pluginConfig.namespace,
+                    templatePath = pluginConfig.templatePath
+                )
+            )
+        }
+
+        for (pluginNamespace in pluginNamespaces) {
+            if (!result.containsKey(pluginNamespace)) {
+                result.set(pluginNamespace, PluginEntry(
+                    namespace = pluginNamespace,
+                    templatePath = null)
+                )
+            }
+        }
+
+        return result.values.toList()
+    }
 
     val dataViewExtensions: List<String>
         get() {
             return state.dataViewExtensions
+        }
+
+    val pluginConfig: List<PluginConfig>
+        get() {
+            return state.pluginConfigs
         }
 
     val enabled: Boolean
@@ -182,8 +241,8 @@ class Settings : PersistentStateComponent<SettingsState> {
         return this.state
     }
 
-    override fun loadState(state: SettingsState) {
-        this.state = state
+    override fun loadState(newState: SettingsState) {
+        XmlSerializerUtil.copyBean(newState, this.state)
     }
 
     companion object {
@@ -210,16 +269,9 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
-        fun pluginEntryListFromNamespaceList(list: List<String>): List<PluginEntry> {
-            val result = arrayListOf<PluginEntry>()
-            list.forEach { result.add(PluginEntry(it)) }
-            return result.toList()
-        }
-
-        @JvmStatic
-        fun pluginNamespaceListFromEntryList(list: List<PluginEntry>): List<String> {
-            val result = arrayListOf<String>()
-            list.forEach { result.add(it.namespace) }
+        fun pluginConfigsFromEntryList(list: List<PluginEntry>): List<PluginConfig> {
+            val result = arrayListOf<PluginConfig>()
+            list.forEach { result.add(PluginConfig(it.namespace, it.templatePath)) }
             return result
         }
 

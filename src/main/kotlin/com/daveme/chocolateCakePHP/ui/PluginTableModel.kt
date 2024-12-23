@@ -35,7 +35,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnCount(): Int {
-        return 1
+        return 2
     }
 
     override fun getColumnName(i: Int): String {
@@ -51,11 +51,27 @@ class PluginTableModel private constructor(
     }
 
     override fun getValueAt(i: Int, i1: Int): Any {
-        return pluginEntries[i].namespace
+        return when (i1) {
+            0 ->
+                pluginEntries[i].namespace
+            1 ->
+                pluginEntries[i].templatePath ?: ""
+            else ->
+                throw RuntimeException("Invalid column")
+        }
     }
 
     override fun setValueAt(o: Any, i: Int, i1: Int) {
-        pluginEntries[i] = o as PluginEntry
+        val existingEntry = pluginEntries[i]
+        when (i1) {
+            0 ->
+                existingEntry.namespace = o.toString()
+            1 ->
+                existingEntry.templatePath = o.toString()
+            else ->
+                throw RuntimeException("Invalid column")
+        }
+        pluginEntries[i] = existingEntry
         fireTableCellUpdated(i, i1)
     }
 
@@ -72,8 +88,9 @@ class PluginTableModel private constructor(
 
     companion object {
         private val myColumns =
-            arrayOf<ColumnInfo<PluginEntry, String>>(
-                NamespaceColumn("Namespace")
+            arrayOf(
+                NamespaceColumn("Namespace"),
+                TemplatePathColumn("Template Path")
             )
 
         @JvmStatic
