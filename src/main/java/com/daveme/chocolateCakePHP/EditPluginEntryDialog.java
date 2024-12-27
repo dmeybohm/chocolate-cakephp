@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.PluginConfigListener;
-import com.daveme.chocolateCakePHP.ui.TextFieldListener;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
@@ -20,9 +19,8 @@ public class EditPluginEntryDialog extends JDialog {
     private PluginConfigListener listener;
 
     public EditPluginEntryDialog(
-            Project project,
-            String initialNamespace,
-            String initialTemplatePath
+        Project project,
+        PluginConfig initialPluginConfig
     ) {
         this.project = project;
 
@@ -45,21 +43,25 @@ public class EditPluginEntryDialog extends JDialog {
         // call onCancel() on ESCAPE
         contentPane.registerKeyboardAction(
                 e -> onCancel(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT
         );
 
         namespaceTextField.requestFocus();
-        namespaceTextField.setText(initialNamespace);
-        templatePathTextField.setText(initialTemplatePath);
+        namespaceTextField.setText(initialPluginConfig.getNamespace());
+        templatePathTextField.setText(initialPluginConfig.getPluginPath());
+        // todo srcPath
+        // todo assetPath
     }
 
     private void onOK() {
         if (listener != null) {
-            String templatePath = templatePathTextField.getText().isEmpty() ? null
-                    : templatePathTextField.getText();
             listener.actionPerformed(new PluginConfig(
-                    namespaceTextField.getText(),
-                    templatePath
+                namespaceTextField.getText(),
+                templatePathTextField.getText(),
+                // todo update
+                "",
+                ""
             ));
         }
         dispose();
@@ -80,13 +82,11 @@ public class EditPluginEntryDialog extends JDialog {
     public static EditPluginEntryDialog createDialog(
             String title,
             Project project,
-            String initialNamespace,
-            String initialTemplatePath
+            PluginConfig initialPluginConfig
     ) {
         EditPluginEntryDialog dialog = new EditPluginEntryDialog(
-                project,
-                initialNamespace,
-                initialTemplatePath
+            project,
+            initialPluginConfig
         );
         dialog.setLocationRelativeTo(null);
         dialog.setTitle(title);

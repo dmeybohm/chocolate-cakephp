@@ -14,7 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
-import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+import static com.daveme.chocolateCakePHP.SettingsKt.*;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -83,13 +83,12 @@ public class PluginForm implements SearchableConfigurable {
 
         decorator.setAddAction(action -> {
             EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    project,
-                    "",
-                    ""
+                EDIT_ENTRY_TITLE,
+                project,
+                defaultPluginConfig()
             );
             dialog.addPluginConfigListener(pluginConfig -> {
-                pluginTableModel.addRow(new PluginEntry("", null));
+                pluginTableModel.addRow(PluginEntry.fromPluginConfig(pluginConfig));
                 setPluginConfig(pluginConfig, pluginTableModel.getRowCount() - 1);
             });
             dialog.setVisible(true);
@@ -105,7 +104,7 @@ public class PluginForm implements SearchableConfigurable {
         tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
 
         pluginPathDefaultButton.addActionListener(e ->
-                this.pluginPathTextField.setText(defaults.getPluginPath())
+            this.pluginPathTextField.setText(defaults.getPluginPath())
         );
 
         return topPanel;
@@ -114,8 +113,8 @@ public class PluginForm implements SearchableConfigurable {
     private void setPluginConfig(PluginConfig pluginConfig, int selectedRow) {
         String withBackslash = pluginConfig.getNamespace().startsWith("\\") ?
                 pluginConfig.getNamespace() : "\\" + pluginConfig.getNamespace();
-        String templatePath = pluginConfig.getPluginPath() == null ? "" :
-                pluginConfig.getPluginPath();
+        pluginConfig.getPluginPath();
+        String templatePath = pluginConfig.getPluginPath();
         pluginTableModel.setValueAt(withBackslash, selectedRow, 0);
         pluginTableModel.setValueAt(templatePath, selectedRow, 1);
     }

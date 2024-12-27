@@ -14,8 +14,8 @@ class PluginTableModel private constructor(
 ) :
     ListTableModel<PluginEntry>(*columns),
     SortableColumnModel,
-    TableModel {
-
+    TableModel
+{
     override fun setSortable(aBoolean: Boolean) {}
 
     override fun isSortable(): Boolean {
@@ -55,7 +55,7 @@ class PluginTableModel private constructor(
             0 ->
                 pluginEntries[i].namespace
             1 ->
-                pluginEntries[i].pluginPath ?: ""
+                pluginEntries[i].pluginPath
             else ->
                 throw RuntimeException("Invalid column")
         }
@@ -95,7 +95,10 @@ class PluginTableModel private constructor(
 
         @JvmStatic
         fun fromSettings(settings: Settings): PluginTableModel {
-            return PluginTableModel(settings.pluginEntries.toMutableList(), myColumns)
+            return PluginTableModel(
+                settings.pluginEntries.toMutableList(),
+                myColumns
+            )
         }
     }
 
