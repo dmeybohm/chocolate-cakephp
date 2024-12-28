@@ -108,7 +108,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="&lt;html&gt;Add namespaces for each plugin you want to add autocomplete for below.&lt;/html&gt;"/>
+              <text value="&lt;html&gt;Add configuration for each plugin you want to add autocomplete for below.&lt;/html&gt;"/>
             </properties>
           </component>
           <vspacer id="93259">

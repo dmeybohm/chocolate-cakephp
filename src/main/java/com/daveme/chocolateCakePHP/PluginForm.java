@@ -25,6 +25,7 @@ public class PluginForm implements SearchableConfigurable {
     private JPanel tableViewPanel;
     private JButton pluginPathDefaultButton;
     private JTextField pluginPathTextField;
+    private JPanel headlinePanelForPlugins;
 
     private static final String EDIT_ENTRY_TITLE = "Edit Plugin Config";
 

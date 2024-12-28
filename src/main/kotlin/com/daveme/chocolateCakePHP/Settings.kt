@@ -193,12 +193,7 @@ class Settings : PersistentStateComponent<SettingsState> {
     ): List<PluginEntry> {
         val result = hashMapOf<String, PluginEntry>()
         for (pluginConfig in pluginConfigs) {
-            result.set(pluginConfig.namespace,
-                PluginEntry(
-                    namespace = pluginConfig.namespace,
-                    pluginPath = pluginConfig.pluginPath
-                )
-            )
+            result.set(pluginConfig.namespace, PluginEntry.fromPluginConfig(pluginConfig))
         }
 
         for (pluginNamespace in pluginNamespaces) {

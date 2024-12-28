@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
+import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 
@@ -14,7 +15,10 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         newState.cake3ForceEnabled = true
         newState.cake2Enabled = false
         newState.appDirectory = "src4"
-        newState.pluginNamespaces = listOf("\\TestPlugin")
+        newState.pluginConfigs = listOf(PluginConfig(
+            namespace = "\\TestPlugin",
+            pluginPath = "vendor/test/test_plugin"
+        ))
         originalSettings.loadState(newState)
 
         setUpTestFiles()
