@@ -25,9 +25,8 @@ public class PluginForm implements SearchableConfigurable {
     private JPanel tableViewPanel;
     private JButton pluginPathDefaultButton;
     private JTextField pluginPathTextField;
-    private JPanel headlinePanelForPlugins;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Namespace";
+    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Config";
 
     public PluginForm(Project project) {
         this.project = project;
@@ -69,28 +68,28 @@ public class PluginForm implements SearchableConfigurable {
             PluginEntry selected = tableView.getSelectedObject();
             final int selectedRow = tableView.getSelectedRow();
             assert selected != null;
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
+            EditPluginEntryDialog dialog= new EditPluginEntryDialog(
                     project,
+                    EDIT_ENTRY_TITLE,
                     selected.toPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
                 setPluginConfig(pluginConfig, selectedRow);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setAddAction(action -> {
-            EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
-                EDIT_ENTRY_TITLE,
+            EditPluginEntryDialog dialog = new EditPluginEntryDialog(
                 project,
+                EDIT_ENTRY_TITLE,
                 defaultPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
                 pluginTableModel.addRow(PluginEntry.fromPluginConfig(pluginConfig));
                 setPluginConfig(pluginConfig, pluginTableModel.getRowCount() - 1);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setRemoveAction(action -> {

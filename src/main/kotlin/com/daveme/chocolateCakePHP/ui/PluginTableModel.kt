@@ -35,7 +35,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnCount(): Int {
-        return 2
+        return myColumns.size
     }
 
     override fun getColumnName(i: Int): String {
@@ -56,6 +56,10 @@ class PluginTableModel private constructor(
                 pluginEntries[i].namespace
             1 ->
                 pluginEntries[i].pluginPath
+            2 ->
+                pluginEntries[i].srcPath
+            3 ->
+                pluginEntries[i].assetPath
             else ->
                 throw RuntimeException("Invalid column")
         }
@@ -68,6 +72,10 @@ class PluginTableModel private constructor(
                 existingEntry.namespace = o.toString()
             1 ->
                 existingEntry.pluginPath = o.toString()
+            2 ->
+                existingEntry.srcPath = o.toString()
+            3 ->
+                existingEntry.assetPath = o.toString()
             else ->
                 throw RuntimeException("Invalid column")
         }
@@ -86,11 +94,37 @@ class PluginTableModel private constructor(
         fireTableRowsDeleted(idx, idx)
     }
 
+    class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
+        override fun valueOf(pluginEntry: PluginEntry): String {
+            return pluginEntry.namespace
+        }
+    }
+
+    class PluginPathColumn : ColumnInfo<PluginEntry, String>("Plugin Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String {
+            return pluginEntry.pluginPath
+        }
+    }
+
+    class SourcePathColumn : ColumnInfo<PluginEntry, String>("Source Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String {
+            return pluginEntry.srcPath
+        }
+    }
+
+    class AssetsPathColumn : ColumnInfo<PluginEntry, String>("Assets Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String {
+            return pluginEntry.assetPath
+        }
+    }
+
     companion object {
         private val myColumns =
             arrayOf(
-                NamespaceColumn("Namespace"),
-                PluginPathColumn("Plugin Path")
+                NamespaceColumn(),
+                PluginPathColumn(),
+                SourcePathColumn(),
+                AssetsPathColumn(),
             )
 
         @JvmStatic
