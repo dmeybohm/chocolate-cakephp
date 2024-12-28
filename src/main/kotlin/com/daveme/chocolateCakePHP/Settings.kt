@@ -5,6 +5,10 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.Property
+import com.intellij.util.xmlb.annotations.Tag
+import com.intellij.util.xmlb.annotations.XCollection
 import java.io.File
 import java.lang.ref.WeakReference
 
@@ -15,6 +19,26 @@ private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
 
+fun defaultPluginConfig(): PluginConfig {
+    return PluginConfig()
+}
+
+@Tag("PluginConfig")
+data class PluginConfig(
+
+    @Property
+    val namespace: String = "",
+
+    @Property
+    val pluginPath: String = "",
+
+    @Property
+    val srcPath: String = "src",
+
+    @Property
+    val assetPath: String = "webroot",
+)
+
 data class SettingsState(
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
     var appDirectory: String = DEFAULT_APP_DIRECTORY,
@@ -22,12 +46,17 @@ data class SettingsState(
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
-    var cake2PluginPath: String = "app/Plugin",
     var cake2Enabled: Boolean = false,
     var cake3Enabled: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
-    var pluginNamespaces: List<String> = arrayListOf("\\DebugKit"),
+
+    // deprecated: superseded by pluginConfigs
+    var pluginNamespaces: List<String> = listOf(),
+
     var dataViewExtensions: List<String> = arrayListOf("json", "xml"),
+
+    @XCollection
+    var pluginConfigs: List<PluginConfig> = listOf(),
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
@@ -151,14 +180,42 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake3ForceEnabled get() = state.cake3ForceEnabled
     var autoDetectedValues = CakeAutoDetectedValues()
 
-    val pluginEntries: List<PluginEntry>
-        get() {
-            return pluginEntryListFromNamespaceList(state.pluginNamespaces)
+    private fun synthesizePluginEntries(
+        pluginNamespaces: List<String>,
+        pluginConfigs: List<PluginConfig>
+    ): List<PluginConfig> {
+        val result = hashMapOf<String, PluginConfig>()
+        for (pluginConfig in pluginConfigs) {
+            result.set(pluginConfig.namespace, pluginConfig)
         }
+
+        for (pluginNamespace in pluginNamespaces) {
+            if (!result.containsKey(pluginNamespace)) {
+                result.set(pluginNamespace, PluginConfig(
+                    namespace = pluginNamespace,
+                    pluginPath = ""
+                ))
+            }
+        }
+
+        return result.values.toList()
+    }
 
     val dataViewExtensions: List<String>
         get() {
             return state.dataViewExtensions
+        }
+
+    val pluginConfigs: List<PluginConfig>
+        get() {
+            if (state.pluginNamespaces.isEmpty()) {
+                return state.pluginConfigs
+            } else {
+                return synthesizePluginEntries(
+                    state.pluginNamespaces,
+                    state.pluginConfigs
+                )
+            }
         }
 
     val enabled: Boolean
@@ -182,8 +239,8 @@ class Settings : PersistentStateComponent<SettingsState> {
         return this.state
     }
 
-    override fun loadState(state: SettingsState) {
-        this.state = state
+    override fun loadState(newState: SettingsState) {
+        XmlSerializerUtil.copyBean(newState, this.state)
     }
 
     companion object {
@@ -210,17 +267,10 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
-        fun pluginEntryListFromNamespaceList(list: List<String>): List<PluginEntry> {
-            val result = arrayListOf<PluginEntry>()
-            list.forEach { result.add(PluginEntry(it)) }
-            return result.toList()
-        }
-
-        @JvmStatic
-        fun pluginNamespaceListFromEntryList(list: List<PluginEntry>): List<String> {
-            val result = arrayListOf<String>()
-            list.forEach { result.add(it.namespace) }
-            return result
+        fun pluginConfigsFromEntryList(
+            list: List<PluginEntry>
+        ): List<PluginConfig> {
+            return list.map { it.toPluginConfig() }
         }
 
     }

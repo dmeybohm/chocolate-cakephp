@@ -14,8 +14,8 @@ class PluginTableModel private constructor(
 ) :
     ListTableModel<PluginEntry>(*columns),
     SortableColumnModel,
-    TableModel {
-
+    TableModel
+{
     override fun setSortable(aBoolean: Boolean) {}
 
     override fun isSortable(): Boolean {
@@ -35,7 +35,7 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnCount(): Int {
-        return 1
+        return myColumns.size
     }
 
     override fun getColumnName(i: Int): String {
@@ -51,11 +51,35 @@ class PluginTableModel private constructor(
     }
 
     override fun getValueAt(i: Int, i1: Int): Any {
-        return pluginEntries[i].namespace
+        return when (i1) {
+            0 ->
+                pluginEntries[i].namespace
+            1 ->
+                pluginEntries[i].pluginPath
+            2 ->
+                pluginEntries[i].srcPath
+            3 ->
+                pluginEntries[i].assetPath
+            else ->
+                throw RuntimeException("Invalid column")
+        }
     }
 
     override fun setValueAt(o: Any, i: Int, i1: Int) {
-        pluginEntries[i] = o as PluginEntry
+        val existingEntry = pluginEntries[i]
+        when (i1) {
+            0 ->
+                existingEntry.namespace = o.toString()
+            1 ->
+                existingEntry.pluginPath = o.toString()
+            2 ->
+                existingEntry.srcPath = o.toString()
+            3 ->
+                existingEntry.assetPath = o.toString()
+            else ->
+                throw RuntimeException("Invalid column")
+        }
+        pluginEntries[i] = existingEntry
         fireTableCellUpdated(i, i1)
     }
 
@@ -70,15 +94,44 @@ class PluginTableModel private constructor(
         fireTableRowsDeleted(idx, idx)
     }
 
+    class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.namespace
+    }
+
+    class PluginPathColumn : ColumnInfo<PluginEntry, String>("Plugin Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.pluginPath
+    }
+
+    class SourcePathColumn : ColumnInfo<PluginEntry, String>("Source Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.srcPath
+    }
+
+    class AssetsPathColumn : ColumnInfo<PluginEntry, String>("Assets Path") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.assetPath
+    }
+
     companion object {
         private val myColumns =
-            arrayOf<ColumnInfo<PluginEntry, String>>(
-                NamespaceColumn("Namespace")
+            arrayOf(
+                NamespaceColumn(),
+                PluginPathColumn(),
+                SourcePathColumn(),
+                AssetsPathColumn(),
             )
 
         @JvmStatic
         fun fromSettings(settings: Settings): PluginTableModel {
-            return PluginTableModel(settings.pluginEntries.toMutableList(), myColumns)
+            val pluginEntries = settings.pluginConfigs.map {
+                PluginEntry.fromPluginConfig(it)
+            }.toMutableList()
+            return PluginTableModel(
+                pluginEntries,
+                myColumns
+            )
         }
     }
 

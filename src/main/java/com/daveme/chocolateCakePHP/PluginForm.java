@@ -12,8 +12,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 
-import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+import static com.daveme.chocolateCakePHP.SettingsKt.*;
 
 public class PluginForm implements SearchableConfigurable {
 
@@ -26,8 +27,7 @@ public class PluginForm implements SearchableConfigurable {
     private JTextField pluginPathTextField;
     private JPanel headlinePanelForPlugins;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Namespace";
-    private static final String EDIT_ENTRY_LABEL = "Plugin namespace";
+    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Config";
 
     public PluginForm(Project project) {
         this.project = project;
@@ -53,7 +53,7 @@ public class PluginForm implements SearchableConfigurable {
         final Settings defaults = Settings.getDefaults();
 
         this.tableView = new TableView<>(pluginTableModel);
-        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<PluginEntry>() {
+        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
             @Override
             public PluginEntry createElement() {
                 return null;
@@ -67,51 +67,61 @@ public class PluginForm implements SearchableConfigurable {
 
         decorator.setEditAction(action -> {
             PluginEntry selected = tableView.getSelectedObject();
+            if (selected == null) {
+                return;
+            }
             final int selectedRow = tableView.getSelectedRow();
-            assert selected != null;
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
+            EditPluginEntryDialog dialog= new EditPluginEntryDialog(
                     project,
-                    selected.getNamespace()
+                    EDIT_ENTRY_TITLE,
+                    selected.toPluginConfig()
             );
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
-                pluginTableModel.setValueAt(newPluginEntry, selectedRow, 0);
+            dialog.setAction(pluginConfig -> {
+                setPluginConfig(pluginConfig, selectedRow);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setAddAction(action -> {
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
-                    EDIT_ENTRY_LABEL,
-                    project,
-                    ""
+            EditPluginEntryDialog dialog = new EditPluginEntryDialog(
+                project,
+                EDIT_ENTRY_TITLE,
+                defaultPluginConfig()
             );
-            dialog.addTextFieldListener(fieldText -> {
-                String withBackslash = fieldText.startsWith("\\") ? fieldText : "\\" + fieldText;
-                PluginEntry newPluginEntry = new PluginEntry(withBackslash);
-                pluginTableModel.addRow(newPluginEntry);
+            dialog.setAction(pluginConfig -> {
+                pluginTableModel.addRow(PluginEntry.fromPluginConfig(pluginConfig));
+                setPluginConfig(pluginConfig, pluginTableModel.getRowCount() - 1);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setRemoveAction(action -> {
             pluginTableModel.removeRow(tableView.getSelectedRow());
         });
 
-        decorator.disableUpAction();
-        decorator.disableDownAction();
+        decorator.disableUpDownActions();
 
         tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
 
         pluginPathDefaultButton.addActionListener(e ->
-                this.pluginPathTextField.setText(defaults.getPluginPath())
+            this.pluginPathTextField.setText(defaults.getPluginPath())
         );
 
         return topPanel;
+    }
+
+    private void setPluginConfig(PluginConfig pluginConfig, int selectedRow) {
+        String withBackslash = pluginConfig.getNamespace().startsWith("\\")
+                ? pluginConfig.getNamespace()
+                : "\\" + pluginConfig.getNamespace();
+        String templatePath = pluginConfig.getPluginPath();
+        String sourcePath = pluginConfig.getSrcPath();
+        String assetPath = pluginConfig.getAssetPath();
+
+        pluginTableModel.setValueAt(withBackslash, selectedRow, 0);
+        pluginTableModel.setValueAt(templatePath, selectedRow, 1);
+        pluginTableModel.setValueAt(sourcePath, selectedRow, 2);
+        pluginTableModel.setValueAt(assetPath, selectedRow, 3);
     }
 
     @Override
@@ -125,8 +135,11 @@ public class PluginForm implements SearchableConfigurable {
     private void applyToSettings(@NotNull Settings settings) {
         SettingsState origState = settings.getState();
         SettingsState newState = copySettingsState(origState);
-        newState.setPluginNamespaces(Settings.pluginNamespaceListFromEntryList(pluginTableModel.getPluginEntries()));
+        newState.setPluginConfigs(Settings.pluginConfigsFromEntryList(
+                pluginTableModel.getPluginEntries()));
         newState.setPluginPath(pluginPathTextField.getText());
+        // Clear legacy lists:
+        newState.setPluginNamespaces(new ArrayList<>());
         settings.loadState(newState);
     }
 

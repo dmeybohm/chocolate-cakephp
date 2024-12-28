@@ -13,8 +13,8 @@ fun PhpIndex.getPossibleTableClasses(settings: Settings, possibleTableName: Stri
     val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
     resultClasses += this.getClassesByFQN(possibleAppNamespaceClass)
 
-    settings.pluginEntries.forEach { pluginEntry ->
-        resultClasses += this.getClassesByFQN("${pluginEntry.namespace}\\Model\\Table\\${possibleTableName}Table")
+    settings.pluginConfigs.forEach { pluginConfig ->
+        resultClasses += this.getClassesByFQN("${pluginConfig.namespace}\\Model\\Table\\${possibleTableName}Table")
     }
     return resultClasses
 }
