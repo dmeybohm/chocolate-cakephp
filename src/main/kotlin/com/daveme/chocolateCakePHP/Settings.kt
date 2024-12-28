@@ -182,23 +182,18 @@ class Settings : PersistentStateComponent<SettingsState> {
     val cake3ForceEnabled get() = state.cake3ForceEnabled
     var autoDetectedValues = CakeAutoDetectedValues()
 
-    val pluginEntries: List<PluginEntry>
-        get() {
-            return synthesizePluginEntries(state.pluginNamespaces, state.pluginConfigs)
-        }
-
     private fun synthesizePluginEntries(
         pluginNamespaces: List<String>,
         pluginConfigs: List<PluginConfig>
-    ): List<PluginEntry> {
-        val result = hashMapOf<String, PluginEntry>()
+    ): List<PluginConfig> {
+        val result = hashMapOf<String, PluginConfig>()
         for (pluginConfig in pluginConfigs) {
-            result.set(pluginConfig.namespace, PluginEntry.fromPluginConfig(pluginConfig))
+            result.set(pluginConfig.namespace, pluginConfig)
         }
 
         for (pluginNamespace in pluginNamespaces) {
             if (!result.containsKey(pluginNamespace)) {
-                result.set(pluginNamespace, PluginEntry(
+                result.set(pluginNamespace, PluginConfig(
                     namespace = pluginNamespace,
                     pluginPath = ""
                 ))
@@ -213,9 +208,16 @@ class Settings : PersistentStateComponent<SettingsState> {
             return state.dataViewExtensions
         }
 
-    val pluginConfig: List<PluginConfig>
+    val pluginConfigs: List<PluginConfig>
         get() {
-            return state.pluginConfigs
+            if (state.pluginNamespaces.isEmpty()) {
+                return state.pluginConfigs
+            } else {
+                return synthesizePluginEntries(
+                    state.pluginNamespaces,
+                    state.pluginConfigs
+                )
+            }
         }
 
     val enabled: Boolean
@@ -267,10 +269,10 @@ class Settings : PersistentStateComponent<SettingsState> {
         }
 
         @JvmStatic
-        fun pluginConfigsFromEntryList(list: List<PluginEntry>): List<PluginConfig> {
-            val result = arrayListOf<PluginConfig>()
-            list.forEach { result.add(PluginConfig(it.namespace, it.pluginPath)) }
-            return result
+        fun pluginConfigsFromEntryList(
+            list: List<PluginEntry>
+        ): List<PluginConfig> {
+            return list.map { it.toPluginConfig() }
         }
 
     }

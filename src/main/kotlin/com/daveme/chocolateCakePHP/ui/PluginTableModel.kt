@@ -125,8 +125,11 @@ class PluginTableModel private constructor(
 
         @JvmStatic
         fun fromSettings(settings: Settings): PluginTableModel {
+            val pluginEntries = settings.pluginConfigs.map {
+                PluginEntry.fromPluginConfig(it)
+            }.toMutableList()
             return PluginTableModel(
-                settings.pluginEntries.toMutableList(),
+                pluginEntries,
                 myColumns
             )
         }

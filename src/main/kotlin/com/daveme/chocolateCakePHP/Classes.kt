@@ -143,8 +143,8 @@ fun PhpIndex.viewHelperClassesFromFieldName(settings: Settings, fieldName: Strin
         result += getClassesByFQN(
             "${settings.appNamespace}\\View\\Helper\\${fieldName}Helper"
         )
-        for (pluginEntry in settings.pluginEntries) {
-            result += getClassesByFQN("${pluginEntry.namespace}\\View\\Helper\\${fieldName}Helper")
+        for (pluginConfig in settings.pluginConfigs) {
+            result += getClassesByFQN("${pluginConfig.namespace}\\View\\Helper\\${fieldName}Helper")
         }
     }
     return result
@@ -167,8 +167,8 @@ fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: S
         result += getClassesByFQN(
                 "${settings.appNamespace}\\Controller\\Component\\${fieldName}Component"
         )
-        for (pluginEntry in settings.pluginEntries) {
-            result += getClassesByFQN("${pluginEntry.namespace}\\Controller\\Component\\${fieldName}Component")
+        for (pluginConfig in settings.pluginConfigs) {
+            result += getClassesByFQN("${pluginConfig.namespace}\\Controller\\Component\\${fieldName}Component")
         }
     }
     return result
@@ -190,8 +190,8 @@ fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: Strin
         result += getClassesByFQN(
                 "${settings.appNamespace}\\Model\\Table\\$fieldName"
         )
-        for (pluginEntry in settings.pluginEntries) {
-            result += getClassesByFQN("${pluginEntry.namespace}\\Model\\Table\\${fieldName}")
+        for (pluginConfig in settings.pluginConfigs) {
+            result += getClassesByFQN("${pluginConfig.namespace}\\Model\\Table\\${fieldName}")
         }
     }
     return result
@@ -220,8 +220,8 @@ fun viewHelperTypeFromFieldName(settings: Settings, fieldName: String): PhpType 
     if (settings.cake3Enabled) {
         result = result.add("\\Cake\\View\\Helper\\${fieldName}Helper")
             .add("${settings.appNamespace}\\View\\Helper\\${fieldName}Helper")
-        for (pluginEntry in settings.pluginEntries) {
-            result = result.add("${pluginEntry.namespace}\\View\\Helper\\${fieldName}Helper")
+        for (pluginConfig in settings.pluginConfigs) {
+            result = result.add("${pluginConfig.namespace}\\View\\Helper\\${fieldName}Helper")
         }
     }
     return result
@@ -242,8 +242,8 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
             .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
             .add("${settings.appNamespace}\\Model\\Table\\${pluralFieldName}Table")
             .add("${settings.appNamespace}\\Model\\Table\\${fieldName}Table")
-        for (pluginEntry in settings.pluginEntries) {
-            result = result.add("${pluginEntry.namespace}\\Controller\\Component\\${fieldName}Component")
+        for (pluginConfig in settings.pluginConfigs) {
+            result = result.add("${pluginConfig.namespace}\\Controller\\Component\\${fieldName}Component")
         }
     }
     return result
@@ -257,8 +257,8 @@ fun controllerTypeFromControllerName(settings: Settings, controllerName: String)
     if (settings.cake3Enabled) {
         result = result.add("\\Cake\\Controller\\${controllerName}Controller")
             .add("${settings.appNamespace}\\Controller\\${controllerName}Controller")
-        for (pluginEntry in settings.pluginEntries) {
-            result = result.add("${pluginEntry.namespace}\\Controller\\${controllerName}Controller")
+        for (pluginConfig in settings.pluginConfigs) {
+            result = result.add("${pluginConfig.namespace}\\Controller\\${controllerName}Controller")
         }
     }
     return result
