@@ -57,8 +57,6 @@ data class SettingsState(
 
     @XCollection
     var pluginConfigs: List<PluginConfig> = listOf(),
-    var themeTemplatePaths: List<String> = listOf(),
-
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
