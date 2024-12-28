@@ -39,7 +39,7 @@ data class PluginConfig(
     val srcPath: String = "src",
 
     @Property
-    val assertPath: String = "webroot",
+    val assetPath: String = "webroot",
 )
 
 data class SettingsState(

@@ -14,9 +14,18 @@ data class PluginEntry(
             return PluginEntry(
                 namespace = pluginConfig.namespace,
                 pluginPath = pluginConfig.pluginPath,
-                assetPath = pluginConfig.assertPath,
+                assetPath = pluginConfig.assetPath,
                 srcPath = pluginConfig.srcPath,
             )
         }
+    }
+
+    fun toPluginConfig(): PluginConfig {
+        return PluginConfig(
+            namespace = namespace,
+            pluginPath = pluginPath,
+            assetPath = assetPath,
+            srcPath = srcPath
+        )
     }
 }

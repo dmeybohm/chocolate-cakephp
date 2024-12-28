@@ -72,10 +72,9 @@ public class PluginForm implements SearchableConfigurable {
             EditPluginEntryDialog dialog = EditPluginEntryDialog.createDialog(
                     EDIT_ENTRY_TITLE,
                     project,
-                    selected.getNamespace(),
-                    selected.getPluginPath()
+                    selected.toPluginConfig()
             );
-            dialog.addPluginConfigListener(pluginConfig -> {
+            dialog.setAction(pluginConfig -> {
                 setPluginConfig(pluginConfig, selectedRow);
             });
             dialog.setVisible(true);
@@ -87,7 +86,7 @@ public class PluginForm implements SearchableConfigurable {
                 project,
                 defaultPluginConfig()
             );
-            dialog.addPluginConfigListener(pluginConfig -> {
+            dialog.setAction(pluginConfig -> {
                 pluginTableModel.addRow(PluginEntry.fromPluginConfig(pluginConfig));
                 setPluginConfig(pluginConfig, pluginTableModel.getRowCount() - 1);
             });
@@ -98,8 +97,7 @@ public class PluginForm implements SearchableConfigurable {
             pluginTableModel.removeRow(tableView.getSelectedRow());
         });
 
-        decorator.disableUpAction();
-        decorator.disableDownAction();
+        decorator.disableUpDownActions();
 
         tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
 

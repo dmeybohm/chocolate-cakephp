@@ -1,10 +1,10 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.PluginConfigListener;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
 import java.awt.event.*;
+import java.util.function.Consumer;
 
 public class EditPluginEntryDialog extends JDialog {
     private JPanel contentPane;
@@ -16,7 +16,7 @@ public class EditPluginEntryDialog extends JDialog {
 
     final private Project project;
 
-    private PluginConfigListener listener;
+    private Consumer<PluginConfig> action;
 
     public EditPluginEntryDialog(
         Project project,
@@ -55,8 +55,8 @@ public class EditPluginEntryDialog extends JDialog {
     }
 
     private void onOK() {
-        if (listener != null) {
-            listener.actionPerformed(new PluginConfig(
+        if (action != null) {
+            action.accept(new PluginConfig(
                 namespaceTextField.getText(),
                 templatePathTextField.getText(),
                 // todo update
@@ -75,8 +75,8 @@ public class EditPluginEntryDialog extends JDialog {
     private void createUIComponents() {
     }
 
-    public void addPluginConfigListener(PluginConfigListener listener) {
-        this.listener = listener;
+    public void setAction(Consumer<PluginConfig> consumer) {
+        this.action = consumer;
     }
 
     public static EditPluginEntryDialog createDialog(

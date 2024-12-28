@@ -68,7 +68,9 @@ public class DataViewsForm implements SearchableConfigurable {
                     EDIT_ENTRY_LABEL,
                     project,
                     selected);
-            dialog.addTextFieldListener(fieldText -> dataViewTableModel.setValueAt(fieldText, selectedRow, 0));
+            dialog.setAction(fieldText -> {
+                dataViewTableModel.setValueAt(fieldText, selectedRow, 0);
+            });
             dialog.setVisible(true);
         });
 
@@ -79,7 +81,9 @@ public class DataViewsForm implements SearchableConfigurable {
                     project,
                     ""
             );
-            dialog.addTextFieldListener(fieldText -> dataViewTableModel.addRow(fieldText));
+            dialog.setAction(fieldText -> {
+                dataViewTableModel.addRow(fieldText);
+            });
             dialog.setVisible(true);
         });
 

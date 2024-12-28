@@ -1,10 +1,10 @@
 package com.daveme.chocolateCakePHP;
 
-import com.daveme.chocolateCakePHP.ui.TextFieldListener;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
 import java.awt.event.*;
+import java.util.function.Consumer;
 
 public class EditEntryDialog extends JDialog {
     private JPanel contentPane;
@@ -15,7 +15,7 @@ public class EditEntryDialog extends JDialog {
 
     final private Project project;
 
-    private TextFieldListener listener;
+    private Consumer<String> action;
 
     public EditEntryDialog(String fieldLabelText, Project project, String initialValue) {
         this.project = project;
@@ -49,8 +49,8 @@ public class EditEntryDialog extends JDialog {
     }
 
     private void onOK() {
-        if (listener != null) {
-            listener.actionPerformed(fieldValueTextField.getText());
+        if (action != null) {
+            action.accept(fieldValueTextField.getText());
         }
         dispose();
     }
@@ -63,8 +63,8 @@ public class EditEntryDialog extends JDialog {
     private void createUIComponents() {
     }
 
-    public void addTextFieldListener(TextFieldListener listener) {
-        this.listener = listener;
+    public void setAction(Consumer<String> consumer) {
+        this.action = consumer;
     }
 
     public static EditEntryDialog createDialog(String title, String fieldLabel, Project project, String initialValue) {

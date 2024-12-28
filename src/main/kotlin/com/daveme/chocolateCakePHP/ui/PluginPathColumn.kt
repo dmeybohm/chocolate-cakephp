@@ -7,6 +7,6 @@ class PluginPathColumn(name: String) :
     ColumnInfo<PluginEntry, String>(name) {
 
     override fun valueOf(pluginEntry: PluginEntry): String {
-        return pluginEntry.pluginPath ?: ""
+        return pluginEntry.pluginPath
     }
 }
