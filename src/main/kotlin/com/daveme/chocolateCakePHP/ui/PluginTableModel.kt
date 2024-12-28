@@ -95,27 +95,23 @@ class PluginTableModel private constructor(
     }
 
     class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
-        override fun valueOf(pluginEntry: PluginEntry): String {
-            return pluginEntry.namespace
-        }
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.namespace
     }
 
     class PluginPathColumn : ColumnInfo<PluginEntry, String>("Plugin Path") {
-        override fun valueOf(pluginEntry: PluginEntry): String {
-            return pluginEntry.pluginPath
-        }
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.pluginPath
     }
 
     class SourcePathColumn : ColumnInfo<PluginEntry, String>("Source Path") {
-        override fun valueOf(pluginEntry: PluginEntry): String {
-            return pluginEntry.srcPath
-        }
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.srcPath
     }
 
     class AssetsPathColumn : ColumnInfo<PluginEntry, String>("Assets Path") {
-        override fun valueOf(pluginEntry: PluginEntry): String {
-            return pluginEntry.assetPath
-        }
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.assetPath
     }
 
     companion object {
