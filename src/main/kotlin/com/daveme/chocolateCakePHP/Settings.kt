@@ -19,9 +19,6 @@ private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
 
-const val DEFAULT_PLUGIN_SRC_PATH = "src"
-const val DEFAULT_PLUGIN_ASSET_PATH = "webroot"
-
 fun defaultPluginConfig(): PluginConfig {
     return PluginConfig()
 }
@@ -188,12 +185,6 @@ class Settings : PersistentStateComponent<SettingsState> {
     val pluginEntries: List<PluginEntry>
         get() {
             return synthesizePluginEntries(state.pluginNamespaces, state.pluginConfigs)
-        }
-
-    val pluginTemplatePaths: List<String>
-        get() {
-            return state.pluginConfigs.map { it.pluginPath }.filterNotNull() +
-                state.themeTemplatePaths
         }
 
     private fun synthesizePluginEntries(
