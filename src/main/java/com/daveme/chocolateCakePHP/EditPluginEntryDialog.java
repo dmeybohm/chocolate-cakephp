@@ -23,9 +23,9 @@ public class EditPluginEntryDialog extends DialogWrapper {
     private Consumer<PluginConfig> action;
 
     public EditPluginEntryDialog(
-        Project project,
+        @Nullable Project project,
         @NotNull String title,
-        PluginConfig initialPluginConfig
+        @NotNull PluginConfig initialPluginConfig
     ) {
         super(project, true, true);
 

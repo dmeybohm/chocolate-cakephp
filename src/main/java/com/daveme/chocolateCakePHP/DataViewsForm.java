@@ -62,29 +62,33 @@ public class DataViewsForm implements SearchableConfigurable {
 
         decorator.setEditAction(action -> {
             String selected = tableView.getSelectedObject();
+            if (selected == null) {
+                return;
+            }
             final int selectedRow = tableView.getSelectedRow();
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
+            EditEntryDialog dialog = new EditEntryDialog(
                     EDIT_ENTRY_LABEL,
+                    EDIT_ENTRY_TITLE,
                     project,
-                    selected);
+                    selected
+            );
             dialog.setAction(fieldText -> {
                 dataViewTableModel.setValueAt(fieldText, selectedRow, 0);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setAddAction(action -> {
-            EditEntryDialog dialog = EditEntryDialog.createDialog(
-                    EDIT_ENTRY_TITLE,
+            EditEntryDialog dialog = new EditEntryDialog(
                     EDIT_ENTRY_LABEL,
+                    EDIT_ENTRY_TITLE,
                     project,
                     ""
             );
             dialog.setAction(fieldText -> {
                 dataViewTableModel.addRow(fieldText);
             });
-            dialog.setVisible(true);
+            dialog.show();
         });
 
         decorator.setRemoveAction(action -> dataViewTableModel.removeRow(tableView.getSelectedRow()));

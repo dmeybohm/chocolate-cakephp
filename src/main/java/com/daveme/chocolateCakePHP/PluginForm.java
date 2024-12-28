@@ -67,8 +67,10 @@ public class PluginForm implements SearchableConfigurable {
 
         decorator.setEditAction(action -> {
             PluginEntry selected = tableView.getSelectedObject();
+            if (selected == null) {
+                return;
+            }
             final int selectedRow = tableView.getSelectedRow();
-            assert selected != null;
             EditPluginEntryDialog dialog= new EditPluginEntryDialog(
                     project,
                     EDIT_ENTRY_TITLE,
