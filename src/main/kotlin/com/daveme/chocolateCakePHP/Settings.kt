@@ -23,6 +23,10 @@ fun defaultPluginConfig(): PluginConfig {
     return PluginConfig()
 }
 
+fun defaultThemeConfig(): ThemeConfig {
+    return ThemeConfig()
+}
+
 @Tag("PluginConfig")
 data class PluginConfig(
 
@@ -37,6 +41,15 @@ data class PluginConfig(
 
     @Property
     val assetPath: String = "webroot",
+)
+
+@Tag("ThemeConfig")
+data class ThemeConfig (
+    @Property
+    val themePath: String = "",
+
+    @Property
+    val assetPath: String = "webroot"
 )
 
 data class SettingsState(
@@ -57,6 +70,9 @@ data class SettingsState(
 
     @XCollection
     var pluginConfigs: List<PluginConfig> = listOf(),
+
+    @XCollection
+    var themeConfigs: List<ThemeConfig> = listOf(),
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
@@ -216,6 +232,11 @@ class Settings : PersistentStateComponent<SettingsState> {
                     state.pluginConfigs
                 )
             }
+        }
+
+    val themeConfigs: List<ThemeConfig>
+        get() {
+            return state.themeConfigs
         }
 
     val enabled: Boolean
