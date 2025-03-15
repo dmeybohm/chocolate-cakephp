@@ -42,8 +42,10 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             ?: return PsiElement.EMPTY_ARRAY
         val templatesDirWithPath = templatesDirWithPath(psiElement.project, templatesDir)
             ?: return PsiElement.EMPTY_ARRAY
-        val allViewPaths = allViewPathsFromElementPath(templatesDirWithPath, settings, contents)
-        val files = viewFilesFromAllViewPaths(project, templatesDir, allViewPaths)
+
+        val themeDirectories = themeDirectories(project, settings)
+        val allViewPaths = allViewPathsFromElementPath(templatesDirWithPath, settings, contents, themeDirectories)
+        val files = allViewPathsToFiles(project, allViewPaths)
 
         return files.toTypedArray()
     }

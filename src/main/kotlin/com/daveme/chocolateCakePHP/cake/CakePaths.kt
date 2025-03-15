@@ -16,7 +16,10 @@ sealed interface TopSourceDirectory {
     val directory: VirtualFile
 }
 sealed interface AppOrSrcDirectory : TopSourceDirectory
-class PluginSrcDirectory(override val directory: VirtualFile, val pluginDirName: String) : TopSourceDirectory
+class PluginSrcDirectory(
+    override val directory:
+    VirtualFile, val pluginDirName: String
+) : TopSourceDirectory
 class AppDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 class SrcDirectory(override val directory: VirtualFile) : AppOrSrcDirectory
 
@@ -24,6 +27,10 @@ sealed interface TemplatesDir {
     val directory: VirtualFile
     val elementDirName: String
 }
+
+data class ThemeDirectories(
+    val directories: List<TemplatesDirWithPath> = listOf(),
+)
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
 {
@@ -135,6 +142,62 @@ fun templatesDirectoryFromViewFile(
         project,
         settings,
         file.originalFile.virtualFile ?: return null
+    )
+}
+
+fun themeDirectories(
+    project: Project,
+    settings: Settings,
+): ThemeDirectories {
+    if (!settings.enabled) {
+        return ThemeDirectories()
+    }
+
+    val hasCakeTwo = settings.cake2Enabled
+    val hasCakeThree = settings.cake3Enabled
+    val projectDir = project.guessProjectDir() ?: return ThemeDirectories()
+    val themeDirs = mutableListOf<TemplatesDirWithPath>()
+    var elementDirName = ""
+
+    // todo: optimize the filesystem traversals here, as they are doing extra work
+    settings.themeConfigs.forEach { themeConfig ->
+        val cakeFourTemplateDir = projectDir.findFileByRelativePath("${themeConfig.themePath}/templates")
+        if (hasCakeThree && cakeFourTemplateDir != null) {
+            val path = pathRelativeToProjectRoot(projectDir, cakeFourTemplateDir)
+            if (path != null) {
+                val templatesDir = TemplatesDirWithPath(
+                    templatesDir = CakeFourTemplatesDir(cakeFourTemplateDir),
+                    templatesPath = path
+                )
+                themeDirs.add(templatesDir)
+            }
+        }
+        val cakeThreeTemplateDir = projectDir.findFileByRelativePath("${themeConfig.themePath}/View/Template")
+        if (hasCakeThree && cakeThreeTemplateDir != null) {
+            val path = pathRelativeToProjectRoot(projectDir, cakeThreeTemplateDir)
+            if (path != null) {
+                val templatesDir = TemplatesDirWithPath(
+                    templatesDir = CakeThreeTemplatesDir(cakeThreeTemplateDir),
+                    templatesPath = path
+                )
+                themeDirs.add(templatesDir)
+            }
+        }
+        val cakeTwoTemplateDir = projectDir.findFileByRelativePath(themeConfig.themePath)
+        if (hasCakeTwo && cakeTwoTemplateDir != null) {
+            val path = pathRelativeToProjectRoot(projectDir, cakeTwoTemplateDir)
+            if (path != null) {
+                val templatesDir = TemplatesDirWithPath(
+                    templatesDir = CakeTwoTemplatesDir(cakeTwoTemplateDir),
+                    templatesPath = path
+                )
+                themeDirs.add(templatesDir)
+            }
+        }
+    }
+
+    return ThemeDirectories(
+        directories = themeDirs,
     )
 }
 

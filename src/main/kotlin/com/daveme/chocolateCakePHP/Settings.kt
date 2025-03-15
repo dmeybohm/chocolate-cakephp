@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry
+import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -294,6 +295,12 @@ class Settings : PersistentStateComponent<SettingsState> {
             return list.map { it.toPluginConfig() }
         }
 
+        @JvmStatic
+        fun themeConfigsFromEntryList(
+            list: List<ThemeEntry>
+        ): List<ThemeConfig> {
+            return list.map { it.toThemeConfig() }
+        }
     }
 
 }

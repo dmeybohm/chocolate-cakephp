@@ -200,8 +200,8 @@ public class PluginForm implements SearchableConfigurable {
         String themePath = themeConfig.getThemePath();
         String assetPath = themeConfig.getAssetPath();
 
-        pluginTableModel.setValueAt(themePath, selectedRow, 0);
-        pluginTableModel.setValueAt(assetPath, selectedRow, 1);
+        themeTableModel.setValueAt(themePath, selectedRow, 0);
+        themeTableModel.setValueAt(assetPath, selectedRow, 1);
     }
 
     @Override
@@ -218,6 +218,8 @@ public class PluginForm implements SearchableConfigurable {
         newState.setPluginConfigs(Settings.pluginConfigsFromEntryList(
                 pluginTableModel.getPluginEntries()));
         newState.setPluginPath(pluginPathTextField.getText());
+        newState.setThemeConfigs(Settings.themeConfigsFromEntryList(
+                themeTableModel.getThemeEntries()));
         // Clear legacy lists:
         newState.setPluginNamespaces(new ArrayList<>());
         settings.loadState(newState);

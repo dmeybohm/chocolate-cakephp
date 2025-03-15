@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 
@@ -180,10 +181,25 @@ private fun elementViewPath(
     )
 }
 
+fun themeElementViewPaths(
+    themeDirectories: ThemeDirectories,
+    settings: Settings,
+    elementPath: String
+): List<ViewPath> {
+    return themeDirectories.directories.map { templateDir ->
+        elementViewPath(
+            templatesDirWithPath = templateDir,
+            settings = settings,
+            elementPath = elementPath
+        )
+    }
+}
+
 fun allViewPathsFromElementPath(
     templatesDirWithPath: TemplatesDirWithPath,
     settings: Settings,
     elementPath: String,
+    themeDirectories: ThemeDirectories
 ): AllViewPaths {
     return AllViewPaths(
         defaultViewPath = elementViewPath(
@@ -191,7 +207,26 @@ fun allViewPathsFromElementPath(
             settings = settings,
             elementPath = elementPath
         ),
-        otherViewPaths = listOf(),
+        otherViewPaths = themeElementViewPaths(
+            themeDirectories = themeDirectories,
+            settings = settings,
+            elementPath = elementPath,
+        ),
         dataViewPaths = listOf()
     )
+}
+
+fun allViewPathsToFiles(
+    project: Project,
+    allViewPaths: AllViewPaths
+): Collection<PsiFile> {
+    val projectRoot: VirtualFile = project.guessProjectDir()
+        ?: return setOf()
+    val files = allViewPaths.all.mapNotNull { viewPath ->
+        val templatePath = findRelativeFile(projectRoot, viewPath.templatePath)
+            ?: return@mapNotNull null
+        findRelativeFile(templatePath, viewPath.pathWithoutTemplate)
+    }
+
+    return virtualFilesToPsiFiles(project, files)
 }
