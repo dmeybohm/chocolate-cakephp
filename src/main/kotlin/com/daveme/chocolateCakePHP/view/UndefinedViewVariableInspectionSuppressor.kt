@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.codeInspection.InspectionSuppressor
@@ -32,7 +32,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
     ): Boolean {
         val psiFile = variable.containingFile
         val virtualFile = psiFile?.virtualFile ?: return false
-        val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return false
+        val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile) ?: return false
         val templateDirVirtualFile = templatesDir.directory
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
 

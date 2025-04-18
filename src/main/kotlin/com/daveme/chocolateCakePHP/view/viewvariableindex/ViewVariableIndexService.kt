@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.ControllerPath
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
@@ -87,7 +87,7 @@ object ViewVariableIndexService {
                 result.add(variableType)
                 continue
             }
-            val templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, elementAndPath.psiElement.containingFile)
                ?: continue
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,
@@ -167,7 +167,7 @@ object ViewVariableIndexService {
                 variables.forEach { v -> result += v }
                 continue
             }
-            val templatesDir = templatesDirectoryFromViewFile(project, settings, elementAndPath.psiElement.containingFile)
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, elementAndPath.psiElement.containingFile)
                 ?: continue
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,

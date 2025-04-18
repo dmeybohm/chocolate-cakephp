@@ -28,7 +28,7 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             return null
         }
         val psiFile = psiElement.containingFile ?: return null
-        val templateDir = templatesDirectoryFromViewFile(psiElement.project, settings, psiFile)
+        val templateDir = templatesDirectoryOfViewFile(psiElement.project, settings, psiFile)
             ?: return null
 
         if (psiElement.textMatches("\$this")) {
