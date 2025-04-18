@@ -38,13 +38,13 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         val contents = (psiElement.context as? StringLiteralExpression)?.contents
             ?: return PsiElement.EMPTY_ARRAY
         val containingFile = psiElement.containingFile
-        val templatesDir = templatesDirectoryFromViewFile(psiElement.project, settings, containingFile)
+
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, containingFile)
             ?: return PsiElement.EMPTY_ARRAY
-        val templatesDirWithPath = templatesDirWithPath(psiElement.project, templatesDir)
+        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return PsiElement.EMPTY_ARRAY
 
-        val themeDirectories = themeDirectories(project, settings)
-        val allViewPaths = allViewPathsFromElementPath(templatesDirWithPath, settings, contents, themeDirectories)
+        val allViewPaths = allViewPathsFromElementPath(allTemplatesPaths, settings, contents)
         val files = allViewPathsToFiles(project, allViewPaths)
 
         return files.toTypedArray()

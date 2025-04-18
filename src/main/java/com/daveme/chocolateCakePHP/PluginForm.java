@@ -197,7 +197,7 @@ public class PluginForm implements SearchableConfigurable {
     }
 
     private void setThemeConfig(ThemeConfig themeConfig, int selectedRow) {
-        String themePath = themeConfig.getThemePath();
+        String themePath = themeConfig.getPluginPath();
         String assetPath = themeConfig.getAssetPath();
 
         themeTableModel.setValueAt(themePath, selectedRow, 0);

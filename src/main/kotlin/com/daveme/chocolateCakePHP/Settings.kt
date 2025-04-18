@@ -28,6 +28,11 @@ fun defaultThemeConfig(): ThemeConfig {
     return ThemeConfig()
 }
 
+interface ThemeOrPluginConfig {
+    val pluginPath: String
+    val assetPath: String
+}
+
 @Tag("PluginConfig")
 data class PluginConfig(
 
@@ -35,23 +40,23 @@ data class PluginConfig(
     val namespace: String = "",
 
     @Property
-    val pluginPath: String = "",
-
-    @Property
     val srcPath: String = "src",
 
     @Property
-    val assetPath: String = "webroot",
-)
+    override val pluginPath: String = "",
+
+    @Property
+    override val assetPath: String = "webroot",
+) : ThemeOrPluginConfig {}
 
 @Tag("ThemeConfig")
 data class ThemeConfig (
     @Property
-    val themePath: String = "",
+    override val pluginPath: String = "",
 
     @Property
-    val assetPath: String = "webroot"
-)
+    override val assetPath: String = "webroot"
+) : ThemeOrPluginConfig
 
 data class SettingsState(
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
@@ -238,6 +243,11 @@ class Settings : PersistentStateComponent<SettingsState> {
     val themeConfigs: List<ThemeConfig>
         get() {
             return state.themeConfigs
+        }
+
+    val pluginAndThemeConfigs: List<ThemeOrPluginConfig>
+        get() {
+            return themeConfigs + pluginConfigs
         }
 
     val enabled: Boolean

@@ -84,22 +84,18 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
             ?: return
-        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(settings, topSourceDirectory)
-            ?: return
-        val controllerName = virtualFile.nameWithoutExtension.controllerBaseName()
+        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return
 
-        val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
-            ?: return
         val allViewPaths = allViewPathsFromController(
             controllerPath,
-            templatesDirWithPath,
+            allTemplatesPaths,
             settings,
             actionNames
         )
         val files = viewFilesFromAllViewPaths(
             project = project,
-            templatesDirectory = templatesDirectory,
+            allTemplatesPaths = allTemplatesPaths,
             allViewPaths = allViewPaths
         )
 
@@ -139,7 +135,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
 
-        val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile) ?: return
+        val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile) ?: return
         val templateDirVirtualFile = templatesDir.directory
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)

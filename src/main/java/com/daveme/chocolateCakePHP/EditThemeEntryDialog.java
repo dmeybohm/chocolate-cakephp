@@ -15,8 +15,6 @@ public class EditThemeEntryDialog extends DialogWrapper {
     private JTextField themePathTextField;
     private JTextField assetsPathTextField;
 
-    final private Project project;
-
     private Consumer<ThemeConfig> action;
 
     public EditThemeEntryDialog(
@@ -26,9 +24,7 @@ public class EditThemeEntryDialog extends DialogWrapper {
     ) {
         super(project, true, true);
 
-        this.project = project;
-
-        themePathTextField.setText(initialThemeConfig.getThemePath());
+        themePathTextField.setText(initialThemeConfig.getPluginPath());
         assetsPathTextField.setText(initialThemeConfig.getAssetPath());
 
         setTitle(title);

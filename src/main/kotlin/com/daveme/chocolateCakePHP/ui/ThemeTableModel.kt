@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -54,7 +53,7 @@ class ThemeTableModel(
     override fun getValueAt(i: Int, i1: Int): Any {
         return when (i1) {
             0 ->
-                themeEntries[i].themePath
+                themeEntries[i].pluginPath
             1 ->
                 themeEntries[i].assetPath
             else ->
@@ -66,7 +65,7 @@ class ThemeTableModel(
         val existingEntry = themeEntries[i]
         when (i1) {
             0 ->
-                existingEntry.themePath = o.toString()
+                existingEntry.pluginPath = o.toString()
             1 ->
                 existingEntry.assetPath = o.toString()
             else ->
@@ -89,7 +88,7 @@ class ThemeTableModel(
 
     class ThemePathColumn : ColumnInfo<ThemeEntry, String>("Theme Path") {
         override fun valueOf(themeEntry: ThemeEntry): String =
-            themeEntry.themePath
+            themeEntry.pluginPath
     }
 
     class AssetsPathColumn : ColumnInfo<ThemeEntry, String>("Assets Path") {

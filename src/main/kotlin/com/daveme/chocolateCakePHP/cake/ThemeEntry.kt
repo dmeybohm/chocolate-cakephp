@@ -3,14 +3,14 @@ package com.daveme.chocolateCakePHP.cake
 import com.daveme.chocolateCakePHP.ThemeConfig
 
 data class ThemeEntry(
-   var themePath: String,
+   var pluginPath: String,
    var assetPath: String = "webroot",
 ) {
    companion object {
       @JvmStatic
       fun fromThemeConfig(themeConfig: ThemeConfig): ThemeEntry {
          return ThemeEntry(
-            themePath = themeConfig.themePath,
+            pluginPath = themeConfig.pluginPath,
             assetPath = themeConfig.assetPath,
          )
       }
@@ -18,7 +18,7 @@ data class ThemeEntry(
 
    fun toThemeConfig(): ThemeConfig {
       return ThemeConfig(
-         themePath = themePath,
+         pluginPath = pluginPath,
          assetPath = assetPath,
       )
    }
