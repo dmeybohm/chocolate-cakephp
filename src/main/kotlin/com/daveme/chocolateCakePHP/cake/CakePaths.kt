@@ -31,8 +31,8 @@ data class AllTemplatePaths(
     val mainTemplatePaths: List<TemplatesDirWithPath>,
     val pluginAndThemeTemplatePaths: PluginAndThemeTemplatePaths = PluginAndThemeTemplatePaths(),
 ) {
-    val allPaths: List<TemplatesDirWithPath>
-        get() = mainTemplatePaths + pluginAndThemeTemplatePaths.paths
+    val allPaths: Sequence<TemplatesDirWithPath>
+        get() = mainTemplatePaths.asSequence() + pluginAndThemeTemplatePaths.paths.asSequence()
 }
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir

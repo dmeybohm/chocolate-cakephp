@@ -192,7 +192,6 @@ class Settings : PersistentStateComponent<SettingsState> {
             return state.appNamespace.absoluteClassName()
     }
 
-    val pluginPath get() = state.pluginPath
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
@@ -247,7 +246,8 @@ class Settings : PersistentStateComponent<SettingsState> {
 
     val pluginAndThemeConfigs: Sequence<ThemeOrPluginConfig>
         get() {
-            return themeConfigs.asSequence() + pluginConfigs.asSequence()
+            return themeConfigs.asSequence() +
+                    pluginConfigs.asSequence()
         }
 
     val enabled: Boolean
