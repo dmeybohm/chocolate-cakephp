@@ -27,8 +27,6 @@ public class PluginForm implements SearchableConfigurable {
     private ThemeTableModel themeTableModel;
     private JPanel topPanel;
     private JPanel pluginTableViewPanel;
-    private JButton pluginPathDefaultButton;
-    private JTextField pluginPathTextField;
     private JPanel headlinePanelForPlugins;
     private JPanel themesPanel;
     private JPanel themeConfigPanel;
@@ -57,12 +55,7 @@ public class PluginForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
         pluginTableModel = PluginTableModel.fromSettings(settings);
         themeTableModel = ThemeTableModel.fromSettings(settings);
-        pluginPathTextField.setText(settings.getPluginPath());
         final Settings defaults = Settings.getDefaults();
-
-        pluginPathDefaultButton.addActionListener(e ->
-            this.pluginPathTextField.setText(defaults.getPluginPath())
-        );
 
         this.pluginTableView = new TableView<>(pluginTableModel);
         ToolbarDecorator pluginDecorator = ToolbarDecorator.createDecorator(
@@ -217,7 +210,6 @@ public class PluginForm implements SearchableConfigurable {
         SettingsState newState = copySettingsState(origState);
         newState.setPluginConfigs(Settings.pluginConfigsFromEntryList(
                 pluginTableModel.getPluginEntries()));
-        newState.setPluginPath(pluginPathTextField.getText());
         newState.setThemeConfigs(Settings.themeConfigsFromEntryList(
                 themeTableModel.getThemeEntries()));
         // Clear legacy lists:

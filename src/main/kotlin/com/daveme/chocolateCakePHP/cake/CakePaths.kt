@@ -151,7 +151,7 @@ fun templatesDirectoryOfViewFile(
     var child: VirtualFile? = originalFile.parent ?: return null
     var parent: VirtualFile? = child?.parent
     val projectDir = project.guessProjectDir() ?: return null
-    while (child != null && child != projectDir && child.name != settings.pluginPath) {
+    while (child != null && child != projectDir) {
         if (hasCakeFour && parent?.name == "templates") {
             return CakeFourTemplatesDir(parent)
         }
@@ -213,23 +213,39 @@ private fun pluginAndThemeTemplatePaths(
     // todo: optimize the filesystem traversals here, as they are doing extra work
     val resultPaths = settings.pluginAndThemeConfigs.flatMap { pluginOrThemeConfig ->
         val results = mutableListOf<TemplatesDirWithPath>()
-        val cakeFourTemplateDir = projectDir.findFileByRelativePath("${pluginOrThemeConfig.pluginPath}/templates")
-        if (hasCakeThree && cakeFourTemplateDir != null) {
-            val path = pathRelativeToProjectRoot(projectDir, cakeFourTemplateDir)
-            val templatesDir = TemplatesDirWithPath(
-                templatesDir = CakeFourTemplatesDir(cakeFourTemplateDir),
-                templatesPath = path
-            )
-            results.add(templatesDir)
-        }
-        val cakeThreeTemplateDir = projectDir.findFileByRelativePath("${pluginOrThemeConfig.pluginPath}/src/Template")
-        if (hasCakeThree && cakeThreeTemplateDir != null) {
-            val path = pathRelativeToProjectRoot(projectDir, cakeThreeTemplateDir)
-            val templatesDir = TemplatesDirWithPath(
-                templatesDir = CakeThreeTemplatesDir(cakeThreeTemplateDir),
-                templatesPath = path
-            )
-            results.add(templatesDir)
+        if (hasCakeThree) {
+            val cakeFourTemplatesPath = "${pluginOrThemeConfig.pluginPath}/templates"
+            val cakeFourTemplateDir = projectDir.findFileByRelativePath(cakeFourTemplatesPath)
+            if (cakeFourTemplateDir != null) {
+                val path = pathRelativeToProjectRoot(projectDir, cakeFourTemplateDir)
+                val templatesDir = TemplatesDirWithPath(
+                    templatesDir = CakeFourTemplatesDir(cakeFourTemplateDir),
+                    templatesPath = path
+                )
+                results.add(templatesDir)
+            }
+            if (pluginOrThemeConfig is PluginConfig) {
+                val cake3PluginTemplatePath = "${pluginOrThemeConfig.pluginPath}/${pluginOrThemeConfig.srcPath}/Template"
+                val cakeThreePluginTemplateDir = projectDir.findFileByRelativePath(cake3PluginTemplatePath)
+                if (cakeThreePluginTemplateDir != null) {
+                    val path = pathRelativeToProjectRoot(projectDir, cakeThreePluginTemplateDir)
+                    val templatesDir = TemplatesDirWithPath(
+                        templatesDir = CakeThreeTemplatesDir(cakeThreePluginTemplateDir),
+                        templatesPath = path
+                    )
+                    results.add(templatesDir)
+                }
+            } else if (pluginOrThemeConfig is ThemeConfig) {
+                val cakeThreeThemeTemplateDir = projectDir.findFileByRelativePath("${pluginOrThemeConfig.pluginPath}/src/Template")
+                if (cakeThreeThemeTemplateDir != null) {
+                    val path = pathRelativeToProjectRoot(projectDir, cakeThreeThemeTemplateDir)
+                    val templatesDir = TemplatesDirWithPath(
+                        templatesDir = CakeThreeTemplatesDir(cakeThreeThemeTemplateDir),
+                        templatesPath = path
+                    )
+                    results.add(templatesDir)
+                }
+            }
         }
         if (hasCakeTwo) {
             if (pluginOrThemeConfig is ThemeConfig) {
@@ -302,21 +318,9 @@ private fun appOrSrcDirectoryFromSourceFile(
     var child: VirtualFile? = dir
     while (child != null) {
         if (settings.cake3Enabled) {
-            if (child.name == settings.appDirectory) {
-                return SrcDirectory(child)
-            }
-            // for Cake4+, view files are located outside src dir,
-            // and also plugins may be located in vendor files.
-            if (
-                child.name == "templates" ||
-                child.name == "plugins" ||
-                child.name == "vendor" ||
-                child.name == settings.pluginPath
-            ) {
-                val sibling = child.parent?.findChild(settings.appDirectory)
-                if (sibling != null) {
-                    return SrcDirectory(sibling)
-                }
+            val appDirChild = child.findChild(settings.appDirectory)
+            if (appDirChild != null) {
+                return SrcDirectory(appDirChild)
             }
         }
         if (settings.cake2Enabled) {
