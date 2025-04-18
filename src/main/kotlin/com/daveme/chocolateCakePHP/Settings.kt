@@ -245,9 +245,9 @@ class Settings : PersistentStateComponent<SettingsState> {
             return state.themeConfigs
         }
 
-    val pluginAndThemeConfigs: List<ThemeOrPluginConfig>
+    val pluginAndThemeConfigs: Sequence<ThemeOrPluginConfig>
         get() {
-            return themeConfigs + pluginConfigs
+            return themeConfigs.asSequence() + pluginConfigs.asSequence()
         }
 
     val enabled: Boolean
