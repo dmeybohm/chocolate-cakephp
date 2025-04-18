@@ -30,8 +30,10 @@ data class AllViewPaths(
     val defaultViewPath: ViewPath =
         defaultViewPaths.first()
 
-    val all: List<ViewPath>
-        get() = defaultViewPaths + otherViewPaths + dataViewPaths
+    val all: Sequence<ViewPath>
+        get() = defaultViewPaths.asSequence() +
+                otherViewPaths.asSequence() +
+                dataViewPaths.asSequence()
 }
 
 fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPath? {
@@ -87,7 +89,7 @@ data class ViewPath(
 }
 
 fun viewPathsFromControllerNameAndActionName(
-    templatesPaths: List<TemplatesDirWithPath>,
+    templatesPaths: Sequence<TemplatesDirWithPath>,
     settings: Settings,
     label: String,
     controllerPath: ControllerPath,
@@ -112,7 +114,7 @@ fun viewPathsFromControllerNameAndActionName(
                 altLabel = altLabel,
                 relativePath = actionName.getViewFilename(templateDirWithPath.templatesDir, settings, convertCase)
             )
-    }
+    }.toList()
 }
 
 
@@ -183,7 +185,7 @@ private fun elementViewPaths(
                 convertCase = false,
             )
         )
-    }
+    }.toList()
 }
 
 fun allViewPathsFromElementPath(
@@ -212,7 +214,7 @@ fun allViewPathsToFiles(
         val templatePath = findRelativeFile(projectRoot, viewPath.templatePath)
             ?: return@mapNotNull null
         findRelativeFile(templatePath, viewPath.pathWithoutTemplate)
-    }
+    }.toList()
 
     return virtualFilesToPsiFiles(project, files)
 }
