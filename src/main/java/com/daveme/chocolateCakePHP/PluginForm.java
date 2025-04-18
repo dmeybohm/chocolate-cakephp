@@ -1,7 +1,9 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry;
+import com.daveme.chocolateCakePHP.cake.ThemeEntry;
 import com.daveme.chocolateCakePHP.ui.PluginTableModel;
+import com.daveme.chocolateCakePHP.ui.ThemeTableModel;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
@@ -18,16 +20,19 @@ import static com.daveme.chocolateCakePHP.SettingsKt.*;
 
 public class PluginForm implements SearchableConfigurable {
 
-    private TableView<PluginEntry> tableView;
+    private TableView<PluginEntry> pluginTableView;
+    private TableView<ThemeEntry> themeTableView;
     private final Project project;
     private PluginTableModel pluginTableModel;
+    private ThemeTableModel themeTableModel;
     private JPanel topPanel;
-    private JPanel tableViewPanel;
-    private JButton pluginPathDefaultButton;
-    private JTextField pluginPathTextField;
+    private JPanel pluginTableViewPanel;
     private JPanel headlinePanelForPlugins;
+    private JPanel themesPanel;
+    private JPanel themeConfigPanel;
 
-    private static final String EDIT_ENTRY_TITLE = "Edit Plugin Config";
+    private static final String EDIT_PLUGIN_CONFIG_TITLE = "Edit Plugin Config";
+    private static final String EDIT_THEME_CONFIG_TITLE = "Edit Theme Config";
 
     public PluginForm(Project project) {
         this.project = project;
@@ -49,31 +54,60 @@ public class PluginForm implements SearchableConfigurable {
     public JComponent createComponent() {
         Settings settings = Settings.getInstance(project);
         pluginTableModel = PluginTableModel.fromSettings(settings);
-        pluginPathTextField.setText(settings.getPluginPath());
+        themeTableModel = ThemeTableModel.fromSettings(settings);
         final Settings defaults = Settings.getDefaults();
 
-        this.tableView = new TableView<>(pluginTableModel);
-        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(this.tableView, new ElementProducer<>() {
-            @Override
-            public PluginEntry createElement() {
-                return null;
-            }
+        this.pluginTableView = new TableView<>(pluginTableModel);
+        ToolbarDecorator pluginDecorator = ToolbarDecorator.createDecorator(
+            this.pluginTableView,
+            new ElementProducer<>() {
+                @Override
+                public PluginEntry createElement() {
+                    return null;
+                }
 
-            @Override
-            public boolean canCreateElement() {
-                return true;
+                @Override
+                public boolean canCreateElement() {
+                    return true;
+                }
             }
-        });
+        );
 
+        setupPluginTableToolbar(pluginDecorator);
+
+        this.themeTableView = new TableView<>(themeTableModel);
+        ToolbarDecorator themeTableDecorator = ToolbarDecorator.createDecorator(
+            this.themeTableView,
+            new ElementProducer<>() {
+                @Override
+                public ThemeEntry createElement() {
+                    return null;
+                }
+
+                @Override
+                public boolean canCreateElement() {
+                    return true;
+                }
+            }
+        );
+        setupThemeTableToolbar(themeTableDecorator);
+
+        pluginTableViewPanel.add(pluginDecorator.createPanel(), BorderLayout.NORTH);
+        themeConfigPanel.add(themeTableDecorator.createPanel(), BorderLayout.NORTH);
+
+        return topPanel;
+    }
+
+    private void setupPluginTableToolbar(ToolbarDecorator decorator) {
         decorator.setEditAction(action -> {
-            PluginEntry selected = tableView.getSelectedObject();
+            PluginEntry selected = pluginTableView.getSelectedObject();
             if (selected == null) {
                 return;
             }
-            final int selectedRow = tableView.getSelectedRow();
+            final int selectedRow = pluginTableView.getSelectedRow();
             EditPluginEntryDialog dialog= new EditPluginEntryDialog(
                     project,
-                    EDIT_ENTRY_TITLE,
+                    EDIT_PLUGIN_CONFIG_TITLE,
                     selected.toPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
@@ -85,7 +119,7 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setAddAction(action -> {
             EditPluginEntryDialog dialog = new EditPluginEntryDialog(
                 project,
-                EDIT_ENTRY_TITLE,
+                    EDIT_PLUGIN_CONFIG_TITLE,
                 defaultPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
@@ -96,18 +130,49 @@ public class PluginForm implements SearchableConfigurable {
         });
 
         decorator.setRemoveAction(action -> {
-            pluginTableModel.removeRow(tableView.getSelectedRow());
+            pluginTableModel.removeRow(pluginTableView.getSelectedRow());
         });
 
         decorator.disableUpDownActions();
+    }
 
-        tableViewPanel.add(decorator.createPanel(), BorderLayout.NORTH);
+    private void setupThemeTableToolbar(ToolbarDecorator themeTableDecorator) {
+        themeTableDecorator.setEditAction(action -> {
+            ThemeEntry selected = themeTableView.getSelectedObject();
+            if (selected == null) {
+                return;
+            }
+            final int selectedRow = themeTableView.getSelectedRow();
+            EditThemeEntryDialog dialog = new EditThemeEntryDialog(
+                    project,
+                    EDIT_PLUGIN_CONFIG_TITLE,
+                    selected.toThemeConfig()
+            );
+            dialog.setAction(themeConfig -> {
+                setThemeConfig(themeConfig, selectedRow);
+            });
+            dialog.show();
+        });
 
-        pluginPathDefaultButton.addActionListener(e ->
-            this.pluginPathTextField.setText(defaults.getPluginPath())
-        );
+        themeTableDecorator.setAddAction(action -> {
+            EditThemeEntryDialog dialog = new EditThemeEntryDialog(
+                    project,
+                    EDIT_THEME_CONFIG_TITLE,
+                    defaultThemeConfig()
+            );
+            dialog.setAction(themeConfig -> {
+                themeTableModel.addRow(ThemeEntry.fromThemeConfig(themeConfig));
+                setThemeConfig(themeConfig, themeTableView.getRowCount() - 1);
+            });
+            dialog.show();
+        });
 
-        return topPanel;
+        themeTableDecorator.setRemoveAction(action -> {
+            themeTableModel.removeRow(themeTableView.getSelectedRow());
+        });
+
+        themeTableDecorator.disableUpDownActions();
+
     }
 
     private void setPluginConfig(PluginConfig pluginConfig, int selectedRow) {
@@ -124,6 +189,14 @@ public class PluginForm implements SearchableConfigurable {
         pluginTableModel.setValueAt(assetPath, selectedRow, 3);
     }
 
+    private void setThemeConfig(ThemeConfig themeConfig, int selectedRow) {
+        String themePath = themeConfig.getPluginPath();
+        String assetPath = themeConfig.getAssetPath();
+
+        themeTableModel.setValueAt(themePath, selectedRow, 0);
+        themeTableModel.setValueAt(assetPath, selectedRow, 1);
+    }
+
     @Override
     public boolean isModified() {
         Settings settings = Settings.getInstance(project);
@@ -137,7 +210,8 @@ public class PluginForm implements SearchableConfigurable {
         SettingsState newState = copySettingsState(origState);
         newState.setPluginConfigs(Settings.pluginConfigsFromEntryList(
                 pluginTableModel.getPluginEntries()));
-        newState.setPluginPath(pluginPathTextField.getText());
+        newState.setThemeConfigs(Settings.themeConfigsFromEntryList(
+                themeTableModel.getThemeEntries()));
         // Clear legacy lists:
         newState.setPluginNamespaces(new ArrayList<>());
         settings.loadState(newState);

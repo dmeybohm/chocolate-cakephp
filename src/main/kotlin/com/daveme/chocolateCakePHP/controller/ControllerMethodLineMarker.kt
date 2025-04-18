@@ -6,6 +6,7 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.elements.Method
@@ -21,6 +22,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     // Add a Cake icon with a list of all the view files next to the action name.
     //
     private fun markerForAllViewFilesInAction(
+        project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement
     ): LineMarkerInfo<*>? {
@@ -39,13 +41,14 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         }
 
         val actionNames = actionNamesFromControllerMethod(method)
-        return relatedItemLineMarkerInfo(actionNames, relatedLookupInfo, element)
+        return relatedItemLineMarkerInfo(project, actionNames, relatedLookupInfo, element)
     }
 
     //
     // Add a marker for a single $this->render() call near on the render identifier.
     //
     private fun markerForSingleRenderCallInAction(
+        project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
     ): LineMarkerInfo<*>? {
@@ -61,6 +64,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             ?: return null
 
         return relatedItemLineMarkerInfo(
+            project,
             actionNames,
             relatedLookupInfo,
             element,
@@ -69,6 +73,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     private fun relatedItemLineMarkerInfo(
+        project: Project,
         actionNames: ActionNames,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
@@ -79,23 +84,21 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             settings,
             relatedLookupInfo.file
         ) ?: return null
-        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
+        val allTemplatePaths = allTemplatePathsFromTopSourceDirectory(
+            project,
             settings,
             topSourceDirectory
         ) ?: return null
-
-        val templatesDirWithPath = templatesDirWithPath(relatedLookupInfo.project, templatesDirectory)
-            ?: return null
         val allViewPaths = allViewPathsFromController(
             relatedLookupInfo.controllerPath,
-            templatesDirWithPath,
+            allTemplatePaths,
             settings,
             actionNames
         )
         val files = viewFilesFromAllViewPaths(
             project = relatedLookupInfo.project,
-            templatesDirectory = templatesDirectory,
-            allViewPaths = allViewPaths
+            allTemplatesPaths = allTemplatePaths,
+            allViewPaths = allViewPaths,
         )
 
         return if (files.isEmpty()) {
@@ -155,10 +158,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
                 controllerPath = controllerPath
             )
 
-            val allViewFilesMarker = markerForAllViewFilesInAction(relatedLookupInfo, element)
+            val allViewFilesMarker = markerForAllViewFilesInAction(project, relatedLookupInfo, element)
             addLineMarkerUnique(result, allViewFilesMarker)
 
-            val renderViewMarker = markerForSingleRenderCallInAction(relatedLookupInfo, element)
+            val renderViewMarker = markerForSingleRenderCallInAction(project, relatedLookupInfo, element)
             addLineMarkerUnique(result, renderViewMarker)
         }
     }

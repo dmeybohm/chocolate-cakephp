@@ -5,10 +5,8 @@ import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
-import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -57,22 +55,21 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             settings,
             containingFile
         ) ?: return null
-        val templatesDirectory = templatesDirectoryFromTopSourceDirectory(
+        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(
+            project,
             settings,
             topSourceDirectory
         ) ?: return null
 
-        val templatesDirWithPath = templatesDirWithPath(project, templatesDirectory)
-            ?: return null
         val allViewPaths = allViewPathsFromController(
             controllerPath,
-            templatesDirWithPath,
+            allTemplatesPaths,
             settings,
             actionNames
         )
         val files = viewFilesFromAllViewPaths(
             project = project,
-            templatesDirectory = templatesDirectory,
+            allTemplatesPaths = allTemplatesPaths,
             allViewPaths = allViewPaths
         )
         return files.toTypedArray()

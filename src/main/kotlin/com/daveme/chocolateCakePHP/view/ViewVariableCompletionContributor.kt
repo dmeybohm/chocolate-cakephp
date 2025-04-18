@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
@@ -52,7 +52,7 @@ class ViewVariableCompletionContributor : CompletionContributor() {
             }
             val psiFile = element.containingFile
                 ?: return
-            val templatesDir = templatesDirectoryFromViewFile(project, settings, psiFile)
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile)
                 ?: return
 
             val path = psiFile.originalFile.virtualFile.path

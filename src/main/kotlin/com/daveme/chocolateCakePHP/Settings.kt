@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry
+import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -23,6 +24,15 @@ fun defaultPluginConfig(): PluginConfig {
     return PluginConfig()
 }
 
+fun defaultThemeConfig(): ThemeConfig {
+    return ThemeConfig()
+}
+
+interface ThemeOrPluginConfig {
+    val pluginPath: String
+    val assetPath: String
+}
+
 @Tag("PluginConfig")
 data class PluginConfig(
 
@@ -30,14 +40,23 @@ data class PluginConfig(
     val namespace: String = "",
 
     @Property
-    val pluginPath: String = "",
-
-    @Property
     val srcPath: String = "src",
 
     @Property
-    val assetPath: String = "webroot",
-)
+    override val pluginPath: String = "",
+
+    @Property
+    override val assetPath: String = "webroot",
+) : ThemeOrPluginConfig {}
+
+@Tag("ThemeConfig")
+data class ThemeConfig (
+    @Property
+    override val pluginPath: String = "",
+
+    @Property
+    override val assetPath: String = "webroot"
+) : ThemeOrPluginConfig
 
 data class SettingsState(
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
@@ -57,6 +76,9 @@ data class SettingsState(
 
     @XCollection
     var pluginConfigs: List<PluginConfig> = listOf(),
+
+    @XCollection
+    var themeConfigs: List<ThemeConfig> = listOf(),
 )
 
 // For accessibility from Java, which doesn't support copy() with default args:
@@ -218,6 +240,16 @@ class Settings : PersistentStateComponent<SettingsState> {
             }
         }
 
+    val themeConfigs: List<ThemeConfig>
+        get() {
+            return state.themeConfigs
+        }
+
+    val pluginAndThemeConfigs: Sequence<ThemeOrPluginConfig>
+        get() {
+            return themeConfigs.asSequence() + pluginConfigs.asSequence()
+        }
+
     val enabled: Boolean
         get() {
             return cake3Enabled || cake2Enabled
@@ -273,6 +305,12 @@ class Settings : PersistentStateComponent<SettingsState> {
             return list.map { it.toPluginConfig() }
         }
 
+        @JvmStatic
+        fun themeConfigsFromEntryList(
+            list: List<ThemeEntry>
+        ): List<ThemeConfig> {
+            return list.map { it.toThemeConfig() }
+        }
     }
 
 }

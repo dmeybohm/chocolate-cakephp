@@ -34,9 +34,16 @@ fun findRelativeFile(dir: VirtualFile?, childPath: String): VirtualFile? {
 
 fun pathRelativeToProject(project: Project, virtualFile: VirtualFile): String? {
     val projectVirtualFile = project.guessProjectDir() ?: return null
-    var dir : VirtualFile? = virtualFile.parent
-    val pathNames = mutableListOf(virtualFile.name)
-    while (dir != null && dir != projectVirtualFile) {
+    return pathRelativeToProjectRoot(projectVirtualFile, virtualFile)
+}
+
+fun pathRelativeToProjectRoot(
+    projectRoot: VirtualFile,
+    target: VirtualFile
+): String {
+    var dir : VirtualFile? = target.parent
+    val pathNames = mutableListOf(target.name)
+    while (dir != null && dir != projectRoot) {
         pathNames.add(dir.name)
         dir = dir.parent
     }
