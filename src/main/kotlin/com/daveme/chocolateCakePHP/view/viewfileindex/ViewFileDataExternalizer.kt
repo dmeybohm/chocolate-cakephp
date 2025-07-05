@@ -4,17 +4,25 @@ import com.intellij.util.io.DataExternalizer
 import java.io.DataInput
 import java.io.DataOutput
 
-object ViewFileDataExternalizer : DataExternalizer<List<Int>> {
+object ViewReferenceDataExternalizer : DataExternalizer<List<ViewReferenceData>> {
 
-    override fun save(out: DataOutput, value: List<Int>) {
+    override fun save(out: DataOutput, value: List<ViewReferenceData>) {
         out.writeInt(value.size)
-        value.map { out.writeInt(it) }
+        value.forEach { data ->
+            out.writeUTF(data.methodName)
+            out.writeUTF(data.elementType)
+            out.writeInt(data.offset)
+        }
     }
 
-    override fun read(`in`: DataInput): List<Int> {
+    override fun read(`in`: DataInput): List<ViewReferenceData> {
         val size = `in`.readInt()
         return List(size) {
-            `in`.readInt()
+            ViewReferenceData(
+                methodName = `in`.readUTF(),
+                elementType = `in`.readUTF(),
+                offset = `in`.readInt()
+            )
         }
     }
 

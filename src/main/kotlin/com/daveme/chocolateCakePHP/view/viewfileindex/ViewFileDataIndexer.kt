@@ -14,10 +14,10 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import org.jetbrains.annotations.Unmodifiable
 
-object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
+object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
 
-    override fun map(inputData: FileContent): MutableMap<String, List<Int>> {
-        val result = mutableMapOf<String, List<Int>>()
+    override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
+        val result = mutableMapOf<String, List<ViewReferenceData>>()
         val psiFile = inputData.psiFile
         val project = psiFile.project
         val projectDir = project.guessProjectDir() ?: return result
@@ -63,7 +63,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
     }
 
     private fun indexRenderCalls(
-        result: MutableMap<String, List<Int>>,
+        result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         renderCalls: List<MethodReference>,
         virtualFile: VirtualFile
@@ -80,7 +80,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
     }
 
     private fun indexElementCalls(
-        result: MutableMap<String, List<Int>>,
+        result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         elementCalls: List<MethodReference>,
         virtualFile: VirtualFile
@@ -107,7 +107,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
     }
 
     private fun indexImplicitRender(
-        result: MutableMap<String, List<Int>>,
+        result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         settings: Settings,
         methods: @Unmodifiable Collection<Method>,
@@ -131,7 +131,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
                 method.name
             )
             val oldList = result.getOrDefault(fullViewPath, emptyList())
-            val newList = oldList + listOf(method.textOffset)
+            val newViewReferenceData = ViewReferenceData(
+                methodName = method.name,
+                elementType = "Method",
+                offset = method.textOffset
+            )
+            val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
         }
     }
@@ -139,7 +144,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
     private fun setViewPath(
         withThis: List<MethodReference>,
         viewPathPrefix: ViewPathPrefix,
-        result: MutableMap<String, List<Int>>
+        result: MutableMap<String, List<ViewReferenceData>>
     ) {
         for (method in withThis) {
             val parameterName = method.parameters.first() as StringLiteralExpression
@@ -153,7 +158,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<Int>, FileContent> {
                 content
             )
             val oldList = result.getOrDefault(fullViewPath, emptyList())
-            val newList = oldList + listOf(method.textOffset)
+            val newViewReferenceData = ViewReferenceData(
+                methodName = method.name ?: "render",
+                elementType = "MethodReference",
+                offset = method.textOffset
+            )
+            val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
         }
     }

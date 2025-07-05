@@ -12,6 +12,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
@@ -141,12 +142,12 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
         val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
 
-        val targets = fileList.asSequence()
-            .filter {
-                it.psiElement.isValid
-            }.map {
-                it.psiElement
-            }.toList()
+        val targets = ReadAction.compute<List<PsiElement>, Nothing> {
+            fileList.asSequence()
+                .mapNotNull { it.psiElement }
+                .filter { it.isValid }
+                .toList()
+        }
 
         val relativePoint = if (point != null)
             RelativePoint(Point(Math.max(0, point.x - 400), point.y))

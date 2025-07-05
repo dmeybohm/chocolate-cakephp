@@ -2,9 +2,13 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
+import com.intellij.psi.SmartPsiElementPointer
+import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
@@ -13,15 +17,22 @@ import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import java.io.File
 
-val VIEW_FILE_INDEX_KEY : ID<String, List<Int>> =
+val VIEW_FILE_INDEX_KEY : ID<String, List<ViewReferenceData>> =
     ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
+
+data class ViewReferenceData(
+    val methodName: String,
+    val elementType: String, // "Method" or "MethodReference" 
+    val offset: Int
+)
 
 data class PsiElementAndPath(
     val path: String,
-    val psiElement: PsiElement
+    val elementPointer: SmartPsiElementPointer<PsiElement>
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
+    val psiElement: PsiElement? get() = elementPointer.element
 
     private fun controllerPathFromPsiElementAndPath(): ControllerPath? {
         val parts = path.split("/")
@@ -109,23 +120,35 @@ object ViewFileIndexService {
     }
 
     fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
-        val result = mutableListOf<PsiElementAndPath>()
-        val fileIndex = FileBasedIndex.getInstance()
-        val searchScope = GlobalSearchScope.allScope(project)
+        return ReadAction.compute<List<PsiElementAndPath>, Nothing> {
+            val result = mutableListOf<PsiElementAndPath>()
+            val fileIndex = FileBasedIndex.getInstance()
+            val searchScope = GlobalSearchScope.allScope(project)
 
-        fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
-            { indexedFile, offsets: List<Int>  ->
-                offsets.forEach { offset ->
-                    val element = indexedFile.findElementAt(project, offset)
-
-                    val methodOrReference = PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
-                        ?: PsiTreeUtil.getParentOfType(element, Method::class.java)
-                        ?: return@forEach
-                    result.add(PsiElementAndPath(indexedFile.path, methodOrReference))
-                }
-                true
-            }, searchScope)
-        return result
+            fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
+                { indexedFile, referenceDataList: List<ViewReferenceData> ->
+                    val psiFile = PsiManager.getInstance(project).findFile(indexedFile) ?: return@processValues true
+                    val smartPointerManager = SmartPointerManager.getInstance(project)
+                    
+                    referenceDataList.forEach { data ->
+                        val element = psiFile.findElementAt(data.offset)
+                        if (element?.isValid == true) {
+                            val methodOrReference = when (data.elementType) {
+                                "MethodReference" -> PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
+                                "Method" -> PsiTreeUtil.getParentOfType(element, Method::class.java, false)
+                                else -> null
+                            }
+                            if (methodOrReference != null) {
+                                val pointer = smartPointerManager.createSmartPsiElementPointer(methodOrReference as PsiElement)
+                                result.add(PsiElementAndPath(indexedFile.path, pointer))
+                            }
+                        }
+                    }
+                    true
+                }, searchScope)
+                
+            result
+        }
     }
 
 }
