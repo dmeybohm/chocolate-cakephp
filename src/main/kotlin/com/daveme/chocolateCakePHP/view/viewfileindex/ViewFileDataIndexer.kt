@@ -6,6 +6,7 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiFile
+import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
@@ -49,6 +50,18 @@ data class MethodInfo(
 
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
 
+    // Robust string literal extraction that handles different PHP plugin versions
+    private fun extractStringLiteral(node: ASTNode): String? {
+        // Accept either STRING wrapper or direct STRING_LITERAL token
+        val strNode = node.takeIf { it.elementType == PhpElementTypes.STRING } ?: node
+        
+        // Try child token
+        val lit = strNode.findChildByType(PhpTokenTypes.STRING_LITERAL)
+        val text = (lit ?: strNode).text
+        // Strip quotes if present
+        return text.removeSurrounding("'").removeSurrounding("\"")
+    }
+
     // AST-based parsing implementation (tested and proven)
     private fun findMethodCallsByName(node: ASTNode, methodName: String): List<MethodCallInfo> {
         val result = mutableListOf<MethodCallInfo>()
@@ -65,9 +78,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             }
         }
         
-        // Recursively check child nodes
-        for (child in node.getChildren(null)) {
+        // Recursively check child nodes - avoid toList() allocation
+        var child = node.firstChildNode
+        while (child != null) {
             findMethodCallsRecursive(child, targetMethodName, result)
+            child = child.treeNext
         }
     }
     
@@ -76,15 +91,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
-        val children = node.getChildren(null).toList()
-        
         // Look for VARIABLE, arrow, identifier, parameter list pattern
         var receiverName: String? = null
         var methodName: String? = null
         var parameterValue: String? = null
         
-        // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...)
-        for (child in children) {
+        // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...) - avoid toList()
+        var child = node.firstChildNode
+        while (child != null) {
             when (child.elementType) {
                 PhpElementTypes.VARIABLE -> {
                     receiverName = child.text.removePrefix("$")
@@ -94,17 +108,22 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 }
                 PhpElementTypes.PARAMETER_LIST -> {
                     // Only accept if there's exactly one parameter (ignoring whitespace/commas)
-                    val childNodes = child.getChildren(null).toList()
-                    val significantChildren = childNodes.filter { 
-                        it.elementType != PhpTokenTypes.WHITE_SPACE && it.elementType != PhpTokenTypes.opCOMMA
+                    val significantChildren = mutableListOf<ASTNode>()
+                    var paramChild = child.firstChildNode
+                    while (paramChild != null) {
+                        if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
+                            significantChildren.add(paramChild)
+                        }
+                        paramChild = paramChild.treeNext
                     }
                     
-                    // Only process if there's exactly one significant child and it's a String
-                    if (significantChildren.size == 1 && significantChildren[0].elementType == PhpElementTypes.STRING) {
-                        parameterValue = significantChildren[0].text.removeSurrounding("'").removeSurrounding("\"")
+                    // Only process if there's exactly one significant child
+                    if (significantChildren.size == 1) {
+                        parameterValue = extractStringLiteral(significantChildren[0])
                     }
                 }
             }
+            child = child.treeNext
         }
         
         // Only return if method name matches target and we have all required parts
@@ -136,9 +155,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             }
         }
         
-        // Recursively check child nodes
-        for (child in node.getChildren(null)) {
+        // Recursively check child nodes - avoid toList() allocation
+        var child = node.firstChildNode
+        while (child != null) {
             findMethodDeclarationsRecursive(child, result)
+            child = child.treeNext
         }
     }
     
@@ -147,33 +168,31 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun parseMethodDeclaration(node: ASTNode): MethodInfo? {
-        val children = node.getChildren(null).toList()
-        
-        var visibility = "public" // default
+        var isPublic = true  // PHP default visibility is public if unspecified
         var methodName: String? = null
-        
-        // Parse structure: Modifier list, function keyword, identifier
-        for (child in children) {
+
+        var child = node.firstChildNode
+        while (child != null) {
             when (child.elementType) {
                 PhpElementTypes.MODIFIER_LIST -> {
-                    val modifierText = child.text.trim()
-                    if (modifierText in listOf("private", "protected", "public")) {
-                        visibility = modifierText
+                    var m = child.firstChildNode
+                    while (m != null) {
+                        when (m.elementType) {
+                            PhpTokenTypes.kwPUBLIC    -> isPublic = true
+                            PhpTokenTypes.kwPRIVATE,
+                            PhpTokenTypes.kwPROTECTED -> isPublic = false
+                        }
+                        m = m.treeNext
                     }
                 }
-                PhpTokenTypes.IDENTIFIER -> {
-                    methodName = child.text
-                }
+                PhpTokenTypes.IDENTIFIER -> methodName = child.text
             }
+            child = child.treeNext
         }
-        
-        return if (methodName != null) {
-            MethodInfo(
-                name = methodName,
-                isPublic = visibility == "public",
-                offset = node.startOffset
-            )
-        } else null
+
+        return methodName?.let {
+            MethodInfo(name = it, isPublic = isPublic, offset = node.startOffset)
+        }
     }
     
 
@@ -194,13 +213,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
 
         // Use AST traversal instead of PSI for method calls
-        val rootNode = psiFile.node
+        val rootNode = psiFile.node ?: return result
         val astRenderCalls = findMethodCallsByName(rootNode, "render")
             .filter { it.receiverText == "this" && it.firstParameterText != null }
         val astElementCalls = findMethodCallsByName(rootNode, "element")
             .filter { it.receiverText == "this" && it.firstParameterText != null }
 
-        val isController = isCakeControllerFile(psiFile)
+        val isController = isCakeControllerFile(virtualFile)
         if (
             astRenderCalls.isEmpty() &&
             astElementCalls.isEmpty() &&
@@ -282,7 +301,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val oldList = result.getOrDefault(fullViewPath, emptyList())
             val newViewReferenceData = ViewReferenceData(
                 methodName = method.name,
-                elementType = "Method",
+                elementType = ElementType.METHOD,
                 offset = method.offset
             )
             val newList = oldList + listOf(newViewReferenceData)
@@ -309,7 +328,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val oldList = result.getOrDefault(fullViewPath, emptyList())
             val newViewReferenceData = ViewReferenceData(
                 methodName = methodCall.methodName,
-                elementType = "MethodReference",
+                elementType = ElementType.METHOD_REFERENCE,
                 offset = methodCall.offset
             )
             val newList = oldList + listOf(newViewReferenceData)

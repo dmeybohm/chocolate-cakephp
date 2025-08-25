@@ -18,11 +18,16 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import java.io.File
 
 val VIEW_FILE_INDEX_KEY : ID<String, List<ViewReferenceData>> =
-    ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex")
+    ID.create("com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex.v2")
+
+enum class ElementType {
+    METHOD,
+    METHOD_REFERENCE
+}
 
 data class ViewReferenceData(
     val methodName: String,
-    val elementType: String, // "Method" or "MethodReference" 
+    val elementType: ElementType,
     val offset: Int
 )
 
@@ -134,9 +139,8 @@ object ViewFileIndexService {
                         val element = psiFile.findElementAt(data.offset)
                         if (element?.isValid == true) {
                             val methodOrReference = when (data.elementType) {
-                                "MethodReference" -> PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
-                                "Method" -> PsiTreeUtil.getParentOfType(element, Method::class.java, false)
-                                else -> null
+                                ElementType.METHOD_REFERENCE -> PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
+                                ElementType.METHOD -> PsiTreeUtil.getParentOfType(element, Method::class.java, false)
                             }
                             if (methodOrReference != null) {
                                 val pointer = smartPointerManager.createSmartPsiElementPointer(methodOrReference as PsiElement)
