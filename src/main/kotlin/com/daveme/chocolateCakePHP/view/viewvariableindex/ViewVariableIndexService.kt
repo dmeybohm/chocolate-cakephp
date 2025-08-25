@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.cake.ControllerPath
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -49,15 +50,18 @@ object ViewVariableIndexService {
     fun controllerKeyFromElementAndPath(
         elementAndPath: PsiElementAndPath
     ): String? {
-        val element = if (elementAndPath.psiElement is Method)
-            elementAndPath.psiElement
-        else
-            PsiTreeUtil.getParentOfType(elementAndPath.psiElement, Method::class.java)
-        if (element == null || !element.isValid) {
-            return null
+        return ReadAction.compute<String?, Nothing> {
+            val psiElement = elementAndPath.psiElement ?: return@compute null
+            val element = if (psiElement is Method)
+                psiElement
+            else
+                PsiTreeUtil.getParentOfType(psiElement, Method::class.java)
+            if (element == null || !element.isValid) {
+                return@compute null
+            }
+            val controllerPath = elementAndPath.controllerPath ?: return@compute null
+            controllerMethodKey(controllerPath, element.name)
         }
-        val controllerPath = elementAndPath.controllerPath ?: return null
-        return controllerMethodKey(controllerPath, element.name)
     }
 
     fun lookupVariableTypeFromViewPath(
@@ -87,7 +91,10 @@ object ViewVariableIndexService {
                 result.add(variableType)
                 continue
             }
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, elementAndPath.psiElement.containingFile)
+            val containingFile = ReadAction.compute<com.intellij.psi.PsiFile?, Nothing> {
+                elementAndPath.psiElement?.containingFile
+            } ?: continue
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile)
                ?: continue
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,
@@ -167,7 +174,10 @@ object ViewVariableIndexService {
                 variables.forEach { v -> result += v }
                 continue
             }
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, elementAndPath.psiElement.containingFile)
+            val containingFile2 = ReadAction.compute<com.intellij.psi.PsiFile?, Nothing> {
+                elementAndPath.psiElement?.containingFile
+            } ?: continue
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile2)
                 ?: continue
             val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,
