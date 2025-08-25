@@ -10,6 +10,8 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
+import com.jetbrains.php.lang.lexer.PhpTokenTypes
+import com.jetbrains.php.lang.parser.PhpElementTypes
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -56,8 +58,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun isMethodReference(node: ASTNode): Boolean {
-        // Based on debug output: "Method reference"
-        return node.elementType.toString() == "Method reference"
+        return node.elementType == PhpElementTypes.METHOD_REFERENCE
     }
     
     private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
@@ -70,23 +71,22 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         
         // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...)
         for (child in children) {
-            when (child.elementType.toString()) {
-                "VARIABLE" -> {
+            when (child.elementType) {
+                PhpElementTypes.VARIABLE -> {
                     receiverName = child.text.removePrefix("$")
                 }
-                "identifier" -> {
+                PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
-                "Parameter list" -> {
+                PhpElementTypes.PARAMETER_LIST -> {
                     // Only accept if there's exactly one parameter (ignoring whitespace/commas)
                     val childNodes = child.getChildren(null).toList()
                     val significantChildren = childNodes.filter { 
-                        val type = it.elementType.toString()
-                        type != "WHITE_SPACE" && type != "comma"
+                        it.elementType != PhpTokenTypes.WHITE_SPACE && it.elementType != PhpTokenTypes.opCOMMA
                     }
                     
                     // Only process if there's exactly one significant child and it's a String
-                    if (significantChildren.size == 1 && significantChildren[0].elementType.toString() == "String") {
+                    if (significantChildren.size == 1 && significantChildren[0].elementType == PhpElementTypes.STRING) {
                         parameterValue = significantChildren[0].text.removeSurrounding("'").removeSurrounding("\"")
                     }
                 }
@@ -129,8 +129,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun isMethodDeclaration(node: ASTNode): Boolean {
-        // Based on debug output: "CLASS_METHOD"
-        return node.elementType.toString() == "CLASS_METHOD"
+        return node.elementType == PhpElementTypes.CLASS_METHOD
     }
     
     private fun parseMethodDeclaration(node: ASTNode): MethodInfo? {
@@ -141,14 +140,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         
         // Parse structure: Modifier list, function keyword, identifier
         for (child in children) {
-            when (child.elementType.toString()) {
-                "Modifier list" -> {
+            when (child.elementType) {
+                PhpElementTypes.MODIFIER_LIST -> {
                     val modifierText = child.text.trim()
                     if (modifierText in listOf("private", "protected", "public")) {
                         visibility = modifierText
                     }
                 }
-                "identifier" -> {
+                PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
             }
