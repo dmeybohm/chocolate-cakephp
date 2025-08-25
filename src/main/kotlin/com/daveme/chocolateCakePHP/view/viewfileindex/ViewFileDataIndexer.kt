@@ -5,6 +5,8 @@ import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.isCustomizableViewMethod
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.lang.ASTNode
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
@@ -14,7 +16,168 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import org.jetbrains.annotations.Unmodifiable
 
+// Data structures for AST-level parsing
+data class MethodCallInfo(
+    val methodName: String,
+    val receiverText: String?,
+    val firstParameterText: String?,
+    val offset: Int
+)
+
+data class MethodInfo(
+    val name: String,
+    val isPublic: Boolean,
+    val offset: Int
+)
+
+
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
+
+    // AST-based parsing implementation (tested and proven)
+    private fun findMethodCallsByName(node: ASTNode, methodName: String): List<MethodCallInfo> {
+        val result = mutableListOf<MethodCallInfo>()
+        findMethodCallsRecursive(node, methodName, result)
+        return result
+    }
+    
+    private fun findMethodCallsRecursive(node: ASTNode, targetMethodName: String, result: MutableList<MethodCallInfo>) {
+        // Check if this node represents a method reference
+        if (isMethodReference(node)) {
+            val methodCall = parseMethodCall(node, targetMethodName)
+            if (methodCall != null) {
+                result.add(methodCall)
+            }
+        }
+        
+        // Recursively check child nodes
+        for (child in node.getChildren(null)) {
+            findMethodCallsRecursive(child, targetMethodName, result)
+        }
+    }
+    
+    private fun isMethodReference(node: ASTNode): Boolean {
+        // Based on debug output: "Method reference"
+        return node.elementType.toString() == "Method reference"
+    }
+    
+    private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
+        val children = node.getChildren(null).toList()
+        
+        // Look for VARIABLE, arrow, identifier, parameter list pattern
+        var receiverName: String? = null
+        var methodName: String? = null
+        var parameterValue: String? = null
+        
+        // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...)
+        for (child in children) {
+            when (child.elementType.toString()) {
+                "VARIABLE" -> {
+                    receiverName = child.text.removePrefix("$")
+                }
+                "identifier" -> {
+                    methodName = child.text
+                }
+                "Parameter list" -> {
+                    // Only accept if there's exactly one parameter (ignoring whitespace/commas)
+                    val childNodes = child.getChildren(null).toList()
+                    val significantChildren = childNodes.filter { 
+                        val type = it.elementType.toString()
+                        type != "WHITE_SPACE" && type != "comma"
+                    }
+                    
+                    // Only process if there's exactly one significant child and it's a String
+                    if (significantChildren.size == 1 && significantChildren[0].elementType.toString() == "String") {
+                        parameterValue = significantChildren[0].text.removeSurrounding("'").removeSurrounding("\"")
+                    }
+                }
+            }
+        }
+        
+        // Only return if method name matches target and we have all required parts
+        if (methodName?.equals(targetMethodName, ignoreCase = true) == true && 
+            receiverName != null && parameterValue != null) {
+            return MethodCallInfo(
+                methodName = methodName,
+                receiverText = receiverName,
+                firstParameterText = parameterValue,
+                offset = node.startOffset
+            )
+        }
+        
+        return null
+    }
+
+    private fun findMethodDeclarations(node: ASTNode): List<MethodInfo> {
+        val result = mutableListOf<MethodInfo>()
+        findMethodDeclarationsRecursive(node, result)
+        return result
+    }
+    
+    private fun findMethodDeclarationsRecursive(node: ASTNode, result: MutableList<MethodInfo>) {
+        // Check if this node represents a method declaration
+        if (isMethodDeclaration(node)) {
+            val methodInfo = parseMethodDeclaration(node)
+            if (methodInfo != null) {
+                result.add(methodInfo)
+            }
+        }
+        
+        // Recursively check child nodes
+        for (child in node.getChildren(null)) {
+            findMethodDeclarationsRecursive(child, result)
+        }
+    }
+    
+    private fun isMethodDeclaration(node: ASTNode): Boolean {
+        // Based on debug output: "CLASS_METHOD"
+        return node.elementType.toString() == "CLASS_METHOD"
+    }
+    
+    private fun parseMethodDeclaration(node: ASTNode): MethodInfo? {
+        val children = node.getChildren(null).toList()
+        
+        var visibility = "public" // default
+        var methodName: String? = null
+        
+        // Parse structure: Modifier list, function keyword, identifier
+        for (child in children) {
+            when (child.elementType.toString()) {
+                "Modifier list" -> {
+                    val modifierText = child.text.trim()
+                    if (modifierText in listOf("private", "protected", "public")) {
+                        visibility = modifierText
+                    }
+                }
+                "identifier" -> {
+                    methodName = child.text
+                }
+            }
+        }
+        
+        return if (methodName != null) {
+            MethodInfo(
+                name = methodName,
+                isPublic = visibility == "public",
+                offset = node.startOffset
+            )
+        } else null
+    }
+    
+    // Helper to create a compatible MethodReference-like object from AST data
+    private fun astCallToMethodReference(astCall: MethodCallInfo, psiFile: PsiFile): MethodReference {
+        // Find the actual PSI element at the offset for compatibility
+        val element = psiFile.findElementAt(astCall.offset)
+        val methodRef = PsiTreeUtil.getParentOfType(element, MethodReference::class.java)
+        return methodRef ?: throw IllegalStateException("Could not find MethodReference at offset ${astCall.offset}")
+    }
+    
+    // Helper to create a compatible Method-like object from AST data
+    private fun astMethodToMethod(astMethod: MethodInfo, psiFile: PsiFile): Method {
+        // Find the actual PSI element at the offset for compatibility
+        val element = psiFile.findElementAt(astMethod.offset)
+        val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
+        return method ?: throw IllegalStateException("Could not find Method at offset ${astMethod.offset}")
+    }
 
     override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
         val result = mutableMapOf<String, List<ViewReferenceData>>()
@@ -32,20 +195,21 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             return result
         }
 
-        val methodCalls = PsiTreeUtil.findChildrenOfType(psiFile, MethodReference::class.java)
-        val renderCalls = methodCalls
-            .filter {
-                it.name.equals("render", ignoreCase = true)
-            }
-        val elementCalls = methodCalls
-            .filter {
-                it.name.equals("element", ignoreCase = true)
-            }
+        // Use AST traversal instead of PSI for method calls
+        val rootNode = psiFile.node
+        val astRenderCalls = findMethodCallsByName(rootNode, "render")
+            .filter { it.receiverText == "this" }
+        val astElementCalls = findMethodCallsByName(rootNode, "element")
+            .filter { it.receiverText == "this" }
+        
+        // Convert AST results to compatible format for existing logic
+        val renderCalls = astRenderCalls.map { astCallToMethodReference(it, psiFile) }
+        val elementCalls = astElementCalls.map { astCallToMethodReference(it, psiFile) }
 
         val isController = isCakeControllerFile(psiFile)
         if (
-            elementCalls.isEmpty() &&
             renderCalls.isEmpty() &&
+            elementCalls.isEmpty() &&
             !isController
         ) {
             return result
@@ -55,7 +219,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         indexElementCalls(result, projectDir, elementCalls, virtualFile)
 
         if (isController) {
-            val methods = PsiTreeUtil.findChildrenOfType(psiFile, Method::class.java)
+            // Use AST traversal instead of PSI for method declarations
+            val astMethods = findMethodDeclarations(rootNode)
+                .filter { it.isPublic }
+            
+            // Convert AST results to compatible format for existing logic  
+            val methods = astMethods.map { astMethodToMethod(it, psiFile) }
             indexImplicitRender(result, projectDir, settings, methods, virtualFile)
         }
 
