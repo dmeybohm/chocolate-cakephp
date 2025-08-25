@@ -2,21 +2,35 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
-import com.daveme.chocolateCakePHP.isCustomizableViewMethod
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
 import com.jetbrains.php.lang.parser.PhpElementTypes
-import com.jetbrains.php.lang.psi.elements.Method
-import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import com.jetbrains.php.lang.psi.elements.Variable
-import org.jetbrains.annotations.Unmodifiable
+
+// Methods that should not trigger implicit view rendering
+private val cakeSkipRenderingMethods : HashSet<String> = listOf(
+    "beforefilter",
+    "beforerender",
+    "afterfilter",
+    "initialize",
+    "implementedEvents",
+    "constructclasses",
+    "invokeaction",
+    "startupprocess",
+    "shutdownprocess",
+    "redirect",
+    "setaction",
+    "render",
+    "viewclasses",
+    "paginate",
+    "isaction",
+    "loadcomponent",
+    "setrequest",
+).map { it.lowercase() }.toHashSet()
 
 // Data structures for AST-level parsing
 data class MethodCallInfo(
@@ -162,21 +176,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         } else null
     }
     
-    // Helper to create a compatible MethodReference-like object from AST data
-    private fun astCallToMethodReference(astCall: MethodCallInfo, psiFile: PsiFile): MethodReference {
-        // Find the actual PSI element at the offset for compatibility
-        val element = psiFile.findElementAt(astCall.offset)
-        val methodRef = PsiTreeUtil.getParentOfType(element, MethodReference::class.java)
-        return methodRef ?: throw IllegalStateException("Could not find MethodReference at offset ${astCall.offset}")
-    }
-    
-    // Helper to create a compatible Method-like object from AST data
-    private fun astMethodToMethod(astMethod: MethodInfo, psiFile: PsiFile): Method {
-        // Find the actual PSI element at the offset for compatibility
-        val element = psiFile.findElementAt(astMethod.offset)
-        val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
-        return method ?: throw IllegalStateException("Could not find Method at offset ${astMethod.offset}")
-    }
 
     override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
         val result = mutableMapOf<String, List<ViewReferenceData>>()
@@ -197,34 +196,28 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Use AST traversal instead of PSI for method calls
         val rootNode = psiFile.node
         val astRenderCalls = findMethodCallsByName(rootNode, "render")
-            .filter { it.receiverText == "this" }
+            .filter { it.receiverText == "this" && it.firstParameterText != null }
         val astElementCalls = findMethodCallsByName(rootNode, "element")
-            .filter { it.receiverText == "this" }
-        
-        // Convert AST results to compatible format for existing logic
-        val renderCalls = astRenderCalls.map { astCallToMethodReference(it, psiFile) }
-        val elementCalls = astElementCalls.map { astCallToMethodReference(it, psiFile) }
+            .filter { it.receiverText == "this" && it.firstParameterText != null }
 
         val isController = isCakeControllerFile(psiFile)
         if (
-            renderCalls.isEmpty() &&
-            elementCalls.isEmpty() &&
+            astRenderCalls.isEmpty() &&
+            astElementCalls.isEmpty() &&
             !isController
         ) {
             return result
         }
 
-        indexRenderCalls(result, projectDir, renderCalls, virtualFile)
-        indexElementCalls(result, projectDir, elementCalls, virtualFile)
+        indexRenderCalls(result, projectDir, astRenderCalls, virtualFile)
+        indexElementCalls(result, projectDir, astElementCalls, virtualFile)
 
         if (isController) {
             // Use AST traversal instead of PSI for method declarations
             val astMethods = findMethodDeclarations(rootNode)
-                .filter { it.isPublic }
+                .filter { it.isPublic && !cakeSkipRenderingMethods.contains(it.name.lowercase()) }
             
-            // Convert AST results to compatible format for existing logic  
-            val methods = astMethods.map { astMethodToMethod(it, psiFile) }
-            indexImplicitRender(result, projectDir, settings, methods, virtualFile)
+            indexImplicitRender(result, projectDir, settings, astMethods, virtualFile)
         }
 
         return result
@@ -233,57 +226,45 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     private fun indexRenderCalls(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
-        renderCalls: List<MethodReference>,
+        renderCalls: List<MethodCallInfo>,
         virtualFile: VirtualFile
     ) {
-        val withThis = filterRenderOrElementCalls(renderCalls)
-        if (withThis.isEmpty()) {
+        if (renderCalls.isEmpty()) {
             return
         }
 
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(withThis, viewPathPrefix, result)
+        setViewPath(renderCalls, viewPathPrefix, result)
     }
 
     private fun indexElementCalls(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
-        elementCalls: List<MethodReference>,
+        elementCalls: List<MethodCallInfo>,
         virtualFile: VirtualFile
     ) {
-        val withThis = filterRenderOrElementCalls(elementCalls)
-        if (withThis.isEmpty()) {
+        if (elementCalls.isEmpty()) {
             return
         }
 
         val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(withThis, viewPathPrefix, result)
+        setViewPath(elementCalls, viewPathPrefix, result)
     }
 
-    private fun filterRenderOrElementCalls(methodCalls: List<MethodReference>): List<MethodReference> {
-        val withThis = methodCalls.filter { method ->
-            val variable = method.firstChild as? Variable ?: return@filter false
-            variable.name == "this" &&
-                    method.parameters.isNotEmpty() &&
-                    method.parameters.first() is StringLiteralExpression
-        }
-        return withThis
-    }
 
     private fun indexImplicitRender(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         settings: Settings,
-        methods: @Unmodifiable Collection<Method>,
+        methods: List<MethodInfo>,
         controllerFile: VirtualFile
     ) {
         // todo check for $this->autoRender = false
-        val relevantMethods = methods.filter { it.isCustomizableViewMethod() }
-        if (relevantMethods.isEmpty()) {
+        if (methods.isEmpty()) {
             return
         }
 
@@ -292,7 +273,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         val controllerInfo = lookupControllerFileInfo(controllerFile, settings)
 
-        relevantMethods.forEach { method ->
+        methods.forEach { method ->
             val fullViewPath = fullImplicitViewPath(
                 viewPathPrefix,
                 controllerInfo,
@@ -302,7 +283,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val newViewReferenceData = ViewReferenceData(
                 methodName = method.name,
                 elementType = "Method",
-                offset = method.textOffset
+                offset = method.offset
             )
             val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
@@ -310,13 +291,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
     private fun setViewPath(
-        withThis: List<MethodReference>,
+        methodCalls: List<MethodCallInfo>,
         viewPathPrefix: ViewPathPrefix,
         result: MutableMap<String, List<ViewReferenceData>>
     ) {
-        for (method in withThis) {
-            val parameterName = method.parameters.first() as StringLiteralExpression
-            val content = RenderPath(parameterName.contents)
+        for (methodCall in methodCalls) {
+            val parameterText = methodCall.firstParameterText ?: continue
+            val content = RenderPath(parameterText)
 
             if (content.path.isEmpty()) {
                 continue
@@ -327,9 +308,9 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             )
             val oldList = result.getOrDefault(fullViewPath, emptyList())
             val newViewReferenceData = ViewReferenceData(
-                methodName = method.name ?: "render",
+                methodName = methodCall.methodName,
                 elementType = "MethodReference",
-                offset = method.textOffset
+                offset = methodCall.offset
             )
             val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
