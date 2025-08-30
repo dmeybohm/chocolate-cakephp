@@ -62,7 +62,7 @@ object ViewVariableIndexService {
         return controllerMethodKey(controllerPath, element.name)
     }
 
-    fun lookupVariableTypeFromViewPath(
+    fun lookupVariableTypeFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
         filenameKey: String,
@@ -114,7 +114,7 @@ object ViewVariableIndexService {
         return result
     }
 
-    fun lookupVariableTypeFromControllerKey(
+    private fun lookupVariableTypeFromControllerKey(
         project: Project,
         controllerKey: String,
         variableName: String
@@ -137,7 +137,7 @@ object ViewVariableIndexService {
         return result
     }
 
-    fun lookupVariablesFromControllerKey(
+    private fun lookupVariablesFromControllerKey(
         project: Project,
         controllerKey: String,
     ): List<ViewVariables> {
@@ -147,7 +147,7 @@ object ViewVariableIndexService {
         return fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
     }
 
-    fun lookupVariablesFromViewPath(
+    fun lookupVariablesFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
         filenameKey: String,

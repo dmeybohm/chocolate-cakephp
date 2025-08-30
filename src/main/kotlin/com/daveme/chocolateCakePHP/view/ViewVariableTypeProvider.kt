@@ -52,7 +52,10 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         return PhpType().add(incompleteType)
     }
 
-    override fun complete(expression: String, project: Project): PhpType? {
+    override fun complete(
+        expression: String,
+        project: Project
+    ): PhpType? {
         if (expression.length < 3) {
             return null
         }
@@ -66,7 +69,7 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
 
         val settings = Settings.getInstance(project)
 
-        val type = ViewVariableIndexService.lookupVariableTypeFromViewPath(
+        val type = ViewVariableIndexService.lookupVariableTypeFromViewPathInSmartReadAction(
             project,
             settings,
             relativePath,
