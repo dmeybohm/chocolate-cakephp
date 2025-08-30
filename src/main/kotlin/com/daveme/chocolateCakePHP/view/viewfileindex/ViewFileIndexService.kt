@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -124,35 +124,34 @@ object ViewFileIndexService {
         return result
     }
 
-    fun referencingElements(project: Project, filenameKey: String): List<PsiElementAndPath> {
-        return ReadAction.compute<List<PsiElementAndPath>, Nothing> {
-            val result = mutableListOf<PsiElementAndPath>()
-            val fileIndex = FileBasedIndex.getInstance()
-            val searchScope = GlobalSearchScope.allScope(project)
+    // Assumes: read lock held + smart mode (indices ready)
+    fun referencingElementsInSmartReadAction(
+        project: Project,
+        filenameKey: String
+    ): List<PsiElementAndPath> {
+        val result = mutableListOf<PsiElementAndPath>()
+        val fileIndex = FileBasedIndex.getInstance()
+        val scope = GlobalSearchScope.projectScope(project)
+        val spm = SmartPointerManager.getInstance(project)
 
-            fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
-                { indexedFile, referenceDataList: List<ViewReferenceData> ->
-                    val psiFile = PsiManager.getInstance(project).findFile(indexedFile) ?: return@processValues true
-                    val smartPointerManager = SmartPointerManager.getInstance(project)
-                    
-                    referenceDataList.forEach { data ->
-                        val element = psiFile.findElementAt(data.offset)
-                        if (element?.isValid == true) {
-                            val methodOrReference = when (data.elementType) {
-                                ElementType.METHOD_REFERENCE -> PsiTreeUtil.getParentOfType(element, MethodReference::class.java, false)
-                                ElementType.METHOD -> PsiTreeUtil.getParentOfType(element, Method::class.java, false)
-                            }
-                            if (methodOrReference != null) {
-                                val pointer = smartPointerManager.createSmartPsiElementPointer(methodOrReference as PsiElement)
-                                result.add(PsiElementAndPath(indexedFile.path, pointer))
-                            }
-                        }
-                    }
-                    true
-                }, searchScope)
-                
-            result
-        }
+        fileIndex.processValues(VIEW_FILE_INDEX_KEY, filenameKey, null,
+            { indexedFile, referenceDataList ->
+                ProgressManager.checkCanceled()
+                val psiFile = PsiManager.getInstance(project).findFile(indexedFile) ?: return@processValues true
+                for (data in referenceDataList) {
+                    ProgressManager.checkCanceled()
+                    val leaf = psiFile.findElementAt(data.offset) ?: continue
+                    val methodOrRef = when (data.elementType) {
+                        ElementType.METHOD_REFERENCE -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
+                        ElementType.METHOD -> PsiTreeUtil.getParentOfType(leaf, Method::class.java, false)
+                    } ?: continue
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(methodOrRef))
+                }
+                true
+            },
+            scope
+        )
+        return result
     }
 
 }

@@ -6,15 +6,21 @@ import com.daveme.chocolateCakePHP.createViewActionPopupFromAllViewPaths
 import com.daveme.chocolateCakePHP.getScreenPoint
 import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
+import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VfsUtil
@@ -25,9 +31,11 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.PsiNavigateUtil
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.jetbrains.php.lang.psi.elements.Method
 import java.awt.Point
 import java.awt.event.MouseEvent
+import kotlin.math.max
 
 
 class ToggleBetweenControllerAndViewAction : AnAction() {
@@ -140,20 +148,27 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val templateDirVirtualFile = templatesDir.directory
         val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
         val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
-        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
 
-        val targets = ReadAction.compute<List<PsiElement>, Nothing> {
-            fileList.asSequence()
-                .mapNotNull { it.psiElement }
-                .filter { it.isValid }
-                .toList()
+        ReadAction.nonBlocking<List<PsiElement>> {
+            val list = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+            val acc = ArrayList<PsiElement>(list.size)
+            for (p in list) {
+                ProgressManager.checkCanceled()
+                val el = p.psiElement ?: continue
+                if (!el.isValid) continue
+                acc += el
+            }
+            acc
         }
+            .inSmartMode(project)                        // wait until indices are ready
+            .expireWith(settings)                         // cancel if settings removed
+            .finishOnUiThread(ModalityState.any()) { targets ->
+                openTargets(project, targets, editor, point?.let {
+                    RelativePoint(Point(max(0, it.x - 400), it.y))
+                })
+            }
+            .submit(AppExecutorUtil.getAppExecutorService())
 
-        val relativePoint = if (point != null)
-            RelativePoint(Point(Math.max(0, point.x - 400), point.y))
-        else
-            null
-        openTargets(project, targets, editor, relativePoint)
     }
 
     private fun openTargets(

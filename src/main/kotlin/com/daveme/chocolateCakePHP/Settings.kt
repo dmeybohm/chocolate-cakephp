@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -166,9 +167,13 @@ class CakePhpAutoDetector(project: Project)
     name = "ChocolateCakePHPSettings",
     storages = [Storage( "ChocolateCakePHP.xml")]
 )
-class Settings : PersistentStateComponent<SettingsState> {
+class Settings : PersistentStateComponent<SettingsState>, Disposable {
 
     private var state = SettingsState()
+
+    override fun dispose() {
+        // nothing here, but maybe should keep track of things to dispose that use this?
+    }
 
     val cakeTemplateExtension get(): String {
         return if (state.cake3Enabled && !state.cake3ForceEnabled) {
