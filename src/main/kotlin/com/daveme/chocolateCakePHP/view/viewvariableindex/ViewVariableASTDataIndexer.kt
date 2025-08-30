@@ -16,7 +16,7 @@ data class SetCallInfo(
     val variableName: String,
     val varKind: VarKind,
     val offset: Int,
-    val rawTokenText: String? = null
+    val varHandle: VarHandle
 )
 
 data class MethodDeclarationInfo(
@@ -71,7 +71,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                     variableName = setCall.variableName,
                     varKind = setCall.varKind,
                     offset = setCall.offset,
-                    rawTokenText = setCall.rawTokenText
+                    varHandle = setCall.varHandle
                 )
                 variables[setCall.variableName] = rawVar
             }
@@ -223,11 +223,15 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                     val paramNodes = paramList?.let { extractParameterNodes(it) } ?: emptyList()
                     val secondParamText = if (paramNodes.size >= 2) paramNodes[1].text else "unknownVar"
                     
+                    // Analyze the second parameter to determine SourceKind
+                    val sourceKind = analyzeValueSource(paramNodes[1])
+                    val symbolName = secondParamText.removePrefix("$")
+                    
                     return listOf(SetCallInfo(
                         variableName = firstParamValue,
                         varKind = VarKind.PAIR,
                         offset = node.startOffset,
-                        rawTokenText = secondParamText.removePrefix("$")
+                        varHandle = VarHandle(sourceKind, symbolName, paramNodes[1].startOffset)
                     ))
                 }
             }
@@ -267,11 +271,13 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             if (child.elementType.toString() == "Hash array element") {
                 val keyValuePair = parseHashArrayElement(child)
                 if (keyValuePair != null) {
+                    // For array case, we need to find the value part of the hash element
+                    val valueHandle = extractArrayValueHandle(child)
                     variables.add(SetCallInfo(
                         variableName = keyValuePair,
                         varKind = VarKind.ARRAY,
                         offset = child.startOffset,
-                        rawTokenText = "array_value" // TODO: extract actual value expression
+                        varHandle = valueHandle
                     ))
                 }
             }
@@ -298,6 +304,60 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         
         // Extract string literal from the key node
         return keyNode?.let { extractStringLiteral(it) }
+    }
+    
+    // Extract VarHandle from the value part of a hash array element
+    private fun extractArrayValueHandle(hashElement: ASTNode): VarHandle {
+        var valueNode: ASTNode? = null
+        
+        // Find the Array value child node
+        var child = hashElement.firstChildNode
+        while (child != null) {
+            if (child.elementType.toString() == "Array value") {
+                // Get the actual value node (first child of Array value)
+                valueNode = child.firstChildNode
+                break
+            }
+            child = child.treeNext
+        }
+        
+        return if (valueNode != null) {
+            val sourceKind = analyzeValueSource(valueNode)
+            val symbolName = when (sourceKind) {
+                SourceKind.LOCAL -> valueNode.text.removePrefix("$")
+                SourceKind.LITERAL -> valueNode.text.removeSurrounding("'").removeSurrounding("\"")
+                else -> valueNode.text
+            }
+            VarHandle(sourceKind, symbolName, valueNode.startOffset)
+        } else {
+            // Fallback for unknown array values
+            VarHandle(SourceKind.UNKNOWN, "unknown_array_value", hashElement.startOffset)
+        }
+    }
+    
+    // Analyze an AST node to determine what kind of value source it represents
+    private fun analyzeValueSource(valueNode: ASTNode): SourceKind {
+        return when (valueNode.elementType) {
+            PhpElementTypes.VARIABLE -> {
+                // $foo - could be PARAM, LOCAL, or UNKNOWN
+                // For now, we'll mark as LOCAL and let resolveByHandle figure it out
+                SourceKind.LOCAL
+            }
+            PhpElementTypes.STRING -> SourceKind.LITERAL
+            PhpElementTypes.METHOD_REFERENCE -> SourceKind.CALL
+            PhpElementTypes.FIELD_REFERENCE -> {
+                // $this->foo
+                SourceKind.PROPERTY
+            }
+            else -> {
+                // Check for numeric literals
+                if (valueNode.text.matches(Regex("\\d+"))) {
+                    SourceKind.LITERAL
+                } else {
+                    SourceKind.UNKNOWN
+                }
+            }
+        }
     }
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)

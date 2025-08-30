@@ -13,13 +13,10 @@ object ViewVariableRawVarsExternalizer : DataExternalizer<ViewVariablesWithRawVa
             out.writeUTF(rawVar.variableName)
             out.writeInt(rawVar.varKind.ordinal)
             out.writeInt(rawVar.offset)
-            val rawTokenText = rawVar.rawTokenText
-            if (rawTokenText != null) {
-                out.writeBoolean(true)
-                out.writeUTF(rawTokenText)
-            } else {
-                out.writeBoolean(false)
-            }
+            // Save VarHandle
+            out.writeInt(rawVar.varHandle.sourceKind.ordinal)
+            out.writeUTF(rawVar.varHandle.symbolName)
+            out.writeInt(rawVar.varHandle.offset)
         }
     }
 
@@ -29,13 +26,17 @@ object ViewVariableRawVarsExternalizer : DataExternalizer<ViewVariablesWithRawVa
         repeat(size) {
             val key = `in`.readUTF()
             val variableName = `in`.readUTF()
-            val assignmentKindOrdinal = `in`.readInt()
+            val varKindOrdinal = `in`.readInt()
             val offset = `in`.readInt()
-            val hasRawTokenText = `in`.readBoolean()
-            val rawTokenText = if (hasRawTokenText) `in`.readUTF() else null
+            // Read VarHandle
+            val sourceKindOrdinal = `in`.readInt()
+            val symbolName = `in`.readUTF()
+            val handleOffset = `in`.readInt()
             
-            val varKind = VarKind.values()[assignmentKindOrdinal]
-            val rawVar = RawViewVar(variableName, varKind, offset, rawTokenText)
+            val varKind = VarKind.values()[varKindOrdinal]
+            val sourceKind = SourceKind.values()[sourceKindOrdinal]
+            val varHandle = VarHandle(sourceKind, symbolName, handleOffset)
+            val rawVar = RawViewVar(variableName, varKind, offset, varHandle)
             result[key] = rawVar
         }
         return result
