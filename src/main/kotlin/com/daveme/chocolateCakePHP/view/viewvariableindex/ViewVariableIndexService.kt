@@ -34,13 +34,30 @@ enum class VarKind {
     VARIABLE_COMPACT // $this->set($compactVar) where $compactVar = compact('var')
 }
 
+// The different sources where the value side of $this->set() comes from
+enum class SourceKind {
+    PARAM,      // comes from a method parameter
+    LOCAL,      // comes from a local variable assigned earlier in the method  
+    PROPERTY,   // comes from an object property reference like $this->foo
+    LITERAL,    // comes from a literal value like 'string' or 123
+    CALL,       // comes from a function/method call result
+    UNKNOWN     // couldn't determine syntactically
+}
+
+// Handle that describes both the syntax form and value source for type resolution
+data class VarHandle(
+    val sourceKind: SourceKind,
+    val symbolName: String,      // The symbol to resolve (e.g. "foo" for $foo)
+    val offset: Int              // Location for navigation
+)
+
 // Lightweight, resolve-free DTO for index storage with embedded type resolution capability
 // Contains only syntax-level facts, no type resolution during indexing
 data class RawViewVar(
     val variableName: String,
     val varKind: VarKind,
     val offset: Int,
-    val rawTokenText: String? = null // For later resolution if needed
+    val varHandle: VarHandle // Describes where the value comes from for type resolution
 ) {
     // Type resolution happens ONLY when needed, with full PSI context
     fun resolveType(project: Project, controllerFile: PsiFile? = null): PhpType {
@@ -56,18 +73,21 @@ data class RawViewVar(
     }
     
     private fun resolvePairType(project: Project, controllerFile: PsiFile?): PhpType {
-        // TODO: Use PSI to find the variable and resolve its type
-        return createFallbackType()
+        // For PAIR: $this->set('name', $value)
+        // Use varHandle to find $value and resolve its type
+        return resolveByHandle(project, controllerFile)
     }
     
     private fun resolveArrayType(project: Project, controllerFile: PsiFile?): PhpType {
-        // TODO: Use PSI to parse the array value and resolve its type
-        return createFallbackType()
+        // For ARRAY: $this->set(['name' => $value])  
+        // Use varHandle to find $value and resolve its type
+        return resolveByHandle(project, controllerFile)
     }
     
     private fun resolveCompactType(project: Project, controllerFile: PsiFile?): PhpType {
-        // TODO: Use PSI to find the compacted variable and resolve its type
-        return createFallbackType()
+        // For COMPACT: $this->set(compact('varName'))
+        // Use varHandle to find $varName and resolve its type
+        return resolveByHandle(project, controllerFile)
     }
     
     private fun resolveTupleType(project: Project, controllerFile: PsiFile?): PhpType {
@@ -88,6 +108,33 @@ data class RawViewVar(
     private fun resolveVariableCompactType(project: Project, controllerFile: PsiFile?): PhpType {
         // TODO: Use PSI to resolve indirect compact assignment
         return createFallbackType()
+    }
+    
+    // Central method that resolves types based on VarHandle information
+    private fun resolveByHandle(project: Project, controllerFile: PsiFile?): PhpType {
+        return when (varHandle.sourceKind) {
+            SourceKind.PARAM -> {
+                // TODO: Look for method parameter with symbolName and get its type
+                createFallbackType()
+            }
+            SourceKind.LOCAL -> {
+                // TODO: Look for local variable assignment with symbolName and get its type
+                createFallbackType()
+            }
+            SourceKind.PROPERTY -> {
+                // TODO: Look for property access like $this->symbolName and get its type
+                createFallbackType()
+            }
+            SourceKind.LITERAL -> {
+                // TODO: Parse literal value and return appropriate type (string, int, etc.)
+                createFallbackType()
+            }
+            SourceKind.CALL -> {
+                // TODO: Analyze function/method call and get return type
+                createFallbackType()
+            }
+            SourceKind.UNKNOWN -> createFallbackType()
+        }
     }
     
     private fun createFallbackType(): PhpType {
@@ -120,7 +167,7 @@ class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 class ViewVariablesWithRawVars : HashMap<ViewVariableName, RawViewVar>()
 
 val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
-    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex.v3")
+    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex.v4")
 
 
 object ViewVariableIndexService {
