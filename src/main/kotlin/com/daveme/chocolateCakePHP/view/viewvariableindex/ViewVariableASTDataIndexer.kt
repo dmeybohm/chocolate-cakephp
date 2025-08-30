@@ -2,7 +2,6 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
-import com.daveme.chocolateCakePHP.isCustomizableViewMethod
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
@@ -12,11 +11,12 @@ import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
 import com.jetbrains.php.lang.parser.PhpElementTypes
 
-// Data structures for AST-level parsing
+// Simplified data structure for AST-level parsing - only syntax facts
 data class SetCallInfo(
     val variableName: String,
-    val variableType: String,
-    val offset: Int
+    val varKind: VarKind,
+    val offset: Int,
+    val rawTokenText: String? = null
 )
 
 data class MethodDeclarationInfo(
@@ -26,12 +26,10 @@ data class MethodDeclarationInfo(
     val astNode: ASTNode  // Keep reference to AST node for further processing
 )
 
-object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables, FileContent> {
+object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesWithRawVars, FileContent> {
 
-    private const val FALLBACK_VIEW_VARIABLE_TYPE = "mixed"
-
-    override fun map(inputData: FileContent): MutableMap<String, ViewVariables> {
-        val result = mutableMapOf<String, ViewVariables>()
+    override fun map(inputData: FileContent): MutableMap<String, ViewVariablesWithRawVars> {
+        val result = mutableMapOf<String, ViewVariablesWithRawVars>()
         val psiFile = inputData.psiFile
 
         val virtualFile = psiFile.virtualFile
@@ -47,7 +45,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables,
     }
 
     private fun indexController(
-        result: MutableMap<String, ViewVariables>,
+        result: MutableMap<String, ViewVariablesWithRawVars>,
         psiFile: PsiFile,
         virtualFile: VirtualFile
     ) {
@@ -63,16 +61,19 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables,
         }
 
         publicMethods.forEach { method ->
-            val variables = ViewVariables()
+            val variables = ViewVariablesWithRawVars()
             
             // Find all $this->set() calls within this method using AST
             val setCallsList = findSetCallsInMethod(method.astNode)
             
             setCallsList.forEach { setCall ->
-                variables[setCall.variableName] = ViewVariableValue(
-                    setCall.variableType,
-                    setCall.offset
+                val rawVar = RawViewVar(
+                    variableName = setCall.variableName,
+                    varKind = setCall.varKind,
+                    offset = setCall.offset,
+                    rawTokenText = setCall.rawTokenText
                 )
+                variables[setCall.variableName] = rawVar
             }
             
             val filenameAndMethodKey = controllerMethodKey(controllerPath, method.name)
@@ -170,7 +171,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables,
     
     // Parse a method reference node to extract set call information
     // This implements case 1: $this->set('name', $value) and case 2: $this->set(['name' => $value])
-    private fun parseSetCall(node: ASTNode): SetCallInfo? {
+    // Returns a list because case 2 can have multiple variables
+    private fun parseSetCalls(node: ASTNode): List<SetCallInfo> {
         var receiverName: String? = null
         var methodName: String? = null
         var firstParamNode: ASTNode? = null
@@ -207,24 +209,35 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables,
             if (hasSecondParam) {
                 val firstParamValue = extractStringLiteral(firstParamNode)
                 if (firstParamValue != null) {
-                    return SetCallInfo(
+                    // Find parameter list to get the second parameter (the variable name)
+                    var paramList: ASTNode? = null
+                    var paramChild = node.firstChildNode
+                    while (paramChild != null) {
+                        if (paramChild.elementType == PhpElementTypes.PARAMETER_LIST) {
+                            paramList = paramChild
+                            break
+                        }
+                        paramChild = paramChild.treeNext
+                    }
+                    
+                    val paramNodes = paramList?.let { extractParameterNodes(it) } ?: emptyList()
+                    val secondParamText = if (paramNodes.size >= 2) paramNodes[1].text else "unknownVar"
+                    
+                    return listOf(SetCallInfo(
                         variableName = firstParamValue,
-                        variableType = FALLBACK_VIEW_VARIABLE_TYPE,
-                        offset = node.startOffset
-                    )
+                        varKind = VarKind.PAIR,
+                        offset = node.startOffset,
+                        rawTokenText = secondParamText.removePrefix("$")
+                    ))
                 }
             }
             // Case 2: $this->set(['name' => $value])
             else if (firstParamNode.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
-                val arrayVariables = extractVariablesFromArrayCreation(firstParamNode)
-                // Return the first variable for now (we'll need to handle multiple variables later)
-                if (arrayVariables.isNotEmpty()) {
-                    return arrayVariables.first()
-                }
+                return extractVariablesFromArrayCreation(firstParamNode)
             }
         }
         
-        return null
+        return emptyList()
     }
     
     // Extract parameter nodes from a parameter list (returns actual AST nodes, not just strings)
@@ -244,19 +257,47 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariables,
     }
     
     // Extract variables from array creation expression: ['name' => $value, 'title' => $pageTitle]
-    // For now, implement a simplified version that handles basic array structure
+    // Parses hash array elements to extract key-value pairs
     private fun extractVariablesFromArrayCreation(arrayNode: ASTNode): List<SetCallInfo> {
         val variables = mutableListOf<SetCallInfo>()
         
-        // Simple implementation for case 2 - just return one dummy variable for now
-        // TODO: Properly parse hash elements when we understand the correct AST structure
-        variables.add(SetCallInfo(
-            variableName = "arrayVariable", 
-            variableType = FALLBACK_VIEW_VARIABLE_TYPE,
-            offset = arrayNode.startOffset
-        ))
+        // Find all hash array elements within the array creation expression
+        var child = arrayNode.firstChildNode
+        while (child != null) {
+            if (child.elementType.toString() == "Hash array element") {
+                val keyValuePair = parseHashArrayElement(child)
+                if (keyValuePair != null) {
+                    variables.add(SetCallInfo(
+                        variableName = keyValuePair,
+                        varKind = VarKind.ARRAY,
+                        offset = child.startOffset,
+                        rawTokenText = "array_value" // TODO: extract actual value expression
+                    ))
+                }
+            }
+            child = child.treeNext
+        }
         
         return variables
+    }
+    
+    // Parse a single hash array element: 'key' => $value
+    // Returns the key string if it's a string literal, null otherwise
+    private fun parseHashArrayElement(hashElement: ASTNode): String? {
+        var keyNode: ASTNode? = null
+        
+        // Find the Array key child node
+        var child = hashElement.firstChildNode
+        while (child != null) {
+            if (child.elementType.toString() == "Array key") {
+                keyNode = child
+                break
+            }
+            child = child.treeNext
+        }
+        
+        // Extract string literal from the key node
+        return keyNode?.let { extractStringLiteral(it) }
     }
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
