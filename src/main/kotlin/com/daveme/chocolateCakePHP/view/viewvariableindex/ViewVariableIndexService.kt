@@ -7,6 +7,7 @@ import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
@@ -21,6 +22,80 @@ typealias ViewVariablesKey = String
 
 // The name of the variable
 typealias ViewVariableName = String
+
+// The different kinds of $this->set() assignments we can detect syntactically
+enum class VarKind {
+    PAIR,           // $this->set('name', $value)
+    ARRAY,          // $this->set(['name' => $value])  
+    COMPACT,        // $this->set(compact('value'))
+    TUPLE,          // $this->set(['name1', 'name2'], [$val1, $val2])
+    VARIABLE_PAIR,  // $this->set($var, $value) 
+    VARIABLE_ARRAY, // $this->set($arrayVar) where $arrayVar = ['key' => 'val']
+    VARIABLE_COMPACT // $this->set($compactVar) where $compactVar = compact('var')
+}
+
+// Lightweight, resolve-free DTO for index storage with embedded type resolution capability
+// Contains only syntax-level facts, no type resolution during indexing
+data class RawViewVar(
+    val variableName: String,
+    val varKind: VarKind,
+    val offset: Int,
+    val rawTokenText: String? = null // For later resolution if needed
+) {
+    // Type resolution happens ONLY when needed, with full PSI context
+    fun resolveType(project: Project, controllerFile: PsiFile? = null): PhpType {
+        return when (varKind) {
+            VarKind.PAIR -> resolvePairType(project, controllerFile)
+            VarKind.ARRAY -> resolveArrayType(project, controllerFile)
+            VarKind.COMPACT -> resolveCompactType(project, controllerFile)
+            VarKind.TUPLE -> resolveTupleType(project, controllerFile)
+            VarKind.VARIABLE_PAIR -> resolveVariablePairType(project, controllerFile)
+            VarKind.VARIABLE_ARRAY -> resolveVariableArrayType(project, controllerFile)
+            VarKind.VARIABLE_COMPACT -> resolveVariableCompactType(project, controllerFile)
+        }
+    }
+    
+    private fun resolvePairType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to find the variable and resolve its type
+        return createFallbackType()
+    }
+    
+    private fun resolveArrayType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to parse the array value and resolve its type
+        return createFallbackType()
+    }
+    
+    private fun resolveCompactType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to find the compacted variable and resolve its type
+        return createFallbackType()
+    }
+    
+    private fun resolveTupleType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to resolve tuple assignment types
+        return createFallbackType()
+    }
+    
+    private fun resolveVariablePairType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to resolve indirect variable assignment
+        return createFallbackType()
+    }
+    
+    private fun resolveVariableArrayType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to resolve indirect array assignment
+        return createFallbackType()
+    }
+    
+    private fun resolveVariableCompactType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to resolve indirect compact assignment
+        return createFallbackType()
+    }
+    
+    private fun createFallbackType(): PhpType {
+        val fallbackType = PhpType()
+        fallbackType.add("mixed")
+        return fallbackType
+    }
+}
 
 // The data stored at each key in the index.
 // For controllers, we store the startOffset at the offset inside the `$this->set()` call.
@@ -41,8 +116,11 @@ data class ViewVariableValue(
 
 class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 
-val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariables> =
-    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex")
+// New version using RawViewVar for direct mapping with embedded type resolution
+class ViewVariablesWithRawVars : HashMap<ViewVariableName, RawViewVar>()
+
+val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
+    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex.v3")
 
 
 object ViewVariableIndexService {
@@ -130,8 +208,8 @@ object ViewVariableIndexService {
             return null
         }
         val result = PhpType()
-        vars.map {
-            val types = it.phpType
+        vars.forEach { rawVar ->
+            val types = rawVar.resolveType(project)
             result.add(types)
         }
         return result
@@ -140,7 +218,7 @@ object ViewVariableIndexService {
     private fun lookupVariablesFromControllerKey(
         project: Project,
         controllerKey: String,
-    ): List<ViewVariables> {
+    ): List<ViewVariablesWithRawVars> {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
 
@@ -169,7 +247,13 @@ object ViewVariableIndexService {
                 val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
                     ?: continue
                 val variables = lookupVariablesFromControllerKey(project, controllerKey)
-                variables.forEach { v -> result += v }
+                variables.forEach { rawVarCollection ->
+                    // Convert RawViewVar to ViewVariableValue for backward compatibility
+                    rawVarCollection.forEach { (name, rawVar) ->
+                        val resolvedType = rawVar.resolveType(project)
+                        result[name] = ViewVariableValue(resolvedType.toString(), rawVar.offset)
+                    }
+                }
                 continue
             }
             val containingFile2 = ReadAction.compute<com.intellij.psi.PsiFile?, Nothing> {
