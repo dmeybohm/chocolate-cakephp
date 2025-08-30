@@ -239,6 +239,29 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             else if (firstParamNode.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
                 return extractVariablesFromArrayCreation(firstParamNode)
             }
+            // Case 3: $this->set(compact('value'))
+            else if (isCompactFunctionCall(firstParamNode)) {
+                return extractVariablesFromCompactCall(firstParamNode)
+            }
+            // Case 5: $this->set($var) where $var = compact('name')
+            // Case 6: $this->set($var) where $var = ['key' => 'val']
+            else if (firstParamNode.elementType == PhpElementTypes.VARIABLE) {
+                return extractVariablesFromVariableIndirection(firstParamNode, node)
+            }
+        }
+        
+        // Case 4: $this->set(['name1', 'name2'], [$val1, $val2]) - tuple assignment
+        if (receiverName == "this" && 
+            methodName?.equals("set", ignoreCase = true) == true && 
+            hasSecondParam && 
+            firstParamNode?.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
+            
+            val paramNodes = extractParameterNodes(
+                child.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
+            )
+            if (paramNodes.size == 2 && paramNodes[1].elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
+                return extractVariablesFromTupleAssignment(paramNodes[0], paramNodes[1])
+            }
         }
         
         return emptyList()
@@ -358,6 +381,110 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                 }
             }
         }
+    }
+    
+    // Check if a node is a compact() function call
+    // For now, we'll do a simple text-based check and improve later
+    private fun isCompactFunctionCall(node: ASTNode): Boolean {
+        val nodeText = node.text.trim()
+        return nodeText.startsWith("compact(", ignoreCase = true) || 
+               nodeText.contains("compact(", ignoreCase = true)
+    }
+    
+    // Extract variables from compact() function call: compact('foo', 'bar') -> [foo, bar]
+    private fun extractVariablesFromCompactCall(compactNode: ASTNode): List<SetCallInfo> {
+        val variables = mutableListOf<SetCallInfo>()
+        
+        // Find parameter list in compact() call
+        var paramList: ASTNode? = null
+        var child = compactNode.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpElementTypes.PARAMETER_LIST) {
+                paramList = child
+                break
+            }
+            child = child.treeNext
+        }
+        
+        paramList?.let { paramListNode ->
+            val paramNodes = extractParameterNodes(paramListNode)
+            paramNodes.forEach { paramNode ->
+                val variableName = extractStringLiteral(paramNode)
+                if (variableName != null) {
+                    // For compact, the variable name in the string becomes both the key and the symbol to resolve
+                    val varHandle = VarHandle(
+                        sourceKind = SourceKind.LOCAL, // compact() references local variables
+                        symbolName = variableName,
+                        offset = paramNode.startOffset
+                    )
+                    variables.add(SetCallInfo(
+                        variableName = variableName,
+                        varKind = VarKind.COMPACT,
+                        offset = paramNode.startOffset,
+                        varHandle = varHandle
+                    ))
+                }
+            }
+        }
+        
+        return variables
+    }
+    
+    // Extract variables from tuple assignment: $this->set(['n1', 'n2'], [$v1, $v2])
+    private fun extractVariablesFromTupleAssignment(keysArray: ASTNode, valuesArray: ASTNode): List<SetCallInfo> {
+        val variables = mutableListOf<SetCallInfo>()
+        
+        // Extract string literals from keys array
+        val keyNames = mutableListOf<String>()
+        var keyChild = keysArray.firstChildNode
+        while (keyChild != null) {
+            if (keyChild.elementType.toString() == "Array value") {
+                val valueChild = keyChild.firstChildNode
+                if (valueChild != null) {
+                    val keyName = extractStringLiteral(valueChild)
+                    if (keyName != null) {
+                        keyNames.add(keyName)
+                    }
+                }
+            }
+            keyChild = keyChild.treeNext
+        }
+        
+        // Extract value nodes from values array
+        val valueNodes = mutableListOf<ASTNode>()
+        var valueChild = valuesArray.firstChildNode
+        while (valueChild != null) {
+            if (valueChild.elementType.toString() == "Array value") {
+                val actualValue = valueChild.firstChildNode
+                if (actualValue != null) {
+                    valueNodes.add(actualValue)
+                }
+            }
+            valueChild = valueChild.treeNext
+        }
+        
+        // Pair up keys and values
+        for (i in keyNames.indices) {
+            if (i < valueNodes.size) {
+                val keyName = keyNames[i]
+                val valueNode = valueNodes[i]
+                val sourceKind = analyzeValueSource(valueNode)
+                val symbolName = when (sourceKind) {
+                    SourceKind.LOCAL -> valueNode.text.removePrefix("$")
+                    SourceKind.LITERAL -> valueNode.text.removeSurrounding("'").removeSurrounding("\"")
+                    else -> valueNode.text
+                }
+                
+                variables.add(SetCallInfo(
+                    variableName = keyName,
+                    varKind = VarKind.TUPLE,
+                    offset = keysArray.startOffset,
+                    varHandle = VarHandle(sourceKind, symbolName, valueNode.startOffset)
+                ))
+            }
+        }
+        
+        return variables
     }
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
