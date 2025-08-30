@@ -10,7 +10,7 @@ object ViewReferenceDataExternalizer : DataExternalizer<List<ViewReferenceData>>
         out.writeInt(value.size)
         value.forEach { data ->
             out.writeUTF(data.methodName)
-            out.writeUTF(data.elementType)
+            out.writeByte(data.elementType.ordinal)
             out.writeInt(data.offset)
         }
     }
@@ -20,7 +20,7 @@ object ViewReferenceDataExternalizer : DataExternalizer<List<ViewReferenceData>>
         return List(size) {
             ViewReferenceData(
                 methodName = `in`.readUTF(),
-                elementType = `in`.readUTF(),
+                elementType = ElementType.values()[`in`.readByte().toInt()],
                 offset = `in`.readInt()
             )
         }

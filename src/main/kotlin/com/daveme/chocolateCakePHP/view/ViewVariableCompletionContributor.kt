@@ -61,7 +61,7 @@ class ViewVariableCompletionContributor : CompletionContributor() {
                 settings,
                 path
             )
-            val viewVarValues = ViewVariableIndexService.lookupVariablesFromViewPath(
+            val viewVarValues = ViewVariableIndexService.lookupVariablesFromViewPathInSmartReadAction(
                 project,
                 settings,
                 filenameKey

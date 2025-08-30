@@ -38,7 +38,7 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
 
         try {
             val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
-            val resultType = ViewVariableIndexService.lookupVariableTypeFromViewPath(
+            val resultType = ViewVariableIndexService.lookupVariableTypeFromViewPathInSmartReadAction(
                 project,
                 settings,
                 filenameKey,

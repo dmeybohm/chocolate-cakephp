@@ -47,30 +47,28 @@ val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariables> =
 
 object ViewVariableIndexService {
 
-    fun controllerKeyFromElementAndPath(
+    private fun controllerKeyFromElementAndPath(
         elementAndPath: PsiElementAndPath
     ): String? {
-        return ReadAction.compute<String?, Nothing> {
-            val psiElement = elementAndPath.psiElement ?: return@compute null
-            val element = if (psiElement is Method)
-                psiElement
-            else
-                PsiTreeUtil.getParentOfType(psiElement, Method::class.java)
-            if (element == null || !element.isValid) {
-                return@compute null
-            }
-            val controllerPath = elementAndPath.controllerPath ?: return@compute null
-            controllerMethodKey(controllerPath, element.name)
+        val psiElement = elementAndPath.psiElement ?: return null
+        val element = if (psiElement is Method)
+            psiElement
+        else
+            PsiTreeUtil.getParentOfType(psiElement, Method::class.java)
+        if (element == null || !element.isValid) {
+            return null
         }
+        val controllerPath = elementAndPath.controllerPath ?: return null
+        return controllerMethodKey(controllerPath, element.name)
     }
 
-    fun lookupVariableTypeFromViewPath(
+    fun lookupVariableTypeFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
         filenameKey: String,
         variableName: String,
     ): PhpType {
-        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
         val toProcess = fileList.toMutableList()
         val visited = mutableSetOf<String>() // paths
         val result = PhpType()
@@ -101,7 +99,7 @@ object ViewVariableIndexService {
                 settings,
                 elementAndPath.path
             )
-            val newFileList = ViewFileIndexService.referencingElements(
+            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
                 project,
                 newFilenameKey
             )
@@ -116,7 +114,7 @@ object ViewVariableIndexService {
         return result
     }
 
-    fun lookupVariableTypeFromControllerKey(
+    private fun lookupVariableTypeFromControllerKey(
         project: Project,
         controllerKey: String,
         variableName: String
@@ -139,7 +137,7 @@ object ViewVariableIndexService {
         return result
     }
 
-    fun lookupVariablesFromControllerKey(
+    private fun lookupVariablesFromControllerKey(
         project: Project,
         controllerKey: String,
     ): List<ViewVariables> {
@@ -149,12 +147,12 @@ object ViewVariableIndexService {
         return fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
     }
 
-    fun lookupVariablesFromViewPath(
+    fun lookupVariablesFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
         filenameKey: String,
     ): ViewVariables {
-        val fileList = ViewFileIndexService.referencingElements(project, filenameKey)
+        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
         val toProcess = fileList.toMutableList()
         val visited = mutableSetOf<String>() // paths
         val result = ViewVariables()
@@ -184,7 +182,7 @@ object ViewVariableIndexService {
                 settings,
                 elementAndPath.path
             )
-            val newFileList = ViewFileIndexService.referencingElements(
+            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
                 project,
                 newFilenameKey
             )
