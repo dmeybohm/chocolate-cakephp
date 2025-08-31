@@ -257,7 +257,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             firstParamNode?.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
             
             val paramNodes = extractParameterNodes(
-                child.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
+                node.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
             )
             if (paramNodes.size == 2 && paramNodes[1].elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
                 return extractVariablesFromTupleAssignment(paramNodes[0], paramNodes[1])
@@ -485,6 +485,28 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         }
         
         return variables
+    }
+    
+    // Extract variables from variable indirection cases like:
+    // Case 5: $this->set($var) where $var = compact('name') 
+    // Case 6: $this->set($var) where $var = ['key' => 'val']
+    private fun extractVariablesFromVariableIndirection(variableNode: ASTNode, @Suppress("UNUSED_PARAMETER") setCallNode: ASTNode): List<SetCallInfo> {
+        val variableName = variableNode.text.removePrefix("$")
+        
+        // For AST-only approach, we can't easily traverse to find assignments
+        // We'll create a placeholder that indicates this needs further resolution
+        // The actual type resolution will be handled later in the indexing pipeline
+        
+        return listOf(SetCallInfo(
+            variableName = "indirect_$variableName", // Mark as indirect for later processing
+            varKind = VarKind.VARIABLE_ARRAY, // Default assumption - could be VARIABLE_COMPACT too
+            offset = variableNode.startOffset,
+            varHandle = VarHandle(
+                sourceKind = SourceKind.LOCAL,
+                symbolName = variableName,
+                offset = variableNode.startOffset
+            )
+        ))
     }
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
