@@ -493,12 +493,10 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     private fun extractVariablesFromVariableIndirection(variableNode: ASTNode, @Suppress("UNUSED_PARAMETER") setCallNode: ASTNode): List<SetCallInfo> {
         val variableName = variableNode.text.removePrefix("$")
         
-        // For AST-only approach, we can't easily traverse to find assignments
-        // We'll create a placeholder that indicates this needs further resolution
-        // The actual type resolution will be handled later in the indexing pipeline
-        
+        // Store the variable name as-is. The actual resolution of what variables this creates
+        // will be handled later using PSI to find the last assignment or check if it's a parameter
         return listOf(SetCallInfo(
-            variableName = "indirect_$variableName", // Mark as indirect for later processing
+            variableName = variableName, // Store the actual variable name being referenced
             varKind = VarKind.VARIABLE_ARRAY, // Default assumption - could be VARIABLE_COMPACT too
             offset = variableNode.startOffset,
             varHandle = VarHandle(
