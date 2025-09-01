@@ -13,6 +13,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 // Maps MovieController:methodName
@@ -118,8 +119,7 @@ data class RawViewVar(
                 createFallbackType()
             }
             SourceKind.LOCAL -> {
-                // TODO: Look for local variable assignment with symbolName and get its type
-                createFallbackType()
+                resolveLocalVariableType(project, controllerFile)
             }
             SourceKind.PROPERTY -> {
                 // TODO: Look for property access like $this->symbolName and get its type
@@ -135,6 +135,30 @@ data class RawViewVar(
             }
             SourceKind.UNKNOWN -> createFallbackType()
         }
+    }
+    
+    private fun resolveLocalVariableType(project: Project, controllerFile: PsiFile?): PhpType {
+        if (controllerFile == null) {
+            return createFallbackType()
+        }
+        
+        // Find the PSI element at the offset specified in varHandle
+        val psiElementAtOffset = controllerFile.findElementAt(varHandle.offset)
+        
+        // Find the closest Variable element that matches our symbol name
+        val variableElement = PsiTreeUtil.findFirstParent(psiElementAtOffset) { element ->
+            element is Variable && 
+            element.name == varHandle.symbolName
+        } as? Variable
+        
+        if (variableElement == null) {
+            return createFallbackType()
+        }
+        
+        // Get the variable's type from PHP type inference
+        // PhpStorm's type system already handles incomplete type resolution automatically
+        // during the global resolution phase, so we can trust the type returned here
+        return variableElement.type
     }
     
     private fun createFallbackType(): PhpType {
