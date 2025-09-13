@@ -264,6 +264,28 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             }
         }
         
+        // Case 7: $this->set($caseSevenKeys, $caseSevenVals) where either keys or vals is a variable
+        if (receiverName == "this" && 
+            methodName?.equals("set", ignoreCase = true) == true && 
+            hasSecondParam) {
+            
+            val paramNodes = extractParameterNodes(
+                node.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
+            )
+            if (paramNodes.size == 2) {
+                val keysParam = paramNodes[0]
+                val valsParam = paramNodes[1]
+                
+                // Handle mixed cases where one param is array and other is variable
+                if ((keysParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION && valsParam.elementType == PhpElementTypes.VARIABLE) ||
+                    (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) ||
+                    (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.VARIABLE)) {
+                    
+                    return extractVariablesFromMixedTupleAssignment(keysParam, valsParam)
+                }
+            }
+        }
+        
         return emptyList()
     }
     
@@ -503,6 +525,41 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                 sourceKind = SourceKind.LOCAL,
                 symbolName = variableName,
                 offset = variableNode.startOffset
+            )
+        ))
+    }
+    
+    // Extract variables from mixed tuple assignment cases like:
+    // Case 7: $this->set($caseSevenKeys, $caseSevenVals) where either keys or vals is a variable
+    private fun extractVariablesFromMixedTupleAssignment(keysParam: ASTNode, valsParam: ASTNode): List<SetCallInfo> {
+        // For case 7, we need to store information about both parameters and let later resolution
+        // figure out what variables are actually created. This is similar to variable indirection
+        // but with two parameters that need to be paired up.
+        
+        val keysVariableName = if (keysParam.elementType == PhpElementTypes.VARIABLE) {
+            keysParam.text.removePrefix("$")
+        } else {
+            null
+        }
+        
+        val valsVariableName = if (valsParam.elementType == PhpElementTypes.VARIABLE) {
+            valsParam.text.removePrefix("$")
+        } else {
+            null
+        }
+        
+        // Create a placeholder entry that indicates this is a mixed tuple assignment
+        // The actual variable names will be resolved later when we can access PSI to find assignments
+        val combinedName = "${keysVariableName ?: "array"}_${valsVariableName ?: "array"}_mixed_tuple"
+        
+        return listOf(SetCallInfo(
+            variableName = combinedName,
+            varKind = VarKind.MIXED_TUPLE, // New kind for this case
+            offset = keysParam.startOffset,
+            varHandle = VarHandle(
+                sourceKind = SourceKind.MIXED_ASSIGNMENT,
+                symbolName = "${keysVariableName ?: ""}|${valsVariableName ?: ""}",
+                offset = keysParam.startOffset
             )
         ))
     }

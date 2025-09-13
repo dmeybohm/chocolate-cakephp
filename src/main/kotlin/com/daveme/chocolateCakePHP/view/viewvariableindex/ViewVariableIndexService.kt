@@ -32,7 +32,8 @@ enum class VarKind {
     TUPLE,          // $this->set(['name1', 'name2'], [$val1, $val2])
     VARIABLE_PAIR,  // $this->set($var, $value) 
     VARIABLE_ARRAY, // $this->set($arrayVar) where $arrayVar = ['key' => 'val']
-    VARIABLE_COMPACT // $this->set($compactVar) where $compactVar = compact('var')
+    VARIABLE_COMPACT, // $this->set($compactVar) where $compactVar = compact('var')
+    MIXED_TUPLE     // $this->set($keysVar, $valsVar) where either param could be variable or array
 }
 
 // The different sources where the value side of $this->set() comes from
@@ -42,6 +43,7 @@ enum class SourceKind {
     PROPERTY,   // comes from an object property reference like $this->foo
     LITERAL,    // comes from a literal value like 'string' or 123
     CALL,       // comes from a function/method call result
+    MIXED_ASSIGNMENT, // comes from mixed tuple assignment requiring further resolution
     UNKNOWN     // couldn't determine syntactically
 }
 
@@ -70,6 +72,7 @@ data class RawViewVar(
             VarKind.VARIABLE_PAIR -> resolveVariablePairType(project, controllerFile)
             VarKind.VARIABLE_ARRAY -> resolveVariableArrayType(project, controllerFile)
             VarKind.VARIABLE_COMPACT -> resolveVariableCompactType(project, controllerFile)
+            VarKind.MIXED_TUPLE -> resolveMixedTupleType(project, controllerFile)
         }
     }
     
@@ -111,6 +114,12 @@ data class RawViewVar(
         return createFallbackType()
     }
     
+    private fun resolveMixedTupleType(project: Project, controllerFile: PsiFile?): PhpType {
+        // TODO: Use PSI to resolve mixed tuple assignment like $this->set($keysVar, $valsVar)
+        // This requires finding assignments to both variables and pairing them up
+        return createFallbackType()
+    }
+    
     // Central method that resolves types based on VarHandle information
     private fun resolveByHandle(project: Project, controllerFile: PsiFile?): PhpType {
         return when (varHandle.sourceKind) {
@@ -131,6 +140,10 @@ data class RawViewVar(
             }
             SourceKind.CALL -> {
                 // TODO: Analyze function/method call and get return type
+                createFallbackType()
+            }
+            SourceKind.MIXED_ASSIGNMENT -> {
+                // TODO: Resolve mixed tuple assignment by finding variable assignments
                 createFallbackType()
             }
             SourceKind.UNKNOWN -> createFallbackType()
