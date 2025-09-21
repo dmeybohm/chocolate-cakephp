@@ -98,7 +98,10 @@
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
                 description="Navigate to the corresponding controller for this view.">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
-            <keyboard-shortcut first-keystroke="ctrl alt UP" keymap="$default" />
+
+            <keyboard-shortcut first-keystroke="ctrl alt shift HOME" keymap="$default" />
+            <keyboard-shortcut first-keystroke="control meta shift UP" keymap="Mac OS X" />
+            <keyboard-shortcut first-keystroke="control meta shift UP" keymap="Mac OS X 10.5+" />
         </action>
     </actions>
 
