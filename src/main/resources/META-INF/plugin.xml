@@ -96,7 +96,7 @@
                 class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 text="Toggle Controller / View"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
-                description="Navigate to the corresponding controller for this view.">
+                description="Toggle between controller and related view.">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
 
             <keyboard-shortcut first-keystroke="ctrl alt shift HOME" keymap="$default" />
