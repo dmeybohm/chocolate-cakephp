@@ -94,7 +94,7 @@
                 description="Create a custom view file for the CakePHP framework"/>
         <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
-                text="Navigate to Controller"
+                text="Toggle Controller / View"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
                 description="Navigate to the corresponding controller for this view.">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
