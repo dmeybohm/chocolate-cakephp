@@ -42,7 +42,7 @@
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
                              displayName="Data Views"
                              nonDefaultProject="false"
-                             id="chocolatecakephp.DateViewsForm"
+                             id="chocolatecakephp.DataViewsForm"
                              instance="com.daveme.chocolateCakePHP.DataViewsForm" />
 
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerModelOrTableCompletionContributor" />

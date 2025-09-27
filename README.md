@@ -21,7 +21,7 @@ The plugin understands CakePHP's conventions and provides navigation between MVC
 - Create view files from controller actions using the gutter icon menu
 - Support for multiple view formats (PHP, JSON, XML) with configurable data view types
 - Navigate from controller actions to their corresponding views
-- Navigate back from views to controllers using `Ctrl+Alt+Up` (Windows/Linux) or `Cmd+Option+Up` (Mac)
+- Navigate back from views to controllers using `Ctrl+Alt+Shift+Home` (Windows/Linux) or `Cmd+Option+Shift+Up` (Mac)
 - Autocompletion for variables set in controllers when working in view files
 
 #### Model & Database Layer
@@ -84,7 +84,7 @@ The plugin detects CakePHP projects and enables features based on the framework 
 |--------|--------------|-------|
 | Navigate Controller → View | `Ctrl+Click` | `Cmd+Click` |
 | Navigate View → Controller | `Ctrl+Alt+Up` | `Cmd+Option+Up` |
-| Toggle Controller/View | `Ctrl+Alt+Home` | `Cmd+Option+Home` |
+| Toggle Controller/View | `Ctrl+Alt+Shift+Home` | `Cmd+Option+Shift+Up` |
 | Create View from Controller | Click gutter icon | Click gutter icon |
 
 ## Screenshots
