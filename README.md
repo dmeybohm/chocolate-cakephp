@@ -147,4 +147,3 @@ Licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for deta
 - [Plugin Homepage](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 - [GitHub Repository](https://github.com/dmeybohm/chocolate-cakephp)
 - [CakePHP Documentation](https://book.cakephp.org/)
-- [PhpStorm Documentation](https://www.jetbrains.com/phpstorm/documentation/)
