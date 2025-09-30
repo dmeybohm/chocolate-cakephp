@@ -37,7 +37,7 @@ class ConfigForm implements SearchableConfigurable {
 
     private void loadSettingsToUI(@NotNull Settings settings) {
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
-        enableAutoDetectCake3CheckBox.setSelected(settings.getCake3Enabled());
+        enableAutoDetectCake3CheckBox.setSelected(settings.getCake3AutoDetect());
         updateCake3SettingsVisibility();
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
@@ -154,9 +154,11 @@ class ConfigForm implements SearchableConfigurable {
 
         // Ensure namespace starts with backslash:
         String namespace = appNamespaceTextField.getText();
-        if (settings.getCake3Enabled() &&
+        if (
+                settings.getCake3AutoDetect() &&
                 !namespace.isEmpty() &&
-                !namespace.startsWith("\\")) {
+                !namespace.startsWith("\\")
+        ) {
             String newNamespace = "\\" + namespace;
             appNamespaceTextField.setText(newNamespace);
         }

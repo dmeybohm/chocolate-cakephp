@@ -203,6 +203,7 @@ class Settings : PersistentStateComponent<SettingsState>, Disposable {
     val cake2Enabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && autoDetectedValues.cake3OrLaterPresent)
+    val cake3AutoDetect get() = state.cake3Enabled
     val cake3ForceEnabled get() = state.cake3ForceEnabled
     var autoDetectedValues = CakeAutoDetectedValues()
 
