@@ -50,7 +50,10 @@ The plugin detects CakePHP projects and enables features based on the framework 
 
 ## Installation
 
-### From JetBrains Marketplace
+You can install it from the plugin page on the [JetBrains
+Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
+
+### From PhpStorm / IntelliJ Ultimate
 
 1. Open PhpStorm/IntelliJ IDEA
 2. Go to **Settings/Preferences** → **Plugins**
