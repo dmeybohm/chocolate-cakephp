@@ -80,12 +80,18 @@ The plugin detects CakePHP projects and enables features based on the framework 
 
 ## Keyboard Shortcuts
 
-| Action | Windows/Linux | macOS |
-|--------|--------------|-------|
-| Navigate Controller → View | `Ctrl+Click` | `Cmd+Click` |
-| Navigate View → Controller | `Ctrl+Alt+Up` | `Cmd+Option+Up` |
-| Toggle Controller/View | `Ctrl+Alt+Shift+Home` | `Cmd+Option+Shift+Up` |
-| Create View from Controller | Click gutter icon | Click gutter icon |
+One keyboard shortcut exists 
+
+| Action                      | Windows/Linux                       | macOS                                  |
+|-----------------------------|-------------------------------------|----------------------------------------|
+| Navigate Controller → View  | Click gutter cake icon              | Click gutter icon                      |
+|                             | `Ctrl+Alt+Shift+Home`               | `Cmd+Option+Shift+Up`                  |
+| Navigate View → Controller  | Click floating cake icon in toolbar | Click floating cake icon in toolbar    |
+|                             | `Ctrl+Alt+Shift+Home`               | `Cmd+Option+Shift+Up`                  |
+| Create View from Controller | Click gutter icon                   | Click gutter icon                      |
+|                             | Ctrl+click gutter when view exists  | Cmd+Click gutter icon when view exists |
+| Navigate to element         | Ctrl+B on element name              | Cmd+B on element name                  |
+|                             | Ctrl+click on element name          | Cmd+Click on element name              |
 
 ## Screenshots
 
