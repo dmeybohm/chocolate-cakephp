@@ -25,10 +25,7 @@ The plugin understands CakePHP's conventions and provides navigation between MVC
 - Autocompletion for variables set in controllers when working in view files
 
 #### Model & Database Layer
-- Navigate to table/model definitions from `fetchTable()` or `loadModel()` calls
 - Navigate to and autocomplete custom finder methods in models
-- Type hints and navigation for associated models/tables
-- Completion for query builder methods
 
 #### Components & Helpers
 - Component suggestions in controllers
