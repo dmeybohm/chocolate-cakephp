@@ -25,10 +25,7 @@ The plugin understands CakePHP's conventions and provides navigation between MVC
 - Autocompletion for variables set in controllers when working in view files
 
 #### Model & Database Layer
-- Navigate to table/model definitions from `fetchTable()` or `loadModel()` calls
 - Navigate to and autocomplete custom finder methods in models
-- Type hints and navigation for associated models/tables
-- Completion for query builder methods
 
 #### Components & Helpers
 - Component suggestions in controllers
@@ -53,7 +50,10 @@ The plugin detects CakePHP projects and enables features based on the framework 
 
 ## Installation
 
-### From JetBrains Marketplace
+You can install it from the plugin page on the [JetBrains
+Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
+
+### From PhpStorm / IntelliJ Ultimate
 
 1. Open PhpStorm/IntelliJ IDEA
 2. Go to **Settings/Preferences** → **Plugins**
@@ -144,7 +144,6 @@ Licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for deta
 
 ## Resources
 
-- [Plugin Homepage](https://plugins.jetbrains.com/plugin/18065-chocolate-cakephp)
+- [Plugin Homepage](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 - [GitHub Repository](https://github.com/dmeybohm/chocolate-cakephp)
 - [CakePHP Documentation](https://book.cakephp.org/)
-- [PhpStorm Documentation](https://www.jetbrains.com/phpstorm/documentation/)
