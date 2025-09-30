@@ -80,8 +80,6 @@ Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 
 ## Keyboard Shortcuts
 
-One keyboard shortcut exists 
-
 | Action                      | Windows/Linux                       | macOS                                  |
 |-----------------------------|-------------------------------------|----------------------------------------|
 | Navigate Controller → View  | Click gutter cake icon              | Click gutter icon                      |
@@ -137,10 +135,6 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 ## Issues & Support
 
 Report bugs or request features in the [issue tracker](https://github.com/dmeybohm/chocolate-cakephp/issues).
-
-## License
-
-Licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Resources
 
