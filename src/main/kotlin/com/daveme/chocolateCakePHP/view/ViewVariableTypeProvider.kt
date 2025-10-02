@@ -2,9 +2,9 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
 import com.jetbrains.php.lang.psi.elements.Variable
@@ -35,10 +35,12 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             return viewType(settings)
         }
 
-        val relativePath = VfsUtil.getRelativePath(
-            psiFile.originalFile.virtualFile,
-            templateDir.directory
-        ) ?: return null
+        val path = psiFile.originalFile.virtualFile.path
+        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+            templateDir,
+            settings,
+            path
+        )
 
         val cakeVersion = when (templateDir) {
             is CakeFourTemplatesDir -> 4
@@ -47,7 +49,7 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         }
         val name = psiElement.name
         val incompleteType = "#${getKey()}v$cakeVersion" + SEPARATOR +
-            relativePath.substringBeforeLast(".") + SEPARATOR +
+            filenameKey + SEPARATOR +
             name
         return PhpType().add(incompleteType)
     }

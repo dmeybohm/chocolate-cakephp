@@ -150,12 +150,48 @@ class ViewVariableTest: Cake5BaseTestCase() {
     fun `test variable list is communicated from nested controller to elements within a variable`() {
         myFixture.configureByFilePathAndText("cake5/templates/Nested/MyNested/some_nested_action.php", """
         <?php
-        
+
         echo ${'$'}this->element('Director/filmography');
         """.trimIndent())
         myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
         <?php
-        
+
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable list is communicated from controller to json view`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/json/film_director.php", """
+
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable type is communicated from controller to json view`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/json/film_director.php", """
+
+        <?php
+        echo ${'$'}moviesTable-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("findOwnedBy"))
+    }
+
+    fun `test variable list is communicated from controller to xml view`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/xml/film_director.php", """
+
+        <?php
         echo ${'$'}<caret>
         """.trimIndent())
         myFixture.completeBasic()
