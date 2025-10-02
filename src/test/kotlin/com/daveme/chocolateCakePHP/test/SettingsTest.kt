@@ -7,8 +7,8 @@ import com.intellij.testFramework.HeavyPlatformTestCase
 class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test default constructed settings equals defaults property`() {
-        val settings = Settings()
-        val defaults = Settings.defaults
+        val settings = Settings(project)
+        val defaults = Settings.getDefaults(project)
         assertEquals(settings, defaults)
         assertEquals(settings.state, defaults.state)
     }
