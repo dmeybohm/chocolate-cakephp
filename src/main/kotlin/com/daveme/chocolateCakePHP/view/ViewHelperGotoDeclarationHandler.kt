@@ -18,7 +18,7 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (DumbService.isDumbMode(psiElement.project)) {
+        if (DumbService.getInstance(psiElement.project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
         val settings = Settings.getInstance(psiElement.project)

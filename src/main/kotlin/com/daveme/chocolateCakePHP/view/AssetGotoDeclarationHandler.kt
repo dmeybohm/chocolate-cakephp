@@ -27,7 +27,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         if (sourceElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (DumbService.isDumbMode(sourceElement.project)) {
+        if (DumbService.getInstance(sourceElement.project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
         val project = sourceElement.project

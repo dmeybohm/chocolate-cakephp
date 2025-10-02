@@ -32,7 +32,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
-            if (DumbService.isDumbMode(psiElement.project)) {
+            if (DumbService.getInstance(psiElement.project).isDumb) {
                 return
             }
             val settings = Settings.getInstance(psiElement.project)

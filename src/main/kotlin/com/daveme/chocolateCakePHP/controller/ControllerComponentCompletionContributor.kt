@@ -44,7 +44,7 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
                 FieldReference::class.java
             ) ?: return
 
-            if (DumbService.isDumbMode(fieldReference.project)) {
+            if (DumbService.getInstance(fieldReference.project).isDumb) {
                 return
             }
 

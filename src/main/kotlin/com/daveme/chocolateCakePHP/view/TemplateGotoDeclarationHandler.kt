@@ -22,7 +22,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (DumbService.isDumbMode(psiElement.project)) {
+        if (DumbService.getInstance(psiElement.project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
         val project = psiElement.project

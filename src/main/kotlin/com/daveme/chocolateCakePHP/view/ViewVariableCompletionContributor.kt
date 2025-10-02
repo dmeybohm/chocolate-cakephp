@@ -47,7 +47,7 @@ class ViewVariableCompletionContributor : CompletionContributor() {
         ) {
             val element = parameters.position
             val project = element.project
-            if (DumbService.isDumbMode(project)) {
+            if (DumbService.getInstance(project).isDumb) {
                 return
             }
             val settings = Settings.getInstance(project)

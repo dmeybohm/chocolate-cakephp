@@ -163,7 +163,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType {
-        if (DumbService.isDumbMode(project)) {
+        if (DumbService.getInstance(project).isDumb) {
             return PhpType()
         }
 

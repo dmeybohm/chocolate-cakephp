@@ -57,7 +57,7 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         expression: String,
         project: Project
     ): PhpType? {
-        if (DumbService.isDumbMode(project)) {
+        if (DumbService.getInstance(project).isDumb) {
             return null
         }
 

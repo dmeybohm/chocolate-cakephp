@@ -97,7 +97,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
-        if (DumbService.isDumbMode(project)) {
+        if (DumbService.getInstance(project).isDumb) {
             return null
         }
 
@@ -124,7 +124,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         depth: Int,
         project: Project
     ): Collection<PhpNamedElement?> {
-        if (DumbService.isDumbMode(project)) {
+        if (DumbService.getInstance(project).isDumb) {
             return emptyList()
         }
 

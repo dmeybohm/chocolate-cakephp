@@ -53,7 +53,7 @@ class TableLocatorCompletionContributor : CompletionContributor() {
                 MethodReference::class.java
             ) ?: return
 
-            if (DumbService.isDumbMode(methodReference.project)) {
+            if (DumbService.getInstance(methodReference.project).isDumb) {
                 return
             }
 

@@ -17,7 +17,7 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
         if (psiElement == null) {
             return PsiElement.EMPTY_ARRAY
         }
-        if (DumbService.isDumbMode(psiElement.project)) {
+        if (DumbService.getInstance(psiElement.project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
         if (!PlatformPatterns.psiElement().withParent(FieldReference::class.java).accepts(psiElement)) {

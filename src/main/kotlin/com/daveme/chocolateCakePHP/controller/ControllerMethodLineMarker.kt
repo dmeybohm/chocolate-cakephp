@@ -143,7 +143,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         result: MutableCollection<in LineMarkerInfo<*>>
     ) {
         val project = elements.firstOrNull()?.project ?: return
-        if (DumbService.isDumbMode(project)) {
+        if (DumbService.getInstance(project).isDumb) {
             return
         }
 
