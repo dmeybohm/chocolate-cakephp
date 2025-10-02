@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
+import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.util.ProcessingContext
@@ -67,6 +68,10 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
                 completionParameters.position,
                 FieldReference::class.java
             ) ?: return
+
+            if (DumbService.getInstance(fieldReference.project).isDumb) {
+                return
+            }
 
             val settings =
                 Settings.getInstance(fieldReference.project)

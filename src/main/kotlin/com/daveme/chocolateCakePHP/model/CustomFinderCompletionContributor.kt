@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.model
 import com.daveme.chocolateCakePHP.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.project.DumbService
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
@@ -50,6 +51,10 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 completionParameters.position,
                 MethodReference::class.java
             ) ?: return
+
+            if (DumbService.getInstance(methodReference.project).isDumb) {
+                return
+            }
 
             val settings =
                 Settings.getInstance(methodReference.project)

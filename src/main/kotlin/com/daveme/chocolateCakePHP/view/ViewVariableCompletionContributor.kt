@@ -7,6 +7,7 @@ import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIcons
@@ -46,6 +47,9 @@ class ViewVariableCompletionContributor : CompletionContributor() {
         ) {
             val element = parameters.position
             val project = element.project
+            if (DumbService.getInstance(project).isDumb) {
+                return
+            }
             val settings = Settings.getInstance(project)
             if (!settings.enabled) {
                 return

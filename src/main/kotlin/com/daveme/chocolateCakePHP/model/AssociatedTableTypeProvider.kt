@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.daveme.chocolateCakePHP.substringOrNull
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -96,6 +97,10 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
+        if (DumbService.getInstance(project).isDumb) {
+            return null
+        }
+
         val version = expression.substringOrNull(3, 5) ?: return null
         val possibleTableName = expression.substringOrNull(6) ?: return null
         if (version != "v1") {
@@ -119,6 +124,10 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
         depth: Int,
         project: Project
     ): Collection<PhpNamedElement?> {
+        if (DumbService.getInstance(project).isDumb) {
+            return emptyList()
+        }
+
         val settings = Settings.getInstance(project)
         if (!settings.cake3Enabled) {
             return emptyList()

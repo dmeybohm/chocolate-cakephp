@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.controller
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
 import com.daveme.chocolateCakePHP.cake.isCakeTwoModelClass
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -75,6 +76,10 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
     }
 
     override fun complete(expression: String, project: Project): PhpType? {
+        if (DumbService.getInstance(project).isDumb) {
+            return null
+        }
+
         val indexOfSign  = expression.indexOf(getKey())
         val indexOfDelimiter = expression.indexOf(getKey(), indexOfSign + 1)
         val firstFieldName = expression.substringOrNull(indexOfSign + 1, indexOfDelimiter)
