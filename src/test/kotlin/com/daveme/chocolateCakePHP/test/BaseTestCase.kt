@@ -9,6 +9,8 @@ import com.intellij.navigation.GotoRelatedItem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.jetbrains.php.lang.psi.elements.PhpClass
+import kotlin.collections.any
 import kotlin.reflect.KClass
 
 abstract class BaseTestCase : BasePlatformTestCase() {
@@ -73,4 +75,25 @@ abstract class BaseTestCase : BasePlatformTestCase() {
         val targets = handler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
         return targets
     }
+
+    protected fun assertGotoDeclarationHandlerGoesToTableClass(
+        handler: GotoDeclarationHandler,
+        expectedClassName: String
+    ) {
+        val offset = myFixture.editor.caretModel.offset
+        val sourceElement = myFixture.file.findElementAt(offset)
+        val targets = handler.getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
+
+        assertNotNull(targets)
+        assertTrue(targets!!.isNotEmpty())
+
+        val matchingClass = targets.any { target ->
+            when (target) {
+                is PhpClass -> target.name == expectedClassName
+                else -> false
+            }
+        }
+        assertTrue("Expected to find $expectedClassName", matchingClass)
+    }
+
 }
