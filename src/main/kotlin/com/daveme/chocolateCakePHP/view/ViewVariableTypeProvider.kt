@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
@@ -56,6 +57,10 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         expression: String,
         project: Project
     ): PhpType? {
+        if (DumbService.isDumbMode(project)) {
+            return null
+        }
+
         if (expression.length < 3) {
             return null
         }

@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.componentAndModelClassesFromFieldName
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
@@ -14,6 +15,9 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
 
     override fun getGotoDeclarationTargets(psiElement: PsiElement?, i: Int, editor: Editor): Array<PsiElement>? {
         if (psiElement == null) {
+            return PsiElement.EMPTY_ARRAY
+        }
+        if (DumbService.isDumbMode(psiElement.project)) {
             return PsiElement.EMPTY_ARRAY
         }
         if (!PlatformPatterns.psiElement().withParent(FieldReference::class.java).accepts(psiElement)) {

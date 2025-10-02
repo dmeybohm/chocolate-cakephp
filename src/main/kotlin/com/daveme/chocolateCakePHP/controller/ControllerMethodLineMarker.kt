@@ -6,6 +6,7 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -141,8 +142,12 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         elements: MutableList<out PsiElement>,
         result: MutableCollection<in LineMarkerInfo<*>>
     ) {
+        val project = elements.firstOrNull()?.project ?: return
+        if (DumbService.isDumbMode(project)) {
+            return
+        }
+
         for (element in elements) {
-            val project = element.project
             val settings = Settings.getInstance(project)
             if (!settings.enabled) {
                 return
