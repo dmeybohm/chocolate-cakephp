@@ -1,10 +1,12 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.model.ContainGotoDeclarationHandler
+import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
+            "cake5/src5/Controller/ArticleController.php",
             "cake5/src5/Model/Table/ArticlesTable.php",
             "cake5/src5/Model/Table/AuthorsTable.php",
             "cake5/src5/Model/Table/CommentsTable.php",
@@ -14,7 +16,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test can navigate to table from contain string parameter`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -35,7 +37,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test can navigate to table from contain array parameter`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -56,7 +58,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test can navigate from second element in array`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -77,7 +79,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test does not navigate on empty string`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -100,7 +102,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test navigates to first part of nested association`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -121,7 +123,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test navigation works from query find method`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
@@ -141,7 +143,7 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
     }
 
     fun `test navigation works on table object directly`() {
-        myFixture.configureByText("ArticleController.php", """
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
         <?php
         namespace App\Controller;
 
