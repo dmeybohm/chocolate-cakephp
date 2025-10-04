@@ -60,4 +60,51 @@ class AssetGotoDeclarationTest : Cake3BaseTestCase() {
         assertGotoDeclarationHandlerGoesToFilename(handler, "pluginIcon.svg")
     }
 
+    fun `test can go to css assets in array`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->Html->css(['<caret>movie']);
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "movie.css")
+    }
+
+    fun `test can go to js assets in array`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->Html->script(['<caret>movie']);
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "movie.js")
+    }
+
+    fun `test can go to image assets in array`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->Html->image(['<caret>pluginIcon.svg']);
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "pluginIcon.svg")
+    }
+
+    fun `test can go to second element in array`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->Html->css(['forms', '<caret>movie']);
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "movie.css")
+    }
+
+    fun `test does not navigate on empty string in array`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->Html->css(['<caret>']);
+        """.trimIndent())
+        val handler = AssetGotoDeclarationHandler()
+        val targets = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(targets)
+        assertEmpty(targets!!)
+    }
+
 }
