@@ -40,6 +40,14 @@ namespace Cake\ORM\Query {
 
         public function where(): static {
         }
+
+        /**
+         * @param string|array $associations
+         * @return static
+         */
+        public function contain($associations) {
+            return $this;
+        }
     }
 }
 

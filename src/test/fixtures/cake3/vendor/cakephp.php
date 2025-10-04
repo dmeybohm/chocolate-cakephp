@@ -49,6 +49,14 @@ namespace Cake\ORM {
 
         public function where(): static {
         }
+
+        /**
+         * @param string|array $associations
+         * @return static
+         */
+        public function contain($associations) {
+            return $this;
+        }
     }
 
     class RulesChecker {}
