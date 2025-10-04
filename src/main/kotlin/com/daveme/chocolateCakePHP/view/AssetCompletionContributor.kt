@@ -9,12 +9,15 @@ import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 
 class AssetCompletionContributor : CompletionContributor() {
     init {
+        // Pattern for string literal directly in parameter list: $this->Html->css('movie')
         val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
             .withParent(
                 psiElement(StringLiteralExpression::class.java)
@@ -27,20 +30,45 @@ class AssetCompletionContributor : CompletionContributor() {
                     )
             )
 
+        // Pattern for string literal inside array: $this->Html->css(['movie', 'forms'])
+        val arrayElementPattern = psiElement(LeafPsiElement::class.java)
+            .withParent(
+                psiElement(StringLiteralExpression::class.java)
+                    .withParent(
+                        psiElement(PhpPsiElement::class.java) // ArrayElement
+                            .withParent(
+                                psiElement(ArrayCreationExpression::class.java)
+                                    .withParent(
+                                        psiElement(ParameterList::class.java)
+                                            .withParent(
+                                                psiElement(MethodReference::class.java)
+                                                    .with(AssetMethodPattern)
+                                            )
+                                    )
+                            )
+                    )
+            )
+
         extend(
             CompletionType.BASIC,
             stringLiteralPattern,
+            AssetCompletionProvider()
+        )
+
+        extend(
+            CompletionType.BASIC,
+            arrayElementPattern,
             AssetCompletionProvider()
         )
     }
 
     class AssetCompletionProvider : CompletionProvider<CompletionParameters>() {
         override fun addCompletions(
-            parameters: CompletionParameters,
+            completionParameters: CompletionParameters,
             context: ProcessingContext,
             result: CompletionResultSet
         ) {
-            val position = parameters.position
+            val position = completionParameters.position
             val project = position.project
             val settings = Settings.getInstance(project)
 
@@ -52,11 +80,29 @@ class AssetCompletionContributor : CompletionContributor() {
             val method = PsiTreeUtil.getParentOfType(position, MethodReference::class.java) ?: return
             val methodName = method.name ?: return
 
+            // Get the string literal element
+            val stringLiteral = PsiTreeUtil.getParentOfType(position, StringLiteralExpression::class.java) ?: return
+
+            // Get the parameter list
+            val parameterList = PsiTreeUtil.getParentOfType(stringLiteral, ParameterList::class.java) ?: return
+
+            // Find which parameter this is - only complete in the first parameter
+            val parameters = parameterList.parameters
+            val paramIndex = parameters.indexOfFirst { param ->
+                PsiTreeUtil.isAncestor(param, stringLiteral, false)
+            }
+
+            // Only provide completions for the first parameter (index 0)
+            if (paramIndex != 0) {
+                return
+            }
+
             // Get the asset directory
+            val virtualFile = completionParameters.originalFile.virtualFile ?: return
             val assetDir = assetDirectoryFromViewFile(
                 project,
                 settings,
-                parameters.originalFile.virtualFile
+                virtualFile
             ) ?: return
 
             // Determine subdirectory and extension based on method name
