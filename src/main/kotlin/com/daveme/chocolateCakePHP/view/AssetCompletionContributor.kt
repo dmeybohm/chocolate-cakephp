@@ -5,59 +5,25 @@ import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.patterns.PlatformPatterns.psiElement
-import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 
 class AssetCompletionContributor : CompletionContributor() {
     init {
         // Pattern for string literal directly in parameter list: $this->Html->css('movie')
-        val stringLiteralPattern = psiElement(LeafPsiElement::class.java)
-            .withParent(
-                psiElement(StringLiteralExpression::class.java)
-                    .withParent(
-                        psiElement(ParameterList::class.java)
-                            .withParent(
-                                psiElement(MethodReference::class.java)
-                                    .with(AssetMethodPattern)
-                            )
-                    )
-            )
-
-        // Pattern for string literal inside array: $this->Html->css(['movie', 'forms'])
-        val arrayElementPattern = psiElement(LeafPsiElement::class.java)
-            .withParent(
-                psiElement(StringLiteralExpression::class.java)
-                    .withParent(
-                        psiElement(PhpPsiElement::class.java) // ArrayElement
-                            .withParent(
-                                psiElement(ArrayCreationExpression::class.java)
-                                    .withParent(
-                                        psiElement(ParameterList::class.java)
-                                            .withParent(
-                                                psiElement(MethodReference::class.java)
-                                                    .with(AssetMethodPattern)
-                                            )
-                                    )
-                            )
-                    )
-            )
-
         extend(
             CompletionType.BASIC,
-            stringLiteralPattern,
+            AssetMethodPatterns.stringForCompletion,
             AssetCompletionProvider()
         )
 
+        // Pattern for string literal inside array: $this->Html->css(['movie', 'forms'])
         extend(
             CompletionType.BASIC,
-            arrayElementPattern,
+            AssetMethodPatterns.arrayForCompletion,
             AssetCompletionProvider()
         )
     }

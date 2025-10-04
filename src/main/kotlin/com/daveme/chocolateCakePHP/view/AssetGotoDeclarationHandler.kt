@@ -9,13 +9,10 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import org.jetbrains.annotations.Nls
 import java.util.HashSet
@@ -35,35 +32,9 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
-        // Pattern for string literal directly in parameter list: $this->Html->css('movie')
-        val stringLiteralPattern = psiElement(StringLiteralExpression::class.java)
-            .withParent(
-                psiElement(ParameterList::class.java)
-                    .withParent(
-                        psiElement(MethodReference::class.java)
-                            .with(AssetMethodPattern)
-                    )
-            )
-
-        // Pattern for string literal inside array: $this->Html->css(['movie', 'forms'])
-        val arrayElementPattern = psiElement(StringLiteralExpression::class.java)
-            .withParent(
-                psiElement(PhpPsiElement::class.java) // ArrayElement
-                    .withParent(
-                        psiElement(ArrayCreationExpression::class.java)
-                            .withParent(
-                                psiElement(ParameterList::class.java)
-                                    .withParent(
-                                        psiElement(MethodReference::class.java)
-                                            .with(AssetMethodPattern)
-                                    )
-                            )
-                    )
-            )
-
-        // Check if either pattern matches
-        if (!stringLiteralPattern.accepts(sourceElement.context)
-            && !arrayElementPattern.accepts(sourceElement.context)) {
+        // Check if either pattern matches (string literal or array element)
+        if (!AssetMethodPatterns.stringForGotoDeclaration.accepts(sourceElement.context)
+            && !AssetMethodPatterns.arrayForGotoDeclaration.accepts(sourceElement.context)) {
             return PsiElement.EMPTY_ARRAY
         }
 
