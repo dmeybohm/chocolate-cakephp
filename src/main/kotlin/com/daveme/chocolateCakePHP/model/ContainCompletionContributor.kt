@@ -39,25 +39,25 @@ class ContainCompletionContributor : CompletionContributor() {
 
             val phpIndex = PhpIndex.getInstance(project)
 
-            // Get all Table classes from the app namespace
-            val appTableFqnPattern = "${settings.appNamespace}\\Model\\Table\\"
-            val allClasses = phpIndex.getAllClassFqns(null)
+            // Get all Table subclasses
+            val tableBaseClass = "\\Cake\\ORM\\Table"
+            val tableClasses = phpIndex.getAllSubclasses(tableBaseClass)
 
-            allClasses
-                .filter { fqn ->
-                    fqn.startsWith(appTableFqnPattern) && fqn.endsWith("Table")
-                }
-                .forEach { fqn ->
+            tableClasses.forEach { phpClass ->
+                // Only show tables from the app namespace (not CakePHP core tables)
+                val fqn = phpClass.fqn
+                if (fqn.startsWith(settings.appNamespace)) {
                     // Extract table name: "\App\Model\Table\ArticlesTable" → "Articles"
-                    val className = fqn.substringAfterLast("\\")
+                    val className = phpClass.name
                     val tableName = className.removeSuffix("Table")
 
-                    if (tableName.isNotEmpty()) {
+                    if (tableName.isNotEmpty() && tableName != className) {
                         val lookupElement = LookupElementBuilder.create(tableName)
                             .withTypeText("Table")
                         result.addElement(lookupElement)
                     }
                 }
+            }
         }
     }
 }
