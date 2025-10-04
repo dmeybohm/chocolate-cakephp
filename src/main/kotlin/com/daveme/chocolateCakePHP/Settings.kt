@@ -6,6 +6,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.CachedValueProvider
@@ -113,7 +114,14 @@ class CakePhpAutoDetector(val project: Project)
                 dependencies.add(appConfig)
             }
 
-            CachedValueProvider.Result.create(result, dependencies)
+            // If no dependencies were found, use the modification tracker to detect when
+            // composer.json or config/app.php are created
+            if (dependencies.isEmpty()) {
+                val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
+                CachedValueProvider.Result.create(result, tracker)
+            } else {
+                CachedValueProvider.Result.create(result, dependencies)
+            }
         }
 
     private fun autodetectCakePhp(): CakeAutoDetectedValues {
