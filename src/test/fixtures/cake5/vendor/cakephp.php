@@ -16,29 +16,51 @@ namespace Cake\View {
     class Helper {}
     class ViewBuilder {}
     trait ViewVarsTrait {
+        /**
+         * @return ViewBuilder
+         */
         public function viewBuilder(): ViewBuilder {
             return new ViewBuilder();
         }
 
         /**
+         * @param array|string $name
+         * @param mixed $value
          * @return $this
          */
-        public function set($name, $value = null): void { }
+        public function set(array|string $name, mixed $value = null) {
+            return $this;
+        }
     }
 }
 
 
 namespace Cake\ORM\Query {
     class SelectQuery {
+        /**
+         * @param string $finder
+         * @param mixed ...$args
+         * @return static
+         */
         public function find(string $finder, mixed ... $args): static {
-            return new SelectQuery();
+            return $this;
         }
 
+        /**
+         * @return array
+         */
         public function toArray(): array {
             return [];
         }
 
-        public function where(): static {
+        /**
+         * @param array|string|null $conditions
+         * @param array $types
+         * @param bool $overwrite
+         * @return static
+         */
+        public function where(array|string|null $conditions = null, array $types = [], bool $overwrite = false): static {
+            return $this;
         }
     }
 }
@@ -112,13 +134,20 @@ namespace Cake\ORM\Locator {
     }
 
     trait LocatorAwareTrait {
-
-
         /**
          * @return \Cake\ORM\Locator\LocatorInterface
          */
-        public function getTableLocator() {}
+        public function getTableLocator(): LocatorInterface {
+            return new TableLocator();
+        }
 
-        public function fetchTable(?string $alias = null, array $optoins = []): Table {}
+        /**
+         * @param string|null $alias
+         * @param array $options
+         * @return Table
+         */
+        public function fetchTable(?string $alias = null, array $options = []): Table {
+            return new Table();
+        }
     }
 }
