@@ -9,7 +9,7 @@ abstract class Cake2BaseTestCase : BaseTestCase() {
         super.setUp()
 
         val originalSettings = Settings.getInstance(myFixture.project)
-        val newState = Settings.defaults.state.copy()
+        val newState = Settings.getDefaults(myFixture.project).state.copy()
         newState.cake2Enabled = true
         newState.cake3Enabled = false
         newState.cake2AppDirectory = "app"

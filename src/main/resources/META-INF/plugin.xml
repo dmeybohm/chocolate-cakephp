@@ -27,6 +27,8 @@
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
     <idea-version since-build="233.15026"/>
     <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.daveme.chocolateCakePHP.CakePhpFilesModificationTracker"/>
+
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
                              nonDefaultProject="false"

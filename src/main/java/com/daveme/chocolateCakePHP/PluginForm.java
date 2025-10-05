@@ -55,7 +55,7 @@ public class PluginForm implements SearchableConfigurable {
         Settings settings = Settings.getInstance(project);
         pluginTableModel = PluginTableModel.fromSettings(settings);
         themeTableModel = ThemeTableModel.fromSettings(settings);
-        final Settings defaults = Settings.getDefaults();
+        final Settings defaults = Settings.getDefaults(project);
 
         this.pluginTableView = new TableView<>(pluginTableModel);
         ToolbarDecorator pluginDecorator = ToolbarDecorator.createDecorator(
