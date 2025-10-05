@@ -161,4 +161,46 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
         val handler = ContainGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "AuthorsTable.php")
     }
+
+    fun `test navigation works in custom finder method`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Model/Table/ArticlesTable.php", """
+        <?php
+        namespace App\Model\Table;
+
+        use Cake\ORM\Query\SelectQuery;
+        use Cake\ORM\Table;
+
+        class ArticlesTable extends Table
+        {
+            public function findTopRated(SelectQuery ${'$'}query): SelectQuery
+            {
+                return ${'$'}query->contain('<caret>Authors');
+            }
+        }
+        """.trimIndent())
+
+        val handler = ContainGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "AuthorsTable.php")
+    }
+
+    fun `test navigation works in custom finder method with array`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Model/Table/ArticlesTable.php", """
+        <?php
+        namespace App\Model\Table;
+
+        use Cake\ORM\Query\SelectQuery;
+        use Cake\ORM\Table;
+
+        class ArticlesTable extends Table
+        {
+            public function findTopRated(SelectQuery ${'$'}query): SelectQuery
+            {
+                return ${'$'}query->contain(['<caret>Comments', 'Authors']);
+            }
+        }
+        """.trimIndent())
+
+        val handler = ContainGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "CommentsTable.php")
+    }
 }
