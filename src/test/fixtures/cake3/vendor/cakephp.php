@@ -39,34 +39,60 @@ namespace Cake\ORM {
 namespace Cake\ORM {
 
     class Query {
-        public function find(string $finder, mixed ... $args): static {
-            return new Query();
+        /**
+         * @param string $finder
+         * @param array $options
+         * @return $this
+         */
+        public function find($finder, $options = []) {
+            return $this;
         }
 
-        public function toArray(): array {
+        /**
+         * @return array
+         */
+        public function toArray() {
             return [];
         }
 
-        public function where(): static {
+        /**
+         * @param array|string|null $conditions
+         * @param array $types
+         * @param bool $overwrite
+         * @return $this
+         */
+        public function where($conditions = null, $types = [], $overwrite = false) {
+            return $this;
         }
     }
 
     class RulesChecker {}
 
     class Table {
-        public function findThreaded(): Query {
+        /**
+         * @return Query
+         */
+        public function findThreaded() {
             return new Query();
         }
-        public function findList(): Query {
+        /**
+         * @return Query
+         */
+        public function findList() {
             return new Query();
         }
-        public function findAll(): Query {
+        /**
+         * @return Query
+         */
+        public function findAll() {
             return new Query();
         }
         /**
          * @param string $type
+         * @param array $options
+         * @return Query
          */
-        public function find(string $type = 'all', ... $args): Query {
+        public function find($type = 'all', $options = []) {
             return new Query();
         }
     }
@@ -91,20 +117,15 @@ namespace Cake\ORM {
 namespace Cake\Database {
     abstract class Query {
         /**
-         * @return Query
+         * @param array|string|null $conditions
+         * @param array $types
+         * @param bool $overwrite
+         * @return $this
          */
-         public function where(
-             array|string|null $conditions = null,
-             array $types = [],
-             bool $overwrite = false
-         ) {
+         public function where($conditions = null, $types = [], $overwrite = false) {
              return $this;
          }
     }
-}
-
-namespace Cake\Database\Query {
-    class Query {}
 }
 
 namespace Cake\Validation {

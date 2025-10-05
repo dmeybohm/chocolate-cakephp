@@ -22,35 +22,58 @@ namespace Cake\Validation {
 namespace Cake\ORM {
     class RulesChecker {}
     class Table {
+        /**
+         * @return Query
+         */
         public function findThreaded(): Query {
             return new Query();
         }
+        /**
+         * @return Query
+         */
         public function findList(): Query {
             return new Query();
         }
+        /**
+         * @return Query
+         */
         public function findAll(): Query {
             return new Query();
         }
         /**
          * @param string $type
+         * @param array $options
+         * @return Query
          */
-        public function find(string $type = 'all', ... $args): Query {
+        public function find(string $type = 'all', array $options = []): Query {
             return new Query();
         }
     }
     class Query {
         /**
-         * @param string $type
+         * @param string $finder
+         * @param array $options
+         * @return static
          */
-        public function find(string $type = 'all', ... $args): static {
-            return new Query();
+        public function find(string $finder, array $options = []) {
+            return $this;
         }
 
+        /**
+         * @return array
+         */
         public function toArray(): array {
             return [];
         }
 
-        public function where(): static {
+        /**
+         * @param array|string|null $conditions
+         * @param array $types
+         * @param bool $overwrite
+         * @return static
+         */
+        public function where($conditions = null, array $types = [], bool $overwrite = false) {
+            return $this;
         }
     }
 
@@ -83,9 +106,18 @@ namespace Cake\ORM\Locator {
     }
 
     trait LocatorAwareTrait {
-        public function fetchTable(): \Cake\ORM\Table {
+        /**
+         * @param string|null $alias
+         * @param array $options
+         * @return \Cake\ORM\Table
+         */
+        public function fetchTable(?string $alias = null, array $options = []): \Cake\ORM\Table {
+            return new Table();
         }
 
+        /**
+         * @return LocatorInterface
+         */
         public function getTableLocator(): LocatorInterface {
             return new TableLocator;
         }
