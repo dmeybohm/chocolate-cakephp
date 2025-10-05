@@ -75,6 +75,14 @@ namespace Cake\ORM {
         public function where($conditions = null, array $types = [], bool $overwrite = false) {
             return $this;
         }
+
+        /**
+         * @param string|array $associations
+         * @return static
+         */
+        public function contain($associations) {
+            return $this;
+        }
     }
 
     class TableRegistry {

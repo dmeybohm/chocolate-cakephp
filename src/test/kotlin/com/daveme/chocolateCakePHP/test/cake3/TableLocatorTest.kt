@@ -364,7 +364,7 @@ class TableLocatorTest : Cake3BaseTestCase() {
         namespace App\Controller;
 
         use Cake\Controller\Controller;
-        
+
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
