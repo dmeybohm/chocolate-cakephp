@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
+use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -62,5 +62,13 @@ class ArticlesTable extends Table
     public function myCustomArticleMethod(): string
     {
         return 'test';
+    }
+
+    public function findTopRated(Query $query): Query
+    {
+        return $query
+            ->contain(['Authors'])
+            ->orderBy(['rating' => 'DESC'])
+            ->limit(6);
     }
 }

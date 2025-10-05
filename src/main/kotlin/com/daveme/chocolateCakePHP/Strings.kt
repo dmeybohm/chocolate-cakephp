@@ -52,8 +52,10 @@ fun String.isTopLevelTableClass(): Boolean =
     this.equals("\\Cake\\ORM\\Table", ignoreCase = true)
 
 fun String.isQueryObject(): Boolean =
-    this.equals("\\Cake\\ORM\\SelectQuery", ignoreCase = true) ||
-            this.equals("\\Cake\\ORM\\Query", ignoreCase = true)
+    this.equals("\\Cake\\ORM\\Query\\SelectQuery", ignoreCase = true) ||  // CakePHP 5
+            this.equals("\\Cake\\ORM\\Query", ignoreCase = true) ||               // CakePHP 3/4
+            this.equals("\\Cake\\Database\\Query\\SelectQuery", ignoreCase = true) ||  // CakePHP 5 base
+            this.equals("\\Cake\\Database\\Query", ignoreCase = true)             // CakePHP 3
 
 fun String.hasGetTableLocatorMethodCall(): Boolean =
     this.contains(".getTableLocator", ignoreCase = true)

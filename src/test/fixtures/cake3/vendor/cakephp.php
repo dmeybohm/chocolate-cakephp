@@ -3,19 +3,10 @@
 namespace Cake\Controller {
     use Cake\View\ViewVarsTrait;
     use Cake\ORM\Locator\LocatorAwareTrait;
-    use Cake\ORM\Table;
 
     class Controller {
         use ViewVarsTrait;
         use LocatorAwareTrait;
-
-        /**
-         * @param string|null $modelClass
-         * @return \Cake\ORM\Table
-         */
-        public function loadModel($modelClass = null) {
-            return new Table();
-        }
     }
 
     class Component {}

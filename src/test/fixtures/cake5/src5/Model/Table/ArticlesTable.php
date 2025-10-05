@@ -63,4 +63,12 @@ class ArticlesTable extends Table
     {
         return 'test';
     }
+
+    public function findTopRated(SelectQuery $query): SelectQuery
+    {
+        return $query
+            ->contain(['Authors'])
+            ->orderBy(['rating' => 'DESC'])
+            ->limit(6);
+    }
 }
