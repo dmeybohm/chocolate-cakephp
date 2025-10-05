@@ -134,4 +134,30 @@ class ContainCompletionTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("Authors"))
         assertTrue(result.contains("Comments"))
     }
+
+    fun `test contain completion in custom finder method`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Model/Table/ArticlesTable.php", """
+        <?php
+        namespace App\Model\Table;
+
+        use Cake\ORM\Query;
+        use Cake\ORM\Table;
+
+        class ArticlesTable extends Table
+        {
+            public function findTopRated(Query ${'$'}query): Query
+            {
+                return ${'$'}query->contain('<caret>');
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("Articles"))
+        assertTrue(result.contains("Authors"))
+        assertTrue(result.contains("Comments"))
+        assertTrue(result.contains("Movies"))
+    }
 }
