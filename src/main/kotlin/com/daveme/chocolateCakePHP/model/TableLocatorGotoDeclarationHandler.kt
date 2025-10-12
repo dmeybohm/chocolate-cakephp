@@ -85,7 +85,21 @@ class TableLocatorGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Look up the table class
         val phpIndex = PhpIndex.getInstance(sourceElement.project)
-        val tableClasses = phpIndex.getPossibleTableClasses(settings, tableName)
+        val tableClasses = if (tableName.contains(".")) {
+            // Handle plugin notation like "TestPlugin.Articles"
+            val parts = tableName.split(".")
+            if (parts.size == 2) {
+                val pluginName = parts[0]
+                val actualTableName = parts[1]
+                phpIndex.getPossibleTableClasses(settings, actualTableName).filter { phpClass ->
+                    phpClass.namespaceName.contains(pluginName, ignoreCase = true)
+                }
+            } else {
+                emptyList()
+            }
+        } else {
+            phpIndex.getPossibleTableClasses(settings, tableName)
+        }
 
         return if (tableClasses.isNotEmpty()) {
             tableClasses.toTypedArray()

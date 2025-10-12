@@ -143,14 +143,11 @@ class TableLocatorGotoDeclarationTest : Cake3BaseTestCase() {
         class MovieController extends Controller
         {
             public function index() {
-                ${'$'}pluginTable = ${'$'}this->getTableLocator()->get('<caret>TestPlugin.Articles');
+                ${'$'}pluginTable = ${'$'}this->getTableLocator()->get('<caret>TestPlugin.Directors');
             }
         }
         """.trimIndent())
         val handler = TableLocatorGotoDeclarationHandler()
-        val elements = gotoDeclarationHandlerTargets(handler)
-        assertNotNull(elements)
-        // For plugin tables, we expect it to either find the plugin table or return empty if not found
-        // This is acceptable behavior for this test
+        assertGotoDeclarationHandlerGoesToTableClass(handler, "DirectorsTable")
     }
 }
