@@ -90,17 +90,39 @@ class ViewVariableTest : Cake2BaseTestCase() {
     fun `test variable list is communicated from controller to elements within a variable`() {
         myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
         <?php
-        
+
         echo ${'$'}this->element('Director/filmography');
         """.trimIndent())
         myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
         <?php
-        
+
         echo ${'$'}<caret>
         """.trimIndent())
         myFixture.completeBasic()
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable list is communicated from controller to view with view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable type is communicated from controller to view with view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}movieModel-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("saveScreening"))
     }
 }
