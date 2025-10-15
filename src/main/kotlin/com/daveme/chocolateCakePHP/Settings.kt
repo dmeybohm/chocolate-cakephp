@@ -6,13 +6,16 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.util.ModificationTracker
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.intellij.util.xmlb.annotations.Property
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.XCollection
-import java.io.File
-import java.lang.ref.WeakReference
+import java.nio.charset.StandardCharsets
 
 
 private const val DEFAULT_NAMESPACE = "\\App"
@@ -92,19 +95,46 @@ data class CakeAutoDetectedValues(
 )
 
 @Service(Service.Level.PROJECT)
-class CakePhpAutoDetector(project: Project)
+class CakePhpAutoDetector(val project: Project)
 {
-    val projectRef = WeakReference(project)
-    val autoDetectedValues by lazy { autodetectCakePhp() }
+    val autoDetectedValues: CakeAutoDetectedValues
+        get() = CachedValuesManager.getManager(project).getCachedValue(project) {
+            val result = autodetectCakePhp()
+            val dependencies = mutableListOf<Any>()
+
+            // Add composer.json as a dependency
+            val composerJson = project.guessProjectDir()?.findFileByRelativePath("composer.json")
+            if (composerJson != null) {
+                dependencies.add(composerJson)
+            }
+
+            // Add config/app.php as a dependency
+            val appConfig = project.guessProjectDir()?.findFileByRelativePath("config/app.php")
+            if (appConfig != null) {
+                dependencies.add(appConfig)
+            }
+
+            // If no dependencies were found, use the modification tracker to detect when
+            // composer.json or config/app.php are created
+            if (dependencies.isEmpty()) {
+                val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
+                CachedValueProvider.Result.create(result, tracker)
+            } else {
+                CachedValueProvider.Result.create(result, dependencies)
+            }
+        }
 
     private fun autodetectCakePhp(): CakeAutoDetectedValues {
-        val project = projectRef.get() ?: return CakeAutoDetectedValues()
-
         val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
         val composerJson = topDir.findFileByRelativePath("composer.json")
             ?: return CakeAutoDetectedValues()
-        val fullPath = composerJson.canonicalPath ?: return CakeAutoDetectedValues()
-        val composerContents = File(fullPath).readText()
+
+        val composerContents = try {
+            String(composerJson.contentsToByteArray(), StandardCharsets.UTF_8)
+        } catch (e: Exception) {
+            return CakeAutoDetectedValues()
+        }
+
         val namespace = checkNamespaceInAppConfig(topDir)
 
         val (cake3OrLaterPresent: Boolean, appDirectory: String) = try {
@@ -150,9 +180,15 @@ class CakePhpAutoDetector(project: Project)
     private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {
         val appConfig = topDir.findFileByRelativePath("config/app.php")
             ?: return DEFAULT_NAMESPACE
-        val fullPath = appConfig.canonicalPath ?: return DEFAULT_NAMESPACE
+
+        val contents = try {
+            String(appConfig.contentsToByteArray(), StandardCharsets.UTF_8)
+        } catch (e: Exception) {
+            return DEFAULT_NAMESPACE
+        }
+
         val regex = Regex("""^\s*['"]namespace['"]\s*=>\s*['"]([^']*)['"]\s*,\s*$""")
-        val lines = File(fullPath).readLines()
+        val lines = contents.lines()
         for (line in lines) {
             val namespace = regex.find(line)?.groupValues?.get(1) ?: continue
             return namespace.replace("\\\\", "\\")
@@ -167,7 +203,7 @@ class CakePhpAutoDetector(project: Project)
     name = "ChocolateCakePHPSettings",
     storages = [Storage( "ChocolateCakePHP.xml")]
 )
-class Settings : PersistentStateComponent<SettingsState>, Disposable {
+class Settings(val project: Project) : PersistentStateComponent<SettingsState>, Disposable {
 
     private var state = SettingsState()
 
@@ -185,14 +221,14 @@ class Settings : PersistentStateComponent<SettingsState>, Disposable {
 
     val appDirectory get(): String {
         return if (state.cake3Enabled && !state.cake3ForceEnabled)
-            autoDetectedValues.appDirectory
+            getAutoDetectedValues().appDirectory
         else
             state.appDirectory
     }
 
     val appNamespace get(): String {
         return if (state.cake3Enabled && !state.cake3ForceEnabled)
-            autoDetectedValues.namespace
+            getAutoDetectedValues().namespace
         else
             return state.appNamespace.absoluteClassName()
     }
@@ -202,10 +238,16 @@ class Settings : PersistentStateComponent<SettingsState>, Disposable {
 
     val cake2Enabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
-            (state.cake3Enabled && autoDetectedValues.cake3OrLaterPresent)
+            (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3AutoDetect get() = state.cake3Enabled
     val cake3ForceEnabled get() = state.cake3ForceEnabled
-    var autoDetectedValues = CakeAutoDetectedValues()
+
+    private fun getAutoDetectedValues(): CakeAutoDetectedValues {
+        if (!state.cake3Enabled || state.cake3ForceEnabled) {
+            return CakeAutoDetectedValues()
+        }
+        return project.getService(CakePhpAutoDetector::class.java).autoDetectedValues
+    }
 
     private fun synthesizePluginEntries(
         pluginNamespaces: List<String>,
@@ -285,21 +327,18 @@ class Settings : PersistentStateComponent<SettingsState>, Disposable {
 
         @JvmStatic
         fun getInstance(project: Project): Settings {
-            val settings = project.getService(Settings::class.java)
-            if (settings.state.cake3Enabled && !settings.state.cake3ForceEnabled) {
-                val autodetector = project.getService(CakePhpAutoDetector::class.java)
-                settings.autoDetectedValues = autodetector.autoDetectedValues
-            }
-            return settings
+            return project.getService(Settings::class.java)
         }
 
         @JvmStatic
-        val defaults get() = Settings()
+        fun getDefaults(project: Project): Settings {
+            return Settings(project)
+        }
 
         @JvmStatic
         fun fromSettings(settings: Settings): Settings {
             val newState = settings.state.copy()
-            val newSettings = Settings()
+            val newSettings = Settings(settings.project)
             newSettings.loadState(newState)
             return newSettings
         }
