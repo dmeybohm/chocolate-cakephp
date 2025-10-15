@@ -67,4 +67,24 @@ class MovieController extends Controller
 		$this->set(compact('metadata'));
 	}
 
+	public function viewBuilderWithPathTest() {
+		$this->viewBuilder()->setTemplatePath('Movie/Nested');
+		$this->viewBuilder()->setTemplate('custom');
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$this->set(compact('metadata'));
+	}
+
+	public function multipleSetTemplatePathTest() {
+		// First path and template
+		$this->viewBuilder()->setTemplatePath('Movie/Nested');
+		$this->viewBuilder()->setTemplate('custom');
+
+		// Change path and use different template
+		$this->viewBuilder()->setTemplatePath('Movie/AnotherPath');
+		$this->viewBuilder()->setTemplate('different');
+
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$this->set(compact('metadata'));
+	}
+
 }

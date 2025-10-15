@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -175,8 +176,16 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val controllerPath = controllerPathFromControllerFile(virtualFile)
             ?: return null
 
-        // Get the template name or path
-        val viewName = stringLiteral.contents
+        // Get the template name or path, as well as
+        // the previous `setTemplatePath call, if any:
+        val viewContents = stringLiteral.contents
+        val templatePath = getTemplatePathPreceeding(stringLiteral)
+        val viewName = if (templatePath) {
+            "${templatePath}/${viewContents}"
+        } else {
+            viewContents
+        }
+
 
         // For now, only handle setTemplate calls (not setTemplatePath)
         if (methodName != "setTemplate") {
@@ -208,6 +217,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             allViewPaths = allViewPaths
         )
         return files.toTypedArray()
+    }
+
+    private fun getTemplatePathPreceeding(
+        stringLiteral: StringLiteralExpression
+    ): StringLiteralExpression|null  {
+        PsiTreeUtil.findSiblingBackward()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
