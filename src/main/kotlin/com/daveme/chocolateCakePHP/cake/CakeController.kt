@@ -392,6 +392,35 @@ fun actionNamesFromViewBuilderCall(methodReference: MethodReference): ActionName
     )
 }
 
+/**
+ * Get ActionNames from a single $this->view field assignment.
+ *
+ * Used in CakePHP 2 for specifying view templates:
+ *   $this->view = 'template_name';
+ *
+ * @param assignmentExpression The AssignmentExpression to check
+ * @return ActionNames or null if not a valid $this->view assignment
+ */
+fun actionNamesFromViewAssignment(assignmentExpression: AssignmentExpression): ActionNames? {
+    val fieldRef = assignmentExpression.variable as? FieldReference ?: return null
+    val variable = fieldRef.classReference as? Variable ?: return null
+
+    // Check it's $this->view
+    if (variable.name != "this" || fieldRef.name != "view") {
+        return null
+    }
+
+    // Get the assigned value
+    val stringLiteral = assignmentExpression.value as? StringLiteralExpression ?: return null
+    val viewName = stringLiteral.contents
+
+    val actionName = actionNameFromPath(viewName)
+    return ActionNames(
+        defaultActionName = actionName,
+        otherActionNames = listOf()
+    )
+}
+
 fun viewFilenameToActionName(
     viewFilename: String,
     settings: Settings,
