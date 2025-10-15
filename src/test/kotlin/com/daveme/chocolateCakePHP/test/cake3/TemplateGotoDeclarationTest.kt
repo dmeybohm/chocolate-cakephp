@@ -54,4 +54,22 @@ class TemplateGotoDeclarationTest : Cake3BaseTestCase() {
         assertNotNull(elements)
        assertTrue(elements!!.isEmpty())
     }
+
+    fun `test TemplateGotoDeclarationHandler can go to viewBuilder setTemplate calls`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function viewBuilderTest() {
+                ${'$'}this->viewBuilder()->setTemplate('<caret>artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.ctp")
+    }
 }

@@ -70,4 +70,10 @@ class MovieController extends Controller
 		$this->set(['title' => 'Test Title', 'count' => 42, 'total' => $count]);
 	}
 
+	public function viewBuilderTest() {
+		$this->viewBuilder()->setTemplate('artist');
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$this->set(compact('metadata'));
+	}
+
 }
