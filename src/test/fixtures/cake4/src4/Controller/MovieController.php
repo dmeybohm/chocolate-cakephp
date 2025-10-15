@@ -24,4 +24,10 @@ class MovieController extends Controller
 
     }
 
+	public function viewBuilderTest() {
+		$this->viewBuilder()->setTemplate('artist');
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$this->set(compact('metadata'));
+	}
+
 }
