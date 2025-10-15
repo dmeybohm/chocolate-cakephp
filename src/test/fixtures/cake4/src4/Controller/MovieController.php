@@ -89,4 +89,12 @@ class MovieController extends Controller
 		$this->set(compact('metadata'));
 	}
 
+	public function chainedViewBuilderTest() {
+		// Chained setTemplatePath and setTemplate
+		$this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate('custom');
+		$metadata = $this->MovieMetadata->generateMetadata();
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set(compact('metadata', 'moviesTable'));
+	}
+
 }

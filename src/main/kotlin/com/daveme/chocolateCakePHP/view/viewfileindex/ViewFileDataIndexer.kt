@@ -308,11 +308,22 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
     private fun parseViewBuilderCall(node: ASTNode): ViewBuilderCallInfo? {
-        // Look for: $this->viewBuilder()->setTemplate('name')
-        // or: $this->viewBuilder()->setTemplatePath('path')
-        // AST structure: METHOD_REFERENCE (setTemplate/setTemplatePath)
-        //   -> receiver: METHOD_REFERENCE (viewBuilder)
-        //       -> receiver: VARIABLE ($this)
+        // Look for:
+        //   1. $this->viewBuilder()->setTemplate('name')
+        //   2. $this->viewBuilder()->setTemplatePath('path')
+        //   3. $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+        //
+        // For chained calls, both setTemplatePath and setTemplate are returned as separate
+        // ViewBuilderCallInfo objects to preserve state tracking behavior.
+        //
+        // AST structure:
+        //   Normal: METHOD_REFERENCE (setTemplate/setTemplatePath)
+        //     -> receiver: METHOD_REFERENCE (viewBuilder)
+        //         -> receiver: VARIABLE ($this)
+        //   Chained: METHOD_REFERENCE (setTemplate)
+        //     -> receiver: METHOD_REFERENCE (setTemplatePath)
+        //         -> receiver: METHOD_REFERENCE (viewBuilder)
+        //             -> receiver: VARIABLE ($this)
 
         var methodName: String? = null
         var parameterValue: String? = null
@@ -351,9 +362,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             return null
         }
 
-        // Check if the receiver is $this->viewBuilder()
-        if (receiverMethodRef != null && isViewBuilderMethodCall(receiverMethodRef)) {
-            // Find containing method
+        if (receiverMethodRef == null) {
+            return null
+        }
+
+        val receiverMethodName = getMethodName(receiverMethodRef)
+
+        // Pattern 1: Normal calls - receiver is viewBuilder()
+        if (receiverMethodName == "viewBuilder" && isViewBuilderMethodCall(receiverMethodRef)) {
             val containingMethod = findContainingMethod(node)
             val methodStartOffset = containingMethod?.startOffset ?: -1
 
@@ -365,6 +381,55 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             )
         }
 
+        // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
+            // Verify the chain goes back to viewBuilder()
+            val viewBuilderNode = getReceiverMethodRef(receiverMethodRef)
+            if (viewBuilderNode != null && isViewBuilderMethodCall(viewBuilderNode)) {
+                val containingMethod = findContainingMethod(node)
+                val methodStartOffset = containingMethod?.startOffset ?: -1
+
+                // Return as normal setTemplate - state tracking will handle the path
+                return ViewBuilderCallInfo(
+                    methodName = "setTemplate",
+                    parameterValue = parameterValue,  // Just the template name, not combined!
+                    offset = node.startOffset,
+                    containingMethodStartOffset = methodStartOffset
+                )
+            }
+        }
+
+        // Pattern 3: Chained setTemplatePath - will be processed normally by Pattern 1
+        // AST traversal visits it separately, so no special handling needed
+
+        return null
+    }
+
+    /**
+     * Get the method name from a METHOD_REFERENCE node
+     */
+    private fun getMethodName(node: ASTNode): String? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.IDENTIFIER) {
+                return child.text
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    /**
+     * Get the receiver METHOD_REFERENCE from a METHOD_REFERENCE node
+     */
+    private fun getReceiverMethodRef(node: ASTNode): ASTNode? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpElementTypes.METHOD_REFERENCE) {
+                return child
+            }
+            child = child.treeNext
+        }
         return null
     }
 

@@ -91,9 +91,13 @@ data class ViewBuilderCall(
 /**
  * Find all ViewBuilder calls (setTemplate and setTemplatePath) in a PSI element.
  *
- * This function finds calls matching the pattern:
+ * This function finds calls matching the patterns:
  *   $this->viewBuilder()->setTemplate('name')
  *   $this->viewBuilder()->setTemplatePath('path')
+ *   $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+ *
+ * For chained calls, both setTemplatePath and setTemplate are returned as separate
+ * ViewBuilderCall objects to preserve state tracking behavior.
  *
  * @param element The PSI element to search (typically a Method)
  * @return List of ViewBuilderCall objects sorted by offset
@@ -108,26 +112,52 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             return@mapNotNull null
         }
 
-        // Check if the receiver is $this->viewBuilder()
         val receiverMethodRef = methodRef.classReference as? MethodReference ?: return@mapNotNull null
-        if (receiverMethodRef.name != "viewBuilder") {
-            return@mapNotNull null
-        }
-        val receiverVariable = receiverMethodRef.classReference as? Variable ?: return@mapNotNull null
-        if (receiverVariable.name != "this") {
-            return@mapNotNull null
+        val receiverMethodName = receiverMethodRef.name
+
+        // Pattern 1: Normal calls - receiver is viewBuilder()
+        if (receiverMethodName == "viewBuilder") {
+            val receiverVariable = receiverMethodRef.classReference as? Variable ?: return@mapNotNull null
+            if (receiverVariable.name != "this") {
+                return@mapNotNull null
+            }
+
+            // Extract the string parameter
+            val parameterList = methodRef.parameterList
+            val firstParam = parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
+
+            return@mapNotNull ViewBuilderCall(
+                methodName = methodName,
+                parameterValue = firstParam.contents,
+                offset = methodRef.textRange.startOffset
+            )
         }
 
-        // Extract the string parameter
-        val parameterList = methodRef.parameterList
-        val firstParam = parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-            ?: return@mapNotNull null
+        // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
+            // Verify the chain goes back to viewBuilder()
+            val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return@mapNotNull null
+            if (viewBuilderRef.name != "viewBuilder") return@mapNotNull null
+            val thisVar = viewBuilderRef.classReference as? Variable ?: return@mapNotNull null
+            if (thisVar.name != "this") return@mapNotNull null
 
-        ViewBuilderCall(
-            methodName = methodName,
-            parameterValue = firstParam.contents,
-            offset = methodRef.textRange.startOffset
-        )
+            // Extract the template parameter
+            val templateParam = methodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
+
+            // Return as normal setTemplate - state tracking will handle the path
+            return@mapNotNull ViewBuilderCall(
+                methodName = "setTemplate",
+                parameterValue = templateParam.contents,  // Just the template name, not combined!
+                offset = methodRef.textRange.startOffset
+            )
+        }
+
+        // Pattern 3: Chained setTemplatePath - will be processed normally by Pattern 1
+        // The PSI tree visits it separately, so no special handling needed
+
+        return@mapNotNull null
     }.sortedBy { it.offset }
 }
 
