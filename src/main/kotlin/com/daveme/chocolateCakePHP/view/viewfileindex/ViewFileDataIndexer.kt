@@ -554,7 +554,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     }
                     "setTemplate" -> {
                         // Build the final path combining setTemplatePath (if any) with setTemplate
-                        logger.error("XXX: currentTemplatePath = ${currentTemplatePath}")
                         val finalPath = if (currentTemplatePath != null) {
                             // setTemplatePath provides an absolute path from templates root
                             // Prefix with "/" to make it absolute so it's not combined with controller path
