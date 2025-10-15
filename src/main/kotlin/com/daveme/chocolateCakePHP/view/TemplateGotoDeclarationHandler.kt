@@ -179,9 +179,10 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         // Get the template name or path, as well as
         // the previous `setTemplatePath call, if any:
         val viewContents = stringLiteral.contents
-        val templatePath = getTemplatePathPreceeding(stringLiteral)
-        val viewName = if (templatePath) {
-            "${templatePath}/${viewContents}"
+        val templatePathLiteral = getTemplatePathPreceeding(stringLiteral)
+        val viewName = if (templatePathLiteral != null) {
+            // Prepend "/" to make it absolute so the controller path is not prepended
+            "/${templatePathLiteral.contents}/${viewContents}"
         } else {
             viewContents
         }
@@ -221,8 +222,59 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
     private fun getTemplatePathPreceeding(
         stringLiteral: StringLiteralExpression
-    ): StringLiteralExpression|null  {
-        PsiTreeUtil.findSiblingBackward()
+    ): StringLiteralExpression? {
+        // Find the containing method to limit our search scope
+        val containingMethod = PsiTreeUtil.getParentOfType(
+            stringLiteral,
+            com.jetbrains.php.lang.psi.elements.Method::class.java
+        ) ?: return null
+
+        // Get the text offset of the current setTemplate call
+        val currentOffset = stringLiteral.textRange.startOffset
+
+        // Find all method references in the containing method
+        val allMethodRefs = PsiTreeUtil.findChildrenOfType(
+            containingMethod,
+            MethodReference::class.java
+        )
+
+        // Filter for setTemplatePath calls on $this->viewBuilder()
+        val setTemplatePathCalls = allMethodRefs.filter { methodRef ->
+            // Check if this is a setTemplatePath call
+            if (methodRef.name != "setTemplatePath") {
+                return@filter false
+            }
+
+            // Check if the receiver is $this->viewBuilder()
+            val receiverMethodRef = methodRef.classReference as? MethodReference ?: return@filter false
+            if (receiverMethodRef.name != "viewBuilder") {
+                return@filter false
+            }
+            val receiverVariable = receiverMethodRef.classReference as? Variable ?: return@filter false
+            receiverVariable.name == "this"
+        }
+
+        // Find the closest preceding setTemplatePath call
+        // (the one with the highest offset that's still less than currentOffset)
+        var closestCall: MethodReference? = null
+        var closestOffset = -1
+
+        for (call in setTemplatePathCalls) {
+            val callOffset = call.textRange.startOffset
+            if (callOffset < currentOffset && callOffset > closestOffset) {
+                closestCall = call
+                closestOffset = callOffset
+            }
+        }
+
+        // Extract the string literal from the parameter list
+        if (closestCall != null) {
+            val parameterList = closestCall.parameterList
+            val firstParam = parameterList?.parameters?.getOrNull(0)
+            return firstParam as? StringLiteralExpression
+        }
+
+        return null
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
