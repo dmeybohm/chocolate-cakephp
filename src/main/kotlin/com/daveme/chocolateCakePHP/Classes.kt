@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
@@ -66,37 +67,64 @@ fun Method.isCustomizableViewMethod(): Boolean {
                 !cakeSkipRenderingMethods.contains(this.name.lowercase())
 }
 
-fun PhpIndex.getAllViewHelperSubclasses(settings: Settings): Collection<PhpClass> {
-    val result = arrayListOf<PhpClass>()
+private fun PhpIndex.getAllSubclassesRecursively(
+    fqn: String
+): Collection<PhpClass> {
+    val result = mutableSetOf<PhpClass>()
+    val queue = ArrayDeque<String>()
+    queue.add(fqn)
+    val visited = mutableSetOf<String>()
+
+    while (queue.isNotEmpty()) {
+        ProgressManager.checkCanceled()
+
+        val currentFqn = queue.removeFirst()
+        if (!visited.add(currentFqn)) continue
+
+        val directSubclasses = getDirectSubclasses(currentFqn)
+        for (subclass in directSubclasses) {
+            ProgressManager.checkCanceled()
+
+            if (result.add(subclass)) {
+                queue.add(subclass.fqn)
+            }
+        }
+    }
+
+    return result
+}
+
+fun PhpIndex.getViewHelperSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclasses(VIEW_HELPER_CAKE2_PARENT_CLASS).filter {
+        result += getAllSubclassesRecursively(VIEW_HELPER_CAKE2_PARENT_CLASS).filter {
             !cake2HelperBlackList.contains(it.name)
         }
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclasses(VIEW_HELPER_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesRecursively(VIEW_HELPER_CAKE3_PARENT_CLASS)
     }
     return result
 }
 
-fun PhpIndex.getAllModelSubclasses(settings: Settings): Collection<PhpClass> {
-    val result = arrayListOf<PhpClass>()
+fun PhpIndex.getModelSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclasses(MODEL_CAKE2_PARENT_CLASS)
+        result += getAllSubclassesRecursively(MODEL_CAKE2_PARENT_CLASS)
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclasses(MODEL_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesRecursively(MODEL_CAKE3_PARENT_CLASS)
     }
     return result
 }
 
-fun PhpIndex.getAllComponentSubclasses(settings: Settings): Collection<PhpClass> {
-    val result = arrayListOf<PhpClass>()
+fun PhpIndex.getComponentSubclasses(settings: Settings): Collection<PhpClass> {
+    val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclasses(COMPONENT_CAKE2_PARENT_CLASS)
+        result += getAllSubclassesRecursively(COMPONENT_CAKE2_PARENT_CLASS)
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclasses(COMPONENT_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesRecursively(COMPONENT_CAKE3_PARENT_CLASS)
     }
     return result
 }

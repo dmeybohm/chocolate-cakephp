@@ -49,7 +49,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
                 return
             }
             val phpIndex = PhpIndex.getInstance(psiElement.project)
-            val viewHelperClasses = phpIndex.getAllViewHelperSubclasses(settings)
+            val viewHelperClasses = phpIndex.getViewHelperSubclasses(settings)
             completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
         }
     }
