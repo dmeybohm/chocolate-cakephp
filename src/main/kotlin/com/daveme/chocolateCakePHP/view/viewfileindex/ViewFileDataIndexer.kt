@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.psi.PsiFile
 import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
@@ -57,11 +58,13 @@ data class FieldAssignmentInfo(
 data class ViewBuilderCallInfo(
     val methodName: String,        // "setTemplate" or "setTemplatePath"
     val parameterValue: String?,   // The template name or path
-    val offset: Int
+    val offset: Int,
+    val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
 )
 
 
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
+    val logger = this.thisLogger()
 
     // Robust string literal extraction that handles different PHP plugin versions
     private fun extractStringLiteral(node: ASTNode): String? {
@@ -350,10 +353,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         // Check if the receiver is $this->viewBuilder()
         if (receiverMethodRef != null && isViewBuilderMethodCall(receiverMethodRef)) {
+            // Find containing method
+            val containingMethod = findContainingMethod(node)
+            val methodStartOffset = containingMethod?.startOffset ?: -1
+
             return ViewBuilderCallInfo(
                 methodName = methodName,
                 parameterValue = parameterValue,
-                offset = node.startOffset
+                offset = node.startOffset,
+                containingMethodStartOffset = methodStartOffset
             )
         }
 
@@ -379,6 +387,17 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
 
         return receiverVariable == "this" && methodName == "viewBuilder"
+    }
+
+    private fun findContainingMethod(node: ASTNode): ASTNode? {
+        var current = node.treeParent
+        while (current != null) {
+            if (current.elementType == PhpElementTypes.CLASS_METHOD) {
+                return current
+            }
+            current = current.treeParent
+        }
+        return null
     }
 
 
@@ -514,35 +533,51 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        // Group calls to handle both setTemplate and setTemplatePath together
-        // For simplicity, we'll process each call individually for now
-        // In a more sophisticated implementation, you might group by method and combine
+        // Group by containing method
+        val callsByMethod = builderCalls.groupBy { it.containingMethodStartOffset }
 
-        for (call in builderCalls) {
-            val parameterValue = call.parameterValue ?: continue
+        for ((_, calls) in callsByMethod) {
+            // Sort by offset to maintain order
+            val sortedCalls = calls.sortedBy { it.offset }
 
-            when (call.methodName) {
-                "setTemplate" -> {
-                    // Template name - use controller's default path + template name
-                    val renderPath = RenderPath(parameterValue)
-                    if (renderPath.path.isEmpty()) {
-                        continue
+            // Track the most recent setTemplatePath
+            var currentTemplatePath: String? = null
+
+            for (call in sortedCalls) {
+                val parameterValue = call.parameterValue ?: continue
+
+                when (call.methodName) {
+                    "setTemplatePath" -> {
+                        // Update the current template path for subsequent setTemplate calls
+                        currentTemplatePath = parameterValue
+                        // Note: We don't index setTemplatePath calls directly
                     }
-                    val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
-                    val oldList = result.getOrDefault(fullViewPath, emptyList())
-                    val newViewReferenceData = ViewReferenceData(
-                        methodName = call.methodName,
-                        elementType = ElementType.VIEW_BUILDER,
-                        offset = call.offset
-                    )
-                    val newList = oldList + listOf(newViewReferenceData)
-                    result[fullViewPath] = newList
-                }
-                "setTemplatePath" -> {
-                    // Template path - this changes the directory for subsequent templates
-                    // For now, we'll skip indexing these directly since they need to be combined
-                    // with setTemplate calls to be meaningful
-                    // TODO: Implement more sophisticated handling of setTemplatePath
+                    "setTemplate" -> {
+                        // Build the final path combining setTemplatePath (if any) with setTemplate
+                        logger.error("XXX: currentTemplatePath = ${currentTemplatePath}")
+                        val finalPath = if (currentTemplatePath != null) {
+                            // setTemplatePath provides an absolute path from templates root
+                            // Prefix with "/" to make it absolute so it's not combined with controller path
+                            "/$currentTemplatePath/$parameterValue"
+                        } else {
+                            parameterValue
+                        }
+
+                        val renderPath = RenderPath(finalPath)
+                        if (renderPath.path.isEmpty()) {
+                            continue
+                        }
+
+                        val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
+                        val oldList = result.getOrDefault(fullViewPath, emptyList())
+                        val newViewReferenceData = ViewReferenceData(
+                            methodName = call.methodName,
+                            elementType = ElementType.VIEW_BUILDER,
+                            offset = call.offset
+                        )
+                        val newList = oldList + listOf(newViewReferenceData)
+                        result[fullViewPath] = newList
+                    }
                 }
             }
         }
