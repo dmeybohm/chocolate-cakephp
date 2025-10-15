@@ -486,4 +486,48 @@ class ViewVariableTest: Cake5BaseTestCase() {
         myFixture.checkHighlighting(true, false, false)
     }
 
+    fun `test variable list is communicated from controller to view with viewBuilder setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable type is communicated from controller to view with viewBuilder setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}moviesTable-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("findOwnedBy"))
+    }
+
+    fun `test variable list is communicated from controller to view with viewBuilder setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/Nested/custom.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test variable type is communicated from controller to view with viewBuilder setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/Nested/custom.php", """
+        <?php
+        echo ${'$'}moviesTable-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("findOwnedBy"))
+    }
+
 }

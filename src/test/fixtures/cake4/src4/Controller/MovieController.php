@@ -64,14 +64,16 @@ class MovieController extends Controller
 	public function viewBuilderTest() {
 		$this->viewBuilder()->setTemplate('artist');
 		$metadata = $this->MovieMetadata->generateMetadata();
-		$this->set(compact('metadata'));
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set(compact('metadata', 'moviesTable'));
 	}
 
 	public function viewBuilderWithPathTest() {
 		$this->viewBuilder()->setTemplatePath('Movie/Nested');
 		$this->viewBuilder()->setTemplate('custom');
 		$metadata = $this->MovieMetadata->generateMetadata();
-		$this->set(compact('metadata'));
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set(compact('metadata', 'moviesTable'));
 	}
 
 	public function multipleSetTemplatePathTest() {
