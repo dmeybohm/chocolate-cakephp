@@ -65,7 +65,7 @@ class TableLocatorCompletionContributor : CompletionContributor() {
             if (!hasRequiredType(type)) {
                 return
             }
-            val modelSubclasses = phpIndex.getAllModelSubclasses(settings)
+            val modelSubclasses = phpIndex.getModelSubclasses(settings)
             completionResultSet.completeMethodCallWithParameterFromClasses(
                 modelSubclasses,
                 removeFromEnd = "Table",

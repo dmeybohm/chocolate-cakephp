@@ -2,7 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.completeFromClasses
-import com.daveme.chocolateCakePHP.getAllViewHelperSubclasses
+import com.daveme.chocolateCakePHP.getViewHelperSubclasses
 import com.intellij.codeInsight.completion.*
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.util.PsiTreeUtil
@@ -53,7 +53,7 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
 
             val type = classReference.type
             val phpIndex = PhpIndex.getInstance(psiElement.project)
-            val viewHelperSubclasses = phpIndex.getAllViewHelperSubclasses(settings)
+            val viewHelperSubclasses = phpIndex.getViewHelperSubclasses(settings)
             val filtered = viewHelperSubclasses.filter { !type.types.contains(it.fqn) }
 
             val isCurrentFileAViewHelper = filtered.size < viewHelperSubclasses.size
