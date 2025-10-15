@@ -162,7 +162,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         }
             .inSmartMode(project)                        // wait until indices are ready
             .expireWith(settings)                         // cancel if settings removed
-            .finishOnUiThread(ModalityState.any()) { targets ->
+            .finishOnUiThread(ModalityState.defaultModalityState()) { targets ->
                 openTargets(project, targets, editor, point?.let {
                     RelativePoint(Point(max(0, it.x - 400), it.y))
                 })
