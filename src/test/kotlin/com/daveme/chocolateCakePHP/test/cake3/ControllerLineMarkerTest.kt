@@ -3,8 +3,11 @@ package com.daveme.chocolateCakePHP.test.cake3
 import com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker
 import com.intellij.icons.AllIcons
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.Variable
 
 class ControllerLineMarkerTest : Cake3BaseTestCase() {
 
@@ -432,6 +435,104 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
             ControllerMethodLineMarker::class)
         // Should not create a marker for setTemplatePath alone
         assertEquals(0, markers.size)
+    }
+
+    fun `test that line marker is added to view field assignments`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->view = "artist";
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        // Find all AssignmentExpressions and locate the one with $this->view
+        val allAssignments = PsiTreeUtil.findChildrenOfType(myFixture.file, AssignmentExpression::class.java)
+        val viewAssignment = allAssignments.find {
+            val fieldRef = it.variable as? FieldReference
+            fieldRef?.name == "view"
+        }
+        assertNotNull(viewAssignment)
+
+        // The marker should be on the $this variable element
+        val fieldRef = viewAssignment!!.variable as FieldReference
+        val thisVariable = fieldRef.classReference as Variable
+        val markers = calculateLineMarkers(thisVariable.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that line marker is added to view field assignments with nested path`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/Nested/custom.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->view = "Nested/custom";
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val allAssignments = PsiTreeUtil.findChildrenOfType(myFixture.file, AssignmentExpression::class.java)
+        val viewAssignment = allAssignments.find {
+            val fieldRef = it.variable as? FieldReference
+            fieldRef?.name == "view"
+        }
+        assertNotNull(viewAssignment)
+
+        val fieldRef = viewAssignment!!.variable as FieldReference
+        val thisVariable = fieldRef.classReference as Variable
+        val markers = calculateLineMarkers(thisVariable.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "custom.ctp", containingDir = "Nested"),
+        )
+        assertEquals(expected, infos)
     }
 
 }

@@ -10,6 +10,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.Variable
@@ -131,6 +133,49 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             currentRef = currentRef.parent as? MethodReference
         }
         return null
+    }
+
+    //
+    // Add a marker for a single $this->view = 'template' assignment.
+    //
+    private fun markerForViewAssignment(
+        project: Project,
+        relatedLookupInfo: RelatedLookupInfo,
+        element: PsiElement,
+    ): LineMarkerInfo<*>? {
+        if (element.firstChild != null) {
+            return null
+        }
+
+        // Check if this element is the "this" variable
+        val variable = element.parent as? Variable ?: return null
+        if (variable.name != "this") {
+            return null
+        }
+
+        // Check if variable.parent is a FieldReference for "view"
+        val fieldRef = variable.parent as? FieldReference ?: return null
+        if (fieldRef.name != "view") {
+            return null
+        }
+
+        // Check if this FieldReference is part of an assignment
+        val assignment = fieldRef.parent as? AssignmentExpression ?: return null
+        if (assignment.variable != fieldRef) {
+            return null
+        }
+
+        // Get ActionNames for this assignment
+        val actionNames = actionNamesFromViewAssignment(assignment)
+            ?: return null
+
+        return relatedItemLineMarkerInfo(
+            project,
+            actionNames,
+            relatedLookupInfo,
+            element,
+            useAltLabel = true
+        )
     }
 
     /**
@@ -257,6 +302,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             // Add line markers for ViewBuilder setTemplate calls
             val viewBuilderMarker = markerForSingleViewBuilderCallInAction(project, relatedLookupInfo, element)
             addLineMarkerUnique(result, viewBuilderMarker)
+
+            // Add line markers for $this->view assignments (CakePHP 2)
+            val viewAssignmentMarker = markerForViewAssignment(project, relatedLookupInfo, element)
+            addLineMarkerUnique(result, viewAssignmentMarker)
         }
     }
 }
