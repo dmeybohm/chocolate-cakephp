@@ -117,8 +117,17 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
 
         // Pattern 1: Normal calls - receiver is viewBuilder()
         if (receiverMethodName == "viewBuilder") {
-            val receiverVariable = receiverMethodRef.classReference as? Variable ?: return@mapNotNull null
-            if (receiverVariable.name != "this") {
+            // The classReference of viewBuilder() could be either:
+            // - A Variable ($this) for simple cases
+            // - A FieldReference ($this->) which contains the Variable
+            val classRef = receiverMethodRef.classReference
+            val isThisVariable = when (classRef) {
+                is Variable -> classRef.name == "this"
+                is FieldReference -> (classRef.classReference as? Variable)?.name == "this"
+                else -> false
+            }
+
+            if (!isThisVariable) {
                 return@mapNotNull null
             }
 
@@ -139,14 +148,22 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             // Verify the chain goes back to viewBuilder()
             val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return@mapNotNull null
             if (viewBuilderRef.name != "viewBuilder") return@mapNotNull null
-            val thisVar = viewBuilderRef.classReference as? Variable ?: return@mapNotNull null
-            if (thisVar.name != "this") return@mapNotNull null
+
+            // Check if the viewBuilder() is called on $this
+            val classRef = viewBuilderRef.classReference
+            val isThisVariable = when (classRef) {
+                is Variable -> classRef.name == "this"
+                is FieldReference -> (classRef.classReference as? Variable)?.name == "this"
+                else -> false
+            }
+            if (!isThisVariable) return@mapNotNull null
 
             // Extract the template parameter
             val templateParam = methodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
                 ?: return@mapNotNull null
 
             // Return as normal setTemplate - state tracking will handle the path
+            // Note: The setTemplatePath should be found separately by Pattern 1
             return@mapNotNull ViewBuilderCall(
                 methodName = "setTemplate",
                 parameterValue = templateParam.contents,  // Just the template name, not combined!
@@ -154,8 +171,10 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             )
         }
 
-        // Pattern 3: Chained setTemplatePath - will be processed normally by Pattern 1
-        // The PSI tree visits it separately, so no special handling needed
+        // Pattern 3: Chained setTemplatePath in a chain like:
+        // $this->viewBuilder()->setTemplatePath()->setTemplate()
+        // The setTemplatePath will be found by checking if any method has it as a receiver
+        // This is already handled by Pattern 1 above
 
         return@mapNotNull null
     }.sortedBy { it.offset }
@@ -176,6 +195,10 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
  *
  * The "/" prefix makes the path absolute (see ActionName.isAbsolute).
  *
+ * Special handling for chained calls: If a setTemplate comes BEFORE its setTemplatePath
+ * in the list (which can happen due to PSI structure), we need to look ahead to find
+ * the path.
+ *
  * @param viewBuilderCalls List of ViewBuilder calls sorted by offset
  * @return List of ActionName objects
  */
@@ -183,18 +206,43 @@ fun actionNamesFromViewBuilderCalls(viewBuilderCalls: List<ViewBuilderCall>): Li
     val result = mutableListOf<ActionName>()
     var currentTemplatePath: String? = null
 
-    for (call in viewBuilderCalls) {
+    for ((index, call) in viewBuilderCalls.withIndex()) {
         when (call.methodName) {
             "setTemplatePath" -> {
                 // Update the current template path for subsequent setTemplate calls
                 currentTemplatePath = call.parameterValue
             }
             "setTemplate" -> {
+                // Check if there's a setTemplatePath that should apply to this setTemplate
+                // First try the current one from state tracking
+                var pathToUse = currentTemplatePath
+
+                // If we don't have a path yet, check if there's a setTemplatePath
+                // near this setTemplate (for chained calls where ordering might be unexpected)
+                if (pathToUse == null) {
+                    // Look backward
+                    if (index > 0) {
+                        val previousCall = viewBuilderCalls[index - 1]
+                        if (previousCall.methodName == "setTemplatePath") {
+                            pathToUse = previousCall.parameterValue
+                        }
+                    }
+
+                    // Also look forward (in case setTemplate offset comes before setTemplatePath)
+                    if (pathToUse == null && index < viewBuilderCalls.size - 1) {
+                        val nextCall = viewBuilderCalls[index + 1]
+                        if (nextCall.methodName == "setTemplatePath" &&
+                            nextCall.offset < call.offset + 20) {  // Within reasonable proximity
+                            pathToUse = nextCall.parameterValue
+                        }
+                    }
+                }
+
                 // Build the final path combining setTemplatePath (if any) with setTemplate
-                val viewName = if (currentTemplatePath != null) {
+                val viewName = if (pathToUse != null) {
                     // Prepend "/" to make it absolute so the controller path is not prepended
                     // This matches the behavior in TemplateGotoDeclarationHandler and ViewFileDataIndexer
-                    "/$currentTemplatePath/${call.parameterValue}"
+                    "/$pathToUse/${call.parameterValue}"
                 } else {
                     call.parameterValue
                 }
@@ -283,6 +331,61 @@ fun actionNamesFromRenderCall(methodReference: MethodReference): ActionNames? {
 
     val renderParameter = firstParameter.contents
     val actionName = actionNameFromPath(renderParameter)
+    return ActionNames(
+        defaultActionName = actionName,
+        otherActionNames = listOf()
+    )
+}
+
+/**
+ * Get ActionNames from a single viewBuilder()->setTemplate() call.
+ *
+ * This function handles both normal and chained ViewBuilder calls:
+ * - $this->viewBuilder()->setTemplate('name')
+ * - $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')
+ *
+ * For state tracking (when there's a preceding setTemplatePath in the same method),
+ * we use findViewBuilderCalls() and actionNamesFromViewBuilderCalls() to properly
+ * combine the path with the template.
+ *
+ * @param methodReference The MethodReference to the setTemplate call
+ * @return ActionNames or null if not a valid setTemplate call
+ */
+fun actionNamesFromViewBuilderCall(methodReference: MethodReference): ActionNames? {
+    if (methodReference.name != "setTemplate") {
+        return null
+    }
+
+    // Get the containing method to check for preceding setTemplatePath calls
+    val containingMethod = PsiTreeUtil.getParentOfType(
+        methodReference,
+        Method::class.java
+    ) ?: return null
+
+    // Find all ViewBuilder calls in the method (preserves state tracking)
+    val allViewBuilderCalls = findViewBuilderCalls(containingMethod)
+
+    // Find this specific setTemplate call in the list
+    val currentOffset = methodReference.textRange.startOffset
+    val matchingCall = allViewBuilderCalls.find {
+        it.methodName == "setTemplate" && it.offset == currentOffset
+    } ?: return null
+
+    // Convert to ActionNames using state tracking
+    val allActionNames = actionNamesFromViewBuilderCalls(allViewBuilderCalls)
+
+    // Find the ActionName that corresponds to this setTemplate call
+    // Since actionNamesFromViewBuilderCalls only returns ActionNames for setTemplate calls,
+    // we need to find which one matches our offset
+
+    // Count how many setTemplate calls come before this one
+    val setTemplateCallsBefore = allViewBuilderCalls
+        .filter { it.methodName == "setTemplate" && it.offset < currentOffset }
+        .size
+
+    // Get the corresponding ActionName (it's at the same index)
+    val actionName = allActionNames.getOrNull(setTemplateCallsBefore) ?: return null
+
     return ActionNames(
         defaultActionName = actionName,
         otherActionNames = listOf()
