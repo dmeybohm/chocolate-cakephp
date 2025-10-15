@@ -117,4 +117,40 @@ class TemplateGotoDeclarationTest : Cake5BaseTestCase() {
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "different.php")
     }
+
+    fun `test TemplateGotoDeclarationHandler with chained viewBuilder calls clicking on template`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test TemplateGotoDeclarationHandler with chained viewBuilder calls clicking on path`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('<caret>Movie/Nested')->setTemplate('custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
 }

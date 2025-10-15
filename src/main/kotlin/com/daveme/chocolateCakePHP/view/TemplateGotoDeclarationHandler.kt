@@ -149,8 +149,10 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
     }
 
     private fun handleViewBuilderCall(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
-        // Pattern: $this->viewBuilder()->setTemplate('template_name')
-        // We want to match when clicking on the string literal in the setTemplate call
+        // Patterns:
+        // 1. $this->viewBuilder()->setTemplate('template_name')
+        // 2. $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+        // We want to match when clicking on the string literal
         val stringLiteral = psiElement.context as? StringLiteralExpression ?: return null
         val parameterList = stringLiteral.parent as? ParameterList ?: return null
         val methodRef = parameterList.parent as? MethodReference ?: return null
@@ -161,9 +163,56 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
-        // Check if the receiver is $this->viewBuilder()
         val receiverMethodRef = methodRef.classReference as? MethodReference ?: return null
-        if (receiverMethodRef.name != "viewBuilder") {
+        val receiverMethodName = receiverMethodRef.name
+
+        // Handle chained calls: ->setTemplatePath('path')->setTemplate('name')
+        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
+            // User clicked on template in a chained call
+            val pathParam = receiverMethodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return null
+
+            // Verify chain goes back to viewBuilder()
+            val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return null
+            if (viewBuilderRef.name != "viewBuilder") return null
+            val thisVar = viewBuilderRef.classReference as? Variable ?: return null
+            if (thisVar.name != "this") return null
+
+            // Navigate with combined path
+            val viewContents = stringLiteral.contents
+            val viewName = "/${pathParam.contents}/${viewContents}"
+
+            return navigateToView(psiElement, settings, viewName)
+        }
+
+        // Handle setTemplatePath in a chain (user clicked on the path)
+        if (methodName == "setTemplatePath" && receiverMethodName == "viewBuilder") {
+            val receiverVariable = receiverMethodRef.classReference as? Variable ?: return null
+            if (receiverVariable.name != "this") return null
+
+            // Check if this setTemplatePath is chained with a setTemplate
+            val containingMethod = PsiTreeUtil.getParentOfType(
+                methodRef,
+                com.jetbrains.php.lang.psi.elements.Method::class.java
+            )
+            val chainedSetTemplate = findChainedSetTemplate(methodRef, containingMethod)
+
+            if (chainedSetTemplate != null) {
+                // This is chained - navigate to the final view
+                val templateParam = chainedSetTemplate.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                    ?: return null
+                val viewContents = stringLiteral.contents
+                val viewName = "/${viewContents}/${templateParam.contents}"
+
+                return navigateToView(psiElement, settings, viewName)
+            }
+
+            // Standalone setTemplatePath - not supported for goto-declaration
+            return null
+        }
+
+        // Normal (non-chained) setTemplate call
+        if (receiverMethodName != "viewBuilder") {
             return null
         }
         val receiverVariable = receiverMethodRef.classReference as? Variable ?: return null
@@ -187,11 +236,73 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             viewContents
         }
 
-
         // For now, only handle setTemplate calls (not setTemplatePath)
         if (methodName != "setTemplate") {
             return null
         }
+
+        val actionName = actionNameFromPath(viewName)
+        val actionNames = ActionNames(defaultActionName = actionName)
+
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(
+            settings,
+            containingFile
+        ) ?: return null
+        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(
+            psiElement.project,
+            settings,
+            topSourceDirectory
+        ) ?: return null
+
+        val allViewPaths = allViewPathsFromController(
+            controllerPath,
+            allTemplatesPaths,
+            settings,
+            actionNames
+        )
+        val files = viewFilesFromAllViewPaths(
+            project = psiElement.project,
+            allTemplatesPaths = allTemplatesPaths,
+            allViewPaths = allViewPaths
+        )
+        return files.toTypedArray()
+    }
+
+    /**
+     * Find a setTemplate call that is chained with the given setTemplatePath call.
+     *
+     * Looks for: $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')
+     * where methodRef is the setTemplatePath call.
+     */
+    private fun findChainedSetTemplate(
+        setTemplatePathRef: MethodReference,
+        containingMethod: com.jetbrains.php.lang.psi.elements.Method?
+    ): MethodReference? {
+        if (containingMethod == null) return null
+
+        val allMethodRefs = PsiTreeUtil.findChildrenOfType(containingMethod, MethodReference::class.java)
+
+        return allMethodRefs.find { methodRef ->
+            if (methodRef.name != "setTemplate") return@find false
+
+            // Check if its receiver is our setTemplatePath
+            val receiver = methodRef.classReference as? MethodReference ?: return@find false
+            receiver == setTemplatePathRef
+        }
+    }
+
+    /**
+     * Helper to navigate to a view file with the given view name.
+     */
+    private fun navigateToView(
+        psiElement: PsiElement,
+        settings: Settings,
+        viewName: String
+    ): Array<PsiElement>? {
+        val containingFile = psiElement.containingFile
+        val virtualFile = containingFile.virtualFile
+        val controllerPath = controllerPathFromControllerFile(virtualFile)
+            ?: return null
 
         val actionName = actionNameFromPath(viewName)
         val actionNames = ActionNames(defaultActionName = actionName)
