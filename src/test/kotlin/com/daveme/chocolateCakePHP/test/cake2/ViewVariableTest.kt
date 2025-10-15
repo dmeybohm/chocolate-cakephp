@@ -286,4 +286,26 @@ class ViewVariableTest : Cake2BaseTestCase() {
         totalElement!!.renderElement(totalPresentation)
         assertEquals("int", totalPresentation.typeText)
     }
+
+    fun `test variable list is communicated from controller to view with view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}movieModel"))
+    }
+
+    fun `test variable type is communicated from controller to view with view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}movieModel-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("saveScreening"))
+    }
 }
