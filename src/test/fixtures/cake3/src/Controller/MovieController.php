@@ -23,4 +23,13 @@ class MovieController extends Controller
 
     }
 
+	public function paramTest(int $movieId) {
+		$this->set(compact('movieId'));
+	}
+
+	public function literalTest() {
+		$this->set('title', 'Test Movie');
+		$this->set('count', 42);
+	}
+
 }

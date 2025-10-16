@@ -124,8 +124,9 @@ data class RawViewVar(
     private fun resolveByHandle(project: Project, controllerFile: PsiFile?): PhpType {
         return when (varHandle.sourceKind) {
             SourceKind.PARAM -> {
-                // TODO: Look for method parameter with symbolName and get its type
-                createFallbackType()
+                // Parameters are resolved the same way as locals
+                // resolveLocalVariableType checks both assignments and parameters
+                resolveLocalVariableType(project, controllerFile)
             }
             SourceKind.LOCAL -> {
                 resolveLocalVariableType(project, controllerFile)
@@ -154,24 +155,46 @@ data class RawViewVar(
         if (controllerFile == null) {
             return createFallbackType()
         }
-        
+
         // Find the PSI element at the offset specified in varHandle
         val psiElementAtOffset = controllerFile.findElementAt(varHandle.offset)
-        
-        // Find the closest Variable element that matches our symbol name
-        val variableElement = PsiTreeUtil.findFirstParent(psiElementAtOffset) { element ->
-            element is Variable && 
-            element.name == varHandle.symbolName
-        } as? Variable
-        
-        if (variableElement == null) {
+        if (psiElementAtOffset == null) {
             return createFallbackType()
         }
-        
-        // Get the variable's type from PHP type inference
-        // PhpStorm's type system already handles incomplete type resolution automatically
-        // during the global resolution phase, so we can trust the type returned here
-        return variableElement.type
+
+        // Find the containing method to limit our search scope
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java)
+        if (containingMethod == null) {
+            return createFallbackType()
+        }
+
+        // Strategy 1: Look for assignments to this variable within the method
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, com.jetbrains.php.lang.psi.elements.AssignmentExpression::class.java)
+        val relevantAssignments = assignments.filter { assignment ->
+            val variable = assignment.variable
+            variable is Variable && variable.name == varHandle.symbolName &&
+            // Only consider assignments that come before our offset
+            assignment.textRange.startOffset < varHandle.offset
+        }
+
+        // Use the last assignment before our offset (closest one)
+        val lastAssignment = relevantAssignments.maxByOrNull { it.textRange.startOffset }
+        if (lastAssignment != null) {
+            val variable = lastAssignment.variable
+            if (variable is com.jetbrains.php.lang.psi.elements.PhpTypedElement) {
+                return variable.type
+            }
+        }
+
+        // Strategy 2: Check if it's a method parameter
+        val parameters = containingMethod.parameters
+        val matchingParam = parameters.firstOrNull { it.name == varHandle.symbolName }
+        if (matchingParam != null) {
+            return matchingParam.type
+        }
+
+        // Fallback: couldn't resolve
+        return createFallbackType()
     }
     
     private fun createFallbackType(): PhpType {
@@ -283,30 +306,45 @@ object ViewVariableIndexService {
     ): PhpType? {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
-
-        val list = fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
-        val vars = list.mapNotNull {
-            it.getOrDefault(variableName, null)
-        }
-        if (vars.isEmpty()) {
-            return null
-        }
+        val psiManager = com.intellij.psi.PsiManager.getInstance(project)
         val result = PhpType()
-        vars.forEach { rawVar ->
-            val types = rawVar.resolveType(project)
-            result.add(types)
-        }
-        return result
+
+        // Use processValues to get access to the VirtualFile (controller file)
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
+            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
+                val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
+                val rawVar: RawViewVar? = (viewVariablesMap as HashMap<ViewVariableName, RawViewVar>).get(variableName)
+                if (rawVar != null) {
+                    val types: PhpType = rawVar.resolveType(project, controllerPsiFile)
+                    result.add(types)
+                }
+                true // continue processing
+            },
+            searchScope
+        )
+
+        return if (result.types.isEmpty()) null else result
     }
 
     private fun lookupVariablesFromControllerKey(
         project: Project,
         controllerKey: String,
-    ): List<ViewVariablesWithRawVars> {
+    ): List<Pair<PsiFile?, ViewVariablesWithRawVars>> {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
+        val psiManager = com.intellij.psi.PsiManager.getInstance(project)
+        val result = mutableListOf<Pair<PsiFile?, ViewVariablesWithRawVars>>()
 
-        return fileIndex.getValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, searchScope)
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
+            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
+                val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
+                result.add(Pair(controllerPsiFile, viewVariablesMap))
+                true // continue processing
+            },
+            searchScope
+        )
+
+        return result
     }
 
     fun lookupVariablesFromViewPathInSmartReadAction(
@@ -331,10 +369,10 @@ object ViewVariableIndexService {
                 val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
                     ?: continue
                 val variables = lookupVariablesFromControllerKey(project, controllerKey)
-                variables.forEach { rawVarCollection ->
+                variables.forEach { (controllerPsiFile, rawVarCollection) ->
                     // Convert RawViewVar to ViewVariableValue for backward compatibility
                     rawVarCollection.forEach { (name, rawVar) ->
-                        val resolvedType = rawVar.resolveType(project)
+                        val resolvedType = rawVar.resolveType(project, controllerPsiFile)
                         result[name] = ViewVariableValue(resolvedType.toString(), rawVar.offset)
                     }
                 }
@@ -370,5 +408,9 @@ fun controllerMethodKey(
     controllerPath: ControllerPath,
     methodName: String
 ): ViewVariablesKey {
-    return "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
+    return if (controllerPath.prefix.isEmpty()) {
+        "${controllerPath.name}:${methodName}"
+    } else {
+        "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
+    }
 }
