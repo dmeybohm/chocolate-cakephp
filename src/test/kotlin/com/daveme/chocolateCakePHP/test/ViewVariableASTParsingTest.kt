@@ -241,12 +241,12 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
                 PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
                     parameters.add(Pair(child.text, "array"))
                 }
-                PhpElementTypes.FUNCTION_REFERENCE -> {
+                PhpElementTypes.FUNCTION -> {
                     // Check if it's compact()
                     val funcChildren = child.getChildren(null)
                     var isCompact = false
                     for (funcChild in funcChildren) {
-                        if (funcChild.elementType == PhpTokenTypes.IDENTIFIER && 
+                        if (funcChild.elementType == PhpTokenTypes.IDENTIFIER &&
                             funcChild.text.equals("compact", ignoreCase = true)) {
                             isCompact = true
                             break
@@ -319,7 +319,7 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
         assertEquals(3, astAssignments.size)
         
         // Check variable names
-        val astVariableNames = astAssignments.map { it.variableName }.sorted()
+        val astVariableNames = astAssignments.mapNotNull { it.variableName }.sorted()
         assertEquals(listOf("data", "result", "users"), astVariableNames)
         
         // Check value types
