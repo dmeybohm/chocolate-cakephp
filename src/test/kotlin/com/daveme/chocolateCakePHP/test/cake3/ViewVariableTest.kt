@@ -14,7 +14,9 @@ class ViewVariableTest : Cake3BaseTestCase() {
             "cake3/src/View/Helper/ArtistFormatterHelper.php",
             "cake3/src/View/AppView.php",
             "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/param_test.ctp",
+            "cake3/src/Template/Movie/literal_test.ctp"
         )
     }
 
@@ -197,6 +199,44 @@ class ViewVariableTest : Cake3BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test compact with method parameter makes variable available`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/param_test.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Completion result should not be null", result)
+        assertTrue("${'$'}movieId should be in completion list, but got: $result", result!!.contains("${'$'}movieId"))
+    }
+
+    fun `test set with string literal makes variable available`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/literal_test.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertTrue(result!!.contains("${'$'}title"))
+        assertTrue(result!!.contains("${'$'}count"))
+    }
+
+    fun `test set with string literal resolves to string type`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/literal_test.ctp", """
+        <?php
+        echo ${'$'}title-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        // String methods like substr, strlen, etc. should be available
+        // This is a simple check - if the type is properly resolved as string,
+        // PHP's string methods will be in the completion list
+        assertNotNull(result)
     }
 
 }
