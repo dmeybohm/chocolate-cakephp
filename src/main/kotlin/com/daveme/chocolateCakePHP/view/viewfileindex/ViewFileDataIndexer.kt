@@ -286,14 +286,25 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
     private fun findViewBuilderCalls(node: ASTNode): List<ViewBuilderCallInfo> {
         val result = mutableListOf<ViewBuilderCallInfo>()
-        findViewBuilderCallsRecursive(node, result)
+        findViewBuilderCallsRecursive(node, result, -1)
         return result
     }
 
-    private fun findViewBuilderCallsRecursive(node: ASTNode, result: MutableList<ViewBuilderCallInfo>) {
+    private fun findViewBuilderCallsRecursive(
+        node: ASTNode,
+        result: MutableList<ViewBuilderCallInfo>,
+        containingMethodOffset: Int = -1
+    ) {
+        // Track when we enter a CLASS_METHOD
+        val currentMethodOffset = if (node.elementType == PhpElementTypes.CLASS_METHOD) {
+            node.startOffset
+        } else {
+            containingMethodOffset
+        }
+
         // Check if this node represents a method reference
         if (node.elementType == PhpElementTypes.METHOD_REFERENCE) {
-            val viewBuilderCall = parseViewBuilderCall(node)
+            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset)
             if (viewBuilderCall != null) {
                 result.add(viewBuilderCall)
             }
@@ -302,12 +313,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Recursively check child nodes
         var child = node.firstChildNode
         while (child != null) {
-            findViewBuilderCallsRecursive(child, result)
+            findViewBuilderCallsRecursive(child, result, currentMethodOffset)
             child = child.treeNext
         }
     }
 
-    private fun parseViewBuilderCall(node: ASTNode): ViewBuilderCallInfo? {
+    private fun parseViewBuilderCall(
+        node: ASTNode,
+        containingMethodOffset: Int
+    ): ViewBuilderCallInfo? {
         // Look for:
         //   1. $this->viewBuilder()->setTemplate('name')
         //   2. $this->viewBuilder()->setTemplatePath('path')
@@ -325,7 +339,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         //         -> receiver: METHOD_REFERENCE (viewBuilder)
         //             -> receiver: VARIABLE ($this)
 
-        var methodName: String? = null
+        // Quick check: get method name first for early rejection
+        val methodName = getMethodName(node)
+        if (methodName != "setTemplate" && methodName != "setTemplatePath") {
+            return null  // Early exit for non-target methods
+        }
+
+        // Now parse the rest of the structure
         var parameterValue: String? = null
         var receiverMethodRef: ASTNode? = null
 
@@ -335,9 +355,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             when (child.elementType) {
                 PhpElementTypes.METHOD_REFERENCE -> {
                     receiverMethodRef = child
-                }
-                PhpTokenTypes.IDENTIFIER -> {
-                    methodName = child.text
                 }
                 PhpElementTypes.PARAMETER_LIST -> {
                     // Extract single string parameter
@@ -357,44 +374,35 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             child = child.treeNext
         }
 
-        // Check if method name is setTemplate or setTemplatePath
-        if (methodName == null || (methodName != "setTemplate" && methodName != "setTemplatePath")) {
-            return null
-        }
-
         if (receiverMethodRef == null) {
             return null
         }
 
-        val receiverMethodName = getMethodName(receiverMethodRef)
-
         // Pattern 1: Normal calls - receiver is viewBuilder()
-        if (receiverMethodName == "viewBuilder" && isViewBuilderMethodCall(receiverMethodRef)) {
-            val containingMethod = findContainingMethod(node)
-            val methodStartOffset = containingMethod?.startOffset ?: -1
-
+        if (isViewBuilderMethodCall(receiverMethodRef)) {
+            // Use passed-in offset instead of walking up tree
             return ViewBuilderCallInfo(
                 methodName = methodName,
                 parameterValue = parameterValue,
                 offset = node.startOffset,
-                containingMethodStartOffset = methodStartOffset
+                containingMethodStartOffset = containingMethodOffset
             )
         }
 
         // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        // Check receiver method name to see if it's setTemplatePath
+        val receiverMethodName = getMethodName(receiverMethodRef)
         if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
             // Verify the chain goes back to viewBuilder()
             val viewBuilderNode = getReceiverMethodRef(receiverMethodRef)
             if (viewBuilderNode != null && isViewBuilderMethodCall(viewBuilderNode)) {
-                val containingMethod = findContainingMethod(node)
-                val methodStartOffset = containingMethod?.startOffset ?: -1
-
+                // Use passed-in offset instead of walking up tree
                 // Return as normal setTemplate - state tracking will handle the path
                 return ViewBuilderCallInfo(
                     methodName = "setTemplate",
                     parameterValue = parameterValue,  // Just the template name, not combined!
                     offset = node.startOffset,
-                    containingMethodStartOffset = methodStartOffset
+                    containingMethodStartOffset = containingMethodOffset
                 )
             }
         }
@@ -454,18 +462,6 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         return receiverVariable == "this" && methodName == "viewBuilder"
     }
 
-    private fun findContainingMethod(node: ASTNode): ASTNode? {
-        var current = node.treeParent
-        while (current != null) {
-            if (current.elementType == PhpElementTypes.CLASS_METHOD) {
-                return current
-            }
-            current = current.treeParent
-        }
-        return null
-    }
-
-
     override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
         val result = mutableMapOf<String, List<ViewReferenceData>>()
         val psiFile = inputData.psiFile
@@ -490,8 +486,16 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             .filter { it.receiverText == "this" && it.firstParameterText != null }
         val astViewFieldAssignments = findFieldAssignments(rootNode, "view")
             .filter { it.receiverText == "this" && it.assignedValue != null }
-        val astViewBuilderCalls = findViewBuilderCalls(rootNode)
-            .filter { it.parameterValue != null }
+
+        // Early bailout: Quick text scan before AST traversal for viewBuilder calls
+        val fileText = inputData.contentAsText.toString()
+        val astViewBuilderCalls = if (!fileText.contains("viewBuilder")) {
+            // Skip viewBuilder parsing entirely
+            emptyList()
+        } else {
+            findViewBuilderCalls(rootNode)
+                .filter { it.parameterValue != null }
+        }
 
         val isController = isCakeControllerFile(virtualFile)
         if (
