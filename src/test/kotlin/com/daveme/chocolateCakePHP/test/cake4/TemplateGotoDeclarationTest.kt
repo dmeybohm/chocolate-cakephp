@@ -11,6 +11,8 @@ class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
             "cake4/src4/View/AppView.php",
             "cake4/templates/Movie/artist.php",
             "cake4/templates/Movie/film_director.php",
+            "cake4/templates/Movie/Nested/custom.php",
+            "cake4/templates/Movie/AnotherPath/different.php",
             "cake4/vendor/cakephp.php",
         )
     }
@@ -54,5 +56,101 @@ class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
         val elements = gotoDeclarationHandlerTargets(handler)
         assertNotNull(elements)
        assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test TemplateGotoDeclarationHandler can go to viewBuilder setTemplate calls`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function viewBuilderTest() {
+                ${'$'}this->viewBuilder()->setTemplate('<caret>artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.php")
+    }
+
+    fun `test TemplateGotoDeclarationHandler can go to viewBuilder setTemplate with setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function viewBuilderWithPathTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested');
+                ${'$'}this->viewBuilder()->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test TemplateGotoDeclarationHandler handles multiple setTemplatePath calls`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function multipleSetTemplatePathTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested');
+                ${'$'}this->viewBuilder()->setTemplate('custom');
+
+                // Change path - this should affect the next setTemplate
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/AnotherPath');
+                ${'$'}this->viewBuilder()->setTemplate('<caret>different');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "different.php")
+    }
+
+    fun `test TemplateGotoDeclarationHandler with chained viewBuilder calls clicking on template`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test TemplateGotoDeclarationHandler with chained viewBuilder calls clicking on path`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('<caret>Movie/Nested')->setTemplate('custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
     }
 }

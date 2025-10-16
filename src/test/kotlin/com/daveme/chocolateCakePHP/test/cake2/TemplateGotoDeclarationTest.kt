@@ -54,4 +54,22 @@ class TemplateGotoDeclarationTest : Cake2BaseTestCase() {
         assertNotNull(elements)
        assertTrue(elements!!.isEmpty())
     }
+
+    fun `test TemplateGotoDeclarationHandler can go to view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function viewFieldTest() {
+                ${'$'}this->view = '<caret>artist';
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.ctp")
+    }
 }
