@@ -68,7 +68,7 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
 
-                val componentSubclasses = phpIndex.getComponentSubclasses(settings)
+                val componentSubclasses = phpIndex.getComponentSubclasses(fieldReference.project, settings)
                 completionResultSet.completeFromClasses(
                     componentSubclasses,
                     removeFromEnd = "Component",

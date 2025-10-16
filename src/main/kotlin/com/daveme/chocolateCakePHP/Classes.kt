@@ -1,11 +1,14 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.stubs.StubIndex
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.PhpLangUtil
 import com.jetbrains.php.lang.psi.elements.ClassConstantReference
@@ -14,6 +17,7 @@ import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
+import com.jetbrains.php.lang.psi.stubs.indexes.PhpInheritanceIndex
 
 private const val VIEW_HELPER_CAKE2_PARENT_CLASS = "\\AppHelper"
 private const val VIEW_HELPER_CAKE3_PARENT_CLASS = "\\Cake\\View\\Helper"
@@ -67,64 +71,85 @@ fun Method.isCustomizableViewMethod(): Boolean {
                 !cakeSkipRenderingMethods.contains(this.name.lowercase())
 }
 
-private fun PhpIndex.getAllSubclassesRecursively(
-    fqn: String
+// Stub-compatible implementation using PhpInheritanceIndex with fallback to getDirectSubclasses
+// Prefers PhpInheritanceIndex (stub-compatible) but falls back to getDirectSubclasses for test environments
+private fun getAllSubclassesWithFallback(
+    phpIndex: PhpIndex,
+    project: Project,
+    parentFqn: String,
+    scope: GlobalSearchScope = GlobalSearchScope.allScope(project)
 ): Collection<PhpClass> {
-    val result = mutableSetOf<PhpClass>()
+    val seen = hashSetOf<String>()
     val queue = ArrayDeque<String>()
-    queue.add(fqn)
-    val visited = mutableSetOf<String>()
+    val out = mutableListOf<PhpClass>()
+    queue += parentFqn
 
     while (queue.isNotEmpty()) {
         ProgressManager.checkCanceled()
 
-        val currentFqn = queue.removeFirst()
-        if (!visited.add(currentFqn)) continue
+        val fqn = queue.removeFirst()
 
-        val directSubclasses = getDirectSubclasses(currentFqn)
-        for (subclass in directSubclasses) {
+        // Try PhpInheritanceIndex first (stub-compatible)
+        // Try both with and without leading backslash as the index might store it differently
+        val fqnVariants = setOf(fqn, fqn.removePrefix("\\"), "\\" + fqn.removePrefix("\\"))
+        val directInheritors = mutableListOf<PhpClass>()
+
+        for (fqnVariant in fqnVariants) {
+            val inheritors = StubIndex.getElements(PhpInheritanceIndex.KEY, fqnVariant, project, scope, PhpClass::class.java)
+            directInheritors.addAll(inheritors)
+        }
+
+        // Fall back to getDirectSubclasses if stub index returned nothing
+        // This helps in test environments where stub indexes might not be fully available
+        // Only call getDirectSubclasses when NOT in dumb mode (requires full PSI)
+        if (directInheritors.isEmpty() && !DumbService.isDumb(project)) {
+            directInheritors.addAll(phpIndex.getDirectSubclasses(fqn))
+        }
+
+        for (clazz in directInheritors) {
             ProgressManager.checkCanceled()
 
-            if (result.add(subclass)) {
-                queue.add(subclass.fqn)
+            val cfqn = clazz.fqn
+            if (seen.add(cfqn)) {
+                out += clazz
+                queue += cfqn
             }
         }
     }
-
-    return result
+    return out
 }
 
-fun PhpIndex.getViewHelperSubclasses(settings: Settings): Collection<PhpClass> {
+fun PhpIndex.getViewHelperSubclasses(project: Project, settings: Settings): Collection<PhpClass> {
     val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclassesRecursively(VIEW_HELPER_CAKE2_PARENT_CLASS).filter {
+        result += getAllSubclassesWithFallback(this, project, VIEW_HELPER_CAKE2_PARENT_CLASS).filter {
             !cake2HelperBlackList.contains(it.name)
         }
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclassesRecursively(VIEW_HELPER_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesWithFallback(this, project, VIEW_HELPER_CAKE3_PARENT_CLASS)
     }
     return result
 }
 
-fun PhpIndex.getModelSubclasses(settings: Settings): Collection<PhpClass> {
+fun PhpIndex.getModelSubclasses(project: Project, settings: Settings): Collection<PhpClass> {
     val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclassesRecursively(MODEL_CAKE2_PARENT_CLASS)
+        result += getAllSubclassesWithFallback(this, project, MODEL_CAKE2_PARENT_CLASS)
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclassesRecursively(MODEL_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesWithFallback(this, project, MODEL_CAKE3_PARENT_CLASS)
     }
     return result
 }
 
-fun PhpIndex.getComponentSubclasses(settings: Settings): Collection<PhpClass> {
+fun PhpIndex.getComponentSubclasses(project: Project, settings: Settings): Collection<PhpClass> {
     val result = mutableSetOf<PhpClass>()
     if (settings.cake2Enabled) {
-        result += getAllSubclassesRecursively(COMPONENT_CAKE2_PARENT_CLASS)
+        result += getAllSubclassesWithFallback(this, project, COMPONENT_CAKE2_PARENT_CLASS)
     }
     if (settings.cake3Enabled) {
-        result += getAllSubclassesRecursively(COMPONENT_CAKE3_PARENT_CLASS)
+        result += getAllSubclassesWithFallback(this, project, COMPONENT_CAKE3_PARENT_CLASS)
     }
     return result
 }
