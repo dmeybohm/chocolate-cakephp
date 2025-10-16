@@ -90,7 +90,6 @@ class TemplateGotoDeclarationTest : Cake3BaseTestCase() {
             }
         }
         """.trimIndent())
-        Thread.sleep(5000);
 
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "custom.ctp")
