@@ -5,6 +5,9 @@ class MovieController extends AppController
 	public $uses = ['Movie', 'Artist'];
     public $components = ['MovieMetadata'];
 
+	/** @var string */
+	public $statusMessage = "Ready";
+
     public function artist($artistId)
 	{
 	    $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
@@ -28,11 +31,29 @@ class MovieController extends AppController
 
 	public function direct_call_test()
 	{
-	    // Direct CALL - requires SourceKind.CALL resolution
+	    // Direct expression - requires SourceKind.EXPRESSION resolution
 	    // Note: CakePHP 2 uses ClassRegistry::init() to get model instances
 	    $this->set('movieModel', ClassRegistry::init('Movie'));
 	    // Add a second variable to avoid auto-completion in tests
 	    $this->set('title', 'Direct Call Test');
+	}
+
+	public function expression_variety_test()
+	{
+		// Property access
+		$this->set('message', $this->statusMessage);
+
+		// Nested function calls
+		$this->set('cleaned', str_replace('World', 'PHP', "Hello World"));
+
+		// Variable reference (with typed local variable)
+		/** @var int */
+		$count = 42;
+		$this->set('total', $count);
+
+		// Array access
+		$data = ['key' => 'value', 'num' => 123];
+		$this->set('item', $data['key']);
 	}
 
 }

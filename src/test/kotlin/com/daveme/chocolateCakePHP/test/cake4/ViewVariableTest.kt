@@ -16,7 +16,8 @@ class ViewVariableTest : Cake4BaseTestCase() {
             "cake4/src4/View/AppView.php",
             "cake4/src4/Model/Table/MoviesTable.php",
             "cake4/vendor/cakephp.php",
-            "cake4/templates/Movie/direct_call_test.php"
+            "cake4/templates/Movie/direct_call_test.php",
+            "cake4/templates/Movie/expression_variety_test.php"
         )
     }
 
@@ -242,6 +243,90 @@ class ViewVariableTest : Cake4BaseTestCase() {
         assertNotNull("Should have type text", presentation.typeText)
         assertTrue("Type should contain MoviesTable (from direct fetchTable call), but got: ${presentation.typeText}",
                    presentation.typeText?.contains("MoviesTable") == true)
+    }
+
+    fun `test property access in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/expression_variety_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("${'$'}message"))
+
+        val elements = myFixture.lookupElements!!
+        val messageElement = elements.find { it.lookupString == "${'$'}message" }
+        assertNotNull(messageElement)
+
+        val presentation = LookupElementPresentation()
+        messageElement!!.renderElement(presentation)
+
+        assertEquals("string", presentation.typeText)
+    }
+
+    fun `test nested function calls in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/expression_variety_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("${'$'}cleaned"))
+
+        val elements = myFixture.lookupElements!!
+        val cleanedElement = elements.find { it.lookupString == "${'$'}cleaned" }
+        assertNotNull(cleanedElement)
+
+        // Note: Without PHP stubs loaded, str_replace() may not have type information available.
+        // This test primarily validates that function call expressions are recognized and indexed.
+    }
+
+    fun `test variable reference in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/expression_variety_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("${'$'}total"))
+
+        val elements = myFixture.lookupElements!!
+        val totalElement = elements.find { it.lookupString == "${'$'}total" }
+        assertNotNull(totalElement)
+
+        val presentation = LookupElementPresentation()
+        totalElement!!.renderElement(presentation)
+
+        assertEquals("int", presentation.typeText)
+    }
+
+    fun `test array access in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/expression_variety_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("${'$'}item"))
+
+        val elements = myFixture.lookupElements!!
+        val itemElement = elements.find { it.lookupString == "${'$'}item" }
+        assertNotNull(itemElement)
+
+        val presentation = LookupElementPresentation()
+        itemElement!!.renderElement(presentation)
+
+        assertNotNull(presentation.typeText)
+        assertTrue("Type should be string or mixed, but got: ${presentation.typeText}",
+                   presentation.typeText == "string" || presentation.typeText == "mixed")
     }
 
 }

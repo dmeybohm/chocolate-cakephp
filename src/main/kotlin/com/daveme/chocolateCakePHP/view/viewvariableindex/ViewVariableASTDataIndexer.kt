@@ -389,11 +389,13 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                 SourceKind.LOCAL
             }
             PhpElementTypes.STRING -> SourceKind.LITERAL
-            PhpElementTypes.METHOD_REFERENCE -> SourceKind.CALL
+            PhpElementTypes.METHOD_REFERENCE -> SourceKind.EXPRESSION
+            PhpElementTypes.FUNCTION_CALL -> SourceKind.EXPRESSION
             PhpElementTypes.FIELD_REFERENCE -> {
-                // $this->foo
-                SourceKind.PROPERTY
+                // $this->foo - property access is now handled by EXPRESSION
+                SourceKind.EXPRESSION
             }
+            PhpElementTypes.ARRAY_ACCESS_EXPRESSION -> SourceKind.EXPRESSION
             else -> {
                 // Check for numeric literals
                 if (valueNode.text.matches(Regex("\\d+"))) {

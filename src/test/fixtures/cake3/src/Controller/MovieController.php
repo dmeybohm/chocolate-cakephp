@@ -6,6 +6,9 @@ use Cake\Controller\Controller;
 
 class MovieController extends Controller
 {
+	/** @var string */
+	public $statusMessage = "Ready";
+
 	public function artist() {
 		$this->Auth->allow();
 		$metadata = $this->MovieMetadata->generateMetadata();
@@ -33,12 +36,28 @@ class MovieController extends Controller
 	}
 
 	public function directCallTest() {
-		// Direct CALL - requires SourceKind.CALL resolution
-		// Note: Chained calls resolve to the first method's return type (getTableLocator)
-		// due to AST offset pointing to the start of the expression
+		// Direct expression - requires SourceKind.EXPRESSION resolution
+		// Note: Chained method calls are resolved by finding the outermost expression
 		$this->set('moviesTable', $this->getTableLocator()->get('Movies'));
 		// Add a second variable to avoid auto-completion in tests
 		$this->set('title', 'Direct Call Test');
+	}
+
+	public function expressionVarietyTest() {
+		// Property access
+		$this->set('message', $this->statusMessage);
+
+		// Nested function calls
+		$this->set('cleaned', str_replace('World', 'PHP', "Hello World"));
+
+		// Variable reference (with typed local variable)
+		/** @var int */
+		$count = 42;
+		$this->set('total', $count);
+
+		// Array access
+		$data = ['key' => 'value', 'num' => 123];
+		$this->set('item', $data['key']);
 	}
 
 }

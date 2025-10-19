@@ -13,11 +13,9 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
-import com.jetbrains.php.lang.psi.elements.FunctionReference
 import com.jetbrains.php.lang.psi.elements.Method
-import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.PhpExpression
+import com.jetbrains.php.lang.psi.elements.PhpTypedElement
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
@@ -44,10 +42,10 @@ enum class VarKind {
 // The different sources where the value side of $this->set() comes from
 enum class SourceKind {
     PARAM,      // comes from a method parameter
-    LOCAL,      // comes from a local variable assigned earlier in the method  
+    LOCAL,      // comes from a local variable assigned earlier in the method
     PROPERTY,   // comes from an object property reference like $this->foo
     LITERAL,    // comes from a literal value like 'string' or 123
-    CALL,       // comes from a function/method call result
+    EXPRESSION, // comes from any typed expression (method calls, property access, variables, etc.)
     MIXED_ASSIGNMENT, // comes from mixed tuple assignment requiring further resolution
     UNKNOWN     // couldn't determine syntactically
 }
@@ -143,8 +141,8 @@ data class RawViewVar(
             SourceKind.LITERAL -> {
                 resolveLiteralType(project, controllerFile)
             }
-            SourceKind.CALL -> {
-                resolveCallType(project, controllerFile)
+            SourceKind.EXPRESSION -> {
+                resolveExpressionType(project, controllerFile)
             }
             SourceKind.MIXED_ASSIGNMENT -> {
                 // TODO: Resolve mixed tuple assignment by finding variable assignments
@@ -283,7 +281,7 @@ data class RawViewVar(
         return createFallbackType()
     }
 
-    private fun resolveCallType(project: Project, controllerFile: PsiFile?): PhpType {
+    private fun resolveExpressionType(project: Project, controllerFile: PsiFile?): PhpType {
         if (controllerFile == null) {
             return createFallbackType()
         }
@@ -294,48 +292,29 @@ data class RawViewVar(
             return createFallbackType()
         }
 
-        // For chained method calls like $this->getTableLocator()->get('Movies'),
-        // we need to find the OUTERMOST MethodReference to get the final return type.
-        // Walk up the tree to find all MethodReference/FunctionReference ancestors
-        // and pick the outermost one, but stop at ParameterList boundary (to avoid
-        // accidentally getting the enclosing method call like $this->set()).
+        // For any typed expression (method calls, property access, variables, array access, etc.),
+        // we need to find the complete expression by walking up the tree until we hit a
+        // ParameterList boundary. The element right before the ParameterList is the full expression.
+        // This handles simple calls, chained calls, and complex expressions uniformly.
 
-        var outermostMethodRef: MethodReference? = null
+        var expressionElement: PsiElement? = psiElementAtOffset
         var current = psiElementAtOffset.parent
+
         while (current != null) {
-            // Stop if we hit a parameter list - we've gone outside the expression
+            // Stop if we hit a parameter list - we've reached the boundary
             if (current is ParameterList) {
                 break
             }
-            if (current is MethodReference) {
-                outermostMethodRef = current
-            }
+            expressionElement = current
             current = current.parent
         }
 
-        if (outermostMethodRef != null) {
-            return outermostMethodRef.type.global(project)
+        // Get type from any PhpTypedElement (covers all expression types)
+        if (expressionElement is PhpTypedElement) {
+            return expressionElement.type.global(project)
         }
 
-        // Check for FunctionReference if no MethodReference found
-        var outermostFunctionRef: FunctionReference? = null
-        current = psiElementAtOffset.parent
-        while (current != null) {
-            // Stop if we hit a parameter list
-            if (current is ParameterList) {
-                break
-            }
-            if (current is FunctionReference) {
-                outermostFunctionRef = current
-            }
-            current = current.parent
-        }
-
-        if (outermostFunctionRef != null) {
-            return outermostFunctionRef.type.global(project)
-        }
-
-        // Couldn't resolve the call type
+        // Couldn't resolve the expression type
         return createFallbackType()
     }
 
@@ -458,7 +437,8 @@ object ViewVariableIndexService {
                 val rawVar: RawViewVar? = (viewVariablesMap as HashMap<ViewVariableName, RawViewVar>).get(variableName)
                 if (rawVar != null) {
                     val types: PhpType = rawVar.resolveType(project, controllerPsiFile)
-                    result.add(types)
+                    val completeTypes = types.lookupCompleteType(project, visited = null)
+                    result.add(completeTypes)
                 }
                 true // continue processing
             },
