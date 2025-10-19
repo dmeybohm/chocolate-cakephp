@@ -209,8 +209,15 @@ class ViewVariableTest : Cake3BaseTestCase() {
         myFixture.completeBasic()
 
         val result = myFixture.lookupElementStrings
-        assertNotNull("Completion result should not be null", result)
-        assertTrue("${'$'}movieId should be in completion list, but got: $result", result!!.contains("${'$'}movieId"))
+        // When there's only one completion option, IntelliJ auto-completes it and returns null
+        // So we check if either: (a) it was auto-completed, or (b) movieId is in the list
+        if (result == null) {
+            // Auto-completed - verify the text was inserted
+            val text = myFixture.editor.document.text
+            assertTrue("${'$'}movieId should have been auto-completed", text.contains("${'$'}movieId"))
+        } else {
+            assertTrue("${'$'}movieId should be in completion list, but got: $result", result.contains("${'$'}movieId"))
+        }
     }
 
     fun `test set with string literal makes variable available`() {
@@ -221,6 +228,7 @@ class ViewVariableTest : Cake3BaseTestCase() {
         myFixture.completeBasic()
 
         val result = myFixture.lookupElementStrings
+        assertNotNull("Completion result should not be null (literal test)", result)
         assertTrue(result!!.contains("${'$'}title"))
         assertTrue(result!!.contains("${'$'}count"))
     }

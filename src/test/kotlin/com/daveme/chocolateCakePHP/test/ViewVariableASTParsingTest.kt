@@ -106,33 +106,13 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
     
     private fun parseAssignmentExpression(node: ASTNode): ASTAssignmentInfo? {
         val children = node.getChildren(null).toList()
-        
+
         var variableName: String? = null
         var valueText: String? = null
         var valueType: String? = null
-        
+
         for (child in children) {
             when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
-                    variableName = child.text.removePrefix("$")
-                }
-                PhpElementTypes.FUNCTION -> {
-                    valueText = child.text
-                    // Check if it's a compact() call
-                    val functionChildren = child.getChildren(null)
-                    for (funcChild in functionChildren) {
-                        if (funcChild.elementType == PhpTokenTypes.IDENTIFIER && 
-                            funcChild.text.equals("compact", ignoreCase = true)) {
-                            valueType = "compact"
-                            break
-                        }
-                    }
-                    if (valueType == null) valueType = "function"
-                }
-                PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
-                    valueText = child.text
-                    valueType = "array"
-                }
                 PhpElementTypes.VARIABLE -> {
                     if (variableName == null) {
                         variableName = child.text.removePrefix("$")
@@ -141,13 +121,32 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
                         valueType = "variable"
                     }
                 }
+                PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
+                    valueText = child.text
+                    valueType = "array"
+                }
                 PhpElementTypes.STRING -> {
                     valueText = child.text
                     valueType = "string"
                 }
+                else -> {
+                    // For any other type, check if it's a compact() call by text
+                    val childText = child.text.trim()
+                    if (childText.startsWith("compact(", ignoreCase = true) ||
+                        childText.contains("compact(", ignoreCase = true)) {
+                        valueText = child.text
+                        valueType = "compact"
+                    } else if (valueText == null && child.text.isNotBlank()) {
+                        // Capture any other value
+                        valueText = child.text
+                        if (valueType == null) {
+                            valueType = "unknown"
+                        }
+                    }
+                }
             }
         }
-        
+
         return if (variableName != null) {
             ASTAssignmentInfo(
                 variableName = variableName,
@@ -229,7 +228,7 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
     private fun parseParameterList(parameterListNode: ASTNode): List<Pair<String, String>> {
         val parameters = mutableListOf<Pair<String, String>>()
         val children = parameterListNode.getChildren(null).toList()
-        
+
         for (child in children) {
             when (child.elementType) {
                 PhpElementTypes.STRING -> {
@@ -241,22 +240,23 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
                 PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
                     parameters.add(Pair(child.text, "array"))
                 }
-                PhpElementTypes.FUNCTION -> {
-                    // Check if it's compact()
-                    val funcChildren = child.getChildren(null)
-                    var isCompact = false
-                    for (funcChild in funcChildren) {
-                        if (funcChild.elementType == PhpTokenTypes.IDENTIFIER &&
-                            funcChild.text.equals("compact", ignoreCase = true)) {
-                            isCompact = true
-                            break
-                        }
+                else -> {
+                    // Check if it's compact() by text content
+                    val childText = child.text.trim()
+                    if (childText.startsWith("compact(", ignoreCase = true) ||
+                        childText.contains("compact(", ignoreCase = true)) {
+                        parameters.add(Pair(child.text, "compact"))
+                    } else if (child.text.isNotBlank() &&
+                               child.elementType != PhpTokenTypes.chLPAREN &&
+                               child.elementType != PhpTokenTypes.chRPAREN &&
+                               child.elementType != PhpTokenTypes.opCOMMA) {
+                        // Some other non-whitespace parameter
+                        parameters.add(Pair(child.text, "unknown"))
                     }
-                    parameters.add(Pair(child.text, if (isCompact) "compact" else "function"))
                 }
             }
         }
-        
+
         return parameters
     }
 

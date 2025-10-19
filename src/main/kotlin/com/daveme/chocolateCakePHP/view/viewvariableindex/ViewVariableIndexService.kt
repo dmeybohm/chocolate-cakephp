@@ -182,7 +182,7 @@ data class RawViewVar(
         if (lastAssignment != null) {
             val variable = lastAssignment.variable
             if (variable is com.jetbrains.php.lang.psi.elements.PhpTypedElement) {
-                return variable.type
+                return variable.type.global(project)
             }
         }
 
@@ -190,7 +190,30 @@ data class RawViewVar(
         val parameters = containingMethod.parameters
         val matchingParam = parameters.firstOrNull { it.name == varHandle.symbolName }
         if (matchingParam != null) {
-            return matchingParam.type
+            // Get the type and clean up any namespace pollution for primitive types
+            val paramType = matchingParam.type
+
+            // PHP primitive types that should never have namespace prefixes
+            val primitiveTypes = setOf("int", "float", "string", "bool", "array", "object",
+                                       "callable", "iterable", "void", "mixed", "null",
+                                       "integer", "boolean", "double")
+
+            // Create a new PhpType with cleaned type strings
+            val cleanedType = PhpType()
+            paramType.types.forEach { typeString ->
+                // Check if this looks like a primitive with an incorrect namespace prefix
+                val lastSegment = typeString.substringAfterLast('\\')
+                val cleanedTypeString = if (lastSegment.lowercase() in primitiveTypes && typeString.contains('\\')) {
+                    // This is a primitive type with a namespace prefix - strip it
+                    lastSegment
+                } else {
+                    // Keep the full type name for classes/interfaces
+                    typeString
+                }
+                cleanedType.add(cleanedTypeString)
+            }
+
+            return cleanedType
         }
 
         // Fallback: couldn't resolve
