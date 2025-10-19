@@ -17,7 +17,8 @@ class ViewVariableTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/MoviesTable.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/param_test.ctp",
-            "cake3/src/Template/Movie/literal_test.ctp"
+            "cake3/src/Template/Movie/literal_test.ctp",
+            "cake3/src/Template/Movie/direct_call_test.ctp"
         )
     }
 
@@ -280,6 +281,36 @@ class ViewVariableTest : Cake3BaseTestCase() {
         val presentation = LookupElementPresentation()
         countElement!!.renderElement(presentation)
         assertEquals("int", presentation.typeText)
+    }
+
+    fun `test direct method call in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/direct_call_test.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        // Verify variables are available (should have 2: $moviesTable and $title)
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Should have completion results with multiple variables", result)
+        assertTrue("Should contain ${'$'}moviesTable, but got: $result",
+                   result!!.contains("${'$'}moviesTable"))
+        assertTrue("Should contain ${'$'}title, but got: $result",
+                   result.contains("${'$'}title"))
+
+        // Verify type from direct method call is resolved
+        val elements = myFixture.lookupElements!!
+        val moviesTableElement = elements.find { it.lookupString == "${'$'}moviesTable" }
+        assertNotNull("Should find ${'$'}moviesTable in lookup elements", moviesTableElement)
+
+        val presentation = LookupElementPresentation()
+        moviesTableElement!!.renderElement(presentation)
+
+        // Verify type is resolved correctly from chained method call
+        // The implementation now finds the outermost MethodReference to get the final return type
+        assertNotNull("Should have type text", presentation.typeText)
+        assertTrue("Type should contain MoviesTable (from chained getTableLocator()->get() call), but got: ${presentation.typeText}",
+                   presentation.typeText?.contains("MoviesTable") == true)
     }
 
 }

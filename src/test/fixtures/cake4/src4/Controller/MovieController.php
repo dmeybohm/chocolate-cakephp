@@ -24,4 +24,11 @@ class MovieController extends Controller
 
     }
 
+	public function directCallTest() {
+		// Direct CALL - requires SourceKind.CALL resolution
+		$this->set('moviesTable', $this->fetchTable('Movies'));
+		// Add a second variable to avoid auto-completion in tests
+		$this->set('title', 'Direct Call Test');
+	}
+
 }

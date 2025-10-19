@@ -26,4 +26,13 @@ class MovieController extends AppController
 	    $this->set(compact('movies', 'artist', 'metadata', 'movieModel'));
 	}
 
+	public function direct_call_test()
+	{
+	    // Direct CALL - requires SourceKind.CALL resolution
+	    // Note: CakePHP 2 uses ClassRegistry::init() to get model instances
+	    $this->set('movieModel', ClassRegistry::init('Movie'));
+	    // Add a second variable to avoid auto-completion in tests
+	    $this->set('title', 'Direct Call Test');
+	}
+
 }

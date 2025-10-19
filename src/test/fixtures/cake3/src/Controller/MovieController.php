@@ -32,4 +32,13 @@ class MovieController extends Controller
 		$this->set('count', 42);
 	}
 
+	public function directCallTest() {
+		// Direct CALL - requires SourceKind.CALL resolution
+		// Note: Chained calls resolve to the first method's return type (getTableLocator)
+		// due to AST offset pointing to the start of the expression
+		$this->set('moviesTable', $this->getTableLocator()->get('Movies'));
+		// Add a second variable to avoid auto-completion in tests
+		$this->set('title', 'Direct Call Test');
+	}
+
 }

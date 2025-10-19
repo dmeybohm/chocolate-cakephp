@@ -16,6 +16,7 @@ import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.FunctionReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
@@ -293,16 +294,45 @@ data class RawViewVar(
             return createFallbackType()
         }
 
-        // Look for a MethodReference or FunctionReference that contains this offset
-        // Use PsiTreeUtil to find the nearest parent of the right type
-        val methodRef = PsiTreeUtil.getParentOfType(psiElementAtOffset, MethodReference::class.java)
-        if (methodRef != null) {
-            return methodRef.type.global(project)
+        // For chained method calls like $this->getTableLocator()->get('Movies'),
+        // we need to find the OUTERMOST MethodReference to get the final return type.
+        // Walk up the tree to find all MethodReference/FunctionReference ancestors
+        // and pick the outermost one, but stop at ParameterList boundary (to avoid
+        // accidentally getting the enclosing method call like $this->set()).
+
+        var outermostMethodRef: MethodReference? = null
+        var current = psiElementAtOffset.parent
+        while (current != null) {
+            // Stop if we hit a parameter list - we've gone outside the expression
+            if (current is ParameterList) {
+                break
+            }
+            if (current is MethodReference) {
+                outermostMethodRef = current
+            }
+            current = current.parent
         }
 
-        val functionRef = PsiTreeUtil.getParentOfType(psiElementAtOffset, FunctionReference::class.java)
-        if (functionRef != null) {
-            return functionRef.type.global(project)
+        if (outermostMethodRef != null) {
+            return outermostMethodRef.type.global(project)
+        }
+
+        // Check for FunctionReference if no MethodReference found
+        var outermostFunctionRef: FunctionReference? = null
+        current = psiElementAtOffset.parent
+        while (current != null) {
+            // Stop if we hit a parameter list
+            if (current is ParameterList) {
+                break
+            }
+            if (current is FunctionReference) {
+                outermostFunctionRef = current
+            }
+            current = current.parent
+        }
+
+        if (outermostFunctionRef != null) {
+            return outermostFunctionRef.type.global(project)
         }
 
         // Couldn't resolve the call type
