@@ -13,7 +13,10 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.FunctionReference
 import com.jetbrains.php.lang.psi.elements.Method
+import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
@@ -140,8 +143,7 @@ data class RawViewVar(
                 resolveLiteralType(project, controllerFile)
             }
             SourceKind.CALL -> {
-                // TODO: Analyze function/method call and get return type
-                createFallbackType()
+                resolveCallType(project, controllerFile)
             }
             SourceKind.MIXED_ASSIGNMENT -> {
                 // TODO: Resolve mixed tuple assignment by finding variable assignments
@@ -277,6 +279,33 @@ data class RawViewVar(
         }
 
         // Couldn't determine literal type
+        return createFallbackType()
+    }
+
+    private fun resolveCallType(project: Project, controllerFile: PsiFile?): PhpType {
+        if (controllerFile == null) {
+            return createFallbackType()
+        }
+
+        // Find the PSI element at the offset
+        val psiElementAtOffset = controllerFile.findElementAt(varHandle.offset)
+        if (psiElementAtOffset == null) {
+            return createFallbackType()
+        }
+
+        // Look for a MethodReference or FunctionReference that contains this offset
+        // Use PsiTreeUtil to find the nearest parent of the right type
+        val methodRef = PsiTreeUtil.getParentOfType(psiElementAtOffset, MethodReference::class.java)
+        if (methodRef != null) {
+            return methodRef.type.global(project)
+        }
+
+        val functionRef = PsiTreeUtil.getParentOfType(psiElementAtOffset, FunctionReference::class.java)
+        if (functionRef != null) {
+            return functionRef.type.global(project)
+        }
+
+        // Couldn't resolve the call type
         return createFallbackType()
     }
 

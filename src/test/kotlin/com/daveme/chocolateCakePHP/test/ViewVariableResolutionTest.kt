@@ -41,9 +41,6 @@ class ViewVariableResolutionTest : BasePlatformTestCase() {
         assertNotNull("Resolved type should not be null", resolvedType)
         val typeString = resolvedType.toString()
 
-        // Should resolve to int (or at least not "mixed")
-        println("Resolved type for movieId: $typeString")
-
         // The type should contain "int" since the parameter is typed as int
         assertTrue("Type should contain 'int' but got: $typeString",
                    typeString.contains("int", ignoreCase = true) || typeString.contains("integer", ignoreCase = true))

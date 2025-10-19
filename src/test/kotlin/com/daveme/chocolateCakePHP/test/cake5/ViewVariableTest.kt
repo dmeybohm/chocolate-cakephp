@@ -16,6 +16,7 @@ class ViewVariableTest: Cake5BaseTestCase() {
             "cake5/src5/View/AppView.php",
             "cake5/src5/Model/Table/MoviesTable.php",
             "cake5/vendor/cakephp.php",
+            "cake5/templates/Movie/direct_call_test.php",
         )
     }
 
@@ -212,6 +213,35 @@ class ViewVariableTest: Cake5BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("${'$'}moviesTable"))
+    }
+
+    fun `test direct method call in set resolves type correctly`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/direct_call_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        // Verify variables are available (should have 2: $moviesTable and $title)
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Should have completion results with multiple variables", result)
+        assertTrue("Should contain ${'$'}moviesTable, but got: $result",
+                   result!!.contains("${'$'}moviesTable"))
+        assertTrue("Should contain ${'$'}title, but got: $result",
+                   result.contains("${'$'}title"))
+
+        // Verify type from direct method call is resolved
+        val elements = myFixture.lookupElements!!
+        val moviesTableElement = elements.find { it.lookupString == "${'$'}moviesTable" }
+        assertNotNull("Should find ${'$'}moviesTable in lookup elements", moviesTableElement)
+
+        val presentation = LookupElementPresentation()
+        moviesTableElement!!.renderElement(presentation)
+
+        // Verify type is resolved correctly from direct method call
+        assertNotNull("Should have type text", presentation.typeText)
+        assertTrue("Type should contain MoviesTable (from direct fetchTable call), but got: ${presentation.typeText}",
+                   presentation.typeText?.contains("MoviesTable") == true)
     }
 
 }
