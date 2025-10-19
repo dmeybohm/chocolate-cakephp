@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+import com.intellij.codeInsight.lookup.LookupElementPresentation
 
 class ViewVariableTest : Cake4BaseTestCase() {
 
@@ -50,7 +51,7 @@ class ViewVariableTest : Cake4BaseTestCase() {
 
     fun `test variable list is communicated from controller to view`() {
         myFixture.configureByFilePathAndText("cake4/templates/Movie/film_director.php", """
-            
+
         <?php
         echo <caret>
         """.trimIndent())
@@ -58,6 +59,19 @@ class ViewVariableTest : Cake4BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("${'$'}moviesTable"))
+
+        // Verify that type from fetchTable() is correctly resolved via LOCAL variable
+        val elements = myFixture.lookupElements!!
+        val moviesTableElement = elements.find { it.lookupString == "${'$'}moviesTable" }
+        assertNotNull("Should find ${'$'}moviesTable", moviesTableElement)
+
+        val presentation = LookupElementPresentation()
+        moviesTableElement!!.renderElement(presentation)
+
+        // Should have MoviesTable type (from fetchTable type provider via PSI)
+        assertNotNull("Should have type text", presentation.typeText)
+        assertTrue("Type should contain MoviesTable, but got: ${presentation.typeText}",
+                   presentation.typeText?.contains("MoviesTable") == true)
     }
 
     fun `test variable list is communicated from nested controller to view`() {
