@@ -7,6 +7,7 @@ import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -136,8 +137,7 @@ data class RawViewVar(
                 createFallbackType()
             }
             SourceKind.LITERAL -> {
-                // TODO: Parse literal value and return appropriate type (string, int, etc.)
-                createFallbackType()
+                resolveLiteralType(project, controllerFile)
             }
             SourceKind.CALL -> {
                 // TODO: Analyze function/method call and get return type
@@ -219,7 +219,67 @@ data class RawViewVar(
         // Fallback: couldn't resolve
         return createFallbackType()
     }
-    
+
+    private fun resolveLiteralType(project: Project, controllerFile: PsiFile?): PhpType {
+        if (controllerFile == null) {
+            return createFallbackType()
+        }
+
+        // Find the PSI element at the offset (should be a literal value)
+        val psiElementAtOffset = controllerFile.findElementAt(varHandle.offset)
+        if (psiElementAtOffset == null) {
+            return createFallbackType()
+        }
+
+        // Navigate up to find the actual literal expression
+        // The offset might point to the content of a string literal, so we need to find the parent
+        var current: PsiElement? = psiElementAtOffset
+        while (current != null) {
+            when (current) {
+                is com.jetbrains.php.lang.psi.elements.StringLiteralExpression -> {
+                    val result = PhpType()
+                    result.add("string")
+                    return result
+                }
+                is com.jetbrains.php.lang.psi.elements.PhpExpression -> {
+                    // Check if it's a numeric literal by looking at the text
+                    val text = current.text.trim()
+                    when {
+                        text == "true" || text == "false" -> {
+                            val result = PhpType()
+                            result.add("bool")
+                            return result
+                        }
+                        text == "null" -> {
+                            val result = PhpType()
+                            result.add("null")
+                            return result
+                        }
+                        text.toIntOrNull() != null -> {
+                            val result = PhpType()
+                            result.add("int")
+                            return result
+                        }
+                        text.toDoubleOrNull() != null -> {
+                            val result = PhpType()
+                            result.add("float")
+                            return result
+                        }
+                    }
+                }
+            }
+
+            // Don't walk up too far - stop at statement level
+            if (current is com.jetbrains.php.lang.psi.elements.Statement) {
+                break
+            }
+            current = current.parent
+        }
+
+        // Couldn't determine literal type
+        return createFallbackType()
+    }
+
     private fun createFallbackType(): PhpType {
         val fallbackType = PhpType()
         fallbackType.add("mixed")
