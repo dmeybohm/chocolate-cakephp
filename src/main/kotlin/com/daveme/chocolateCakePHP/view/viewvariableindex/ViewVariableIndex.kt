@@ -5,21 +5,21 @@ import com.intellij.util.io.DataExternalizer
 import com.intellij.util.io.EnumeratorStringDescriptor
 import com.intellij.util.io.KeyDescriptor
 
-class ViewVariableIndex : FileBasedIndexExtension<ViewVariablesKey, ViewVariables>() {
+class ViewVariableIndex : FileBasedIndexExtension<ViewVariablesKey, ViewVariablesWithRawVars>() {
 
     override fun getName() = VIEW_VARIABLE_INDEX_KEY
 
-    override fun getIndexer(): DataIndexer<ViewVariablesKey, ViewVariables, FileContent> =
-        ViewVariableDataIndexer
+    override fun getIndexer(): DataIndexer<ViewVariablesKey, ViewVariablesWithRawVars, FileContent> =
+        ViewVariableASTDataIndexer
 
     override fun getKeyDescriptor(): KeyDescriptor<String> =
         EnumeratorStringDescriptor.INSTANCE
 
-    override fun getValueExternalizer(): DataExternalizer<ViewVariables> =
-        ViewVariableDataExternalizer
+    override fun getValueExternalizer(): DataExternalizer<ViewVariablesWithRawVars> =
+        ViewVariableRawVarsExternalizer
 
     override fun getVersion(): Int {
-        return 13
+        return 17
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {

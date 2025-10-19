@@ -68,11 +68,27 @@ class ViewVariableCompletionContributor : CompletionContributor() {
             )
             val phpIndex = PhpIndex.getInstance(project)
             viewVarValues.forEach { (viewVarName, viewVarType) ->
-                val phpType = viewVarType.phpType.lookupCompleteType(
-                    project,
-                    phpIndex,
-                    null
-                ).filterUnknown()
+                // For primitive types, don't try to look them up - they're not classes
+                val primitiveTypes = setOf("int", "float", "string", "bool", "array", "object",
+                                           "callable", "iterable", "void", "mixed", "null",
+                                           "integer", "boolean", "double")
+
+                val isPrimitive = viewVarType.phpType.types.all { type ->
+                    primitiveTypes.contains(type.lowercase())
+                }
+
+                val phpType = if (isPrimitive) {
+                    // Don't look up primitive types - use them as-is
+                    viewVarType.phpType
+                } else {
+                    // Look up class/interface types
+                    viewVarType.phpType.lookupCompleteType(
+                        project,
+                        phpIndex,
+                        null
+                    ).filterUnknown()
+                }
+
                 var completion = LookupElementBuilder.create("${'$'}${viewVarName}")
                     .withIcon(PhpIcons.VARIABLE)
                 if (phpType.types.size > 0) {

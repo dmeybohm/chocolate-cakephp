@@ -6,6 +6,9 @@ use Cake\Controller\Controller;
 
 class MovieController extends Controller
 {
+	/** @var string */
+	public $statusMessage = "Ready";
+
 	public function artist() {
 		$this->Auth->allow();
 		$metadata = $this->MovieMetadata->generateMetadata();
@@ -23,5 +26,29 @@ class MovieController extends Controller
 	public function meta() {
 
     }
+
+	public function directCallTest() {
+		// Direct expression - requires SourceKind.EXPRESSION resolution
+		$this->set('moviesTable', $this->fetchTable('Movies'));
+		// Add a second variable to avoid auto-completion in tests
+		$this->set('title', 'Direct Call Test');
+	}
+
+	public function expressionVarietyTest() {
+		// Property access
+		$this->set('message', $this->statusMessage);
+
+		// Nested function calls
+		$this->set('cleaned', str_replace('World', 'PHP', "Hello World"));
+
+		// Variable reference (with typed local variable)
+		/** @var int */
+		$count = 42;
+		$this->set('total', $count);
+
+		// Array access
+		$data = ['key' => 'value', 'num' => 123];
+		$this->set('item', $data['key']);
+	}
 
 }
