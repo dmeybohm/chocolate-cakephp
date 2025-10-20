@@ -4,7 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.util.ModificationTracker
+import com.intellij.openapi.util.SimpleModificationTracker
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
@@ -13,7 +13,6 @@ import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Tracks modifications to composer.json and config/app.php files in the project root.
@@ -22,11 +21,7 @@ import java.util.concurrent.atomic.AtomicLong
  * created or deleted, even if they didn't exist when the cache was first created.
  */
 @Service(Service.Level.PROJECT)
-class CakePhpFilesModificationTracker(private val project: Project) : ModificationTracker, Disposable {
-
-    private val modificationCount = AtomicLong(0)
-
-    override fun getModificationCount(): Long = modificationCount.get()
+class CakePhpFilesModificationTracker(private val project: Project) : SimpleModificationTracker(), Disposable {
 
     init {
         val connection = project.messageBus.connect(this)
@@ -37,7 +32,7 @@ class CakePhpFilesModificationTracker(private val project: Project) : Modificati
 
                 for (e in events) {
                     if (affectsTarget(e, projectPath)) {
-                        modificationCount.incrementAndGet()
+                        incModificationCount()
                         break
                     }
                 }
