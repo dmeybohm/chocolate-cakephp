@@ -100,28 +100,8 @@ class CakePhpAutoDetector(val project: Project)
     val autoDetectedValues: CakeAutoDetectedValues
         get() = CachedValuesManager.getManager(project).getCachedValue(project) {
             val result = autodetectCakePhp()
-            val dependencies = mutableListOf<Any>()
-
-            // Add composer.json as a dependency
-            val composerJson = project.guessProjectDir()?.findFileByRelativePath("composer.json")
-            if (composerJson != null) {
-                dependencies.add(composerJson)
-            }
-
-            // Add config/app.php as a dependency
-            val appConfig = project.guessProjectDir()?.findFileByRelativePath("config/app.php")
-            if (appConfig != null) {
-                dependencies.add(appConfig)
-            }
-
-            // If no dependencies were found, use the modification tracker to detect when
-            // composer.json or config/app.php are created
-            if (dependencies.isEmpty()) {
-                val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
-                CachedValueProvider.Result.create(result, tracker)
-            } else {
-                CachedValueProvider.Result.create(result, dependencies)
-            }
+            val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
+            CachedValueProvider.Result.create(result, tracker)
         }
 
     private fun autodetectCakePhp(): CakeAutoDetectedValues {
@@ -178,8 +158,7 @@ class CakePhpAutoDetector(val project: Project)
     }
 
     private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {
-        val appConfig = topDir.findFileByRelativePath("config/app.php")
-            ?: return DEFAULT_NAMESPACE
+        val appConfig = topDir.findFileByRelativePath("config/app.php") ?: return DEFAULT_NAMESPACE
 
         val contents = try {
             String(appConfig.contentsToByteArray(), StandardCharsets.UTF_8)
@@ -187,12 +166,12 @@ class CakePhpAutoDetector(val project: Project)
             return DEFAULT_NAMESPACE
         }
 
-        val regex = Regex("""^\s*['"]namespace['"]\s*=>\s*['"]([^']*)['"]\s*,\s*$""")
-        val lines = contents.lines()
-        for (line in lines) {
-            val namespace = regex.find(line)?.groupValues?.get(1) ?: continue
-            return namespace.replace("\\\\", "\\")
-                .absoluteClassName()
+        // More robust quote handling:
+        val regex = Regex("""^\s*['"]namespace['"]\s*=>\s*(['"])(.*?)\1\s*,\s*$""")
+        contents.lineSequence().forEach { line ->
+            regex.find(line)?.groupValues?.getOrNull(2)?.let { raw ->
+                return raw.replace("\\\\", "\\")
+            }
         }
         return DEFAULT_NAMESPACE
     }

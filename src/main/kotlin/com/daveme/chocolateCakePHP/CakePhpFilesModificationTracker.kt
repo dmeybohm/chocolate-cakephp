@@ -6,9 +6,12 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileCreateEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -22,15 +25,17 @@ class CakePhpFilesModificationTracker(private val project: Project) : Modificati
 
     private val modificationCount = AtomicLong(0)
 
+    override fun getModificationCount(): Long = modificationCount.get()
+
     init {
-        // Subscribe to VFS changes to detect when composer.json or config/app.php are created/deleted
-        project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+        val connection = project.messageBus.connect()
+        connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 val projectDir = project.guessProjectDir() ?: return
                 val projectPath = projectDir.path
 
-                for (event in events) {
-                    if (isCakePhpConfigFile(event, projectPath)) {
+                for (e in events) {
+                    if (affectsTarget(e, projectPath)) {
                         modificationCount.incrementAndGet()
                         break
                     }
@@ -39,20 +44,45 @@ class CakePhpFilesModificationTracker(private val project: Project) : Modificati
         })
     }
 
-    /**
-     * Checks if the event is for composer.json or config/app.php in the project root.
-     */
-    private fun isCakePhpConfigFile(event: VFileEvent, projectPath: String): Boolean {
-        if (event !is VFileCreateEvent && event !is VFileDeleteEvent) {
-            return false
+    private fun affectsTarget(e: VFileEvent, projectPath: String): Boolean {
+        // Handle create/delete by path
+        when (e) {
+            is VFileCreateEvent, is VFileDeleteEvent -> {
+                val p = e.path
+                return p == "$projectPath/composer.json" ||
+                        p == "$projectPath/config/app.php"
+            }
         }
 
-        val path = event.path
-        return path == "$projectPath/composer.json" ||
-               path == "$projectPath/config/app.php"
+        // For events with a file object (content change, rename, move)
+        val file = when (e) {
+            is VFileContentChangeEvent -> e.file
+            is VFilePropertyChangeEvent -> if (e.isRename) e.file else e.file // rename or other prop
+            is VFileMoveEvent -> e.file
+            else -> null
+        } ?: return false
+
+        val path = file.path
+        if (path == "$projectPath/composer.json" || path == "$projectPath/config/app.php") {
+            return true
+        }
+
+        // Also handle rename/move where the *new* path becomes the target
+        if (e is VFilePropertyChangeEvent && e.isRename) {
+            val newName = e.newValue as? String ?: return false
+            val parentPath = file.parent?.path ?: return false
+            val newPath = "$parentPath/$newName"
+            return newPath == "$projectPath/composer.json" ||
+                    newPath == "$projectPath/config/app.php"
+        }
+        if (e is VFileMoveEvent) {
+            val newPath = e.newParent.path + "/" + e.file.name
+            return newPath == "$projectPath/composer.json" ||
+                    newPath == "$projectPath/config/app.php"
+        }
+
+        return false
     }
 
-    override fun getModificationCount(): Long {
-        return modificationCount.get()
-    }
+
 }
