@@ -82,19 +82,19 @@ data class RawViewVar(
     private fun resolvePairType(project: Project, controllerFile: PsiFile?): PhpType {
         // For PAIR: $this->set('name', $value)
         // Use varHandle to find $value and resolve its type
-        return resolveByHandle(project, controllerFile)
+        return resolveByHandle(project, controllerFile, VarKind.PAIR)
     }
-    
+
     private fun resolveArrayType(project: Project, controllerFile: PsiFile?): PhpType {
-        // For ARRAY: $this->set(['name' => $value])  
+        // For ARRAY: $this->set(['name' => $value])
         // Use varHandle to find $value and resolve its type
-        return resolveByHandle(project, controllerFile)
+        return resolveByHandle(project, controllerFile, VarKind.ARRAY)
     }
-    
+
     private fun resolveCompactType(project: Project, controllerFile: PsiFile?): PhpType {
         // For COMPACT: $this->set(compact('varName'))
         // Use varHandle to find $varName and resolve its type
-        return resolveByHandle(project, controllerFile)
+        return resolveByHandle(project, controllerFile, VarKind.COMPACT)
     }
     
     private fun resolveTupleType(project: Project, controllerFile: PsiFile?): PhpType {
@@ -124,7 +124,7 @@ data class RawViewVar(
     }
     
     // Central method that resolves types based on VarHandle information
-    private fun resolveByHandle(project: Project, controllerFile: PsiFile?): PhpType {
+    private fun resolveByHandle(project: Project, controllerFile: PsiFile?, varKind: VarKind): PhpType {
         return when (varHandle.sourceKind) {
             SourceKind.PARAM -> {
                 // Parameters are resolved the same way as locals
@@ -142,7 +142,12 @@ data class RawViewVar(
                 resolveLiteralType(project, controllerFile)
             }
             SourceKind.EXPRESSION -> {
-                resolveExpressionType(project, controllerFile)
+                // Dispatch based on VarKind to handle different expression contexts
+                when (varKind) {
+                    VarKind.PAIR -> resolveExpressionTypeFromPair(project, controllerFile)
+                    VarKind.ARRAY -> resolveExpressionTypeFromArray(project, controllerFile)
+                    else -> createFallbackType() // For COMPACT, TUPLE, or other unsupported types
+                }
             }
             SourceKind.MIXED_ASSIGNMENT -> {
                 // TODO: Resolve mixed tuple assignment by finding variable assignments
@@ -281,7 +286,7 @@ data class RawViewVar(
         return createFallbackType()
     }
 
-    private fun resolveExpressionType(project: Project, controllerFile: PsiFile?): PhpType {
+    private fun resolveExpressionTypeFromPair(project: Project, controllerFile: PsiFile?): PhpType {
         if (controllerFile == null) {
             return createFallbackType()
         }
@@ -292,10 +297,11 @@ data class RawViewVar(
             return createFallbackType()
         }
 
-        // For any typed expression (method calls, property access, variables, array access, etc.),
+        // For PAIR syntax expressions (method calls, property access, variables, etc.),
         // we need to find the complete expression by walking up the tree until we hit a
-        // ParameterList boundary. The element right before the ParameterList is the full expression.
-        // This handles simple calls, chained calls, and complex expressions uniformly.
+        // ParameterList boundary.
+        // Example: $this->set('name', $this->getTable()->get('Movies'))
+        // This walks up from inner parts of chained calls to find the complete expression.
 
         var expressionElement: PsiElement? = psiElementAtOffset
         var current = psiElementAtOffset.parent
@@ -315,6 +321,52 @@ data class RawViewVar(
         }
 
         // Couldn't resolve the expression type
+        return createFallbackType()
+    }
+
+    private fun resolveExpressionTypeFromArray(project: Project, controllerFile: PsiFile?): PhpType {
+        if (controllerFile == null) {
+            return createFallbackType()
+        }
+
+        // Find the PSI element at the offset
+        val psiElementAtOffset = controllerFile.findElementAt(varHandle.offset)
+        if (psiElementAtOffset == null) {
+            return createFallbackType()
+        }
+
+        // For ARRAY syntax, the offset points to an expression inside structural wrappers
+        // Structure: ArrayCreationExpression → Hash array element → Array value → (wrapper?) → Expression
+        // Example: $this->set(['name' => $this->property])
+        // We need to walk up but stop at the great-grandchild of ArrayCreationExpression
+
+        // Walk up the tree to find the expression, stopping when we're 3 levels below ArrayCreationExpression
+        var expressionElement: PsiElement? = psiElementAtOffset
+        var current = psiElementAtOffset.parent
+
+        while (current != null) {
+            // Check if current's grandparent is the ArrayCreationExpression boundary
+            val grandparent = current.parent?.parent
+            if (grandparent is com.jetbrains.php.lang.psi.elements.ArrayCreationExpression) {
+                // Current is 2 levels down from ArrayCreationExpression
+                // expressionElement is the great-grandchild - this is what we want!
+                break
+            }
+
+            // Also stop if we hit the boundary directly (safety check)
+            if (current is com.jetbrains.php.lang.psi.elements.ArrayCreationExpression) {
+                break
+            }
+
+            expressionElement = current
+            current = current.parent
+        }
+
+        // Get type from the expression element (should be the actual value, not a wrapper)
+        if (expressionElement is PhpTypedElement) {
+            return expressionElement.type.global(project)
+        }
+
         return createFallbackType()
     }
 
@@ -437,8 +489,7 @@ object ViewVariableIndexService {
                 val rawVar: RawViewVar? = (viewVariablesMap as HashMap<ViewVariableName, RawViewVar>).get(variableName)
                 if (rawVar != null) {
                     val types: PhpType = rawVar.resolveType(project, controllerPsiFile)
-                    val completeTypes = types.lookupCompleteType(project, visited = null)
-                    result.add(completeTypes)
+                    result.add(types)
                 }
                 true // continue processing
             },

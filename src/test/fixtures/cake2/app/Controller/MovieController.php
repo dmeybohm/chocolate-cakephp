@@ -56,4 +56,15 @@ class MovieController extends AppController
 		$this->set('item', $data['key']);
 	}
 
+	public function array_variety_test()
+	{
+		// Single variable in array syntax (property access expression)
+		$this->set(['singleVar' => $this->statusMessage]);
+
+		// Mixed literals and variables in array syntax
+		/** @var int */
+		$count = 42;
+		$this->set(['title' => 'Test Title', 'count' => 42, 'total' => $count]);
+	}
+
 }
