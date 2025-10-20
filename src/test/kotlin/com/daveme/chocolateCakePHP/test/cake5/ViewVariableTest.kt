@@ -355,11 +355,8 @@ class ViewVariableTest: Cake5BaseTestCase() {
         val presentation = LookupElementPresentation()
         singleVarElement!!.renderElement(presentation)
 
-        // NOTE: Type resolves to string[] instead of string
-        // This is because PHP's type system infers array element types when the value is in an array context
-        // TODO: Need to extract the base type from array element context
-        // For now, this test verifies the variable is found and basic type resolution works
-        assertEquals("string[]", presentation.typeText)
+        // Type should resolve to string from property PHPDoc
+        assertEquals("string", presentation.typeText)
     }
 
     fun `test mixed literals and variables in array set`() {
@@ -384,10 +381,6 @@ class ViewVariableTest: Cake5BaseTestCase() {
         myFixture.completeBasic()
 
         val elements = myFixture.lookupElements!!
-
-        // NOTE: Literal values have correct base types (string, int)
-        // Expression values (like $this->property or variables) get [] suffix from PHP type inference
-        // This happens because expressions are resolved in array context
 
         // Check $title type (literal string in array)
         val titleElement = elements.find { it.lookupString == "${'$'}title" }
