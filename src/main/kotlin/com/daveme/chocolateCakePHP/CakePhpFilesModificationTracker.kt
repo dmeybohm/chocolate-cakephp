@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -21,14 +22,14 @@ import java.util.concurrent.atomic.AtomicLong
  * created or deleted, even if they didn't exist when the cache was first created.
  */
 @Service(Service.Level.PROJECT)
-class CakePhpFilesModificationTracker(private val project: Project) : ModificationTracker {
+class CakePhpFilesModificationTracker(private val project: Project) : ModificationTracker, Disposable {
 
     private val modificationCount = AtomicLong(0)
 
     override fun getModificationCount(): Long = modificationCount.get()
 
     init {
-        val connection = project.messageBus.connect()
+        val connection = project.messageBus.connect(this)
         connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 val projectDir = project.guessProjectDir() ?: return
@@ -57,7 +58,7 @@ class CakePhpFilesModificationTracker(private val project: Project) : Modificati
         // For events with a file object (content change, rename, move)
         val file = when (e) {
             is VFileContentChangeEvent -> e.file
-            is VFilePropertyChangeEvent -> if (e.isRename) e.file else e.file // rename or other prop
+            is VFilePropertyChangeEvent -> e.file
             is VFileMoveEvent -> e.file
             else -> null
         } ?: return false
@@ -84,5 +85,7 @@ class CakePhpFilesModificationTracker(private val project: Project) : Modificati
         return false
     }
 
-
+    override fun dispose() {
+        // Connection is automatically disposed via parent disposable
+    }
 }
