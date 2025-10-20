@@ -55,12 +55,16 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             return
         }
 
-        val psiFile = getPsiFile(project, e) ?: return
-        val isViewFile = isCakeViewFile(project, settings, psiFile)
-        val isControllerFile = isCakeControllerFile(psiFile)
+        val psiFile = getPsiFile(project, e)
+        if (psiFile == null) {
+            e.presentation.isEnabledAndVisible = false
+        } else {
+            val isViewFile = isCakeViewFile(project, settings, psiFile)
+            val isControllerFile = isCakeControllerFile(psiFile)
 
-        e.presentation.isEnabled = isViewFile || isControllerFile
-        e.presentation.isVisible = isViewFile
+            e.presentation.isEnabled = isViewFile || isControllerFile
+            e.presentation.isVisible = isViewFile
+        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
