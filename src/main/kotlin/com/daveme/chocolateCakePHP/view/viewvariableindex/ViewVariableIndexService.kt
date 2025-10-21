@@ -156,7 +156,7 @@ data class RawViewVar(
             SourceKind.UNKNOWN -> createFallbackType()
         }
     }
-    
+
     private fun resolveLocalVariableType(project: Project, controllerFile: PsiFile?): PhpType {
         if (controllerFile == null) {
             return createFallbackType()
@@ -200,9 +200,7 @@ data class RawViewVar(
             val paramType = matchingParam.type
 
             // PHP primitive types that should never have namespace prefixes
-            val primitiveTypes = setOf("int", "float", "string", "bool", "array", "object",
-                                       "callable", "iterable", "void", "mixed", "null",
-                                       "integer", "boolean", "double")
+            val primitiveTypes = PRIMITIVE_TYPES
 
             // Create a new PhpType with cleaned type strings
             val cleanedType = PhpType()
@@ -573,6 +571,94 @@ object ViewVariableIndexService {
             }
         }
         return result
+    }
+
+    /**
+     * Check if a variable exists in the view path without resolving its type.
+     * This is faster than lookupVariableTypeFromViewPathInSmartReadAction as it avoids type resolution.
+     *
+     * Phase 1: Supports static patterns (PAIR, ARRAY, COMPACT, TUPLE) via direct map lookup.
+     * Future phases will add support for dynamic patterns (VARIABLE_ARRAY, etc.).
+     */
+    fun variableExistsInViewPath(
+        project: Project,
+        settings: Settings,
+        filenameKey: String,
+        variableName: String
+    ): Boolean {
+        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+        val toProcess = fileList.toMutableList()
+        val visited = mutableSetOf<String>()
+        var maxLookups = 15
+
+        while (toProcess.isNotEmpty()) {
+            if (maxLookups == 0) break
+            maxLookups -= 1
+
+            val elementAndPath = toProcess.removeAt(0)
+            visited.add(elementAndPath.path)
+
+            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
+
+                if (variableExistsInController(project, controllerKey, variableName)) {
+                    return true
+                }
+                continue
+            }
+
+            // Handle view file references (traverse to find controllers)
+            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
+                elementAndPath.psiElement?.containingFile
+            } ?: continue
+
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
+            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+                templatesDir, settings, elementAndPath.path
+            )
+            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
+                project, newFilenameKey
+            )
+            for (newPsiElementAndPath in newFileList) {
+                if (visited.contains(newPsiElementAndPath.path)) continue
+                toProcess.add(newPsiElementAndPath)
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Check if a variable exists in a specific controller without resolving its type.
+     *
+     * Phase 1: Only checks static patterns via direct map key lookup (no PSI loading).
+     * Returns false for dynamic patterns (VARIABLE_ARRAY, etc.) - these will be added in future phases.
+     */
+    private fun variableExistsInController(
+        project: Project,
+        controllerKey: String,
+        variableName: String
+    ): Boolean {
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+        var found = false
+
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
+            { _, viewVariablesMap: ViewVariablesWithRawVars ->
+                // Phase 1: Check static patterns (direct key lookup - no PSI needed)
+                if (viewVariablesMap.containsKey(variableName)) {
+                    found = true
+                    false  // Stop processing
+                } else {
+                    true  // Continue
+                }
+                // NOTE: Dynamic patterns (VARIABLE_ARRAY, VARIABLE_COMPACT, etc.) will
+                // return false for now. These will be added in Phase 2+.
+            },
+            searchScope
+        )
+
+        return found
     }
 
 }

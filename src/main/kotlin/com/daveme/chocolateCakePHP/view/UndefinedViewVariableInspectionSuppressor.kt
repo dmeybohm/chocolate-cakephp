@@ -55,14 +55,15 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
                 variable.name,
                 phpTracker
             ) { key, varName ->
-                // Lookup function called only on cache miss
-                val resultType = ViewVariableIndexService.lookupVariableTypeFromViewPathInSmartReadAction(
+                // Fast path: Check variable existence without type resolution
+                // Phase 1: Static patterns only (PAIR, ARRAY, COMPACT, TUPLE)
+                // Future phases will add dynamic pattern support
+                ViewVariableIndexService.variableExistsInViewPath(
                     project,
                     settings,
                     key,
                     varName
                 )
-                resultType.types.size > 0
             }
         } catch (e: Exception) {
             println("Exception: ${e.message}")
