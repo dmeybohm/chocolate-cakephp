@@ -404,6 +404,22 @@ class ViewVariableTest: Cake5BaseTestCase() {
         assertEquals("int", totalPresentation.typeText)
     }
 
+    fun `test static patterns suppress undefined variable warnings`() {
+        // Tests Phase 1 optimization: PAIR, COMPACT static patterns
+        // Verifies that UndefinedViewVariableInspectionSuppressor works with direct map lookup
+        // Uses film_director.php which maps to filmDirector() action
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        // Use existing film_director.php template that's already in fixtures
+        // filmDirector() uses: $this->set(compact('moviesTable', 'metadata'))
+        myFixture.configureByFile("cake5/templates/Movie/film_director.php")
+
+        // Check highlighting - moviesTable and metadata should NOT have warnings
+        // since they come from the controller via COMPACT pattern
+        myFixture.checkHighlighting(true, false, false)
+    }
+
     fun `test VARIABLE_ARRAY pattern suppresses undefined variable warnings`() {
         // Tests Phase 2 optimization: VARIABLE_ARRAY pattern
         // Verifies that UndefinedViewVariableInspectionSuppressor correctly extracts variable names
