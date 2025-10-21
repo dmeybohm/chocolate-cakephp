@@ -443,4 +443,25 @@ class ViewVariableTest: Cake5BaseTestCase() {
         myFixture.checkHighlighting(true, false, false)
     }
 
+    fun `test VARIABLE_COMPACT pattern suppresses undefined variable warnings`() {
+        // Tests Phase 3 optimization: VARIABLE_COMPACT pattern
+        // Verifies that UndefinedViewVariableInspectionSuppressor correctly extracts variable names
+        // from compact() function calls and suppresses PhpUndefinedVariableInspection
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        myFixture.addFileToProject("cake5/templates/Movie/variable_compact_test.php", """
+        <?php
+        // These variables come from MovieController::variableCompactTest()
+        echo ${'$'}genre;
+        echo ${'$'}rating;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_compact_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on these variables
+        myFixture.checkHighlighting(true, false, false)
+    }
+
 }

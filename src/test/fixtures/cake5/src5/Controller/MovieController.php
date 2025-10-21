@@ -71,4 +71,13 @@ class MovieController extends Controller
 		$this->set($vars);
 	}
 
+	public function variableCompactTest() {
+		// VARIABLE_COMPACT pattern: $this->set($vars) where $vars = compact(...)
+		// Tests Phase 3 optimization - extracting parameters from compact() call
+		$genre = 'Sci-Fi';
+		$rating = 8.8;
+		$vars = compact('genre', 'rating');
+		$this->set($vars);
+	}
+
 }
