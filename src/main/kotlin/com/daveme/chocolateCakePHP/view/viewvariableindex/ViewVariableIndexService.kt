@@ -9,13 +9,17 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpTypedElement
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
@@ -629,10 +633,71 @@ object ViewVariableIndexService {
     }
 
     /**
+     * Extract variable names from dynamic pattern entries.
+     * Dispatches to appropriate extraction method based on VarKind.
+     *
+     * Phase 2: Supports VARIABLE_ARRAY
+     * Future phases will add VARIABLE_COMPACT, VARIABLE_PAIR, MIXED_TUPLE
+     */
+    private fun extractVariableNamesFromDynamicPattern(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile?
+    ): Set<String> {
+        if (controllerFile == null) return emptySet()
+
+        return when (rawVar.varKind) {
+            VarKind.VARIABLE_ARRAY -> extractVariableArrayNames(rawVar, controllerFile)
+            // Future phases will add other patterns here
+            else -> emptySet()
+        }
+    }
+
+    /**
+     * Extract variable names from VARIABLE_ARRAY pattern.
+     * Example: $vars = ['movie' => ..., 'actors' => ...]; $this->set($vars);
+     * Returns: ["movie", "actors"]
+     */
+    private fun extractVariableArrayNames(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find the last assignment to this variable before the $this->set() call
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == rawVar.varHandle.symbolName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        // Extract keys from the array assignment: $vars = ['movie' => ..., 'actors' => ...]
+        val value = relevantAssignment.value ?: return emptySet()
+
+        if (value !is ArrayCreationExpression) return emptySet()
+
+        val keys = mutableSetOf<String>()
+        for (hashElement in value.hashElements) {
+            val key = hashElement.key
+            if (key is StringLiteralExpression) {
+                keys.add(key.contents)
+            }
+        }
+
+        return keys
+    }
+
+    /**
      * Check if a variable exists in a specific controller without resolving its type.
      *
-     * Phase 1: Only checks static patterns via direct map key lookup (no PSI loading).
-     * Returns false for dynamic patterns (VARIABLE_ARRAY, etc.) - these will be added in future phases.
+     * Phase 1: Checks static patterns via direct map key lookup (no PSI loading).
+     * Phase 2: Checks VARIABLE_ARRAY dynamic pattern (with PSI loading).
+     * Future phases will add other dynamic patterns.
      */
     private fun variableExistsInController(
         project: Project,
@@ -641,19 +706,34 @@ object ViewVariableIndexService {
     ): Boolean {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
+        val psiManager = PsiManager.getInstance(project)
         var found = false
 
         fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
-            { _, viewVariablesMap: ViewVariablesWithRawVars ->
+            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
                 // Phase 1: Check static patterns (direct key lookup - no PSI needed)
                 if (viewVariablesMap.containsKey(variableName)) {
                     found = true
-                    false  // Stop processing
-                } else {
-                    true  // Continue
+                    return@processValues false  // Stop processing
                 }
-                // NOTE: Dynamic patterns (VARIABLE_ARRAY, VARIABLE_COMPACT, etc.) will
-                // return false for now. These will be added in Phase 2+.
+
+                // Phase 2: Check dynamic patterns (need PSI)
+                val dynamicEntries = viewVariablesMap.values.filter { rawVar ->
+                    rawVar.varKind == VarKind.VARIABLE_ARRAY  // Only this one for Phase 2
+                }
+
+                if (dynamicEntries.isNotEmpty()) {
+                    val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
+                    for (entry in dynamicEntries) {
+                        val variableNames = extractVariableNamesFromDynamicPattern(entry, controllerPsiFile)
+                        if (variableName in variableNames) {
+                            found = true
+                            return@processValues false  // Stop processing
+                        }
+                    }
+                }
+
+                true  // Continue processing
             },
             searchScope
         )

@@ -60,4 +60,15 @@ class MovieController extends Controller
 		$this->set(['title' => 'Test Title', 'count' => 42, 'total' => $count]);
 	}
 
+	public function variableArrayTest() {
+		// VARIABLE_ARRAY pattern: $this->set($vars) where $vars = [...]
+		// Tests Phase 2 optimization - extracting keys from variable assignment
+		$vars = [
+			'movie' => 'Inception',
+			'director' => 'Christopher Nolan',
+			'year' => 2010
+		];
+		$this->set($vars);
+	}
+
 }

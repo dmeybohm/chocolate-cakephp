@@ -15,6 +15,12 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
+val PRIMITIVE_TYPES: Set<String> = setOf(
+    "int", "float", "string", "bool", "array", "object",
+    "callable", "iterable", "void", "mixed", "null",
+    "integer", "boolean", "double"
+)
+
 private const val VIEW_HELPER_CAKE2_PARENT_CLASS = "\\AppHelper"
 private const val VIEW_HELPER_CAKE3_PARENT_CLASS = "\\Cake\\View\\Helper"
 

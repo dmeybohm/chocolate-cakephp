@@ -404,4 +404,27 @@ class ViewVariableTest: Cake5BaseTestCase() {
         assertEquals("int", totalPresentation.typeText)
     }
 
+    fun `test VARIABLE_ARRAY pattern suppresses undefined variable warnings`() {
+        // Tests Phase 2 optimization: VARIABLE_ARRAY pattern
+        // Verifies that UndefinedViewVariableInspectionSuppressor correctly extracts variable names
+        // from array assignments and suppresses PhpUndefinedVariableInspection
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        // Use addFileToProject to create the test file dynamically
+        myFixture.addFileToProject("cake5/templates/Movie/variable_array_test.php", """
+        <?php
+        // These variables come from MovieController::variableArrayTest()
+        echo ${'$'}movie;
+        echo ${'$'}director;
+        echo ${'$'}year;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_array_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on these variables
+        myFixture.checkHighlighting(true, false, false)
+    }
+
 }
