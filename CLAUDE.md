@@ -15,6 +15,10 @@ to prior to beginning work.
 We should commit after each significant step. You should add a
 `Co-Authored-By` annotation for Claude to each commit.
 
+Be way of rebasing to undo a mistake. You can amend the previous
+commit, but if you have to go back further in the history, prefer
+to make a new commit instead.
+
 ## Feature log
 
 When planning how to implement a feature, we should store the plans
