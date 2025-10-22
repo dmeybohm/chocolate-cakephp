@@ -640,7 +640,7 @@ object ViewVariableIndexService {
      * Phase 2: Supports VARIABLE_ARRAY
      * Phase 3: Supports VARIABLE_COMPACT
      * Phase 4: Supports VARIABLE_PAIR
-     * Future phases will add MIXED_TUPLE
+     * Phase 5: Supports MIXED_TUPLE
      */
     private fun extractVariableNamesFromDynamicPattern(
         rawVar: RawViewVar,
@@ -652,7 +652,7 @@ object ViewVariableIndexService {
             VarKind.VARIABLE_ARRAY -> extractVariableArrayNames(rawVar, controllerFile)
             VarKind.VARIABLE_COMPACT -> extractVariableCompactNames(rawVar, controllerFile)
             VarKind.VARIABLE_PAIR -> extractVariablePairName(rawVar, controllerFile)
-            // Future phases will add other patterns here
+            VarKind.MIXED_TUPLE -> extractMixedTupleName(rawVar, controllerFile)
             else -> emptySet()
         }
     }
@@ -786,13 +786,56 @@ object ViewVariableIndexService {
     }
 
     /**
+     * Extract variable names from MIXED_TUPLE pattern.
+     * Example: $key = 'studio'; $val = 'Warner Bros'; $this->set($key, $val);
+     * Returns: ["studio"]
+     *
+     * The symbolName format is "keyVarName|valVarName" (e.g., "key|val")
+     * We need to find the assignment to the key variable to get the actual variable name.
+     */
+    private fun extractMixedTupleName(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        // Parse the symbolName to get both variable names
+        val parts = rawVar.varHandle.symbolName.split("|")
+        if (parts.size != 2) return emptySet()
+
+        val keyVariableName = parts[0]
+        if (keyVariableName.isEmpty()) return emptySet()
+
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find assignment: $key = 'studio'
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == keyVariableName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        // Check if value is a string literal
+        val value = relevantAssignment.value
+        if (value is StringLiteralExpression) {
+            return setOf(value.contents)
+        }
+
+        return emptySet()
+    }
+
+    /**
      * Check if a variable exists in a specific controller without resolving its type.
      *
      * Phase 1: Checks static patterns via direct map key lookup (no PSI loading).
      * Phase 2: Checks VARIABLE_ARRAY dynamic pattern (with PSI loading).
      * Phase 3: Checks VARIABLE_COMPACT dynamic pattern (with PSI loading).
      * Phase 4: Checks VARIABLE_PAIR dynamic pattern (with PSI loading).
-     * Future phases will add other dynamic patterns.
+     * Phase 5: Checks MIXED_TUPLE dynamic pattern (with PSI loading).
      */
     private fun variableExistsInController(
         project: Project,
@@ -812,12 +855,13 @@ object ViewVariableIndexService {
                     return@processValues false  // Stop processing
                 }
 
-                // Phase 2-4: Check dynamic patterns (need PSI)
+                // Phase 2-5: Check dynamic patterns (need PSI)
                 val dynamicEntries = viewVariablesMap.values.filter { rawVar ->
                     rawVar.varKind in setOf(
                         VarKind.VARIABLE_ARRAY,
                         VarKind.VARIABLE_COMPACT,
-                        VarKind.VARIABLE_PAIR
+                        VarKind.VARIABLE_PAIR,
+                        VarKind.MIXED_TUPLE
                     )
                 }
 

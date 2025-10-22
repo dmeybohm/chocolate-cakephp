@@ -470,4 +470,20 @@ class ViewVariableTest: Cake5BaseTestCase() {
     // it creates MIXED_TUPLE instead. The extraction code is in place for VARIABLE_PAIR,
     // but it won't be triggered until the indexer is updated or MIXED_TUPLE (Phase 5) is implemented.
 
+    // Phase 5: MIXED_TUPLE pattern
+    fun `test MIXED_TUPLE pattern suppresses undefined variable warnings`() {
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        myFixture.addFileToProject("cake5/templates/Movie/variable_pair_test.php", """
+        <?php
+        echo ${'$'}studio;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_pair_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on this variable
+        myFixture.checkHighlighting(true, false, false)
+    }
+
 }
