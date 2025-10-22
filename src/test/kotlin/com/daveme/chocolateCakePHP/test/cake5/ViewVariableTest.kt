@@ -464,4 +464,10 @@ class ViewVariableTest: Cake5BaseTestCase() {
         myFixture.checkHighlighting(true, false, false)
     }
 
+    // Phase 4: VARIABLE_PAIR pattern
+    // Note: The indexer currently does not create VARIABLE_PAIR entries.
+    // When $this->set($key, $val) is encountered with both parameters as variables,
+    // it creates MIXED_TUPLE instead. The extraction code is in place for VARIABLE_PAIR,
+    // but it won't be triggered until the indexer is updated or MIXED_TUPLE (Phase 5) is implemented.
+
 }

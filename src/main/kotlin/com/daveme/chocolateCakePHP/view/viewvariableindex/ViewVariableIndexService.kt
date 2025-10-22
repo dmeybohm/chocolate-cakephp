@@ -639,7 +639,8 @@ object ViewVariableIndexService {
      *
      * Phase 2: Supports VARIABLE_ARRAY
      * Phase 3: Supports VARIABLE_COMPACT
-     * Future phases will add VARIABLE_PAIR, MIXED_TUPLE
+     * Phase 4: Supports VARIABLE_PAIR
+     * Future phases will add MIXED_TUPLE
      */
     private fun extractVariableNamesFromDynamicPattern(
         rawVar: RawViewVar,
@@ -650,6 +651,7 @@ object ViewVariableIndexService {
         return when (rawVar.varKind) {
             VarKind.VARIABLE_ARRAY -> extractVariableArrayNames(rawVar, controllerFile)
             VarKind.VARIABLE_COMPACT -> extractVariableCompactNames(rawVar, controllerFile)
+            VarKind.VARIABLE_PAIR -> extractVariablePairName(rawVar, controllerFile)
             // Future phases will add other patterns here
             else -> emptySet()
         }
@@ -660,8 +662,8 @@ object ViewVariableIndexService {
      * Example: $vars = ['movie' => ..., 'actors' => ...]; $this->set($vars);
      * Returns: ["movie", "actors"]
      *
-     * Note: Currently the indexer marks both VARIABLE_ARRAY and VARIABLE_COMPACT as VARIABLE_ARRAY,
-     * so this function also checks for compact() calls and delegates to extractVariableCompactNames.
+     * Note: Currently the indexer marks VARIABLE_ARRAY, VARIABLE_COMPACT, and VARIABLE_PAIR as VARIABLE_ARRAY,
+     * so this function checks the assignment value type and delegates appropriately.
      */
     private fun extractVariableArrayNames(
         rawVar: RawViewVar,
@@ -687,6 +689,11 @@ object ViewVariableIndexService {
         // Check if this is actually a compact() call (indexer doesn't distinguish yet)
         if (value is FunctionReference && value.name == "compact") {
             return extractVariableCompactNames(rawVar, controllerFile)
+        }
+
+        // Check if this is actually a string literal (VARIABLE_PAIR pattern)
+        if (value is StringLiteralExpression) {
+            return extractVariablePairName(rawVar, controllerFile)
         }
 
         // Extract keys from the array assignment: $vars = ['movie' => ..., 'actors' => ...]
@@ -743,11 +750,48 @@ object ViewVariableIndexService {
     }
 
     /**
+     * Extract variable names from VARIABLE_PAIR pattern.
+     * Example: $key = 'movie'; $this->set($key, $val);
+     * Returns: ["movie"]
+     */
+    private fun extractVariablePairName(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find assignment: $key = 'movie'
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == rawVar.varHandle.symbolName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        // Check if value is a string literal
+        val value = relevantAssignment.value
+        if (value is StringLiteralExpression) {
+            return setOf(value.contents)
+        }
+
+        // Could also be a parameter - check method params
+        // Note: We can't determine the value from parameter at this point
+        // as it would need to analyze call sites (too expensive)
+        return emptySet()
+    }
+
+    /**
      * Check if a variable exists in a specific controller without resolving its type.
      *
      * Phase 1: Checks static patterns via direct map key lookup (no PSI loading).
      * Phase 2: Checks VARIABLE_ARRAY dynamic pattern (with PSI loading).
      * Phase 3: Checks VARIABLE_COMPACT dynamic pattern (with PSI loading).
+     * Phase 4: Checks VARIABLE_PAIR dynamic pattern (with PSI loading).
      * Future phases will add other dynamic patterns.
      */
     private fun variableExistsInController(
@@ -768,9 +812,13 @@ object ViewVariableIndexService {
                     return@processValues false  // Stop processing
                 }
 
-                // Phase 2-3: Check dynamic patterns (need PSI)
+                // Phase 2-4: Check dynamic patterns (need PSI)
                 val dynamicEntries = viewVariablesMap.values.filter { rawVar ->
-                    rawVar.varKind in setOf(VarKind.VARIABLE_ARRAY, VarKind.VARIABLE_COMPACT)
+                    rawVar.varKind in setOf(
+                        VarKind.VARIABLE_ARRAY,
+                        VarKind.VARIABLE_COMPACT,
+                        VarKind.VARIABLE_PAIR
+                    )
                 }
 
                 if (dynamicEntries.isNotEmpty()) {

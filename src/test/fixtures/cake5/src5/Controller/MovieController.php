@@ -80,4 +80,12 @@ class MovieController extends Controller
 		$this->set($vars);
 	}
 
+	public function variablePairTest() {
+		// VARIABLE_PAIR pattern: $this->set($key, $val) where $key = '...'
+		// Tests Phase 4 optimization - extracting variable name from assignment
+		$key = 'studio';
+		$val = 'Warner Bros';
+		$this->set($key, $val);
+	}
+
 }
