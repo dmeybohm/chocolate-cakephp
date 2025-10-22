@@ -2,32 +2,42 @@
 
 class MovieController extends AppController
 {
-	public $uses = ['Movie', 'Artist'];
+    public $uses = ['Movie', 'Artist'];
     public $components = ['MovieMetadata'];
 
 	/** @var string */
 	public $statusMessage = "Ready";
 
     public function artist($artistId)
-	{
-	    $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
-	    $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
-	    $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
+    {
+        $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
+        $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
+        $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
 
-	    ClassRegistry::init('Movie')->saveScreening();
-	    $this->set(compact('movies', 'artist', 'metadata'));
-	}
+        ClassRegistry::init('Movie')->saveScreening();
+        $this->set(compact('movies', 'artist', 'metadata'));
+    }
 
     public function film_director($artistId)
-	{
-	    $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
-	    $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
-	    $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
+    {
+        $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
+        $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
+        $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
 
         $movieModel = ClassRegistry::init('Movie');
-	    ClassRegistry::init('Movie')->saveScreening();
-	    $this->set(compact('movies', 'artist', 'metadata', 'movieModel'));
-	}
+        ClassRegistry::init('Movie')->saveScreening();
+        $this->set(compact('movies', 'artist', 'metadata', 'movieModel'));
+    }
+
+    public function viewFieldTest($artistId)
+    {
+        $this->view = 'artist';
+        $movies = $this->Movie->find('all', ['conditions' => ['artist_id' => $artistId]]);
+        $artist = $this->Artist->find('first', ['conditions' => ['id' => $artistId]]);
+        $metadata = $this->MovieMetadata->generateMovieMetadata($movies);
+        $movieModel = ClassRegistry::init('Movie');
+        $this->set(compact('movies', 'artist', 'metadata', 'movieModel'));
+    }
 
 	public function direct_call_test()
 	{

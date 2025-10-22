@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.psi.PsiFile
 import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
@@ -47,8 +48,23 @@ data class MethodInfo(
     val offset: Int
 )
 
+data class FieldAssignmentInfo(
+    val fieldName: String,
+    val receiverText: String?,
+    val assignedValue: String?,
+    val offset: Int
+)
+
+data class ViewBuilderCallInfo(
+    val methodName: String,        // "setTemplate" or "setTemplatePath"
+    val parameterValue: String?,   // The template name or path
+    val offset: Int,
+    val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
+)
+
 
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
+    val logger = this.thisLogger()
 
     // Robust string literal extraction that handles different PHP plugin versions
     private fun extractStringLiteral(node: ASTNode): String? {
@@ -194,7 +210,257 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             MethodInfo(name = it, isPublic = isPublic, offset = node.startOffset)
         }
     }
-    
+
+    private fun findFieldAssignments(node: ASTNode, fieldName: String): List<FieldAssignmentInfo> {
+        val result = mutableListOf<FieldAssignmentInfo>()
+        findFieldAssignmentsRecursive(node, fieldName, result)
+        return result
+    }
+
+    private fun findFieldAssignmentsRecursive(node: ASTNode, targetFieldName: String, result: MutableList<FieldAssignmentInfo>) {
+        // Check if this node represents an assignment expression
+        if (node.elementType == PhpElementTypes.ASSIGNMENT_EXPRESSION) {
+            val fieldAssignment = parseFieldAssignment(node, targetFieldName)
+            if (fieldAssignment != null) {
+                result.add(fieldAssignment)
+            }
+        }
+
+        // Recursively check child nodes
+        var child = node.firstChildNode
+        while (child != null) {
+            findFieldAssignmentsRecursive(child, targetFieldName, result)
+            child = child.treeNext
+        }
+    }
+
+    private fun parseFieldAssignment(node: ASTNode, targetFieldName: String): FieldAssignmentInfo? {
+        // Look for: $this->view = 'template_name'
+        // AST structure: ASSIGNMENT_EXPRESSION -> FIELD_REFERENCE (left) -> STRING (right)
+        var fieldReference: ASTNode? = null
+        var assignedValue: String? = null
+
+        var child = node.firstChildNode
+        while (child != null) {
+            when (child.elementType) {
+                PhpElementTypes.FIELD_REFERENCE -> {
+                    fieldReference = child
+                }
+                PhpElementTypes.STRING -> {
+                    assignedValue = extractStringLiteral(child)
+                }
+            }
+            child = child.treeNext
+        }
+
+        // Parse the field reference to ensure it's $this->view
+        if (fieldReference != null && assignedValue != null) {
+            var receiverName: String? = null
+            var fieldName: String? = null
+
+            var refChild = fieldReference.firstChildNode
+            while (refChild != null) {
+                when (refChild.elementType) {
+                    PhpElementTypes.VARIABLE -> {
+                        receiverName = refChild.text.removePrefix("$")
+                    }
+                    PhpTokenTypes.IDENTIFIER -> {
+                        fieldName = refChild.text
+                    }
+                }
+                refChild = refChild.treeNext
+            }
+
+            if (receiverName == "this" && fieldName?.equals(targetFieldName, ignoreCase = true) == true) {
+                return FieldAssignmentInfo(
+                    fieldName = fieldName,
+                    receiverText = receiverName,
+                    assignedValue = assignedValue,
+                    offset = fieldReference.startOffset
+                )
+            }
+        }
+
+        return null
+    }
+
+    private fun findViewBuilderCalls(node: ASTNode): List<ViewBuilderCallInfo> {
+        val result = mutableListOf<ViewBuilderCallInfo>()
+        findViewBuilderCallsRecursive(node, result, -1)
+        return result
+    }
+
+    private fun findViewBuilderCallsRecursive(
+        node: ASTNode,
+        result: MutableList<ViewBuilderCallInfo>,
+        containingMethodOffset: Int = -1
+    ) {
+        // Track when we enter a CLASS_METHOD
+        val currentMethodOffset = if (node.elementType == PhpElementTypes.CLASS_METHOD) {
+            node.startOffset
+        } else {
+            containingMethodOffset
+        }
+
+        // Check if this node represents a method reference
+        if (node.elementType == PhpElementTypes.METHOD_REFERENCE) {
+            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset)
+            if (viewBuilderCall != null) {
+                result.add(viewBuilderCall)
+            }
+        }
+
+        // Recursively check child nodes
+        var child = node.firstChildNode
+        while (child != null) {
+            findViewBuilderCallsRecursive(child, result, currentMethodOffset)
+            child = child.treeNext
+        }
+    }
+
+    private fun parseViewBuilderCall(
+        node: ASTNode,
+        containingMethodOffset: Int
+    ): ViewBuilderCallInfo? {
+        // Look for:
+        //   1. $this->viewBuilder()->setTemplate('name')
+        //   2. $this->viewBuilder()->setTemplatePath('path')
+        //   3. $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+        //
+        // For chained calls, both setTemplatePath and setTemplate are returned as separate
+        // ViewBuilderCallInfo objects to preserve state tracking behavior.
+        //
+        // AST structure:
+        //   Normal: METHOD_REFERENCE (setTemplate/setTemplatePath)
+        //     -> receiver: METHOD_REFERENCE (viewBuilder)
+        //         -> receiver: VARIABLE ($this)
+        //   Chained: METHOD_REFERENCE (setTemplate)
+        //     -> receiver: METHOD_REFERENCE (setTemplatePath)
+        //         -> receiver: METHOD_REFERENCE (viewBuilder)
+        //             -> receiver: VARIABLE ($this)
+
+        // Quick check: get method name first for early rejection
+        val methodName = getMethodName(node)
+        if (methodName != "setTemplate" && methodName != "setTemplatePath") {
+            return null  // Early exit for non-target methods
+        }
+
+        // Now parse the rest of the structure
+        var parameterValue: String? = null
+        var receiverMethodRef: ASTNode? = null
+
+        // Parse the outer method reference (setTemplate or setTemplatePath)
+        var child = node.firstChildNode
+        while (child != null) {
+            when (child.elementType) {
+                PhpElementTypes.METHOD_REFERENCE -> {
+                    receiverMethodRef = child
+                }
+                PhpElementTypes.PARAMETER_LIST -> {
+                    // Extract single string parameter
+                    val significantChildren = mutableListOf<ASTNode>()
+                    var paramChild = child.firstChildNode
+                    while (paramChild != null) {
+                        if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
+                            significantChildren.add(paramChild)
+                        }
+                        paramChild = paramChild.treeNext
+                    }
+                    if (significantChildren.size == 1) {
+                        parameterValue = extractStringLiteral(significantChildren[0])
+                    }
+                }
+            }
+            child = child.treeNext
+        }
+
+        if (receiverMethodRef == null) {
+            return null
+        }
+
+        // Pattern 1: Normal calls - receiver is viewBuilder()
+        if (isViewBuilderMethodCall(receiverMethodRef)) {
+            // Use passed-in offset instead of walking up tree
+            return ViewBuilderCallInfo(
+                methodName = methodName,
+                parameterValue = parameterValue,
+                offset = node.startOffset,
+                containingMethodStartOffset = containingMethodOffset
+            )
+        }
+
+        // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        // Check receiver method name to see if it's setTemplatePath
+        val receiverMethodName = getMethodName(receiverMethodRef)
+        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
+            // Verify the chain goes back to viewBuilder()
+            val viewBuilderNode = getReceiverMethodRef(receiverMethodRef)
+            if (viewBuilderNode != null && isViewBuilderMethodCall(viewBuilderNode)) {
+                // Use passed-in offset instead of walking up tree
+                // Return as normal setTemplate - state tracking will handle the path
+                return ViewBuilderCallInfo(
+                    methodName = "setTemplate",
+                    parameterValue = parameterValue,  // Just the template name, not combined!
+                    offset = node.startOffset,
+                    containingMethodStartOffset = containingMethodOffset
+                )
+            }
+        }
+
+        // Pattern 3: Chained setTemplatePath - will be processed normally by Pattern 1
+        // AST traversal visits it separately, so no special handling needed
+
+        return null
+    }
+
+    /**
+     * Get the method name from a METHOD_REFERENCE node
+     */
+    private fun getMethodName(node: ASTNode): String? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.IDENTIFIER) {
+                return child.text
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    /**
+     * Get the receiver METHOD_REFERENCE from a METHOD_REFERENCE node
+     */
+    private fun getReceiverMethodRef(node: ASTNode): ASTNode? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpElementTypes.METHOD_REFERENCE) {
+                return child
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun isViewBuilderMethodCall(node: ASTNode): Boolean {
+        // Check if this is a METHOD_REFERENCE with name "viewBuilder" and receiver "$this"
+        var receiverVariable: String? = null
+        var methodName: String? = null
+
+        var child = node.firstChildNode
+        while (child != null) {
+            when (child.elementType) {
+                PhpElementTypes.VARIABLE -> {
+                    receiverVariable = child.text.removePrefix("$")
+                }
+                PhpTokenTypes.IDENTIFIER -> {
+                    methodName = child.text
+                }
+            }
+            child = child.treeNext
+        }
+
+        return receiverVariable == "this" && methodName == "viewBuilder"
+    }
 
     override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
         val result = mutableMapOf<String, List<ViewReferenceData>>()
@@ -218,11 +484,25 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             .filter { it.receiverText == "this" && it.firstParameterText != null }
         val astElementCalls = findMethodCallsByName(rootNode, "element")
             .filter { it.receiverText == "this" && it.firstParameterText != null }
+        val astViewFieldAssignments = findFieldAssignments(rootNode, "view")
+            .filter { it.receiverText == "this" && it.assignedValue != null }
+
+        // Early bailout: Quick text scan before AST traversal for viewBuilder calls
+        val fileText = inputData.contentAsText.toString()
+        val astViewBuilderCalls = if (!fileText.contains("viewBuilder")) {
+            // Skip viewBuilder parsing entirely
+            emptyList()
+        } else {
+            findViewBuilderCalls(rootNode)
+                .filter { it.parameterValue != null }
+        }
 
         val isController = isCakeControllerFile(virtualFile)
         if (
             astRenderCalls.isEmpty() &&
             astElementCalls.isEmpty() &&
+            astViewFieldAssignments.isEmpty() &&
+            astViewBuilderCalls.isEmpty() &&
             !isController
         ) {
             return result
@@ -230,6 +510,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         indexRenderCalls(result, projectDir, astRenderCalls, virtualFile)
         indexElementCalls(result, projectDir, astElementCalls, virtualFile)
+        indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile)
+        indexViewBuilderCalls(result, projectDir, astViewBuilderCalls, virtualFile)
 
         if (isController) {
             // Use AST traversal instead of PSI for method declarations
@@ -272,6 +554,101 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             ?: return
 
         setViewPath(elementCalls, viewPathPrefix, result)
+    }
+
+    private fun indexViewFieldAssignments(
+        result: MutableMap<String, List<ViewReferenceData>>,
+        projectDir: VirtualFile,
+        fieldAssignments: List<FieldAssignmentInfo>,
+        virtualFile: VirtualFile
+    ) {
+        if (fieldAssignments.isEmpty()) {
+            return
+        }
+
+        val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
+            ?: return
+
+        for (assignment in fieldAssignments) {
+            val assignedValue = assignment.assignedValue ?: continue
+            val renderPath = RenderPath(assignedValue)
+
+            if (renderPath.path.isEmpty()) {
+                continue
+            }
+
+            val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
+            val oldList = result.getOrDefault(fullViewPath, emptyList())
+            val newViewReferenceData = ViewReferenceData(
+                methodName = assignment.fieldName,
+                elementType = ElementType.FIELD_ASSIGNMENT,
+                offset = assignment.offset
+            )
+            val newList = oldList + listOf(newViewReferenceData)
+            result[fullViewPath] = newList
+        }
+    }
+
+    private fun indexViewBuilderCalls(
+        result: MutableMap<String, List<ViewReferenceData>>,
+        projectDir: VirtualFile,
+        builderCalls: List<ViewBuilderCallInfo>,
+        virtualFile: VirtualFile
+    ) {
+        if (builderCalls.isEmpty()) {
+            return
+        }
+
+        val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
+            ?: return
+
+        // Group by containing method
+        val callsByMethod = builderCalls.groupBy { it.containingMethodStartOffset }
+
+        for ((_, calls) in callsByMethod) {
+            // Sort by offset to maintain order
+            val sortedCalls = calls.sortedBy { it.offset }
+
+            // Track the most recent setTemplatePath
+            var currentTemplatePath: String? = null
+
+            for (call in sortedCalls) {
+                val parameterValue = call.parameterValue ?: continue
+
+                when (call.methodName) {
+                    "setTemplatePath" -> {
+                        // Update the current template path for subsequent setTemplate calls
+                        currentTemplatePath = parameterValue
+                        // Note: We don't index setTemplatePath calls directly
+                    }
+                    "setTemplate" -> {
+                        // Build the final path combining setTemplatePath (if any) with setTemplate
+                        val finalPath = if (currentTemplatePath != null) {
+                            // setTemplatePath provides an absolute path from templates root
+                            // Prefix with "/" to make it absolute so it's not combined with controller path
+                            "/$currentTemplatePath/$parameterValue"
+                        } else {
+                            parameterValue
+                        }
+
+                        val renderPath = RenderPath(finalPath)
+                        if (renderPath.path.isEmpty()) {
+                            continue
+                        }
+
+                        val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
+                        val oldList = result.getOrDefault(fullViewPath, emptyList())
+                        val newViewReferenceData = ViewReferenceData(
+                            methodName = call.methodName,
+                            elementType = ElementType.VIEW_BUILDER,
+                            offset = call.offset
+                        )
+                        val newList = oldList + listOf(newViewReferenceData)
+                        result[fullViewPath] = newList
+                    }
+                }
+            }
+        }
     }
 
 
