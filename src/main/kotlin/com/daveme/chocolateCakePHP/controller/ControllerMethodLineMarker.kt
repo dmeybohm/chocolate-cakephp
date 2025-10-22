@@ -147,11 +147,12 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return
         }
 
+        val settings = Settings.getInstance(project)
+        if (!settings.enabled) {
+            return
+        }
+
         for (element in elements) {
-            val settings = Settings.getInstance(project)
-            if (!settings.enabled) {
-                return
-            }
             val file = element.containingFile ?: continue
             val virtualFile = file.virtualFile ?: continue
 
