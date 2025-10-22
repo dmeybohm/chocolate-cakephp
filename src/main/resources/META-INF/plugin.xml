@@ -84,16 +84,6 @@
     </extensions>
 
     <actions>
-        <action id="com.daveme.chocolateCakePHP.controller.CreateDefaultViewFileAction"
-                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
-                icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
-                text="Create Default CakePHP View File"
-                description="Create a default view file for the CakePHP framework"/>
-        <action id="com.daveme.chocolateCakePHP.controller.CreateCustomViewFileAction"
-                class="com.daveme.chocolateCakePHP.controller.CreateViewFileAction"
-                icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
-                text="Create Custom CakePHP View File"
-                description="Create a custom view file for the CakePHP framework"/>
         <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 text="Toggle Controller / View"
