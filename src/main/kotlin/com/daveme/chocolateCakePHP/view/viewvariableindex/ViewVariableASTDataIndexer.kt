@@ -568,13 +568,23 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
     private fun extractStringLiteral(node: ASTNode): String? {
-        // Only extract if this is actually a STRING node
-        if (node.elementType != PhpElementTypes.STRING) {
-            return null
+        // First check if this node itself is a STRING
+        if (node.elementType == PhpElementTypes.STRING) {
+            val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
+            val text = (lit ?: node).text
+            return text.removeSurrounding("'").removeSurrounding("\"")
         }
 
-        val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
-        val text = (lit ?: node).text
-        return text.removeSurrounding("'").removeSurrounding("\"")
+        // If not, try to find a STRING child (e.g., for "Array key" nodes that contain STRING)
+        val stringChild = node.findChildByType(PhpElementTypes.STRING)
+        if (stringChild != null) {
+            val lit = stringChild.findChildByType(PhpTokenTypes.STRING_LITERAL)
+            val text = (lit ?: stringChild).text
+            return text.removeSurrounding("'").removeSurrounding("\"")
+        }
+
+        // If it's a VARIABLE or other non-string type, return null
+        // This prevents variables like $key from being treated as string literals
+        return null
     }
 }
