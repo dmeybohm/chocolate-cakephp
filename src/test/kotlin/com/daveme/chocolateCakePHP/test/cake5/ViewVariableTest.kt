@@ -404,4 +404,86 @@ class ViewVariableTest: Cake5BaseTestCase() {
         assertEquals("int", totalPresentation.typeText)
     }
 
+    fun `test static patterns suppress undefined variable warnings`() {
+        // Tests Phase 1 optimization: PAIR, COMPACT static patterns
+        // Verifies that UndefinedViewVariableInspectionSuppressor works with direct map lookup
+        // Uses film_director.php which maps to filmDirector() action
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        // Use existing film_director.php template that's already in fixtures
+        // filmDirector() uses: $this->set(compact('moviesTable', 'metadata'))
+        myFixture.configureByFile("cake5/templates/Movie/film_director.php")
+
+        // Check highlighting - moviesTable and metadata should NOT have warnings
+        // since they come from the controller via COMPACT pattern
+        myFixture.checkHighlighting(true, false, false)
+    }
+
+    fun `test VARIABLE_ARRAY pattern suppresses undefined variable warnings`() {
+        // Tests Phase 2 optimization: VARIABLE_ARRAY pattern
+        // Verifies that UndefinedViewVariableInspectionSuppressor correctly extracts variable names
+        // from array assignments and suppresses PhpUndefinedVariableInspection
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        // Use addFileToProject to create the test file dynamically
+        myFixture.addFileToProject("cake5/templates/Movie/variable_array_test.php", """
+        <?php
+        // These variables come from MovieController::variableArrayTest()
+        echo ${'$'}movie;
+        echo ${'$'}director;
+        echo ${'$'}year;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_array_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on these variables
+        myFixture.checkHighlighting(true, false, false)
+    }
+
+    fun `test VARIABLE_COMPACT pattern suppresses undefined variable warnings`() {
+        // Tests Phase 3 optimization: VARIABLE_COMPACT pattern
+        // Verifies that UndefinedViewVariableInspectionSuppressor correctly extracts variable names
+        // from compact() function calls and suppresses PhpUndefinedVariableInspection
+
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        myFixture.addFileToProject("cake5/templates/Movie/variable_compact_test.php", """
+        <?php
+        // These variables come from MovieController::variableCompactTest()
+        echo ${'$'}genre;
+        echo ${'$'}rating;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_compact_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on these variables
+        myFixture.checkHighlighting(true, false, false)
+    }
+
+    // Phase 4: VARIABLE_PAIR pattern
+    // Note: The indexer currently does not create VARIABLE_PAIR entries.
+    // When $this->set($key, $val) is encountered with both parameters as variables,
+    // it creates MIXED_TUPLE instead. The extraction code is in place for VARIABLE_PAIR,
+    // but it won't be triggered until the indexer is updated or MIXED_TUPLE (Phase 5) is implemented.
+
+    // Phase 5: MIXED_TUPLE pattern
+    fun `test MIXED_TUPLE pattern suppresses undefined variable warnings`() {
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        myFixture.addFileToProject("cake5/templates/Movie/variable_pair_test.php", """
+        <?php
+        echo ${'$'}studio;
+        """.trimIndent())
+
+        myFixture.configureByFile("cake5/templates/Movie/variable_pair_test.php")
+
+        // No <warning> markup means we expect ZERO warnings
+        // Test fails if PhpUndefinedVariableInspection triggers on this variable
+        myFixture.checkHighlighting(true, false, false)
+    }
+
 }

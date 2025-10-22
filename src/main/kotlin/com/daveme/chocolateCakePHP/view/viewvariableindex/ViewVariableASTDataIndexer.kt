@@ -219,14 +219,14 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                         }
                         paramChild = paramChild.treeNext
                     }
-                    
+
                     val paramNodes = paramList?.let { extractParameterNodes(it) } ?: emptyList()
                     val secondParamText = if (paramNodes.size >= 2) paramNodes[1].text else "unknownVar"
-                    
+
                     // Analyze the second parameter to determine SourceKind
                     val sourceKind = analyzeValueSource(paramNodes[1])
                     val symbolName = secondParamText.removePrefix("$")
-                    
+
                     return listOf(SetCallInfo(
                         variableName = firstParamValue,
                         varKind = VarKind.PAIR,
@@ -265,22 +265,22 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         }
         
         // Case 7: $this->set($caseSevenKeys, $caseSevenVals) where either keys or vals is a variable
-        if (receiverName == "this" && 
-            methodName?.equals("set", ignoreCase = true) == true && 
+        if (receiverName == "this" &&
+            methodName?.equals("set", ignoreCase = true) == true &&
             hasSecondParam) {
-            
+
             val paramNodes = extractParameterNodes(
                 node.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
             )
             if (paramNodes.size == 2) {
                 val keysParam = paramNodes[0]
                 val valsParam = paramNodes[1]
-                
+
                 // Handle mixed cases where one param is array and other is variable
                 if ((keysParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION && valsParam.elementType == PhpElementTypes.VARIABLE) ||
                     (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) ||
                     (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.VARIABLE)) {
-                    
+
                     return extractVariablesFromMixedTupleAssignment(keysParam, valsParam)
                 }
             }
@@ -568,9 +568,23 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
     private fun extractStringLiteral(node: ASTNode): String? {
-        val strNode = node.takeIf { it.elementType == PhpElementTypes.STRING } ?: node
-        val lit = strNode.findChildByType(PhpTokenTypes.STRING_LITERAL)
-        val text = (lit ?: strNode).text
-        return text.removeSurrounding("'").removeSurrounding("\"")
+        // First check if this node itself is a STRING
+        if (node.elementType == PhpElementTypes.STRING) {
+            val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
+            val text = (lit ?: node).text
+            return text.removeSurrounding("'").removeSurrounding("\"")
+        }
+
+        // If not, try to find a STRING child (e.g., for "Array key" nodes that contain STRING)
+        val stringChild = node.findChildByType(PhpElementTypes.STRING)
+        if (stringChild != null) {
+            val lit = stringChild.findChildByType(PhpTokenTypes.STRING_LITERAL)
+            val text = (lit ?: stringChild).text
+            return text.removeSurrounding("'").removeSurrounding("\"")
+        }
+
+        // If it's a VARIABLE or other non-string type, return null
+        // This prevents variables like $key from being treated as string literals
+        return null
     }
 }

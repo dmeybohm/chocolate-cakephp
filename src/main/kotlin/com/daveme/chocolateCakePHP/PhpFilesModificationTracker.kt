@@ -12,6 +12,9 @@ import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
+import com.intellij.openapi.fileTypes.FileTypeRegistry
+import com.intellij.openapi.vfs.VirtualFile
+import com.jetbrains.php.lang.PhpFileType
 
 /**
  * Tracks modifications to PHP files in the project.
@@ -24,7 +27,9 @@ import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
  * zero overhead for non-CakePHP projects.
  */
 @Service(Service.Level.PROJECT)
-class PhpFilesModificationTracker(private val project: Project) : SimpleModificationTracker(), Disposable {
+class PhpFilesModificationTracker(
+    private val project: Project
+) : SimpleModificationTracker(), Disposable {
 
     private val _isArmed: Boolean by lazy {
         val settings = Settings.getInstance(project)
@@ -65,33 +70,26 @@ class PhpFilesModificationTracker(private val project: Project) : SimpleModifica
         _isArmed
     }
 
-    private fun affectsPhpFile(e: VFileEvent): Boolean {
-        // Handle create/delete by path
-        when (e) {
-            is VFileCreateEvent, is VFileDeleteEvent -> {
-                return e.path.endsWith(".php")
-            }
-        }
+    private fun isPhp(file: VirtualFile) =
+        FileTypeRegistry.getInstance().isFileOfType(file, PhpFileType.INSTANCE)
 
-        // For events with a file object (content change, rename, move)
+    private fun affectsPhpFile(e: VFileEvent): Boolean {
         val file = when (e) {
             is VFileContentChangeEvent -> e.file
             is VFilePropertyChangeEvent -> e.file
             is VFileMoveEvent -> e.file
+            is VFileDeleteEvent -> e.file
+            is VFileCreateEvent -> e.file
             else -> null
         } ?: return false
 
-        // Check if the file is a PHP file
-        if (file.extension == "php") {
-            return true
-        }
+        if (isPhp(file)) return true
 
-        // Also handle rename where the file becomes a PHP file
         if (e is VFilePropertyChangeEvent && e.isRename) {
+            // On rename we don’t have new VirtualFile yet; fall back to name
             val newName = e.newValue as? String ?: return false
             return newName.endsWith(".php")
         }
-
         return false
     }
 

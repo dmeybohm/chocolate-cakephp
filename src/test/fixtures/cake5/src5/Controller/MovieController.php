@@ -60,4 +60,32 @@ class MovieController extends Controller
 		$this->set(['title' => 'Test Title', 'count' => 42, 'total' => $count]);
 	}
 
+	public function variableArrayTest() {
+		// VARIABLE_ARRAY pattern: $this->set($vars) where $vars = [...]
+		// Tests Phase 2 optimization - extracting keys from variable assignment
+		$vars = [
+			'movie' => 'Inception',
+			'director' => 'Christopher Nolan',
+			'year' => 2010
+		];
+		$this->set($vars);
+	}
+
+	public function variableCompactTest() {
+		// VARIABLE_COMPACT pattern: $this->set($vars) where $vars = compact(...)
+		// Tests Phase 3 optimization - extracting parameters from compact() call
+		$genre = 'Sci-Fi';
+		$rating = 8.8;
+		$vars = compact('genre', 'rating');
+		$this->set($vars);
+	}
+
+	public function variablePairTest() {
+		// VARIABLE_PAIR pattern: $this->set($key, $val) where $key = '...'
+		// Tests Phase 4 optimization - extracting variable name from assignment
+		$key = 'studio';
+		$val = 'Warner Bros';
+		$this->set($key, $val);
+	}
+
 }

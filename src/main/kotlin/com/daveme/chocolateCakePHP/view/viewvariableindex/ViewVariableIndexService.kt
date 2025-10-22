@@ -9,13 +9,18 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.FunctionReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpTypedElement
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
@@ -156,7 +161,7 @@ data class RawViewVar(
             SourceKind.UNKNOWN -> createFallbackType()
         }
     }
-    
+
     private fun resolveLocalVariableType(project: Project, controllerFile: PsiFile?): PhpType {
         if (controllerFile == null) {
             return createFallbackType()
@@ -200,9 +205,7 @@ data class RawViewVar(
             val paramType = matchingParam.type
 
             // PHP primitive types that should never have namespace prefixes
-            val primitiveTypes = setOf("int", "float", "string", "bool", "array", "object",
-                                       "callable", "iterable", "void", "mixed", "null",
-                                       "integer", "boolean", "double")
+            val primitiveTypes = PRIMITIVE_TYPES
 
             // Create a new PhpType with cleaned type strings
             val cleanedType = PhpType()
@@ -573,6 +576,312 @@ object ViewVariableIndexService {
             }
         }
         return result
+    }
+
+    /**
+     * Check if a variable exists in the view path without resolving its type.
+     * This is faster than lookupVariableTypeFromViewPathInSmartReadAction as it avoids type resolution.
+     *
+     * Phase 1: Supports static patterns (PAIR, ARRAY, COMPACT, TUPLE) via direct map lookup.
+     * Future phases will add support for dynamic patterns (VARIABLE_ARRAY, etc.).
+     */
+    fun variableExistsInViewPath(
+        project: Project,
+        settings: Settings,
+        filenameKey: String,
+        variableName: String
+    ): Boolean {
+        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+        val toProcess = fileList.toMutableList()
+        val visited = mutableSetOf<String>()
+        var maxLookups = 15
+
+        while (toProcess.isNotEmpty()) {
+            if (maxLookups == 0) break
+            maxLookups -= 1
+
+            val elementAndPath = toProcess.removeAt(0)
+            visited.add(elementAndPath.path)
+
+            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
+
+                if (variableExistsInController(project, controllerKey, variableName)) {
+                    return true
+                }
+                continue
+            }
+
+            // Handle view file references (traverse to find controllers)
+            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
+                elementAndPath.psiElement?.containingFile
+            } ?: continue
+
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
+            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+                templatesDir, settings, elementAndPath.path
+            )
+            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
+                project, newFilenameKey
+            )
+            for (newPsiElementAndPath in newFileList) {
+                if (visited.contains(newPsiElementAndPath.path)) continue
+                toProcess.add(newPsiElementAndPath)
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Extract variable names from dynamic pattern entries.
+     * Dispatches to appropriate extraction method based on VarKind.
+     *
+     * Phase 2: Supports VARIABLE_ARRAY
+     * Phase 3: Supports VARIABLE_COMPACT
+     * Phase 4: Supports VARIABLE_PAIR
+     * Phase 5: Supports MIXED_TUPLE
+     */
+    private fun extractVariableNamesFromDynamicPattern(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile?
+    ): Set<String> {
+        if (controllerFile == null) return emptySet()
+
+        return when (rawVar.varKind) {
+            VarKind.VARIABLE_ARRAY -> extractVariableArrayNames(rawVar, controllerFile)
+            VarKind.VARIABLE_COMPACT -> extractVariableCompactNames(rawVar, controllerFile)
+            VarKind.VARIABLE_PAIR -> extractVariablePairName(rawVar, controllerFile)
+            VarKind.MIXED_TUPLE -> extractMixedTupleName(rawVar, controllerFile)
+            else -> emptySet()
+        }
+    }
+
+    /**
+     * Extract variable names from VARIABLE_ARRAY pattern.
+     * Example: $vars = ['movie' => ..., 'actors' => ...]; $this->set($vars);
+     * Returns: ["movie", "actors"]
+     *
+     * Note: Currently the indexer marks VARIABLE_ARRAY, VARIABLE_COMPACT, and VARIABLE_PAIR as VARIABLE_ARRAY,
+     * so this function checks the assignment value type and delegates appropriately.
+     */
+    private fun extractVariableArrayNames(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find the last assignment to this variable before the $this->set() call
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == rawVar.varHandle.symbolName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        val value = relevantAssignment.value ?: return emptySet()
+
+        // Check if this is actually a compact() call (indexer doesn't distinguish yet)
+        if (value is FunctionReference && value.name == "compact") {
+            return extractVariableCompactNames(rawVar, controllerFile)
+        }
+
+        // Check if this is actually a string literal (VARIABLE_PAIR pattern)
+        if (value is StringLiteralExpression) {
+            return extractVariablePairName(rawVar, controllerFile)
+        }
+
+        // Extract keys from the array assignment: $vars = ['movie' => ..., 'actors' => ...]
+        if (value !is ArrayCreationExpression) return emptySet()
+
+        val keys = mutableSetOf<String>()
+        for (hashElement in value.hashElements) {
+            val key = hashElement.key
+            if (key is StringLiteralExpression) {
+                keys.add(key.contents)
+            }
+        }
+
+        return keys
+    }
+
+    /**
+     * Extract variable names from VARIABLE_COMPACT pattern.
+     * Example: $vars = compact('movie', 'actors'); $this->set($vars);
+     * Returns: ["movie", "actors"]
+     */
+    private fun extractVariableCompactNames(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find assignment: $vars = compact('movie', 'actors')
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == rawVar.varHandle.symbolName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        val value = relevantAssignment.value
+        if (value !is FunctionReference || value.name != "compact") return emptySet()
+
+        // Extract string parameters from compact()
+        val keys = mutableSetOf<String>()
+        val parameterList = value.parameterList ?: return emptySet()
+        for (param in parameterList.parameters) {
+            if (param is StringLiteralExpression) {
+                keys.add(param.contents)
+            }
+        }
+
+        return keys
+    }
+
+    /**
+     * Extract variable names from VARIABLE_PAIR pattern.
+     * Example: $key = 'movie'; $this->set($key, $val);
+     * Returns: ["movie"]
+     */
+    private fun extractVariablePairName(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find assignment: $key = 'movie'
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == rawVar.varHandle.symbolName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        // Check if value is a string literal
+        val value = relevantAssignment.value
+        if (value is StringLiteralExpression) {
+            return setOf(value.contents)
+        }
+
+        // Could also be a parameter - check method params
+        // Note: We can't determine the value from parameter at this point
+        // as it would need to analyze call sites (too expensive)
+        return emptySet()
+    }
+
+    /**
+     * Extract variable names from MIXED_TUPLE pattern.
+     * Example: $key = 'studio'; $val = 'Warner Bros'; $this->set($key, $val);
+     * Returns: ["studio"]
+     *
+     * The symbolName format is "keyVarName|valVarName" (e.g., "key|val")
+     * We need to find the assignment to the key variable to get the actual variable name.
+     */
+    private fun extractMixedTupleName(
+        rawVar: RawViewVar,
+        controllerFile: PsiFile
+    ): Set<String> {
+        // Parse the symbolName to get both variable names
+        val parts = rawVar.varHandle.symbolName.split("|")
+        if (parts.size != 2) return emptySet()
+
+        val keyVariableName = parts[0]
+        if (keyVariableName.isEmpty()) return emptySet()
+
+        val psiElementAtOffset = controllerFile.findElementAt(rawVar.varHandle.offset) ?: return emptySet()
+        val containingMethod = PsiTreeUtil.getParentOfType(psiElementAtOffset, Method::class.java) ?: return emptySet()
+
+        // Find assignment: $key = 'studio'
+        val assignments = PsiTreeUtil.findChildrenOfType(containingMethod, AssignmentExpression::class.java)
+        val relevantAssignment = assignments
+            .filter { assignment ->
+                val variable = assignment.variable
+                variable is Variable &&
+                variable.name == keyVariableName &&
+                assignment.textRange.startOffset < rawVar.varHandle.offset
+            }
+            .maxByOrNull { it.textRange.startOffset }
+            ?: return emptySet()
+
+        // Check if value is a string literal
+        val value = relevantAssignment.value
+        if (value is StringLiteralExpression) {
+            return setOf(value.contents)
+        }
+
+        return emptySet()
+    }
+
+    /**
+     * Check if a variable exists in a specific controller without resolving its type.
+     *
+     * Phase 1: Checks static patterns via direct map key lookup (no PSI loading).
+     * Phase 2: Checks VARIABLE_ARRAY dynamic pattern (with PSI loading).
+     * Phase 3: Checks VARIABLE_COMPACT dynamic pattern (with PSI loading).
+     * Phase 4: Checks VARIABLE_PAIR dynamic pattern (with PSI loading).
+     * Phase 5: Checks MIXED_TUPLE dynamic pattern (with PSI loading).
+     */
+    private fun variableExistsInController(
+        project: Project,
+        controllerKey: String,
+        variableName: String
+    ): Boolean {
+        val fileIndex = FileBasedIndex.getInstance()
+        val searchScope = GlobalSearchScope.allScope(project)
+        val psiManager = PsiManager.getInstance(project)
+        var found = false
+
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
+            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
+                // Phase 1: Check static patterns (direct key lookup - no PSI needed)
+                if (viewVariablesMap.containsKey(variableName)) {
+                    found = true
+                    return@processValues false  // Stop processing
+                }
+
+                // Phase 2-5: Check dynamic patterns (need PSI)
+                val dynamicEntries = viewVariablesMap.values.filter { rawVar ->
+                    rawVar.varKind in setOf(
+                        VarKind.VARIABLE_ARRAY,
+                        VarKind.VARIABLE_COMPACT,
+                        VarKind.VARIABLE_PAIR,
+                        VarKind.MIXED_TUPLE
+                    )
+                }
+
+                if (dynamicEntries.isNotEmpty()) {
+                    val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
+                    for (entry in dynamicEntries) {
+                        val variableNames = extractVariableNamesFromDynamicPattern(entry, controllerPsiFile)
+                        if (variableName in variableNames) {
+                            found = true
+                            return@processValues false  // Stop processing
+                        }
+                    }
+                }
+
+                true  // Continue processing
+            },
+            searchScope
+        )
+
+        return found
     }
 
 }
