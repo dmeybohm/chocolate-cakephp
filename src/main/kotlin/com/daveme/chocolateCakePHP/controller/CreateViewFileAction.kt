@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.controller
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.createDirectoriesIfMissing
 import com.daveme.chocolateCakePHP.cake.viewFilePathInfoFromPath
@@ -46,8 +47,8 @@ class CreateViewFileAction(
         val filePath = if (allowEdit) {
             val userInput = Messages.showInputDialog(
                 project,
-                "View file path",
-                "Create View File",
+                ChocolateCakePHPBundle.message("createView.dialog.title"),
+                ChocolateCakePHPBundle.message("createView.dialog.createTitle"),
                 Messages.getQuestionIcon(),
                 destinationPath,
                 object : InputValidator {
@@ -63,7 +64,7 @@ class CreateViewFileAction(
         // Create file
         WriteCommandAction.runWriteCommandAction(
             project,
-            "Create View File",
+            ChocolateCakePHPBundle.message("createView.command.name"),
             null,
             object : Runnable {
                 override fun run() {
@@ -77,24 +78,24 @@ class CreateViewFileAction(
                     val filename = viewFilePathInfo.viewFilename
                     val baseDirPath = baseDir.path
                     if (!createDirectoriesIfMissing("${baseDirPath}/${parentDir}")) {
-                        showError("Failed to create directories")
+                        showError(ChocolateCakePHPBundle.message("createView.error.createDirectories"))
                         return
                     }
                     val parentDirVirtualFile = baseDir.findFileByRelativePath(parentDir) ?: return
                     if (!parentDirVirtualFile.isDirectory) {
-                        showError("Failed to find directory")
+                        showError(ChocolateCakePHPBundle.message("createView.error.findDirectory"))
                         return
                     }
                     val parentDirPsiFile = PsiManager.getInstance(project).findDirectory(parentDirVirtualFile)
                     if (parentDirPsiFile == null) {
-                        showError("Failed to find directory")
+                        showError(ChocolateCakePHPBundle.message("createView.error.findDirectory"))
                         return
                     }
 
                     // Check if file exists already:
                     val child = parentDirVirtualFile.findChild(filename)
                     if (child != null && child.exists()) {
-                        showError("File already exists")
+                        showError(ChocolateCakePHPBundle.message("createView.error.fileExists"))
                         return
                     }
 
@@ -113,7 +114,7 @@ class CreateViewFileAction(
                 }
 
                 fun showError(error: String) {
-                    showErrorDialog(error, "Create View File")
+                    showErrorDialog(error, ChocolateCakePHPBundle.message("createView.dialog.createTitle"))
                 }
             }
 

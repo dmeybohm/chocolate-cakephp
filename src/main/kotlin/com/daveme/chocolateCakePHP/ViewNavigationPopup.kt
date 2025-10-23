@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.cake.AllViewPaths
 import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.controller.CreateViewFileAction
@@ -52,7 +53,7 @@ fun showPsiFilePopup(
         .toTypedArray<PsiElement>()
     PsiTargetNavigator(elements)
         .presentationProvider(CakePhpNavigationPresentationProvider())
-        .createPopup(project, title="Select Target to Navigate")
+        .createPopup(project, title=ChocolateCakePHPBundle.message("navigation.selectTarget.title"))
         .show(point)
 }
 
@@ -91,10 +92,8 @@ fun createViewActionPopupFromAllViewPaths(
     useAltLabel: Boolean = false,
 ): DefaultActionGroup {
     val defaultActionGroup = DefaultActionGroup()
-    val defaultOptionTitle = if (useAltLabel)
-        "Create ${allViewPaths.defaultViewPath.altLabel}"
-    else
-        "Create ${allViewPaths.defaultViewPath.label}"
+    val defaultLabel = if (useAltLabel) allViewPaths.defaultViewPath.altLabel else allViewPaths.defaultViewPath.label
+    val defaultOptionTitle = ChocolateCakePHPBundle.message("navigation.create.label", defaultLabel)
     defaultActionGroup.add(
         CreateViewFileAction(
             title = defaultOptionTitle,
@@ -105,7 +104,7 @@ fun createViewActionPopupFromAllViewPaths(
     allViewPaths.otherViewPaths.map { otherViewPath ->
         defaultActionGroup.add(
             CreateViewFileAction(
-                title = "Create ${otherViewPath.label}",
+                title = ChocolateCakePHPBundle.message("navigation.create.label", otherViewPath.label),
                 destinationPath = otherViewPath.fullPath,
                 allowEdit = false
             )
@@ -114,7 +113,7 @@ fun createViewActionPopupFromAllViewPaths(
     defaultActionGroup.addSeparator()
     defaultActionGroup.add(
         CreateViewFileAction(
-            title = "Create Custom View File",
+            title = ChocolateCakePHPBundle.message("navigation.createCustom.label"),
             destinationPath = allViewPaths.defaultViewPath.fullPath,
             allowEdit = true
         )
@@ -122,7 +121,7 @@ fun createViewActionPopupFromAllViewPaths(
     allViewPaths.dataViewPaths.map { dataViewPath ->
         defaultActionGroup.add(
             CreateViewFileAction(
-                title = "Create ${dataViewPath.label} View File",
+                title = ChocolateCakePHPBundle.message("navigation.createDataView.label", dataViewPath.label),
                 destinationPath = dataViewPath.fullPath,
                 allowEdit = false
             )
