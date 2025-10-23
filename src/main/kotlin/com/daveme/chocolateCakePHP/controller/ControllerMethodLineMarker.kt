@@ -142,6 +142,10 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         elements: MutableList<out PsiElement>,
         result: MutableCollection<in LineMarkerInfo<*>>
     ) {
+        if (result.size == 0) {
+            return 0
+        }
+
         val project = elements.firstOrNull()?.project ?: return
         if (DumbService.getInstance(project).isDumb) {
             return
