@@ -301,7 +301,14 @@ Messages.showInputDialog(
 
 **Commit:** `b646569` - "Add internationalization support with 8 language translations"
 
+**Important Discovery:**
+- JetBrains Marketplace does NOT support localized plugin names/descriptions via resource bundles
+- The `<name>` and `<description>` tags must contain static text for marketplace display
+- Only UI elements within the IDE (settings pages, dialogs, etc.) can use resource bundles
+- Reverted plugin.xml name/description to static English text to fix marketplace display
+
 **Remaining Work:**
-- Runtime testing in IntelliJ IDEA with different locale settings to verify translations display correctly
+- Runtime testing in PhpStorm with different locale settings to verify translations display correctly
 - Native speaker review of translations for accuracy
-- Update README.md and JetBrains Marketplace listing to advertise multi-language support
+- Update README.md to mention multi-language support for UI elements
+- Note in documentation that plugin name/description remain in English on marketplace
