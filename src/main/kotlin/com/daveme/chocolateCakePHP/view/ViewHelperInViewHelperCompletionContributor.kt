@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.completeFromClasses
 import com.daveme.chocolateCakePHP.getViewHelperSubclasses
 import com.intellij.codeInsight.completion.*
+import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
@@ -33,6 +34,9 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet
         ) {
             val psiElement = completionParameters.position
+            if (DumbService.getInstance(psiElement.project).isDumb) {
+                return
+            }
             val settings = Settings.getInstance(psiElement.project)
             if (!settings.enabled) {
                 return

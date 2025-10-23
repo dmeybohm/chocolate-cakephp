@@ -8,6 +8,7 @@ import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -24,6 +25,9 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         editor: Editor
     ): Array<PsiElement>? {
         if (sourceElement == null) {
+            return PsiElement.EMPTY_ARRAY
+        }
+        if (DumbService.getInstance(sourceElement.project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
         val project = sourceElement.project
