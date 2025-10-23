@@ -4,24 +4,26 @@
 
 set -e
 
-IDEA_CONFIG="$HOME/.config/JetBrains"
+JETBRAINS_CONFIG="$HOME/.config/JetBrains"
 VMOPTS_FILE=""
 
-# Find the most recent IntelliJ IDEA configuration directory
-if [ -d "$IDEA_CONFIG" ]; then
-    IDEA_DIR=$(ls -dt "$IDEA_CONFIG"/IntelliJIdea* 2>/dev/null | head -1)
-    if [ -n "$IDEA_DIR" ]; then
-        VMOPTS_FILE="$IDEA_DIR/idea64.vmopts"
+# Find the most recent PhpStorm configuration directory
+if [ -d "$JETBRAINS_CONFIG" ]; then
+    PHPSTORM_DIR=$(ls -dt "$JETBRAINS_CONFIG"/PhpStorm* 2>/dev/null | head -1)
+    if [ -n "$PHPSTORM_DIR" ]; then
+        VMOPTS_FILE="$PHPSTORM_DIR/phpstorm64.vmopts"
     fi
 fi
 
 if [ -z "$VMOPTS_FILE" ]; then
-    echo "Could not find IntelliJ IDEA configuration directory."
-    echo "Please manually edit your idea64.vmopts file and add:"
+    echo "Could not find PhpStorm configuration directory."
+    echo "Please manually edit your phpstorm64.vmopts file and add:"
     echo ""
     echo "  -Duser.language=<lang> -Duser.country=<COUNTRY>"
     echo ""
     echo "Example: -Duser.language=es -Duser.country=ES"
+    echo ""
+    echo "You can also edit it via: Help → Edit Custom VM Options..."
     exit 1
 fi
 
@@ -107,11 +109,11 @@ case $choice in
         ;;
     0)
         echo "Language override removed."
-        echo "IntelliJ will use system default."
+        echo "PhpStorm will use system default."
         echo ""
         echo "VM options file: $VMOPTS_FILE"
         echo ""
-        echo "Please restart IntelliJ IDEA for changes to take effect."
+        echo "Please restart PhpStorm for changes to take effect."
         exit 0
         ;;
     *)
@@ -125,9 +127,9 @@ echo "✓ VM options updated to use: $LANG_NAME"
 echo ""
 echo "VM options file: $VMOPTS_FILE"
 echo ""
-echo "IMPORTANT: You must restart IntelliJ IDEA for this change to take effect."
+echo "IMPORTANT: You must restart PhpStorm for this change to take effect."
 echo ""
-echo "After restarting IntelliJ:"
+echo "After restarting PhpStorm:"
 echo "  1. Build the plugin: ./gradlew buildPlugin"
 echo "  2. Install from: build/distributions/Chocolate-CakePHP-1.0.0.zip"
 echo "  3. Settings → Languages & Frameworks → PHP → Chocolate CakePHP"

@@ -11,7 +11,7 @@ This guide explains how to test the Chocolate CakePHP plugin translations on you
 ```
 
 This script will:
-1. Automatically find your IntelliJ IDEA configuration
+1. Automatically find your PhpStorm configuration
 2. Update VM options to use your selected language
 3. Back up your current settings
 4. Provide instructions for reverting changes
@@ -32,11 +32,11 @@ This creates: `build/distributions/Chocolate-CakePHP-1.0.0.zip`
 ./test-translations-vmopts.sh
 ```
 
-Select a language (1-8) and restart IntelliJ IDEA.
+Select a language (1-8) and restart PhpStorm.
 
 ### 3. Install the Plugin
 
-1. Open IntelliJ IDEA
+1. Open PhpStorm
 2. Go to **Settings** → **Plugins**
 3. Click the **⚙️** (gear icon) → **Install Plugin from Disk...**
 4. Navigate to `build/distributions/Chocolate-CakePHP-1.0.0.zip`
@@ -88,9 +88,9 @@ If the script doesn't work, manually edit your VM options:
 ### Find Your VM Options File
 
 Typically located at:
-- `~/.config/JetBrains/IntelliJIdea*/idea64.vmopts`
+- `~/.config/JetBrains/PhpStorm*/phpstorm64.vmopts`
 
-Or via IntelliJ: **Help** → **Edit Custom VM Options...**
+Or via PhpStorm: **Help** → **Edit Custom VM Options...**
 
 ### Add Language Override
 
@@ -115,7 +115,7 @@ Add these lines (example for Spanish):
 | Chinese | zh | CN |
 | English | en | US |
 
-### Restart IntelliJ
+### Restart PhpStorm
 
 Changes take effect after restart.
 
@@ -170,11 +170,11 @@ Then restart IntelliJ IDEA.
 
 ### Option 3: Restore Backup
 
-The script creates backups like `idea64.vmopts.backup.1234567890`
+The script creates backups like `phpstorm64.vmopts.backup.1234567890`
 
 ```bash
-cp ~/.config/JetBrains/IntelliJIdea*/idea64.vmopts.backup.* \
-   ~/.config/JetBrains/IntelliJIdea*/idea64.vmopts
+cp ~/.config/JetBrains/PhpStorm*/phpstorm64.vmopts.backup.* \
+   ~/.config/JetBrains/PhpStorm*/phpstorm64.vmopts
 ```
 
 ## Troubleshooting
@@ -189,13 +189,13 @@ cp ~/.config/JetBrains/IntelliJIdea*/idea64.vmopts.backup.* \
 
 ### Plugin Not Loading
 
-1. **Check IntelliJ logs**: Help → Show Log in Files
+1. **Check PhpStorm logs**: Help → Show Log in Files
 2. **Verify build succeeded**: `./gradlew buildPlugin` completes without errors
-3. **Check compatibility**: Plugin requires IntelliJ build 233.15026+
+3. **Check compatibility**: Plugin requires PhpStorm build 233.15026+
 
 ### Partial Translations
 
-Some IntelliJ UI elements (like main menus) are controlled by IntelliJ's own translations, not the plugin. Only plugin-specific text will be translated.
+Some PhpStorm UI elements (like main menus) are controlled by PhpStorm's own translations, not the plugin. Only plugin-specific text will be translated.
 
 ## What Gets Translated
 
@@ -206,7 +206,7 @@ Some IntelliJ UI elements (like main menus) are controlled by IntelliJ's own tra
 ✅ **Navigation popups** - Popup titles and menu items
 ✅ **Plugin metadata** - Name and description in plugin manager
 
-❌ **IntelliJ UI** - Main menu, toolbars (controlled by JetBrains)
+❌ **PhpStorm UI** - Main menu, toolbars (controlled by JetBrains)
 ❌ **System dialogs** - File choosers, etc. (OS-level)
 
 ## Reporting Issues
