@@ -143,7 +143,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         result: MutableCollection<in LineMarkerInfo<*>>
     ) {
         if (result.size == 0) {
-            return 0
+            return
         }
 
         val project = elements.firstOrNull()?.project ?: return
