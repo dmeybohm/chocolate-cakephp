@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.util.ui.ColumnInfo
@@ -86,12 +87,12 @@ class ThemeTableModel(
         fireTableRowsDeleted(idx, idx)
     }
 
-    class ThemePathColumn : ColumnInfo<ThemeEntry, String>("Theme Path") {
+    class ThemePathColumn : ColumnInfo<ThemeEntry, String>(ChocolateCakePHPBundle.message("table.column.themePath")) {
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.pluginPath
     }
 
-    class AssetsPathColumn : ColumnInfo<ThemeEntry, String>("Assets Path") {
+    class AssetsPathColumn : ColumnInfo<ThemeEntry, String>(ChocolateCakePHPBundle.message("table.column.assetsPath")) {
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.assetPath
     }

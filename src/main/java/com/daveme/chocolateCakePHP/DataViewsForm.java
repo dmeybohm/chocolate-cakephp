@@ -23,9 +23,6 @@ public class DataViewsForm implements SearchableConfigurable {
     private JPanel headlinePanelForPlugins;
     private JLabel viewFilesLabel;
 
-    private static final String EDIT_ENTRY_TITLE = "Data View Extension";
-    private static final String EDIT_ENTRY_LABEL = "Data view extension";
-
     public DataViewsForm(Project project) {
         this.project = project;
     }
@@ -67,8 +64,8 @@ public class DataViewsForm implements SearchableConfigurable {
             }
             final int selectedRow = tableView.getSelectedRow();
             EditEntryDialog dialog = new EditEntryDialog(
-                    EDIT_ENTRY_LABEL,
-                    EDIT_ENTRY_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.dataViewExtension.label"),
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.dataViewExtension.title"),
                     project,
                     selected
             );
@@ -80,8 +77,8 @@ public class DataViewsForm implements SearchableConfigurable {
 
         decorator.setAddAction(action -> {
             EditEntryDialog dialog = new EditEntryDialog(
-                    EDIT_ENTRY_LABEL,
-                    EDIT_ENTRY_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.dataViewExtension.label"),
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.dataViewExtension.title"),
                     project,
                     ""
             );

@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.ui
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -94,22 +95,22 @@ class PluginTableModel private constructor(
         fireTableRowsDeleted(idx, idx)
     }
 
-    class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
+    class NamespaceColumn : ColumnInfo<PluginEntry, String>(ChocolateCakePHPBundle.message("table.column.pluginNamespace")) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.namespace
     }
 
-    class PluginPathColumn : ColumnInfo<PluginEntry, String>("Plugin Path") {
+    class PluginPathColumn : ColumnInfo<PluginEntry, String>(ChocolateCakePHPBundle.message("table.column.pluginPath")) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.pluginPath
     }
 
-    class SourcePathColumn : ColumnInfo<PluginEntry, String>("Source Path") {
+    class SourcePathColumn : ColumnInfo<PluginEntry, String>(ChocolateCakePHPBundle.message("table.column.sourcePath")) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.srcPath
     }
 
-    class AssetsPathColumn : ColumnInfo<PluginEntry, String>("Assets Path") {
+    class AssetsPathColumn : ColumnInfo<PluginEntry, String>(ChocolateCakePHPBundle.message("table.column.assetsPath")) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.assetPath
     }

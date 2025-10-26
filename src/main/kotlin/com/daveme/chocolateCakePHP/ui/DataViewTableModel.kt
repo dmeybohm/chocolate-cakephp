@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -72,7 +73,7 @@ class DataViewTableModel private constructor(
     companion object {
         private val myColumns =
             arrayOf<ColumnInfo<String, String>>(
-                DataViewColumn("Data View Extension")
+                DataViewColumn(ChocolateCakePHPBundle.message("table.column.dataViewExtension"))
             )
 
         @JvmStatic
