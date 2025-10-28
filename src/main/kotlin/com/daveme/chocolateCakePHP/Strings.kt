@@ -139,3 +139,30 @@ fun String.removeImmediateParentDir(dirName: String): String {
     }
     return parts.dropLast(2).joinToString("/") + "/$filename"
 }
+
+/**
+ * Join view path segments and normalize:
+ * - trims whitespace
+ * - removes leading/trailing slashes in segments
+ * - collapses repeated slashes
+ *
+ * Examples:
+ *  joinViewPath("Admin/Users", "edit") -> "Admin/Users/edit"
+ *  joinViewPath("/Admin//Users/", "/edit/") -> "Admin/Users/edit"
+ *  joinViewPath("", "index") -> "index"
+ */
+fun joinViewPath(vararg segments: String?): String {
+    val cleaned = segments.asSequence()
+        .filterNotNull()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .flatMap { seg ->
+            // split to remove accidental doubles inside a single segment
+            seg.split('/').asSequence()
+        }
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .toList()
+    if (cleaned.isEmpty()) return ""
+    return cleaned.joinToString("/")
+}
