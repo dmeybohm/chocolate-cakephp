@@ -13,6 +13,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import java.io.File
@@ -22,7 +23,9 @@ val VIEW_FILE_INDEX_KEY : ID<String, List<ViewReferenceData>> =
 
 enum class ElementType {
     METHOD,
-    METHOD_REFERENCE
+    METHOD_REFERENCE,
+    FIELD_ASSIGNMENT,
+    VIEW_BUILDER
 }
 
 data class ViewReferenceData(
@@ -141,11 +144,13 @@ object ViewFileIndexService {
                 for (data in referenceDataList) {
                     ProgressManager.checkCanceled()
                     val leaf = psiFile.findElementAt(data.offset) ?: continue
-                    val methodOrRef = when (data.elementType) {
+                    val element = when (data.elementType) {
                         ElementType.METHOD_REFERENCE -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                         ElementType.METHOD -> PsiTreeUtil.getParentOfType(leaf, Method::class.java, false)
+                        ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
+                        ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(methodOrRef))
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element))
                 }
                 true
             },

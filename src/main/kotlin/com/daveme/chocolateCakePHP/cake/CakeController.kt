@@ -5,10 +5,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.Variable
 
 data class ActionName(
     val name: String,
@@ -77,9 +80,204 @@ data class ActionNames(
 }
 
 /**
+ * Represents a ViewBuilder method call (setTemplate or setTemplatePath).
+ */
+data class ViewBuilderCall(
+    val methodName: String,        // "setTemplate" or "setTemplatePath"
+    val parameterValue: String,     // The template name or path
+    val offset: Int                 // Text offset for ordering
+)
+
+/**
+ * Find all ViewBuilder calls (setTemplate and setTemplatePath) in a PSI element.
+ *
+ * This function finds calls matching the patterns:
+ *   $this->viewBuilder()->setTemplate('name')
+ *   $this->viewBuilder()->setTemplatePath('path')
+ *   $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+ *
+ * For chained calls, the path is combined structurally at detection time. Only the
+ * setTemplate call is returned with the combined path (e.g., "path/name"). This
+ * eliminates the need for offset-based proximity detection in processing.
+ *
+ * The structural detection works regardless of whitespace, comments, or newlines
+ * between chained methods, as the PSI tree preserves the structural relationships.
+ *
+ * @param element The PSI element to search (typically a Method)
+ * @return List of ViewBuilderCall objects sorted by offset
+ */
+fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
+    val methodRefs = PsiTreeUtil.findChildrenOfType(element, MethodReference::class.java)
+
+    return methodRefs.mapNotNull { methodRef ->
+        // Check if this is a setTemplate or setTemplatePath call
+        val methodName = methodRef.name
+        if (methodName != "setTemplate" && methodName != "setTemplatePath") {
+            return@mapNotNull null
+        }
+
+        val receiverMethodRef = methodRef.classReference as? MethodReference ?: return@mapNotNull null
+        val receiverMethodName = receiverMethodRef.name
+
+        // Pattern 1: Normal calls - receiver is viewBuilder()
+        // Matches: $this->viewBuilder()->setTemplate('name')
+        // Matches: $this->viewBuilder()->setTemplatePath('path')
+        // Does NOT match setTemplatePath when it's part of a chain (handled by Pattern 2)
+        if (receiverMethodName == "viewBuilder") {
+            // The classReference of viewBuilder() could be either:
+            // - A Variable ($this) for simple cases
+            // - A FieldReference ($this->) which contains the Variable
+            val classRef = receiverMethodRef.classReference
+            val isThisVariable = when (classRef) {
+                is Variable -> classRef.name == "this"
+                is FieldReference -> (classRef.classReference as? Variable)?.name == "this"
+                else -> false
+            }
+
+            if (!isThisVariable) {
+                return@mapNotNull null
+            }
+
+            // Skip setTemplatePath if it's part of a chained call
+            // Check if this method is used as a receiver for another method
+            if (methodName == "setTemplatePath") {
+                // Check if methodRef appears as a classReference in any other MethodReference
+                val isPartOfChain = methodRefs.any { otherRef ->
+                    otherRef.classReference == methodRef
+                }
+                if (isPartOfChain) {
+                    // This setTemplatePath is part of a chain, skip it
+                    // Pattern 2 will handle the complete chain
+                    return@mapNotNull null
+                }
+            }
+
+            // Extract the string parameter
+            val parameterList = methodRef.parameterList
+            val firstParam = parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
+
+            return@mapNotNull ViewBuilderCall(
+                methodName = methodName,
+                parameterValue = firstParam.contents,
+                offset = methodRef.textRange.startOffset
+            )
+        }
+
+        // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        // For chains like: $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')
+        // We detect this structurally and combine the paths immediately
+        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
+            // Verify the chain goes back to viewBuilder()
+            val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return@mapNotNull null
+            if (viewBuilderRef.name != "viewBuilder") return@mapNotNull null
+
+            // Check if the viewBuilder() is called on $this
+            val classRef = viewBuilderRef.classReference
+            val isThisVariable = when (classRef) {
+                is Variable -> classRef.name == "this"
+                is FieldReference -> (classRef.classReference as? Variable)?.name == "this"
+                else -> false
+            }
+            if (!isThisVariable) return@mapNotNull null
+
+            // Extract BOTH path and template parameters structurally
+            val pathParam = receiverMethodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
+            val templateParam = methodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
+
+            // Combine the path immediately using joinViewPath for normalization
+            // This handles whitespace, comments, newlines - all preserved in PSI structure
+            val combinedPath = joinViewPath(pathParam.contents, templateParam.contents)
+
+            // Return a setTemplate call with the COMBINED path
+            // This eliminates the need for offset-based proximity detection later
+            return@mapNotNull ViewBuilderCall(
+                methodName = "setTemplate",
+                parameterValue = combinedPath,
+                offset = methodRef.textRange.startOffset
+            )
+        }
+
+        // Pattern 3: Chained setTemplatePath in a chain like:
+        // $this->viewBuilder()->setTemplatePath()->setTemplate()
+        // The setTemplatePath will be found by checking if any method has it as a receiver
+        // This is already handled by Pattern 1 above
+
+        return@mapNotNull null
+    }.sortedBy { it.offset }
+}
+
+/**
+ * Convert a list of ViewBuilder calls into ActionName objects.
+ *
+ * This function processes setTemplate and setTemplatePath calls in order,
+ * tracking the "current" template path and applying it to subsequent setTemplate calls.
+ *
+ * Algorithm:
+ * - Iterate through calls in order (by offset)
+ * - When we see setTemplatePath('path'), store 'path' as the current prefix
+ * - When we see setTemplate('name'):
+ *   - If the call already has a path (from chained detection): use it as-is
+ *   - Else if we have a current prefix: combine prefix + name
+ *   - Otherwise: use name as-is
+ *
+ * The "/" prefix makes the path absolute (see ActionName.isAbsolute).
+ *
+ * Note: For chained calls like ->setTemplatePath('X')->setTemplate('Y'), the path
+ * is already combined by findViewBuilderCalls() using structural detection, so no
+ * offset-based proximity checks are needed.
+ *
+ * @param viewBuilderCalls List of ViewBuilder calls sorted by offset
+ * @return List of ActionName objects
+ */
+fun actionNamesFromViewBuilderCalls(viewBuilderCalls: List<ViewBuilderCall>): List<ActionName> {
+    val result = mutableListOf<ActionName>()
+    var currentTemplatePath: String? = null
+
+    for (call in viewBuilderCalls) {
+        when (call.methodName) {
+            "setTemplatePath" -> {
+                // Update the current template path for subsequent separate setTemplate calls
+                // Example: $this->viewBuilder()->setTemplatePath('path');
+                //          $this->viewBuilder()->setTemplate('name');
+                currentTemplatePath = call.parameterValue
+            }
+            "setTemplate" -> {
+                // Build the final path
+                val viewName = if (call.parameterValue.contains('/')) {
+                    // Path already combined (from chained detection)
+                    // Prepend "/" to make it absolute
+                    "/${call.parameterValue}"
+                } else if (currentTemplatePath != null) {
+                    // Separate calls - combine with current state
+                    // Prepend "/" to make it absolute so the controller path is not prepended
+                    "/$currentTemplatePath/${call.parameterValue}"
+                } else {
+                    // No path, just the template name
+                    call.parameterValue
+                }
+
+                val actionName = actionNameFromPath(viewName)
+                result.add(actionName)
+            }
+        }
+    }
+
+    return result
+}
+
+/**
  * Get all the action names from a PHP method.
  *
- * The name itself is included, and only if the string is a literal. (so $this->render($dynamic) is filtered out).
+ * Collects action names from:
+ * - The method name itself (default action)
+ * - $this->render('template') calls
+ * - $this->viewBuilder()->setTemplate('template') calls (with setTemplatePath() support)
+ * - $this->view = 'template' field assignments
+ *
+ * Only literal string parameters are included (dynamic values like $this->render($var) are filtered out).
  *
  * @param method The method element to search for action names.
  */
@@ -89,7 +287,9 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
             as Collection<MethodReference>
 
     val defaultActionName = actionNameFromMethod(method)
-    val otherActionNames: List<ActionName> = renderCalls.mapNotNull {
+
+    // Collect render() action names
+    val renderActionNames: List<ActionName> = renderCalls.mapNotNull {
         if (it.name != "render") {
             return@mapNotNull null
         }
@@ -98,9 +298,32 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
         return@mapNotNull actionNameFromPath(firstParameter.contents)
     }
 
+    // Collect ViewBuilder action names (setTemplate/setTemplatePath)
+    val viewBuilderCalls = findViewBuilderCalls(method)
+    val viewBuilderActionNames = actionNamesFromViewBuilderCalls(viewBuilderCalls)
+
+    // Collect $this->view = 'template' field assignments (CakePHP 2)
+    val fieldAssignments = PsiTreeUtil.findChildrenOfType(method, AssignmentExpression::class.java)
+    val fieldAssignmentActionNames: List<ActionName> = fieldAssignments.mapNotNull { assignment ->
+        val fieldRef = assignment.variable as? FieldReference ?: return@mapNotNull null
+        val variable = fieldRef.classReference as? Variable ?: return@mapNotNull null
+
+        // Check it's $this->view
+        if (variable.name != "this" || fieldRef.name != "view") {
+            return@mapNotNull null
+        }
+
+        // Get the assigned value
+        val stringLiteral = assignment.value as? StringLiteralExpression ?: return@mapNotNull null
+        return@mapNotNull actionNameFromPath(stringLiteral.contents)
+    }
+
+    // Combine all action names
+    val allOtherActionNames = renderActionNames + viewBuilderActionNames + fieldAssignmentActionNames
+
     return ActionNames(
         defaultActionName = defaultActionName,
-        otherActionNames = otherActionNames
+        otherActionNames = allOtherActionNames
     )
 }
 
@@ -120,6 +343,90 @@ fun actionNamesFromRenderCall(methodReference: MethodReference): ActionNames? {
 
     val renderParameter = firstParameter.contents
     val actionName = actionNameFromPath(renderParameter)
+    return ActionNames(
+        defaultActionName = actionName,
+        otherActionNames = listOf()
+    )
+}
+
+/**
+ * Get ActionNames from a single viewBuilder()->setTemplate() call.
+ *
+ * This function handles both normal and chained ViewBuilder calls:
+ * - $this->viewBuilder()->setTemplate('name')
+ * - $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')
+ *
+ * For state tracking (when there's a preceding setTemplatePath in the same method),
+ * we use findViewBuilderCalls() and actionNamesFromViewBuilderCalls() to properly
+ * combine the path with the template.
+ *
+ * @param methodReference The MethodReference to the setTemplate call
+ * @return ActionNames or null if not a valid setTemplate call
+ */
+fun actionNamesFromViewBuilderCall(methodReference: MethodReference): ActionNames? {
+    if (methodReference.name != "setTemplate") {
+        return null
+    }
+
+    // Get the containing method to check for preceding setTemplatePath calls
+    val containingMethod = PsiTreeUtil.getParentOfType(
+        methodReference,
+        Method::class.java
+    ) ?: return null
+
+    // Find all ViewBuilder calls in the method (preserves state tracking)
+    val allViewBuilderCalls = findViewBuilderCalls(containingMethod)
+
+    // Find this specific setTemplate call in the list
+    val currentOffset = methodReference.textRange.startOffset
+    val matchingCall = allViewBuilderCalls.find {
+        it.methodName == "setTemplate" && it.offset == currentOffset
+    } ?: return null
+
+    // Convert to ActionNames using state tracking
+    val allActionNames = actionNamesFromViewBuilderCalls(allViewBuilderCalls)
+
+    // Find the ActionName that corresponds to this setTemplate call
+    // Since actionNamesFromViewBuilderCalls only returns ActionNames for setTemplate calls,
+    // we need to find which one matches our offset
+
+    // Count how many setTemplate calls come before this one
+    val setTemplateCallsBefore = allViewBuilderCalls
+        .filter { it.methodName == "setTemplate" && it.offset < currentOffset }
+        .size
+
+    // Get the corresponding ActionName (it's at the same index)
+    val actionName = allActionNames.getOrNull(setTemplateCallsBefore) ?: return null
+
+    return ActionNames(
+        defaultActionName = actionName,
+        otherActionNames = listOf()
+    )
+}
+
+/**
+ * Get ActionNames from a single $this->view field assignment.
+ *
+ * Used in CakePHP 2 for specifying view templates:
+ *   $this->view = 'template_name';
+ *
+ * @param assignmentExpression The AssignmentExpression to check
+ * @return ActionNames or null if not a valid $this->view assignment
+ */
+fun actionNamesFromViewAssignment(assignmentExpression: AssignmentExpression): ActionNames? {
+    val fieldRef = assignmentExpression.variable as? FieldReference ?: return null
+    val variable = fieldRef.classReference as? Variable ?: return null
+
+    // Check it's $this->view
+    if (variable.name != "this" || fieldRef.name != "view") {
+        return null
+    }
+
+    // Get the assigned value
+    val stringLiteral = assignmentExpression.value as? StringLiteralExpression ?: return null
+    val viewName = stringLiteral.contents
+
+    val actionName = actionNameFromPath(viewName)
     return ActionNames(
         defaultActionName = actionName,
         otherActionNames = listOf()

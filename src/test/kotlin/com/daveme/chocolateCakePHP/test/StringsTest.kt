@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.substringOrNull
 import com.daveme.chocolateCakePHP.removeImmediateParentDir
+import com.daveme.chocolateCakePHP.joinViewPath
 import junit.framework.TestCase
 
 class StringsTest : BaseTestCase() {
@@ -61,5 +62,52 @@ class StringsTest : BaseTestCase() {
 
         val result2 = "foo/json/bar/json/foo.php".removeImmediateParentDir("json")
         assertEquals("foo/json/bar/foo.php", result2)
+    }
+
+    // joinViewPath() tests
+
+    fun `test joinViewPath basic path joining`() {
+        val result = joinViewPath("Admin/Users", "edit")
+        assertEquals("Admin/Users/edit", result)
+    }
+
+    fun `test joinViewPath normalize leading and trailing slashes`() {
+        val result = joinViewPath("/Admin//Users/", "/edit/")
+        assertEquals("Admin/Users/edit", result)
+    }
+
+    fun `test joinViewPath trim whitespace`() {
+        val result = joinViewPath(" Movie/Nested ", " custom ")
+        assertEquals("Movie/Nested/custom", result)
+    }
+
+    fun `test joinViewPath collapse repeated slashes`() {
+        val result = joinViewPath("Movie//Nested", "summary")
+        assertEquals("Movie/Nested/summary", result)
+    }
+
+    fun `test joinViewPath handle empty segments`() {
+        val result = joinViewPath("", "index")
+        assertEquals("index", result)
+    }
+
+    fun `test joinViewPath mix of issues`() {
+        val result = joinViewPath(" /Admin// ", "  /Users/  ", " edit ")
+        assertEquals("Admin/Users/edit", result)
+    }
+
+    fun `test joinViewPath null segments`() {
+        val result = joinViewPath("Admin", null, "edit")
+        assertEquals("Admin/edit", result)
+    }
+
+    fun `test joinViewPath single segment`() {
+        val result = joinViewPath("index")
+        assertEquals("index", result)
+    }
+
+    fun `test joinViewPath all empty`() {
+        val result = joinViewPath("", "", "")
+        assertEquals("", result)
     }
 }
