@@ -40,7 +40,11 @@ class ThemeTableModel(
     }
 
     override fun getColumnName(i: Int): String {
-        return columnInfos[i].name
+        return when (i) {
+            0 -> ChocolateCakePHPBundle.message("table.column.themePath")
+            1 -> ChocolateCakePHPBundle.message("table.column.assetsPath")
+            else -> throw RuntimeException("Invalid column")
+        }
     }
 
     override fun getColumnClass(i: Int): Class<*> {
@@ -87,12 +91,18 @@ class ThemeTableModel(
         fireTableRowsDeleted(idx, idx)
     }
 
-    class ThemePathColumn : ColumnInfo<ThemeEntry, String>(ChocolateCakePHPBundle.message("table.column.themePath")) {
+    class ThemePathColumn : ColumnInfo<ThemeEntry, String>("Theme Path") {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.themePath")
+
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.pluginPath
     }
 
-    class AssetsPathColumn : ColumnInfo<ThemeEntry, String>(ChocolateCakePHPBundle.message("table.column.assetsPath")) {
+    class AssetsPathColumn : ColumnInfo<ThemeEntry, String>("Assets Path") {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.assetsPath")
+
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.assetPath
     }
