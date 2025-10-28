@@ -30,21 +30,6 @@ class ASTParsingDebugTest : BasePlatformTestCase() {
         val allNodes = mutableListOf<String>()
         collectNodeTypes(rootNode, allNodes, 0)
         
-        // Write to file for debugging
-        val debugOutput = buildString {
-            appendLine("=== AST Node Structure ===")
-            allNodes.take(50).forEach { appendLine(it) } // Limit output
-            
-            // Look for render method calls
-            val renderNodes = findNodesContainingText(rootNode, "render")
-            appendLine("\n=== Nodes containing 'render' ===")
-            renderNodes.forEach { node ->
-                appendLine("Type: ${node.elementType}, Text: '${node.text.trim()}'")
-            }
-        }
-        
-        java.io.File("ast-debug.txt").writeText(debugOutput)
-        
         // Look for render method calls
         val renderNodes = findNodesContainingText(rootNode, "render")
         
