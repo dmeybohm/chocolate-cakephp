@@ -29,19 +29,6 @@ class ViewFileASTOnlyTest : BasePlatformTestCase() {
         // Find all array creation expressions
         val arrayNodes = findArrayCreationExpressions(rootNode)
         
-        val debugOutput = buildString {
-            appendLine("=== Found ${arrayNodes.size} array creation expressions ===")
-            arrayNodes.forEachIndexed { index, arrayNode ->
-                appendLine("\n--- Array $index ---")
-                appendLine("Node Type: ${arrayNode.elementType}")
-                appendLine("Text: ${arrayNode.text}")
-                appendLine("Children:")
-                debugNodeStructure(arrayNode, this, 1)
-            }
-        }
-        
-        File("array-ast-debug.txt").writeText(debugOutput)
-        
         // Basic assertion to ensure test passes
         assertTrue("Should find at least one array", arrayNodes.isNotEmpty())
     }

@@ -37,15 +37,6 @@ class ASTParsingTest : BasePlatformTestCase() {
         val allRenderCalls = findMethodCallsByName(rootNode, "render")
         val renderCalls = allRenderCalls.filter { it.receiverText == "this" }
         
-        // Debug output to file
-        val debugOutput = buildString {
-            appendLine("Found ${allRenderCalls.size} total render calls, ${renderCalls.size} on \$this")
-            allRenderCalls.forEachIndexed { index, call ->
-                appendLine("Call $index: ${call.methodName} on ${call.receiverText} with '${call.firstParameterText}'")
-            }
-        }
-        java.io.File("test-debug.txt").writeText(debugOutput)
-        
         assertEquals("Should find 2 render calls on \$this", 2, renderCalls.size)
         
         if (renderCalls.isNotEmpty()) {
@@ -150,15 +141,6 @@ class ASTParsingTest : BasePlatformTestCase() {
         val validCalls = renderCalls.filter { 
             it.receiverText == "this" && it.firstParameterText != null 
         }
-        
-        // Debug output for complex test
-        val debugOutput = buildString {
-            appendLine("Complex test - Found ${renderCalls.size} total calls, ${validCalls.size} valid")
-            renderCalls.forEachIndexed { index, call ->
-                appendLine("Call $index: ${call.methodName} on ${call.receiverText} with '${call.firstParameterText}'")
-            }
-        }
-        java.io.File("complex-debug.txt").writeText(debugOutput)
         
         assertEquals("Should find 4 valid render calls", 4, validCalls.size)
         
