@@ -356,6 +356,137 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
         assertEquals(expected, infos)
     }
 
+    fun `test that line marker handles chained calls with extra whitespace`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/Nested/custom.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')  ->  setTemplate("custom");
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val allMethodRefs = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+        val viewBuilderRef = allMethodRefs.find { it.name == "viewBuilder" }
+        assertNotNull(viewBuilderRef)
+
+        val markers = calculateLineMarkers(viewBuilderRef!!.firstChild!!.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "custom.ctp", containingDir = "Nested"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that line marker handles chained calls with comment between`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Admin/edit.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Admin') /* some comment */ ->setTemplate("edit");
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val allMethodRefs = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+        val viewBuilderRef = allMethodRefs.find { it.name == "viewBuilder" }
+        assertNotNull(viewBuilderRef)
+
+        val markers = calculateLineMarkers(viewBuilderRef!!.firstChild!!.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "edit.ctp", containingDir = "Admin"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that line marker handles chained calls with newline`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Reports/Monthly/summary.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                ${'$'}this->viewBuilder()
+                    ->setTemplatePath('Reports/Monthly')
+                    ->setTemplate("summary");
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        val allMethodRefs = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+        val viewBuilderRef = allMethodRefs.find { it.name == "viewBuilder" }
+        assertNotNull(viewBuilderRef)
+
+        val markers = calculateLineMarkers(viewBuilderRef!!.firstChild!!.firstChild!!,
+            ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val items = gotoRelatedItems(markers.first())
+        assertEquals(1, items.size)
+
+        val infos = getRelatedItemInfos(items)
+        val expected = setOf(
+            RelatedItemInfo(filename = "summary.ctp", containingDir = "Monthly"),
+        )
+        assertEquals(expected, infos)
+    }
+
     fun `test that line marker respects preceding setTemplatePath in same method`() {
         val files = myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",

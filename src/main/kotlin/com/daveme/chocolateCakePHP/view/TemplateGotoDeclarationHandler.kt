@@ -180,7 +180,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
             // Navigate with combined path
             val viewContents = stringLiteral.contents
-            val viewName = "/${pathParam.contents}/${viewContents}"
+            val viewName = "/" + joinViewPath(pathParam.contents, viewContents)
 
             return navigateToView(psiElement, settings, viewName)
         }
@@ -202,7 +202,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
                 val templateParam = chainedSetTemplate.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
                     ?: return null
                 val viewContents = stringLiteral.contents
-                val viewName = "/${viewContents}/${templateParam.contents}"
+                val viewName = "/" + joinViewPath(viewContents, templateParam.contents)
 
                 return navigateToView(psiElement, settings, viewName)
             }
@@ -231,7 +231,8 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val templatePathLiteral = getTemplatePathPreceeding(stringLiteral)
         val viewName = if (templatePathLiteral != null) {
             // Prepend "/" to make it absolute so the controller path is not prepended
-            "/${templatePathLiteral.contents}/${viewContents}"
+            // Use joinViewPath to normalize the path (handles whitespace, slashes, etc.)
+            "/" + joinViewPath(templatePathLiteral.contents, viewContents)
         } else {
             viewContents
         }

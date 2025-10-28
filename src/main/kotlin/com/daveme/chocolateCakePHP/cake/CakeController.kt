@@ -96,8 +96,12 @@ data class ViewBuilderCall(
  *   $this->viewBuilder()->setTemplatePath('path')
  *   $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
  *
- * For chained calls, both setTemplatePath and setTemplate are returned as separate
- * ViewBuilderCall objects to preserve state tracking behavior.
+ * For chained calls, the path is combined structurally at detection time. Only the
+ * setTemplate call is returned with the combined path (e.g., "path/name"). This
+ * eliminates the need for offset-based proximity detection in processing.
+ *
+ * The structural detection works regardless of whitespace, comments, or newlines
+ * between chained methods, as the PSI tree preserves the structural relationships.
  *
  * @param element The PSI element to search (typically a Method)
  * @return List of ViewBuilderCall objects sorted by offset
@@ -116,6 +120,9 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
         val receiverMethodName = receiverMethodRef.name
 
         // Pattern 1: Normal calls - receiver is viewBuilder()
+        // Matches: $this->viewBuilder()->setTemplate('name')
+        // Matches: $this->viewBuilder()->setTemplatePath('path')
+        // Does NOT match setTemplatePath when it's part of a chain (handled by Pattern 2)
         if (receiverMethodName == "viewBuilder") {
             // The classReference of viewBuilder() could be either:
             // - A Variable ($this) for simple cases
@@ -131,6 +138,20 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
                 return@mapNotNull null
             }
 
+            // Skip setTemplatePath if it's part of a chained call
+            // Check if this method is used as a receiver for another method
+            if (methodName == "setTemplatePath") {
+                // Check if methodRef appears as a classReference in any other MethodReference
+                val isPartOfChain = methodRefs.any { otherRef ->
+                    otherRef.classReference == methodRef
+                }
+                if (isPartOfChain) {
+                    // This setTemplatePath is part of a chain, skip it
+                    // Pattern 2 will handle the complete chain
+                    return@mapNotNull null
+                }
+            }
+
             // Extract the string parameter
             val parameterList = methodRef.parameterList
             val firstParam = parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
@@ -144,6 +165,8 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
         }
 
         // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
+        // For chains like: $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')
+        // We detect this structurally and combine the paths immediately
         if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
             // Verify the chain goes back to viewBuilder()
             val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return@mapNotNull null
@@ -158,15 +181,21 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             }
             if (!isThisVariable) return@mapNotNull null
 
-            // Extract the template parameter
+            // Extract BOTH path and template parameters structurally
+            val pathParam = receiverMethodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
+                ?: return@mapNotNull null
             val templateParam = methodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
                 ?: return@mapNotNull null
 
-            // Return as normal setTemplate - state tracking will handle the path
-            // Note: The setTemplatePath should be found separately by Pattern 1
+            // Combine the path immediately using joinViewPath for normalization
+            // This handles whitespace, comments, newlines - all preserved in PSI structure
+            val combinedPath = joinViewPath(pathParam.contents, templateParam.contents)
+
+            // Return a setTemplate call with the COMBINED path
+            // This eliminates the need for offset-based proximity detection later
             return@mapNotNull ViewBuilderCall(
                 methodName = "setTemplate",
-                parameterValue = templateParam.contents,  // Just the template name, not combined!
+                parameterValue = combinedPath,
                 offset = methodRef.textRange.startOffset
             )
         }
@@ -190,14 +219,15 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
  * - Iterate through calls in order (by offset)
  * - When we see setTemplatePath('path'), store 'path' as the current prefix
  * - When we see setTemplate('name'):
- *   - If we have a current prefix: create ActionName with prefix "/path/" + name
- *   - If no prefix: create ActionName with just name
+ *   - If the call already has a path (from chained detection): use it as-is
+ *   - Else if we have a current prefix: combine prefix + name
+ *   - Otherwise: use name as-is
  *
  * The "/" prefix makes the path absolute (see ActionName.isAbsolute).
  *
- * Special handling for chained calls: If a setTemplate comes BEFORE its setTemplatePath
- * in the list (which can happen due to PSI structure), we need to look ahead to find
- * the path.
+ * Note: For chained calls like ->setTemplatePath('X')->setTemplate('Y'), the path
+ * is already combined by findViewBuilderCalls() using structural detection, so no
+ * offset-based proximity checks are needed.
  *
  * @param viewBuilderCalls List of ViewBuilder calls sorted by offset
  * @return List of ActionName objects
@@ -206,44 +236,26 @@ fun actionNamesFromViewBuilderCalls(viewBuilderCalls: List<ViewBuilderCall>): Li
     val result = mutableListOf<ActionName>()
     var currentTemplatePath: String? = null
 
-    for ((index, call) in viewBuilderCalls.withIndex()) {
+    for (call in viewBuilderCalls) {
         when (call.methodName) {
             "setTemplatePath" -> {
-                // Update the current template path for subsequent setTemplate calls
+                // Update the current template path for subsequent separate setTemplate calls
+                // Example: $this->viewBuilder()->setTemplatePath('path');
+                //          $this->viewBuilder()->setTemplate('name');
                 currentTemplatePath = call.parameterValue
             }
             "setTemplate" -> {
-                // Check if there's a setTemplatePath that should apply to this setTemplate
-                // First try the current one from state tracking
-                var pathToUse = currentTemplatePath
-
-                // If we don't have a path yet, check if there's a setTemplatePath
-                // near this setTemplate (for chained calls where ordering might be unexpected)
-                if (pathToUse == null) {
-                    // Look backward
-                    if (index > 0) {
-                        val previousCall = viewBuilderCalls[index - 1]
-                        if (previousCall.methodName == "setTemplatePath") {
-                            pathToUse = previousCall.parameterValue
-                        }
-                    }
-
-                    // Also look forward (in case setTemplate offset comes before setTemplatePath)
-                    if (pathToUse == null && index < viewBuilderCalls.size - 1) {
-                        val nextCall = viewBuilderCalls[index + 1]
-                        if (nextCall.methodName == "setTemplatePath" &&
-                            nextCall.offset < call.offset + 20) {  // Within reasonable proximity
-                            pathToUse = nextCall.parameterValue
-                        }
-                    }
-                }
-
-                // Build the final path combining setTemplatePath (if any) with setTemplate
-                val viewName = if (pathToUse != null) {
+                // Build the final path
+                val viewName = if (call.parameterValue.contains('/')) {
+                    // Path already combined (from chained detection)
+                    // Prepend "/" to make it absolute
+                    "/${call.parameterValue}"
+                } else if (currentTemplatePath != null) {
+                    // Separate calls - combine with current state
                     // Prepend "/" to make it absolute so the controller path is not prepended
-                    // This matches the behavior in TemplateGotoDeclarationHandler and ViewFileDataIndexer
-                    "/$pathToUse/${call.parameterValue}"
+                    "/$currentTemplatePath/${call.parameterValue}"
                 } else {
+                    // No path, just the template name
                     call.parameterValue
                 }
 
