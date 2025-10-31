@@ -13,6 +13,9 @@ class TemplateGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Template/Movie/film_director.ctp",
             "cake3/src/Template/Movie/Nested/custom.ctp",
             "cake3/src/Template/Movie/AnotherPath/different.ctp",
+            "cake3/src/Template/Admin/edit.ctp",
+            "cake3/src/Template/Reports/Monthly/summary.ctp",
+            "cake3/src/Template/User/Profile/view.ctp",
             "cake3/vendor/cakephp.php",
         )
     }
@@ -152,5 +155,72 @@ class TemplateGotoDeclarationTest : Cake3BaseTestCase() {
         """.trimIndent())
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "custom.ctp")
+    }
+
+    // Chain walking tests - structural vs offset-based
+
+    fun `test viewBuilder chain with extra whitespace`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function test() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')  ->  setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // SHOULD resolve the chained path even with extra whitespace, but currently doesn't
+        assertNotNull("Expected goto declaration to work with chained viewBuilder calls", elements)
+        assertFalse("Expected to find navigation target for chained viewBuilder call", elements!!.isEmpty())
+    }
+
+    fun `test viewBuilder chain with comment between`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function test() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Admin') /* some comment */ ->setTemplate('<caret>edit');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // SHOULD resolve the chained path even with comment between, but currently doesn't
+        assertNotNull("Expected goto declaration to work with chained viewBuilder calls", elements)
+        assertFalse("Expected to find navigation target for chained viewBuilder call", elements!!.isEmpty())
+    }
+
+    fun `test viewBuilder chain with newline`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function test() {
+                ${'$'}this->viewBuilder()
+                    ->setTemplatePath('Reports/Monthly')
+                    ->setTemplate('<caret>summary');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // SHOULD resolve the chained path even with newlines, but currently doesn't
+        assertNotNull("Expected goto declaration to work with chained viewBuilder calls", elements)
+        assertFalse("Expected to find navigation target for chained viewBuilder call", elements!!.isEmpty())
     }
 }
