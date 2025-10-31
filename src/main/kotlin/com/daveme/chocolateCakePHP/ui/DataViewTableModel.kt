@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -38,7 +39,10 @@ class DataViewTableModel private constructor(
     }
 
     override fun getColumnName(i: Int): String {
-        return columnInfos[i].name
+        return when (i) {
+            0 -> ChocolateCakePHPBundle.message("table.column.dataViewExtension")
+            else -> throw RuntimeException("Invalid column")
+        }
     }
 
     override fun getColumnClass(i: Int): Class<*> {
@@ -70,14 +74,13 @@ class DataViewTableModel private constructor(
     }
 
     companion object {
-        private val myColumns =
-            arrayOf<ColumnInfo<String, String>>(
-                DataViewColumn("Data View Extension")
-            )
-
         @JvmStatic
         fun fromSettings(settings: Settings): DataViewTableModel {
-            return DataViewTableModel(settings.dataViewExtensions.toMutableList(), myColumns)
+            val columnText = ChocolateCakePHPBundle.message("table.column.dataViewExtension")
+            val columns = arrayOf<ColumnInfo<String, String>>(
+                DataViewColumn(columnText)
+            )
+            return DataViewTableModel(settings.dataViewExtensions.toMutableList(), columns)
         }
     }
 

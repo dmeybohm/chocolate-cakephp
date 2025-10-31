@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" defaultCharsetForPropertiesFiles="UTF-8">
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_da.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_de.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_es.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_fr.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_ja.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_ko.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_pt.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/messages/ChocolateCakePHPBundle_zh.properties" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>

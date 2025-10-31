@@ -4,6 +4,8 @@
     <version>0.6.2</version>
     <vendor email="dmeybohm@gmail.com" url="https://github.com/dmeybohm">David Meybohm</vendor>
 
+    <resource-bundle>messages.ChocolateCakePHPBundle</resource-bundle>
+
     <description><![CDATA[
       Autocompletion and navigation for CakePHP.<br><br>
 
@@ -20,27 +22,26 @@
         <li>Navigate from controller to view file by clicking on Cake Icon in the left gutter</li>
         <li>Navigate to models, components, and views by Control/Cmd-clicking inside $uses, $components, and $views variables in a controller</li>
       </ul>
-    ]]>
-    </description>
+    ]]></description>
 
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
     <idea-version since-build="233.15026"/>
     <extensions defaultExtensionNs="com.intellij">
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
-                             displayName="Chocolate CakePHP"
+                             key="settings.title"
                              nonDefaultProject="false"
                              id="chocolatecakephp.ConfigForm"
                              instance="com.daveme.chocolateCakePHP.ConfigForm" />
 
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="Plugins"
+                             key="settings.plugins.title"
                              nonDefaultProject="false"
                              id="chocolatecakephp.PluginForm"
                              instance="com.daveme.chocolateCakePHP.PluginForm" />
 
         <projectConfigurable parentId="chocolatecakephp.ConfigForm"
-                             displayName="Data Views"
+                             key="settings.dataviews.title"
                              nonDefaultProject="false"
                              id="chocolatecakephp.DataViewsForm"
                              instance="com.daveme.chocolateCakePHP.DataViewsForm" />
@@ -86,9 +87,9 @@
     <actions>
         <action id="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
                 class="com.daveme.chocolateCakePHP.view.ToggleBetweenControllerAndViewAction"
-                text="Toggle Controller / View"
+                text="action.toggleControllerView.text"
                 icon="com.daveme.chocolateCakePHP.cake.CakeIcons.LOGO_PNG"
-                description="Toggle between controller and related view.">
+                description="action.toggleControllerView.description">
             <add-to-group group-id="EditorContextBarMenu" anchor="first" />
 
             <keyboard-shortcut first-keystroke="ctrl alt shift HOME" keymap="$default" />

@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.ui
 
 import com.daveme.chocolateCakePHP.cake.PluginEntry
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.ListTableModel
@@ -8,6 +9,7 @@ import com.intellij.util.ui.SortableColumnModel
 import javax.swing.RowSorter
 import javax.swing.table.TableModel
 
+@Suppress("UNCHECKED_CAST")
 class PluginTableModel private constructor(
     val pluginEntries: MutableList<PluginEntry>,
     columns: Array<ColumnInfo<PluginEntry, String>>
@@ -39,7 +41,13 @@ class PluginTableModel private constructor(
     }
 
     override fun getColumnName(i: Int): String {
-        return columnInfos[i].name
+        return when (i) {
+            0 -> ChocolateCakePHPBundle.message("table.column.pluginNamespace")
+            1 -> ChocolateCakePHPBundle.message("table.column.pluginPath")
+            2 -> ChocolateCakePHPBundle.message("table.column.sourcePath")
+            3 -> ChocolateCakePHPBundle.message("table.column.assetsPath")
+            else -> throw RuntimeException("Invalid column")
+        }
     }
 
     override fun getColumnClass(i: Int): Class<*> {
@@ -94,34 +102,49 @@ class PluginTableModel private constructor(
         fireTableRowsDeleted(idx, idx)
     }
 
-    class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
+    abstract class TranslatedColumn(name: String) :
+        ColumnInfo<PluginEntry, String>(name)
+
+    class NamespaceColumn(name: String) : TranslatedColumn(name) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.namespace
     }
 
-    class PluginPathColumn : ColumnInfo<PluginEntry, String>("Plugin Path") {
+    class PluginPathColumn(name: String) : TranslatedColumn(name) {
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.pluginPath
     }
 
-    class SourcePathColumn : ColumnInfo<PluginEntry, String>("Source Path") {
+    class SourcePathColumn(name: String) : TranslatedColumn(name) {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.sourcePath")
+
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.srcPath
     }
 
-    class AssetsPathColumn : ColumnInfo<PluginEntry, String>("Assets Path") {
+    class AssetsPathColumn(name: String) : TranslatedColumn(name) {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.assetsPath")
+
         override fun valueOf(pluginEntry: PluginEntry): String =
             pluginEntry.assetPath
     }
 
     companion object {
-        private val myColumns =
+        private val myColumns by lazy {
+            val namespace = ChocolateCakePHPBundle.message("table.column.pluginNamespace")
+            val pluginPath = ChocolateCakePHPBundle.message("table.column.pluginPath")
+            val sourcePath = ChocolateCakePHPBundle.message("table.column.sourcePath")
+            val assetsPath = ChocolateCakePHPBundle.message("table.column.assetsPath")
+
             arrayOf(
-                NamespaceColumn(),
-                PluginPathColumn(),
-                SourcePathColumn(),
-                AssetsPathColumn(),
+                NamespaceColumn(namespace),
+                PluginPathColumn(pluginPath),
+                SourcePathColumn(sourcePath),
+                AssetsPathColumn(assetsPath),
             )
+        }
 
         @JvmStatic
         fun fromSettings(settings: Settings): PluginTableModel {
@@ -130,7 +153,7 @@ class PluginTableModel private constructor(
             }.toMutableList()
             return PluginTableModel(
                 pluginEntries,
-                myColumns
+                myColumns as Array<ColumnInfo<PluginEntry, String>>
             )
         }
     }

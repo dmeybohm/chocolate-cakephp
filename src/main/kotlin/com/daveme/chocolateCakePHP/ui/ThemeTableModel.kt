@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.ui
 
+import com.daveme.chocolateCakePHP.ChocolateCakePHPBundle
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.util.ui.ColumnInfo
@@ -39,7 +40,11 @@ class ThemeTableModel(
     }
 
     override fun getColumnName(i: Int): String {
-        return columnInfos[i].name
+        return when (i) {
+            0 -> ChocolateCakePHPBundle.message("table.column.themePath")
+            1 -> ChocolateCakePHPBundle.message("table.column.assetsPath")
+            else -> throw RuntimeException("Invalid column")
+        }
     }
 
     override fun getColumnClass(i: Int): Class<*> {
@@ -87,11 +92,17 @@ class ThemeTableModel(
     }
 
     class ThemePathColumn : ColumnInfo<ThemeEntry, String>("Theme Path") {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.themePath")
+
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.pluginPath
     }
 
     class AssetsPathColumn : ColumnInfo<ThemeEntry, String>("Assets Path") {
+        override fun getName(): String =
+            ChocolateCakePHPBundle.message("table.column.assetsPath")
+
         override fun valueOf(themeEntry: ThemeEntry): String =
             themeEntry.assetPath
     }

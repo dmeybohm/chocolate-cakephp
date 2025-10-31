@@ -31,9 +31,6 @@ public class PluginForm implements SearchableConfigurable {
     private JPanel themesPanel;
     private JPanel themeConfigPanel;
 
-    private static final String EDIT_PLUGIN_CONFIG_TITLE = "Edit Plugin Config";
-    private static final String EDIT_THEME_CONFIG_TITLE = "Edit Theme Config";
-
     public PluginForm(Project project) {
         this.project = project;
     }
@@ -107,7 +104,7 @@ public class PluginForm implements SearchableConfigurable {
             final int selectedRow = pluginTableView.getSelectedRow();
             EditPluginEntryDialog dialog= new EditPluginEntryDialog(
                     project,
-                    EDIT_PLUGIN_CONFIG_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.editPluginConfig.title"),
                     selected.toPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
@@ -119,7 +116,7 @@ public class PluginForm implements SearchableConfigurable {
         decorator.setAddAction(action -> {
             EditPluginEntryDialog dialog = new EditPluginEntryDialog(
                 project,
-                    EDIT_PLUGIN_CONFIG_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.editPluginConfig.title"),
                 defaultPluginConfig()
             );
             dialog.setAction(pluginConfig -> {
@@ -145,7 +142,7 @@ public class PluginForm implements SearchableConfigurable {
             final int selectedRow = themeTableView.getSelectedRow();
             EditThemeEntryDialog dialog = new EditThemeEntryDialog(
                     project,
-                    EDIT_PLUGIN_CONFIG_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.editThemeConfig.title"),
                     selected.toThemeConfig()
             );
             dialog.setAction(themeConfig -> {
@@ -157,7 +154,7 @@ public class PluginForm implements SearchableConfigurable {
         themeTableDecorator.setAddAction(action -> {
             EditThemeEntryDialog dialog = new EditThemeEntryDialog(
                     project,
-                    EDIT_THEME_CONFIG_TITLE,
+                    ChocolateCakePHPBundle.INSTANCE.message("dialog.editThemeConfig.title"),
                     defaultThemeConfig()
             );
             dialog.setAction(themeConfig -> {

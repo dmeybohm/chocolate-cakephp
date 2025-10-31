@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.daveme.chocolateCakePHP.DataViewsForm">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.daveme.chocolateCakePHP.DataViewsForm" default-resource-bundle="messages.ChocolateCakePHPBundle">
   <grid id="27dc6" binding="topPanel" layout-manager="GridLayoutManager" row-count="4" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
@@ -30,7 +30,7 @@
             </constraints>
             <properties>
               <font style="1"/>
-              <text value="CakePHP Data Views"/>
+              <text resource-bundle="messages.ChocolateCakePHPBundle" key="dataViewsForm.title"/>
             </properties>
           </component>
           <component id="a487f" class="javax.swing.JSeparator">
@@ -63,7 +63,7 @@
             </constraints>
             <properties>
               <horizontalAlignment value="2"/>
-              <text value="&lt;html&gt;Add any custom data view file extensions you want to check for below. This will be checked when navigating from a controller to a view file corresponding to an action.&lt;/html&gt;"/>
+              <text resource-bundle="messages.ChocolateCakePHPBundle" key="dataViewsForm.help"/>
             </properties>
           </component>
         </children>
