@@ -206,10 +206,11 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val appNamespace get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+        val namespace = if (state.cake3Enabled && !state.cake3ForceEnabled)
             getAutoDetectedValues().namespace
         else
-            return state.appNamespace.absoluteClassName()
+            state.appNamespace
+        return namespace.absoluteClassName()
     }
 
     val cake2AppDirectory get() = state.cake2AppDirectory
