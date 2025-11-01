@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-10-31
+
 ### Added
 - Add ability to navigate from `TableLocator::get()` to table classes
 - Add autocompletion for `TableRegistry::get()` and `TableRegistry::getTableLocator()->get()`
@@ -15,14 +17,23 @@
 - Add support for configuring theme paths in plugin settings
 - Add support for nested controllers in view variable resolution
 - Add support for implicit render in controllers
+- Add support for `ViewBuilder()->setTemplate()` and `ViewBuilder()->setTemplatePath()` in CakePHP 3+ controllers
+- Add support for `$this->view` field assignment in CakePHP 2 controllers
 
 ### Changed
 - Change default keyboard shortcut for toggling between controller and view from `Ctrl-Alt-Up` to `Ctrl-Alt-Shift-Home` (Windows/Linux) and `Ctrl-Meta-Shift-Up` (Mac) to avoid conflicts
 - Rename toggle action from "Toggle between controller and view" to more descriptive name
 - Improve performance of view file indexing
+- Improve performance of view variable inspection by 8-12x through optimized suppression checks
 - Improve handling of nested elements in templates
 - Improve flexibility when handling plugin and theme template paths
 - Improve JSON parser to be more fault-tolerant
+
+### Fixed
+- Fix view variable type hints in JSON/XML data views
+- Fix Cake icon appearing in inappropriate file contexts
+- Fix auto-detection settings not saving properly for new projects
+- Fix plugin running during IDE indexing (dumb mode)
 
 ## [0.9.2] - 2024-11-07
 
