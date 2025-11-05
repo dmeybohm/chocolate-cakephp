@@ -7,15 +7,17 @@
 ## [1.0.0] - 2025-10-31
 
 ### Added
+- Add ability to navigate to table from `fetchTable()` calls
+- Add autocompletion for tables for `fetchTable()` calls
 - Add ability to navigate from `TableLocator::get()` to table classes
 - Add autocompletion for `TableRegistry::get()` and `TableRegistry::getTableLocator()->get()`
 - Add autocompletion and type hints for view variables in templates
 - Add support for navigating to and from data views (JSON/XML)
-- Add support for navigating from asset helper methods to asset files
+- Add support for navigating / autocompletion from asset helper methods to asset files
 - Add auto-detection of CakePHP version and configuration from composer.json
 - Add auto-detection of app namespace from AppController
 - Add support for configuring theme paths in plugin settings
-- Add support for nested controllers in view variable resolution
+- Add support for controllers nested not at the top-level `for various features
 - Add support for implicit render in controllers
 - Add support for `ViewBuilder()->setTemplate()` and `ViewBuilder()->setTemplatePath()` in CakePHP 3+ controllers
 - Add support for `$this->view` field assignment in CakePHP 2 controllers
@@ -23,11 +25,8 @@
 ### Changed
 - Change default keyboard shortcut for toggling between controller and view from `Ctrl-Alt-Up` to `Ctrl-Alt-Shift-Home` (Windows/Linux) and `Ctrl-Meta-Shift-Up` (Mac) to avoid conflicts
 - Rename toggle action from "Toggle between controller and view" to more descriptive name
-- Improve performance of view file indexing
-- Improve performance of view variable inspection by 8-12x through optimized suppression checks
 - Improve handling of nested elements in templates
 - Improve flexibility when handling plugin and theme template paths
-- Improve JSON parser to be more fault-tolerant
 
 ### Fixed
 - Fix view variable type hints in JSON/XML data views
