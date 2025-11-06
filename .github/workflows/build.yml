@@ -149,13 +149,15 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      # Check if changelog has non-whitespace content
+      # Check if changelog has non-whitespace content (excluding just the [Unreleased] marker)
       - name: Check Changelog Content
         id: check
         shell: bash
         run: |
           CHANGELOG="${{ needs.build.outputs.changelog }}"
-          if [[ -n "$(echo "$CHANGELOG" | tr -d '[:space:]')" ]]; then
+          # Remove [Unreleased] markers (with or without ##), then check if non-whitespace content remains
+          CONTENT=$(echo "$CHANGELOG" | sed 's/##\?\s*\[Unreleased\]//g' | tr -d '[:space:]')
+          if [[ -n "$CONTENT" ]]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
