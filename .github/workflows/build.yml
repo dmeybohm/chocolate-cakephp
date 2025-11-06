@@ -33,13 +33,6 @@ jobs:
       changelog: ${{ steps.properties.outputs.changelog }}
     steps:
 
-      # Free GitHub Actions Environment Disk Space
-      - name: Maximize Build Space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-
       # Check out current repository
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -63,7 +56,7 @@ jobs:
           PROPERTIES="$(./gradlew properties --console=plain -q)"
           VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
           NAME="$(echo "$PROPERTIES" | grep "^pluginName:" | cut -f2- -d ' ')"
-          CHANGELOG="$(./gradlew getChangelog --unreleased --no-header --console=plain -q)"
+          CHANGELOG="$(./gradlew getChangelog --unreleased --console=plain -q)"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -93,47 +86,6 @@ jobs:
         with:
           files: ${{ github.workspace }}/build/reports/kover/xml/report.xml
 
-      # Cache Plugin Verifier IDEs
-      #- name: Setup Plugin Verifier IDEs Cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: ${{ steps.properties.outputs.pluginVerifierHomeDir }}/ides
-      #    key: plugin-verifier-${{ hashFiles('build/listProductsReleases.txt') }}
-
-      # Run Verify Plugin task and IntelliJ Plugin Verifier tool
-      #      - name: Run Plugin Verification tasks
-      #  run: ./gradlew runPluginVerifier -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
-
-      # Collect Plugin Verifier Result
-      #- name: Collect Plugin Verifier Result
-      #  if: ${{ always() }}
-      #  uses: actions/upload-artifact@v3
-      #  with:
-      #    name: pluginVerifier-result
-      #    path: ${{ github.workspace }}/build/reports/pluginVerifier
-
-      # Run Qodana inspections
-      #- name: Qodana - Code Inspection
-      #  uses: JetBrains/qodana-action@v2022.3.4
-
-      # Prepare plugin archive content for creating artifact
-      #- name: Prepare Plugin Artifact
-      #  id: artifact
-      #  shell: bash
-      #  run: |
-      #    cd ${{ github.workspace }}/build/distributions
-      #    FILENAME=`ls *.zip`
-      #    unzip "$FILENAME" -d content
-      #
-      #    echo "filename=${FILENAME:0:-4}" >> $GITHUB_OUTPUT
-
-      # Store already-built plugin as an artifact for downloading
-      #- name: Upload artifact
-      #  uses: actions/upload-artifact@v3
-      #  with:
-      #    name: ${{ steps.artifact.outputs.filename }}
-      #    path: ./build/distributions/content/*/*
-
   # Prepare a draft release for GitHub Releases page for the manual verification
   # If accepted and published, release workflow would be triggered
   releaseDraft:
@@ -155,8 +107,8 @@ jobs:
         shell: bash
         run: |
           CHANGELOG="${{ needs.build.outputs.changelog }}"
-          # Remove [Unreleased] markers (with or without ##), then check if non-whitespace content remains
-          CONTENT=$(echo "$CHANGELOG" | sed 's/#\?#\?\s*\[Unreleased\]//g' | tr -d '[:space:]')
+          # Remove lines containing [Unreleased] (header or link), then check if non-whitespace content remains
+          CONTENT=$(echo "$CHANGELOG" | grep -v '\[Unreleased\]' | tr -d '[:space:]')
           if [[ -n "$CONTENT" ]]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
