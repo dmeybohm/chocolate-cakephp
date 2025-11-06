@@ -156,7 +156,7 @@ jobs:
         run: |
           CHANGELOG="${{ needs.build.outputs.changelog }}"
           # Remove [Unreleased] markers (with or without ##), then check if non-whitespace content remains
-          CONTENT=$(echo "$CHANGELOG" | sed 's/##\?\s*\[Unreleased\]//g' | tr -d '[:space:]')
+          CONTENT=$(echo "$CHANGELOG" | sed 's/#\?#\?\s*\[Unreleased\]//g' | tr -d '[:space:]')
           if [[ -n "$CONTENT" ]]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
