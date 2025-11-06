@@ -30,10 +30,10 @@ SECTION="$1"
 
 # Normalize section name
 if [ "$SECTION" = "unreleased" ]; then
-    SECTION_PATTERN="^## \[Unreleased\]"
+    SECTION_PATTERN="^## [[]Unreleased[]]"
 else
     # Version sections have dates like: ## [1.0.0] - 2025-10-31
-    SECTION_PATTERN="^## \[$SECTION\]"
+    SECTION_PATTERN="^## [[]$SECTION[]]"
 fi
 
 # Extract the section content
@@ -54,13 +54,13 @@ awk -v pattern="$SECTION_PATTERN" '
     }
 
     # Found another section header - stop processing
-    in_section && /^## \[/ {
+    in_section && /^## [[]/ {
         in_section = 0
         next
     }
 
     # Skip footer link lines
-    /^\[.*\]: https?:\/\// {
+    /^[[].*[]]: https?:\/\// {
         next
     }
 
