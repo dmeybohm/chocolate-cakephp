@@ -25,9 +25,9 @@ When planning how to implement a feature, we should store the plans
 in markdown format in the feature logs.
 
 This is to keep track of development and design rationales. The
-feature log is located in the `feature/` directory, and it is
+feature log is located in the `features/` directory, and it is
 organized by year and then month.  All plan documents for each
-feature should go in the `feature/$year/$month/{$git_branch_name}.md`.
+feature should go in the `features/$year/$month/{$git_branch_name}.md`.
 Each document there should have the plan for implementing the
 feature.
 

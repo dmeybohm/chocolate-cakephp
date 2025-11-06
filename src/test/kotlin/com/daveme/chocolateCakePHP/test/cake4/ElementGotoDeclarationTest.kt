@@ -12,6 +12,7 @@ class ElementGotoDeclarationTest : Cake4BaseTestCase() {
             "cake4/src4/View/AppView.php",
             "cake4/templates/Movie/artist.php",
             "cake4/templates/Movie/film_director.php",
+            "cake4/templates/Movie/element_with_params.php",
             "cake4/templates/element/Director/filmography.php",
             "cake4/vendor/cakephp.php",
         )
@@ -36,6 +37,15 @@ class ElementGotoDeclarationTest : Cake4BaseTestCase() {
         val elements = gotoDeclarationHandlerTargets(handler)
         assertNotNull(elements)
         assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test ElementGotoDeclarationHandler can go to element calls with parameters`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/element_with_params.php", """
+        <?php
+        ${'$'}this->element('<caret>Director/filmography', ['director' => ${'$'}someDirector]);
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "filmography.php")
     }
 
 }

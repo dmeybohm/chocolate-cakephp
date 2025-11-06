@@ -123,19 +123,20 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     methodName = child.text
                 }
                 PhpElementTypes.PARAMETER_LIST -> {
-                    // Only accept if there's exactly one parameter (ignoring whitespace/commas)
-                    val significantChildren = mutableListOf<ASTNode>()
+                    // Extract the first string parameter, ignoring additional parameters
+                    // Both element() and render() accept optional parameters - we only need the first one
                     var paramChild = child.firstChildNode
                     while (paramChild != null) {
+                        // Skip whitespace and commas to find actual parameters
                         if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
-                            significantChildren.add(paramChild)
+                            // Try to extract string literal from the first parameter we encounter
+                            val extractedValue = extractStringLiteral(paramChild)
+                            if (extractedValue != null) {
+                                parameterValue = extractedValue
+                                break  // Found the first string parameter, stop looking
+                            }
                         }
                         paramChild = paramChild.treeNext
-                    }
-                    
-                    // Only process if there's exactly one significant child
-                    if (significantChildren.size == 1) {
-                        parameterValue = extractStringLiteral(significantChildren[0])
                     }
                 }
             }
