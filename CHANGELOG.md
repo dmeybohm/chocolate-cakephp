@@ -17,7 +17,7 @@
 - Add auto-detection of CakePHP version and configuration from composer.json
 - Add auto-detection of app namespace from AppController
 - Add support for configuring theme paths in plugin settings
-- Add support for controllers nested not at the top-level `for various features
+- Add support for controllers nested not at the top-level for various features
 - Add support for implicit render in controllers
 - Add support for `ViewBuilder()->setTemplate()` and `ViewBuilder()->setTemplatePath()` in CakePHP 3+ controllers
 - Add support for `$this->view` field assignment in CakePHP 2 controllers
