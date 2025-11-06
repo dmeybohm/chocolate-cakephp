@@ -1,7 +1,6 @@
 # GitHub Actions Workflow is created for testing and preparing the plugin release in the following steps:
 # - validate Gradle Wrapper,
 # - run 'test' and 'verifyPlugin' tasks,
-# - run Qodana inspections,
 # - run 'buildPlugin' task and prepare artifact for the further tests,
 # - run 'runPluginVerifier' task,
 # - create a draft release.
@@ -56,7 +55,7 @@ jobs:
           PROPERTIES="$(./gradlew properties --console=plain -q)"
           VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
           NAME="$(echo "$PROPERTIES" | grep "^pluginName:" | cut -f2- -d ' ')"
-          CHANGELOG="$(./gradlew getChangelog --unreleased --console=plain -q)"
+          CHANGELOG="$(./scripts/get-changelog-section.sh unreleased)"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -101,40 +100,17 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
-      # Check if changelog has non-whitespace content (excluding just the [Unreleased] marker)
-      - name: Check Changelog Content
-        id: check
-        shell: bash
-        run: |
-          CHANGELOG="${{ needs.build.outputs.changelog }}"
-          # Remove lines containing [Unreleased] (header or link), then check if non-whitespace content remains
-          CONTENT=$(echo "$CHANGELOG" | grep -v '\[Unreleased\]' | tr -d '[:space:]')
-          if [[ -n "$CONTENT" ]]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-      # Remove old release drafts by using the curl request for the available releases with a draft flag
-      - name: Remove Old Release Drafts
-        if: steps.check.outputs.has_changes == 'true'
+      # Prepare and create release draft using script
+      - name: Prepare Release Draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api repos/{owner}/{repo}/releases \
-            --jq '.[] | select(.draft == true) | .id' \
-            | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
-
-      # Create a new release draft which is not publicly visible and requires manual acceptance
-      - name: Create Release Draft
-        if: steps.check.outputs.has_changes == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create v${{ needs.build.outputs.version }} \
-            --draft \
-            --title "v${{ needs.build.outputs.version }}" \
-            --notes "$(cat << 'EOM'
+          # Save changelog to temp file
+          cat > /tmp/changelog.md << 'EOF'
           ${{ needs.build.outputs.changelog }}
-          EOM
-          )"
+          EOF
+
+          # Run preparation script
+          ./scripts/prepare-release-draft.sh \
+            --version "${{ needs.build.outputs.version }}" \
+            --changelog-file /tmp/changelog.md
