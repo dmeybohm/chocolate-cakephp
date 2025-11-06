@@ -70,10 +70,33 @@ class ASTParsingTest : BasePlatformTestCase() {
         val rootNode = psiFile.node
 
         val elementCalls = findMethodCallsByName(rootNode, "element")
-        
+
         assertEquals("Should find 2 element calls", 2, elementCalls.size)
         assertEquals("director/info", elementCalls[0].firstParameterText)
         assertEquals("actor/filmography", elementCalls[1].firstParameterText)
+    }
+
+    fun `test parse element method calls with parameters from AST`() {
+        val phpCode = """
+            <?php
+            class MovieController extends Controller {
+                public function show() {
+                    ${'$'}this->element('director/info', ['director' => ${'$'}director]);
+                    ${'$'}this->element("actor/filmography", ['actor' => ${'$'}actor, 'movies' => ${'$'}movies]);
+                    ${'$'}this->element('simple');
+                }
+            }
+        """.trimIndent()
+
+        val psiFile = myFixture.configureByText(PhpFileType.INSTANCE, phpCode)
+        val rootNode = psiFile.node
+
+        val elementCalls = findMethodCallsByName(rootNode, "element")
+
+        assertEquals("Should find 3 element calls", 3, elementCalls.size)
+        assertEquals("director/info", elementCalls[0].firstParameterText)
+        assertEquals("actor/filmography", elementCalls[1].firstParameterText)
+        assertEquals("simple", elementCalls[2].firstParameterText)
     }
 
     fun `test parse method declarations from AST`() {
@@ -123,9 +146,9 @@ class ASTParsingTest : BasePlatformTestCase() {
                     // Edge cases that should be ignored
                     ${'$'}this->render(); // no parameters
                     ${'$'}this->render(${'$'}variable); // variable parameter
-                    ${'$'}this->render('template', ['data']); // multiple parameters
+                    ${'$'}this->render('template', ['data']); // multiple parameters - extracts first
                     ${'$'}other->render('ignored'); // wrong receiver
-                    
+
                     // Nested/complex cases
                     if (true) {
                         ${'$'}this->render('nested/template');
@@ -138,13 +161,13 @@ class ASTParsingTest : BasePlatformTestCase() {
         val rootNode = psiFile.node
 
         val renderCalls = findMethodCallsByName(rootNode, "render")
-        val validCalls = renderCalls.filter { 
-            it.receiverText == "this" && it.firstParameterText != null 
+        val validCalls = renderCalls.filter {
+            it.receiverText == "this" && it.firstParameterText != null
         }
-        
-        assertEquals("Should find 4 valid render calls", 4, validCalls.size)
-        
-        val expectedTemplates = listOf("simple", "double_quotes", "path/to/template", "nested/template")
+
+        assertEquals("Should find 5 valid render calls", 5, validCalls.size)
+
+        val expectedTemplates = listOf("simple", "double_quotes", "path/to/template", "template", "nested/template")
         val actualTemplates = validCalls.map { it.firstParameterText }
         assertEquals(expectedTemplates, actualTemplates)
     }
@@ -242,16 +265,19 @@ class ASTParsingTest : BasePlatformTestCase() {
                     methodName = child.text
                 }
                 "Parameter list" -> {
-                    // Only accept if there's exactly one parameter (ignoring whitespace/commas)
+                    // Extract the first string parameter, ignoring additional parameters
                     val childNodes = child.getChildren(null).toList()
-                    val significantChildren = childNodes.filter { 
+                    val significantChildren = childNodes.filter {
                         val type = it.elementType.toString()
                         type != "WHITE_SPACE" && type != "comma"
                     }
-                    
-                    // Only process if there's exactly one significant child and it's a String
-                    if (significantChildren.size == 1 && significantChildren[0].elementType.toString() == "String") {
-                        parameterValue = significantChildren[0].text.removeSurrounding("'").removeSurrounding("\"")
+
+                    // Get the first String parameter if it exists
+                    val firstStringParam = significantChildren.firstOrNull {
+                        it.elementType.toString() == "String"
+                    }
+                    if (firstStringParam != null) {
+                        parameterValue = firstStringParam.text.removeSurrounding("'").removeSurrounding("\"")
                     }
                 }
             }
