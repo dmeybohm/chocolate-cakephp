@@ -144,9 +144,9 @@ Report bugs or request features in the [issue tracker](https://github.com/dmeybo
 
 ## License
 
-This project is licensed under the GNU Lesser General Public License v3.0
-(LGPL-3.0-only) since v1.0. Previous version were licensed under the MIT
-license..
+This project is licensed under the GNU Lesser General Public License v3.0 or later
+(LGPL-3.0-or-later) since v1.0. Previous versions were licensed under the MIT
+license.
 
 See [COPYING.LESSER](COPYING.LESSER) and [COPYING](COPYING) for the full license text.
 
