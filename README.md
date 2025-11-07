@@ -140,16 +140,27 @@ This plugin enables proper compilation of the configuration UI forms located in 
 
 ### Development Setup
 
-1. Ensure you have the prerequisites installed (see Prerequisites section above)
-2. Clone the repository
-3. Open the project in IntelliJ IDEA (Community or Ultimate)
-4. Run `./gradlew buildPlugin` to build the plugin
-5. Run `./gradlew runIde` to test in a sandboxed IDE instance
+#### Requirements
+
+- **JDK 17 or higher** - Required to build the plugin
+  - OpenJDK, Oracle JDK, Azul Zulu, Eclipse Temurin, Amazon Corretto, or other JDK distributions are supported
+  - Set `JAVA_HOME` environment variable to your JDK installation path
+  - The Gradle wrapper handles Gradle itself - you only need to provide the JDK
+- **Swing UI Designer plugin** - See Prerequisites section above
+
+#### Build Steps
+
+1. Clone the repository
+2. Open the project in IntelliJ IDEA (Community or Ultimate)
+3. Run `./gradlew buildPlugin` to build the plugin
+4. Run `./gradlew runIde` to test in a sandboxed IDE instance
 
 ### Running Tests
 
+Ensure JDK 17+ is installed and `JAVA_HOME` is set:
+
 ```bash
-JAVA_HOME=/path/to/jdk17 ./gradlew test
+./gradlew test
 ```
 
 ## Changelog
