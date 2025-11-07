@@ -489,8 +489,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             .filter { it.receiverText == "this" && it.assignedValue != null }
 
         // Early bailout: Quick text scan before AST traversal for viewBuilder calls
-        val fileText = inputData.contentAsText.toString()
-        val astViewBuilderCalls = if (!fileText.contains("viewBuilder")) {
+        val astViewBuilderCalls = if (!inputData.contentAsText.contains("viewBuilder")) {
             // Skip viewBuilder parsing entirely
             emptyList()
         } else {

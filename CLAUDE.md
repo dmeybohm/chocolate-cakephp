@@ -15,7 +15,7 @@ to prior to beginning work.
 We should commit after each significant step. You should add a
 `Co-Authored-By` annotation for Claude to each commit.
 
-Be way of rebasing to undo a mistake. You can amend the previous
+Be wary of rebasing to undo a mistake. You can amend the previous
 commit, but if you have to go back further in the history, prefer
 to make a new commit instead.
 
@@ -61,7 +61,9 @@ breakdown by CakePHP version in `cake2`, `cake3`, etc directories.
 When testing features, try to avoid running the whole test suite
 until the end, since it is time consuming. Try to run targetted
 tests as soon as possible after development to find any problems
-sooner.
+sooner. For moving faster, try to focus on making tests for cake5
+first, and getting those to work, before writing tests for other
+cake versions.
 
 ### Completion tests
 
@@ -117,7 +119,7 @@ to keep in mind when dealing with the tests.
 
 ## Debugging
 
-If you get stuck and you would like to run some code in a debugger,
+If you get stuck (for example would like to run some code in a debugger),
 don't be afraid to ask for help. The developers have access to more
 sophisticated debug tools than you do.
 

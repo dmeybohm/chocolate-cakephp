@@ -115,17 +115,52 @@ Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 
 Contributions are welcome. For major changes, please open an issue first to discuss the proposed changes.
 
+### Prerequisites
+
+#### Required IDE
+
+You can develop this plugin using either:
+- **IntelliJ IDEA Community Edition** (free)
+- **IntelliJ IDEA Ultimate Edition**
+
+Note: While the plugin provides features for PhpStorm users, you only need IntelliJ IDEA (Community or Ultimate) to build and develop the plugin itself.
+
+#### Required IntelliJ Plugin
+
+The **Swing UI Designer** plugin is required to build this project. Without it, the `.form` GUI files will not compile correctly and the plugin's settings dialogs will hang.
+
+**Installation:**
+1. In IntelliJ IDEA, go to **Settings/Preferences** → **Plugins**
+2. Click on **Marketplace** tab
+3. Search for "Swing UI Designer"
+4. Install the plugin from: https://plugins.jetbrains.com/plugin/25304-swing-ui-designer
+5. Restart IntelliJ IDEA
+
+This plugin enables proper compilation of the configuration UI forms located in `src/main/java/com/daveme/chocolateCakePHP/*.form`.
+
 ### Development Setup
 
+#### Requirements
+
+- **JDK 17 or higher** - Required to build the plugin
+  - OpenJDK, Oracle JDK, Azul Zulu, Eclipse Temurin, Amazon Corretto, or other JDK distributions are supported
+  - Set `JAVA_HOME` environment variable to your JDK installation path
+  - The Gradle wrapper handles Gradle itself - you only need to provide the JDK
+- **Swing UI Designer plugin** - See Prerequisites section above
+
+#### Build Steps
+
 1. Clone the repository
-2. Open the project in IntelliJ IDEA
+2. Open the project in IntelliJ IDEA (Community or Ultimate)
 3. Run `./gradlew buildPlugin` to build the plugin
 4. Run `./gradlew runIde` to test in a sandboxed IDE instance
 
 ### Running Tests
 
+Ensure JDK 17+ is installed and `JAVA_HOME` is set:
+
 ```bash
-JAVA_HOME=/path/to/jdk17 ./gradlew test
+./gradlew test
 ```
 
 ## Changelog
