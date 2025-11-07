@@ -176,3 +176,17 @@ Report bugs or request features in the [issue tracker](https://github.com/dmeybo
 - [Plugin Homepage](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 - [GitHub Repository](https://github.com/dmeybohm/chocolate-cakephp)
 - [CakePHP Documentation](https://book.cakephp.org/)
+
+## License
+
+This project is licensed under the GNU Lesser General Public License v3.0 or later
+(LGPL-3.0-or-later) since v1.0. Previous versions were licensed under the MIT
+license.
+
+See [COPYING.LESSER](COPYING.LESSER) and [COPYING](COPYING) for the full license text.
+
+### Exception: Inflector.kt
+
+The file `src/main/kotlin/com/daveme/chocolateCakePHP/Inflector.kt` is licensed
+under the MIT License.  It is a derivative work from CakePHP framework code. 
+See the file header for details.
