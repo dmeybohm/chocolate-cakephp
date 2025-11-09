@@ -172,8 +172,8 @@ create_source_distributions() {
     info "Creating source distributions"
     cd "$WORKTREE_PATH"
 
-    local tar_name="chocolate-cakephp-${version}.tar.gz"
-    local zip_name="chocolate-cakephp-${version}.zip"
+    local tar_name="chocolate-cakephp-${version}-src.tar.gz"
+    local zip_name="chocolate-cakephp-${version}-src.zip"
 
     # Create list of files to exclude
     local exclude_patterns=(
@@ -222,6 +222,10 @@ build_plugin() {
     fi
 
     info "Plugin built successfully: $plugin_zip"
+
+    # Copy plugin distribution to release directory
+    info "Copying plugin distribution to release directory..."
+    cp "$plugin_zip" "${RELEASE_DIR}/"
 }
 
 # Extract JARs and sign everything
@@ -264,8 +268,8 @@ extract_and_sign() {
     done
 
     # Sign source distributions
-    local tar_name="chocolate-cakephp-${version}.tar.gz"
-    local zip_name="chocolate-cakephp-${version}.zip"
+    local tar_name="chocolate-cakephp-${version}-src.tar.gz"
+    local zip_name="chocolate-cakephp-${version}-src.zip"
 
     info "Signing source tar.gz..."
     gpg --default-key "$GPG_KEY_ID" --detach-sign --armor \
@@ -373,8 +377,8 @@ verify_signatures() {
     rm -rf "$jar_extract_dir"
 
     # Verify source distributions
-    local tar_name="chocolate-cakephp-${version}.tar.gz"
-    local zip_name="chocolate-cakephp-${version}.zip"
+    local tar_name="chocolate-cakephp-${version}-src.tar.gz"
+    local zip_name="chocolate-cakephp-${version}-src.zip"
 
     info "Verifying signature for $tar_name..."
     if ! gpg --verify "$verify_temp_dir/${tar_name}.sig" "${RELEASE_DIR}/${tar_name}" >/dev/null 2>&1; then
@@ -408,8 +412,9 @@ print_report() {
     ls -lh "${RELEASE_DIR}"/chocolate-cakephp-${version}* | awk '{print "  " $9 " (" $5 ")"}'
     echo ""
     echo "Files ready for release:"
-    echo "  - chocolate-cakephp-${version}.tar.gz (source)"
-    echo "  - chocolate-cakephp-${version}.zip (source)"
+    echo "  - chocolate-cakephp-${version}.zip (plugin distribution)"
+    echo "  - chocolate-cakephp-${version}-src.tar.gz (source)"
+    echo "  - chocolate-cakephp-${version}-src.zip (source)"
     echo "  - chocolate-cakephp-${version}.signatures.zip (GPG signatures)"
 }
 
