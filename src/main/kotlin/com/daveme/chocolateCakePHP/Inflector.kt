@@ -1,5 +1,5 @@
 /**
- * This file contains comse code derived from Inflector.php in CakePHP.
+ * This file contains comes code derived from Inflector.php in CakePHP.
  * Here is the original copyright notice for that:
  *
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
