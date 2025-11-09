@@ -43,14 +43,14 @@ for test_script in "${TEST_SCRIPTS[@]}"; do
 
     if "$test_script"; then
         echo -e "${GREEN}✓ $script_name passed${NC}"
-        ((PASSED_TESTS++))
+        ((PASSED_TESTS++)) || true
     else
         echo -e "${RED}✗ $script_name failed${NC}"
-        ((FAILED_TESTS++))
+        ((FAILED_TESTS++)) || true
         FAILED_SCRIPTS+=("$script_name")
     fi
 
-    ((TOTAL_TESTS++))
+    ((TOTAL_TESTS++)) || true
     echo ""
 done
 
