@@ -275,6 +275,51 @@ extract_and_sign() {
     gpg --default-key "$GPG_KEY_ID" --detach-sign --armor \
         --output "${sig_temp_dir}/${zip_name}.sig" "${RELEASE_DIR}/${zip_name}"
 
+    # Get git commit information
+    cd "$WORKTREE_PATH"
+    local commit_hash=$(git rev-parse HEAD)
+    local short_hash=$(git rev-parse --short HEAD)
+
+    # Create README.md with release information
+    info "Creating README.md with release information..."
+    cat > "${sig_temp_dir}/README.md" <<EOF
+# Chocolate CakePHP Release Signatures
+
+**Version:** ${version}
+**Git Commit:** ${commit_hash}
+**Short Hash:** ${short_hash}
+
+## Signed Files
+
+This archive contains GPG signatures for the following release artifacts:
+
+EOF
+
+    # List all signature files
+    for sig in "${sig_temp_dir}"/*.sig; do
+        if [ -f "$sig" ]; then
+            echo "- $(basename "$sig")" >> "${sig_temp_dir}/README.md"
+        fi
+    done
+
+    cat >> "${sig_temp_dir}/README.md" <<EOF
+
+## Verification
+
+To verify a signature, use:
+
+\`\`\`bash
+gpg --verify <signature-file> <original-file>
+\`\`\`
+
+For example:
+\`\`\`bash
+gpg --verify chocolate-cakephp-${version}.tar.gz.sig chocolate-cakephp-${version}.tar.gz
+\`\`\`
+
+The signatures were created with GPG key ID: ${GPG_KEY_ID}
+EOF
+
     # Create signatures zip
     local sig_zip="chocolate-cakephp-${version}.signatures.zip"
     info "Creating signatures archive..."
