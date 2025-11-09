@@ -42,6 +42,12 @@ cleanup() {
         cd "$PROJECT_ROOT"
         git worktree remove "$WORKTREE_PATH" --force || warn "Failed to remove worktree"
     fi
+    if [ -n "${RELEASE_BRANCH:-}" ]; then
+        if git rev-parse --verify "$RELEASE_BRANCH" >/dev/null 2>&1; then
+            info "Removing release branch $RELEASE_BRANCH"
+            git branch -D "$RELEASE_BRANCH" || warn "Failed to remove release branch"
+        fi
+    fi
     if [ -n "${TEMP_EXTRACT_DIR:-}" ] && [ -d "$TEMP_EXTRACT_DIR" ]; then
         info "Cleaning up temp directory at $TEMP_EXTRACT_DIR"
         rm -rf "$TEMP_EXTRACT_DIR"
@@ -88,27 +94,39 @@ validate_and_setup() {
         mkdir -p "$RELEASE_DIR"
     fi
 
-    # Check if worktree already exists
-    WORKTREE_PATH="${WORKTREE_BASE}/${branch_name}"
-    if [ -d "$WORKTREE_PATH" ]; then
-        error "Worktree already exists at $WORKTREE_PATH - remove it first"
-    fi
-
-    # Verify branch exists
+    # Verify source branch exists
     if ! git rev-parse --verify "$branch_name" >/dev/null 2>&1; then
         error "Branch '$branch_name' does not exist"
+    fi
+
+    # Set release branch name and worktree path
+    RELEASE_BRANCH="release-${version}"
+    WORKTREE_PATH="${WORKTREE_BASE}/${RELEASE_BRANCH}"
+
+    # Check if release branch already exists
+    if git rev-parse --verify "$RELEASE_BRANCH" >/dev/null 2>&1; then
+        error "Release branch '$RELEASE_BRANCH' already exists"
+    fi
+
+    # Check if worktree already exists
+    if [ -d "$WORKTREE_PATH" ]; then
+        error "Worktree already exists at $WORKTREE_PATH - remove it first"
     fi
 
     info "Validation passed"
 }
 
-# Create git worktree
+# Create release branch and worktree
 create_worktree() {
-    local branch_name="$1"
+    local source_branch="$1"
+    local version="$2"
+
+    info "Creating release branch '$RELEASE_BRANCH' from '$source_branch'"
+    cd "$PROJECT_ROOT"
+    git branch "$RELEASE_BRANCH" "$source_branch"
 
     info "Creating worktree at $WORKTREE_PATH"
-    cd "$PROJECT_ROOT"
-    git worktree add "$WORKTREE_PATH" "$branch_name"
+    git worktree add "$WORKTREE_PATH" "$RELEASE_BRANCH"
     info "Worktree created successfully"
 }
 
@@ -262,10 +280,77 @@ extract_and_sign() {
     info "Creating signatures archive..."
     (cd "$sig_temp_dir" && zip -r "${RELEASE_DIR}/${sig_zip}" . >/dev/null)
 
+    # Store signature paths for verification
+    SIGNATURE_FILES=("${sig_temp_dir}"/*)
+
     # Cleanup signature temp dir
     rm -rf "$sig_temp_dir"
 
     info "All artifacts signed successfully"
+}
+
+# Verify all signatures
+verify_signatures() {
+    local version="$1"
+
+    info "Verifying GPG signatures..."
+
+    # Extract signatures zip to temp directory
+    local verify_temp_dir=$(mktemp -d)
+    unzip -q "${RELEASE_DIR}/chocolate-cakephp-${version}.signatures.zip" -d "$verify_temp_dir"
+
+    local verification_failed=0
+
+    # Verify JARs
+    local plugin_zip="$WORKTREE_PATH/build/distributions/chocolate-cakephp-${version}.zip"
+    local jar_extract_dir=$(mktemp -d)
+    unzip -q "$plugin_zip" -d "$jar_extract_dir"
+
+    local jar_dir="$jar_extract_dir/chocolate-cakephp/lib"
+    local jars=($(find "$jar_dir" -name "*.jar"))
+
+    for jar in "${jars[@]}"; do
+        local jar_name=$(basename "$jar")
+        local sig_file="$verify_temp_dir/${jar_name}.sig"
+
+        if [ -f "$sig_file" ]; then
+            info "Verifying signature for $jar_name..."
+            if ! gpg --verify "$sig_file" "$jar" >/dev/null 2>&1; then
+                error "Signature verification failed for $jar_name"
+                verification_failed=1
+            fi
+        else
+            error "Signature file not found for $jar_name"
+            verification_failed=1
+        fi
+    done
+
+    rm -rf "$jar_extract_dir"
+
+    # Verify source distributions
+    local tar_name="chocolate-cakephp-${version}.tar.gz"
+    local zip_name="chocolate-cakephp-${version}.zip"
+
+    info "Verifying signature for $tar_name..."
+    if ! gpg --verify "$verify_temp_dir/${tar_name}.sig" "${RELEASE_DIR}/${tar_name}" >/dev/null 2>&1; then
+        error "Signature verification failed for $tar_name"
+        verification_failed=1
+    fi
+
+    info "Verifying signature for $zip_name..."
+    if ! gpg --verify "$verify_temp_dir/${zip_name}.sig" "${RELEASE_DIR}/${zip_name}" >/dev/null 2>&1; then
+        error "Signature verification failed for $zip_name"
+        verification_failed=1
+    fi
+
+    # Cleanup
+    rm -rf "$verify_temp_dir"
+
+    if [ $verification_failed -eq 1 ]; then
+        error "Signature verification failed"
+    fi
+
+    info "All signatures verified successfully!"
 }
 
 # Print summary report
@@ -297,8 +382,8 @@ main() {
     # Step 1: Validation and setup
     validate_and_setup "$branch_name" "$version"
 
-    # Step 2: Create worktree
-    create_worktree "$branch_name"
+    # Step 2: Create release branch and worktree
+    create_worktree "$branch_name" "$version"
 
     # Step 3: Verify version
     verify_version "$version"
@@ -315,7 +400,10 @@ main() {
     # Step 7: Extract JARs and sign everything
     extract_and_sign "$version"
 
-    # Step 8: Print report
+    # Step 8: Verify signatures
+    verify_signatures "$version"
+
+    # Step 9: Print report
     print_report "$version"
 }
 
