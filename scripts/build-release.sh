@@ -11,7 +11,7 @@ set -euo pipefail
 # Configuration
 GPG_KEY_ID="${GPG_KEY_ID:-}"  # Set via environment or hardcode here
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORKTREE_BASE="/worktree"
+WORKTREE_BASE="${PROJECT_ROOT}/worktree"
 RELEASE_DIR="${PROJECT_ROOT}/release"
 
 # Colors for output
