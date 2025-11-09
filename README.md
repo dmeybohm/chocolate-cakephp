@@ -148,7 +148,7 @@ This project is licensed under the GNU Lesser General Public License v3.0 or lat
 (LGPL-3.0-or-later) since v1.0. Previous versions were licensed under the MIT
 license.
 
-See [COPYING.LESSER](COPYING.LESSER) and [COPYING](COPYING) for the full license text.
+See [LICENSE](LICENSE) and [COPYING](COPYING) for the full license text.
 
 ### Exception: Inflector.kt
 
