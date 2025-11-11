@@ -43,7 +43,13 @@ dependencies {
 
         // Required for testing
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Plugin.Java)
     }
+
+    // Test dependencies
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
 }
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
@@ -121,6 +127,14 @@ tasks {
 
     compileTestKotlin {
         kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
+    }
+
+    test {
+        useJUnitPlatform()
+        // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
+        testLogging {
+            events("passed", "skipped", "failed")
+        }
     }
 
     // Note: patchPluginXml is now configured via intellijPlatform.pluginConfiguration block
