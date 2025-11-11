@@ -1,0 +1,2 @@
+# Ensure gradlew.bat uses CRLF line endings on all platforms
+gradlew.bat text eol=crlf
