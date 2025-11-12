@@ -104,10 +104,10 @@ Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 
 ## Version Compatibility
 
-| Plugin Version | CakePHP Versions | PhpStorm Version | IntelliJ IDEA |
-|---------------|------------------|------------------|---------------|
-| 1.0.0 | 5.x, 4.x, 3.x, 2.x* | 2023.3+ | 2023.3+ (Ultimate) |
-| 0.9.x | 5.x, 4.x, 3.x, 2.x* | 2022.1+ | 2022.1+ (Ultimate) |
+| Plugin Version | CakePHP Versions    | PhpStorm Version | IntelliJ IDEA        |
+|----------------|---------------------|------------------|----------------------|
+| 1.0.0          | 5.x, 4.x, 3.x, 2.x* | 2024.2.6+        | 2024.2.6+ (Ultimate) |
+| 0.9.x          | 5.x, 4.x, 3.x, 2.x* | 2022.1+          | 2022.1+ (Ultimate)   |
 
 *CakePHP 2 support is disabled by default but can be enabled in settings
 
@@ -142,7 +142,7 @@ This plugin enables proper compilation of the configuration UI forms located in 
 
 #### Requirements
 
-- **JDK 17 or higher** - Required to build the plugin
+- **JDK 21 or higher** - Required to build the plugin
   - OpenJDK, Oracle JDK, Azul Zulu, Eclipse Temurin, Amazon Corretto, or other JDK distributions are supported
   - Set `JAVA_HOME` environment variable to your JDK installation path
   - The Gradle wrapper handles Gradle itself - you only need to provide the JDK
@@ -157,7 +157,7 @@ This plugin enables proper compilation of the configuration UI forms located in 
 
 ### Running Tests
 
-Ensure JDK 17+ is installed and `JAVA_HOME` is set:
+Ensure JDK 21+ is installed and `JAVA_HOME` is set:
 
 ```bash
 ./gradlew test

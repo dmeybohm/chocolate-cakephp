@@ -82,6 +82,16 @@ intellijPlatform {
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
         channels = properties("pluginVersion").map { listOf(it.split('-').getOrElse(1) { "default" }.split('.').first()) }
     }
+
+    pluginVerification {
+        ides {
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.2.6")
+        }
+        freeArgs = listOf(
+            "-mute",
+            "TemplateWordInPluginId"
+        )
+    }
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
