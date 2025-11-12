@@ -403,7 +403,7 @@ class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 class ViewVariablesWithRawVars : HashMap<ViewVariableName, RawViewVar>()
 
 val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
-    ID.create("com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex.v4")
+    ID.create("com.daveme.chocolateCakePHP.viewvariableindex.v4")
 
 
 object ViewVariableIndexService {
