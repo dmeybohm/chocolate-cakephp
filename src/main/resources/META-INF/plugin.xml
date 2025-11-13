@@ -1,31 +1,17 @@
 <idea-plugin>
     <id>com.daveme.intellij.chocolateCakePHP</id>
     <name>Chocolate CakePHP</name>
-    <version>0.6.2</version>
+    <version>PATCHED_VERSION</version>
     <vendor email="dmeybohm@gmail.com" url="https://github.com/dmeybohm">David Meybohm</vendor>
 
     <description><![CDATA[
-      Autocompletion and navigation for CakePHP.<br><br>
-
-      This supports CakePHP 2, 3, 4, and 5. CakePHP 2 support is disabled by default, but<br>
-      can be enabled in settings.<br><br>
-
-      Current features:<br>
-
-      <ul>
-        <li>Navigate and autocomplete $this->Model->someMethod and $this->Component->someMethod inside controllers</li>
-        <li>Navigate and autocomplete $this->ViewHelper->someMethod inside view files.</li>
-        <li>Navigate to $this->ViewHelper in view files when clicking on "ViewHelper"</li>
-        <li>Navigate to $this->{Model,Component} in controller files when clicking on $this->{Model,Component}</li>
-        <li>Navigate from controller to view file by clicking on Cake Icon in the left gutter</li>
-        <li>Navigate to models, components, and views by Control/Cmd-clicking inside $uses, $components, and $views variables in a controller</li>
-      </ul>
+      PATCHED_DESCRIPTION
     ]]>
     </description>
 
 
     <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-    <idea-version since-build="233.15026"/>
+    <idea-version since-build="PATCHED_SINCE_BUILD"/>
     <extensions defaultExtensionNs="com.intellij">
         <projectConfigurable parentId="reference.webide.settings.project.settings.php"
                              displayName="Chocolate CakePHP"
