@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.isMethodReference
 import com.intellij.lang.ASTNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.PhpFileType
@@ -31,15 +32,15 @@ class MultiParamDebugTest : BasePlatformTestCase() {
     
     private fun findMethodReferences(node: ASTNode): List<ASTNode> {
         val result = mutableListOf<ASTNode>()
-        
-        if (node.elementType.toString() == "Method reference") {
+
+        if (node.isMethodReference()) {
             result.add(node)
         }
-        
+
         for (child in node.getChildren(null)) {
             result.addAll(findMethodReferences(child))
         }
-        
+
         return result
     }
 }
