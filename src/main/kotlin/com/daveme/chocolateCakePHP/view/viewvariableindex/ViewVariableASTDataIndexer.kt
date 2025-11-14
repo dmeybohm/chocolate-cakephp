@@ -328,7 +328,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find all hash array elements within the array creation expression
         var child = arrayNode.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Hash array element") {
+            if (child.isHashArrayElement()) {
                 val keyValuePair = parseHashArrayElement(child)
                 if (keyValuePair != null) {
                     // For array case, we need to find the value part of the hash element
@@ -355,7 +355,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find the Array key child node
         var child = hashElement.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Array key") {
+            if (child.isArrayKey()) {
                 keyNode = child
                 break
             }
@@ -373,7 +373,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find the Array value child node
         var child = hashElement.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Array value") {
+            if (child.isArrayValue()) {
                 // Get the actual value node (first child of Array value)
                 valueNode = child.firstChildNode
                 break
@@ -477,7 +477,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val keyNames = mutableListOf<String>()
         var keyChild = keysArray.firstChildNode
         while (keyChild != null) {
-            if (keyChild.elementType.toString() == "Array value") {
+            if (keyChild.isArrayValue()) {
                 val valueChild = keyChild.firstChildNode
                 if (valueChild != null) {
                     val keyName = extractStringLiteral(valueChild)
@@ -493,7 +493,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val valueNodes = mutableListOf<ASTNode>()
         var valueChild = valuesArray.firstChildNode
         while (valueChild != null) {
-            if (valueChild.elementType.toString() == "Array value") {
+            if (valueChild.isArrayValue()) {
                 val actualValue = valueChild.firstChildNode
                 if (actualValue != null) {
                     valueNodes.add(actualValue)

@@ -1,7 +1,6 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.lang.ASTNode
-import com.jetbrains.php.lang.psi.PhpElementType
 import com.jetbrains.php.lang.parser.PhpElementTypes as PhpParserElementTypes;
 
 /**
@@ -18,16 +17,6 @@ import com.jetbrains.php.lang.parser.PhpElementTypes as PhpParserElementTypes;
 private const val VARIABLE = "VARIABLE"
 private const val CLASS_METHOD = "CLASS_METHOD"
 private const val IDENTIFIER = "identifier"
-private const val METHOD_REFERENCE = "Method reference"
-private const val PARAMETER_LIST = "Parameter list"
-private const val ASSIGNMENT_EXPRESSION = "Assignment expression"
-private const val FIELD_REFERENCE = "Field reference"
-private const val STRING = "String"
-private const val ARRAY_CREATION_EXPRESSION = "Array creation expression"
-private const val FUNCTION_CALL = "Function call"
-private const val MODIFIER_LIST = "Modifier list"
-private const val ARRAY_ACCESS_EXPRESSION = "Array access expression"
-
 
 // Extension functions for type checking
 fun ASTNode.isVariable() = this.elementType.toString() == VARIABLE
@@ -42,3 +31,6 @@ fun ASTNode.isArrayCreationExpression() = this.elementType == PhpParserElementTy
 fun ASTNode.isFunctionCall() = this.elementType == PhpParserElementTypes.FUNCTION_CALL
 fun ASTNode.isModifierList() = this.elementType == PhpParserElementTypes.MODIFIER_LIST
 fun ASTNode.isArrayAccessExpression() = this.elementType == PhpParserElementTypes.ARRAY_ACCESS_EXPRESSION
+fun ASTNode.isHashArrayElement() = this.elementType == PhpParserElementTypes.HASH_ARRAY_ELEMENT
+fun ASTNode.isArrayKey() = this.elementType == PhpParserElementTypes.ARRAY_KEY
+fun ASTNode.isArrayValue() = this.elementType == PhpParserElementTypes.ARRAY_VALUE
