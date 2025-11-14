@@ -1,9 +1,9 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.*
 import com.intellij.lang.ASTNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.PhpFileType
-import com.jetbrains.php.lang.parser.PhpElementTypes
 import java.io.File
 
 /**
@@ -40,10 +40,10 @@ class ViewFileASTOnlyTest : BasePlatformTestCase() {
     }
     
     private fun findArrayCreationExpressionsRecursive(node: ASTNode, result: MutableList<ASTNode>) {
-        if (node.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
+        if (node.isArrayCreationExpression()) {
             result.add(node)
         }
-        
+
         var child = node.firstChildNode
         while (child != null) {
             findArrayCreationExpressionsRecursive(child, result)

@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
+import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.intellij.lang.ASTNode
@@ -9,7 +10,6 @@ import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
 
 // Simplified data structure for AST-level parsing - only syntax facts
 data class SetCallInfo(
@@ -101,13 +101,13 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     }
     
     private fun findMethodDeclarationsRecursive(node: ASTNode, result: MutableList<MethodDeclarationInfo>) {
-        if (node.elementType == PhpElementTypes.CLASS_METHOD) {
+        if (node.isClassMethod()) {
             val methodInfo = parseMethodDeclaration(node)
             if (methodInfo != null) {
                 result.add(methodInfo)
             }
         }
-        
+
         var child = node.firstChildNode
         while (child != null) {
             findMethodDeclarationsRecursive(child, result)
@@ -121,8 +121,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
 
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.MODIFIER_LIST -> {
+            when {
+                child.isModifierList() -> {
                     var m = child.firstChildNode
                     while (m != null) {
                         when (m.elementType) {
@@ -133,7 +133,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                         m = m.treeNext
                     }
                 }
-                PhpTokenTypes.IDENTIFIER -> methodName = child.text
+                child.elementType == PhpTokenTypes.IDENTIFIER -> methodName = child.text
             }
             child = child.treeNext
         }
@@ -157,11 +157,11 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     
     private fun findSetCallsRecursive(node: ASTNode, result: MutableList<SetCallInfo>) {
         // Check if this is a method reference that could be $this->set(...)
-        if (node.elementType == PhpElementTypes.METHOD_REFERENCE) {
+        if (node.isMethodReference()) {
             val setCalls = parseSetCalls(node) // Note: now returns a list
             result.addAll(setCalls)
         }
-        
+
         var child = node.firstChildNode
         while (child != null) {
             findSetCallsRecursive(child, result)
@@ -180,14 +180,14 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
+            when {
+                child.isVariable() -> {
                     receiverName = child.text.removePrefix("$")
                 }
-                PhpTokenTypes.IDENTIFIER -> {
+                child.elementType == PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
-                PhpElementTypes.PARAMETER_LIST -> {
+                child.isParameterList() -> {
                     val paramNodes = extractParameterNodes(child)
                     if (paramNodes.size == 2) {
                         firstParamNode = paramNodes[0]
@@ -213,7 +213,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                     var paramList: ASTNode? = null
                     var paramChild = node.firstChildNode
                     while (paramChild != null) {
-                        if (paramChild.elementType == PhpElementTypes.PARAMETER_LIST) {
+                        if (paramChild.isParameterList()) {
                             paramList = paramChild
                             break
                         }
@@ -236,7 +236,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                 }
             }
             // Case 2: $this->set(['name' => $value])
-            else if (firstParamNode.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
+            else if (firstParamNode.isArrayCreationExpression()) {
                 return extractVariablesFromArrayCreation(firstParamNode)
             }
             // Case 3: $this->set(compact('value'))
@@ -245,21 +245,28 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             }
             // Case 5: $this->set($var) where $var = compact('name')
             // Case 6: $this->set($var) where $var = ['key' => 'val']
-            else if (firstParamNode.elementType == PhpElementTypes.VARIABLE) {
+            else if (firstParamNode.isVariable()) {
                 return extractVariablesFromVariableIndirection(firstParamNode, node)
             }
         }
         
         // Case 4: $this->set(['name1', 'name2'], [$val1, $val2]) - tuple assignment
-        if (receiverName == "this" && 
-            methodName?.equals("set", ignoreCase = true) == true && 
-            hasSecondParam && 
-            firstParamNode?.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
-            
-            val paramNodes = extractParameterNodes(
-                node.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
-            )
-            if (paramNodes.size == 2 && paramNodes[1].elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) {
+        if (receiverName == "this" &&
+            methodName?.equals("set", ignoreCase = true) == true &&
+            hasSecondParam &&
+            firstParamNode?.isArrayCreationExpression() == true) {
+
+            val paramList = node.firstChildNode?.let { child ->
+                var current = child
+                while (current != null) {
+                    if (current.isParameterList()) return@let current
+                    current = current.treeNext
+                }
+                null
+            } ?: return emptyList()
+
+            val paramNodes = extractParameterNodes(paramList)
+            if (paramNodes.size == 2 && paramNodes[1].isArrayCreationExpression()) {
                 return extractVariablesFromTupleAssignment(paramNodes[0], paramNodes[1])
             }
         }
@@ -269,17 +276,24 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             methodName?.equals("set", ignoreCase = true) == true &&
             hasSecondParam) {
 
-            val paramNodes = extractParameterNodes(
-                node.findChildByType(PhpElementTypes.PARAMETER_LIST) ?: return emptyList()
-            )
+            val paramList = node.firstChildNode?.let { child ->
+                var current = child
+                while (current != null) {
+                    if (current.isParameterList()) return@let current
+                    current = current.treeNext
+                }
+                null
+            } ?: return emptyList()
+
+            val paramNodes = extractParameterNodes(paramList)
             if (paramNodes.size == 2) {
                 val keysParam = paramNodes[0]
                 val valsParam = paramNodes[1]
 
                 // Handle mixed cases where one param is array and other is variable
-                if ((keysParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION && valsParam.elementType == PhpElementTypes.VARIABLE) ||
-                    (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION) ||
-                    (keysParam.elementType == PhpElementTypes.VARIABLE && valsParam.elementType == PhpElementTypes.VARIABLE)) {
+                if ((keysParam.isArrayCreationExpression() && valsParam.isVariable()) ||
+                    (keysParam.isVariable() && valsParam.isArrayCreationExpression()) ||
+                    (keysParam.isVariable() && valsParam.isVariable())) {
 
                     return extractVariablesFromMixedTupleAssignment(keysParam, valsParam)
                 }
@@ -313,7 +327,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find all hash array elements within the array creation expression
         var child = arrayNode.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Hash array element") {
+            if (child.isHashArrayElement()) {
                 val keyValuePair = parseHashArrayElement(child)
                 if (keyValuePair != null) {
                     // For array case, we need to find the value part of the hash element
@@ -340,7 +354,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find the Array key child node
         var child = hashElement.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Array key") {
+            if (child.isArrayKey()) {
                 keyNode = child
                 break
             }
@@ -358,7 +372,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // Find the Array value child node
         var child = hashElement.firstChildNode
         while (child != null) {
-            if (child.elementType.toString() == "Array value") {
+            if (child.isArrayValue()) {
                 // Get the actual value node (first child of Array value)
                 valueNode = child.firstChildNode
                 break
@@ -382,20 +396,20 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     
     // Analyze an AST node to determine what kind of value source it represents
     private fun analyzeValueSource(valueNode: ASTNode): SourceKind {
-        return when (valueNode.elementType) {
-            PhpElementTypes.VARIABLE -> {
+        return when {
+            valueNode.isVariable() -> {
                 // $foo - could be PARAM, LOCAL, or UNKNOWN
                 // For now, we'll mark as LOCAL and let resolveByHandle figure it out
                 SourceKind.LOCAL
             }
-            PhpElementTypes.STRING -> SourceKind.LITERAL
-            PhpElementTypes.METHOD_REFERENCE -> SourceKind.EXPRESSION
-            PhpElementTypes.FUNCTION_CALL -> SourceKind.EXPRESSION
-            PhpElementTypes.FIELD_REFERENCE -> {
+            valueNode.isString() -> SourceKind.LITERAL
+            valueNode.isMethodReference() -> SourceKind.EXPRESSION
+            valueNode.isFunctionCall() -> SourceKind.EXPRESSION
+            valueNode.isFieldReference() -> {
                 // $this->foo - property access is now handled by EXPRESSION
                 SourceKind.EXPRESSION
             }
-            PhpElementTypes.ARRAY_ACCESS_EXPRESSION -> SourceKind.EXPRESSION
+            valueNode.isArrayAccessExpression() -> SourceKind.EXPRESSION
             else -> {
                 // Check for numeric literals
                 if (valueNode.text.matches(Regex("\\d+"))) {
@@ -423,7 +437,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         var paramList: ASTNode? = null
         var child = compactNode.firstChildNode
         while (child != null) {
-            if (child.elementType == PhpElementTypes.PARAMETER_LIST) {
+            if (child.isParameterList()) {
                 paramList = child
                 break
             }
@@ -462,7 +476,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val keyNames = mutableListOf<String>()
         var keyChild = keysArray.firstChildNode
         while (keyChild != null) {
-            if (keyChild.elementType.toString() == "Array value") {
+            if (keyChild.isArrayValue()) {
                 val valueChild = keyChild.firstChildNode
                 if (valueChild != null) {
                     val keyName = extractStringLiteral(valueChild)
@@ -478,7 +492,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val valueNodes = mutableListOf<ASTNode>()
         var valueChild = valuesArray.firstChildNode
         while (valueChild != null) {
-            if (valueChild.elementType.toString() == "Array value") {
+            if (valueChild.isArrayValue()) {
                 val actualValue = valueChild.firstChildNode
                 if (actualValue != null) {
                     valueNodes.add(actualValue)
@@ -538,13 +552,13 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         // figure out what variables are actually created. This is similar to variable indirection
         // but with two parameters that need to be paired up.
         
-        val keysVariableName = if (keysParam.elementType == PhpElementTypes.VARIABLE) {
+        val keysVariableName = if (keysParam.isVariable()) {
             keysParam.text.removePrefix("$")
         } else {
             null
         }
-        
-        val valsVariableName = if (valsParam.elementType == PhpElementTypes.VARIABLE) {
+
+        val valsVariableName = if (valsParam.isVariable()) {
             valsParam.text.removePrefix("$")
         } else {
             null
@@ -569,14 +583,23 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
     private fun extractStringLiteral(node: ASTNode): String? {
         // First check if this node itself is a STRING
-        if (node.elementType == PhpElementTypes.STRING) {
+        if (node.isString()) {
             val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
             val text = (lit ?: node).text
             return text.removeSurrounding("'").removeSurrounding("\"")
         }
 
         // If not, try to find a STRING child (e.g., for "Array key" nodes that contain STRING)
-        val stringChild = node.findChildByType(PhpElementTypes.STRING)
+        var stringChild: ASTNode? = null
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.isString()) {
+                stringChild = child
+                break
+            }
+            child = child.treeNext
+        }
+
         if (stringChild != null) {
             val lit = stringChild.findChildByType(PhpTokenTypes.STRING_LITERAL)
             val text = (lit ?: stringChild).text

@@ -1,11 +1,11 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.*
 import com.intellij.lang.ASTNode
 import com.intellij.psi.tree.TokenSet
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.PhpFileType
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
 
 /**
  * Test cases for AST-based parsing functions to replace PSI operations in indexers.
@@ -240,8 +240,7 @@ class ASTParsingTest : BasePlatformTestCase() {
     }
     
     private fun isMethodReference(node: ASTNode): Boolean {
-        // Based on debug output: "Method reference"
-        return node.elementType.toString() == "Method reference"
+        return node.isMethodReference()
     }
     
     private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
@@ -257,14 +256,14 @@ class ASTParsingTest : BasePlatformTestCase() {
         
         // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...)
         for ((index, child) in children.withIndex()) {
-            when (child.elementType.toString()) {
-                "VARIABLE" -> {
+            when {
+                child.isVariable() -> {
                     receiverName = child.text.removePrefix("$")
                 }
-                "identifier" -> {
+                child.isIdentifier() -> {
                     methodName = child.text
                 }
-                "Parameter list" -> {
+                child.isParameterList() -> {
                     // Extract the first string parameter, ignoring additional parameters
                     val childNodes = child.getChildren(null).toList()
                     val significantChildren = childNodes.filter {
@@ -274,7 +273,7 @@ class ASTParsingTest : BasePlatformTestCase() {
 
                     // Get the first String parameter if it exists
                     val firstStringParam = significantChildren.firstOrNull {
-                        it.elementType.toString() == "String"
+                        it.isString()
                     }
                     if (firstStringParam != null) {
                         parameterValue = firstStringParam.text.removeSurrounding("'").removeSurrounding("\"")
@@ -319,8 +318,7 @@ class ASTParsingTest : BasePlatformTestCase() {
     }
     
     private fun isMethodDeclaration(node: ASTNode): Boolean {
-        // Based on debug output: "CLASS_METHOD"
-        return node.elementType.toString() == "CLASS_METHOD"
+        return node.isClassMethod()
     }
     
     private fun parseMethodDeclaration(node: ASTNode): MethodInfo? {
@@ -331,14 +329,14 @@ class ASTParsingTest : BasePlatformTestCase() {
         
         // Parse structure: Modifier list, function keyword, identifier
         for (child in children) {
-            when (child.elementType.toString()) {
-                "Modifier list" -> {
+            when {
+                child.isModifierList() -> {
                     val modifierText = child.text.trim()
                     if (modifierText in listOf("private", "protected", "public")) {
                         visibility = modifierText
                     }
                 }
-                "identifier" -> {
+                child.isIdentifier() -> {
                     methodName = child.text
                 }
             }
