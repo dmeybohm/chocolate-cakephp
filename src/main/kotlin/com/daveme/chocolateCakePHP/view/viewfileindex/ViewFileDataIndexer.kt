@@ -12,7 +12,6 @@ import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
 
 // Methods that should not trigger implicit view rendering
 private val cakeSkipRenderingMethods : HashSet<String> = listOf(

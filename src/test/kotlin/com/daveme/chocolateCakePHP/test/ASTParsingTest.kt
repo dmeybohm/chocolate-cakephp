@@ -6,7 +6,6 @@ import com.intellij.psi.tree.TokenSet
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.PhpFileType
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
 
 /**
  * Test cases for AST-based parsing functions to replace PSI operations in indexers.

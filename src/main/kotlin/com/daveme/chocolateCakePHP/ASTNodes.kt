@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.lang.ASTNode
-import com.jetbrains.php.lang.parser.PhpElementTypes as PhpParserElementTypes;
+import com.jetbrains.php.lang.parser.PhpElementTypes;
 
 /**
  * Helper functions for checking PHP element types using string comparison instead of
@@ -64,15 +64,15 @@ private fun Char.lowerAscii(): Char =
 fun ASTNode.isVariable() = equalsAlphaIgnoreCase(this.elementType.toString(), VARIABLE)
 fun ASTNode.isClassMethod() = equalsAlphaIgnoreCase(this.elementType.toString(), CLASS_METHOD)
 fun ASTNode.isIdentifier() = equalsAlphaIgnoreCase(this.elementType.toString(), IDENTIFIER)
-fun ASTNode.isMethodReference() = this.elementType == PhpParserElementTypes.METHOD_REFERENCE
-fun ASTNode.isParameterList() = this.elementType == PhpParserElementTypes.PARAMETER_LIST
-fun ASTNode.isAssignmentExpression() = this.elementType == PhpParserElementTypes.ASSIGNMENT_EXPRESSION
-fun ASTNode.isFieldReference() = this.elementType == PhpParserElementTypes.FIELD_REFERENCE
-fun ASTNode.isString() = this.elementType == PhpParserElementTypes.STRING
-fun ASTNode.isArrayCreationExpression() = this.elementType == PhpParserElementTypes.ARRAY_CREATION_EXPRESSION
-fun ASTNode.isFunctionCall() = this.elementType == PhpParserElementTypes.FUNCTION_CALL
-fun ASTNode.isModifierList() = this.elementType == PhpParserElementTypes.MODIFIER_LIST
-fun ASTNode.isArrayAccessExpression() = this.elementType == PhpParserElementTypes.ARRAY_ACCESS_EXPRESSION
-fun ASTNode.isHashArrayElement() = this.elementType == PhpParserElementTypes.HASH_ARRAY_ELEMENT
-fun ASTNode.isArrayKey() = this.elementType == PhpParserElementTypes.ARRAY_KEY
-fun ASTNode.isArrayValue() = this.elementType == PhpParserElementTypes.ARRAY_VALUE
+fun ASTNode.isMethodReference() = this.elementType == PhpElementTypes.METHOD_REFERENCE
+fun ASTNode.isParameterList() = this.elementType == PhpElementTypes.PARAMETER_LIST
+fun ASTNode.isAssignmentExpression() = this.elementType == PhpElementTypes.ASSIGNMENT_EXPRESSION
+fun ASTNode.isFieldReference() = this.elementType == PhpElementTypes.FIELD_REFERENCE
+fun ASTNode.isString() = this.elementType == PhpElementTypes.STRING
+fun ASTNode.isArrayCreationExpression() = this.elementType == PhpElementTypes.ARRAY_CREATION_EXPRESSION
+fun ASTNode.isFunctionCall() = this.elementType == PhpElementTypes.FUNCTION_CALL
+fun ASTNode.isModifierList() = this.elementType == PhpElementTypes.MODIFIER_LIST
+fun ASTNode.isArrayAccessExpression() = this.elementType == PhpElementTypes.ARRAY_ACCESS_EXPRESSION
+fun ASTNode.isHashArrayElement() = this.elementType == PhpElementTypes.HASH_ARRAY_ELEMENT
+fun ASTNode.isArrayKey() = this.elementType == PhpElementTypes.ARRAY_KEY
+fun ASTNode.isArrayValue() = this.elementType == PhpElementTypes.ARRAY_VALUE

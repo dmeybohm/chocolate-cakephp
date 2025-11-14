@@ -4,7 +4,6 @@ import com.daveme.chocolateCakePHP.*
 import com.intellij.lang.ASTNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.PhpFileType
-import com.jetbrains.php.lang.parser.PhpElementTypes
 import java.io.File
 
 /**

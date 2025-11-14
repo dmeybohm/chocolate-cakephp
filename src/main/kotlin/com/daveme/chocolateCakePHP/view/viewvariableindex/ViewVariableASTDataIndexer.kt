@@ -10,7 +10,6 @@ import com.intellij.psi.TokenType
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
-import com.jetbrains.php.lang.parser.PhpElementTypes
 
 // Simplified data structure for AST-level parsing - only syntax facts
 data class SetCallInfo(
