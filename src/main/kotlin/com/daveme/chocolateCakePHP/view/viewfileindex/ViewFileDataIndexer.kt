@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.lang.ASTNode
@@ -69,8 +70,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     // Robust string literal extraction that handles different PHP plugin versions
     private fun extractStringLiteral(node: ASTNode): String? {
         // Accept either STRING wrapper or direct STRING_LITERAL token
-        val strNode = node.takeIf { it.elementType == PhpElementTypes.STRING } ?: node
-        
+        val strNode = node.takeIf { it.isString() } ?: node
+
         // Try child token
         val lit = strNode.findChildByType(PhpTokenTypes.STRING_LITERAL)
         val text = (lit ?: strNode).text
@@ -103,7 +104,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun isMethodReference(node: ASTNode): Boolean {
-        return node.elementType == PhpElementTypes.METHOD_REFERENCE
+        return node.isMethodReference()
     }
     
     private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
@@ -115,14 +116,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...) - avoid toList()
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
+            when {
+                child.isVariable() -> {
                     receiverName = child.text.removePrefix("$")
                 }
-                PhpTokenTypes.IDENTIFIER -> {
+                child.elementType == PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
-                PhpElementTypes.PARAMETER_LIST -> {
+                child.isParameterList() -> {
                     // Extract the first string parameter, ignoring additional parameters
                     // Both element() and render() accept optional parameters - we only need the first one
                     var paramChild = child.firstChildNode
@@ -181,7 +182,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
     
     private fun isMethodDeclaration(node: ASTNode): Boolean {
-        return node.elementType == PhpElementTypes.CLASS_METHOD
+        return node.isClassMethod()
     }
     
     private fun parseMethodDeclaration(node: ASTNode): MethodInfo? {
@@ -190,8 +191,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.MODIFIER_LIST -> {
+            when {
+                child.isModifierList() -> {
                     var m = child.firstChildNode
                     while (m != null) {
                         when (m.elementType) {
@@ -202,7 +203,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                         m = m.treeNext
                     }
                 }
-                PhpTokenTypes.IDENTIFIER -> methodName = child.text
+                child.elementType == PhpTokenTypes.IDENTIFIER -> methodName = child.text
             }
             child = child.treeNext
         }
@@ -220,7 +221,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
     private fun findFieldAssignmentsRecursive(node: ASTNode, targetFieldName: String, result: MutableList<FieldAssignmentInfo>) {
         // Check if this node represents an assignment expression
-        if (node.elementType == PhpElementTypes.ASSIGNMENT_EXPRESSION) {
+        if (node.isAssignmentExpression()) {
             val fieldAssignment = parseFieldAssignment(node, targetFieldName)
             if (fieldAssignment != null) {
                 result.add(fieldAssignment)
@@ -243,11 +244,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.FIELD_REFERENCE -> {
+            when {
+                child.isFieldReference() -> {
                     fieldReference = child
                 }
-                PhpElementTypes.STRING -> {
+                child.isString() -> {
                     assignedValue = extractStringLiteral(child)
                 }
             }
@@ -261,11 +262,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
             var refChild = fieldReference.firstChildNode
             while (refChild != null) {
-                when (refChild.elementType) {
-                    PhpElementTypes.VARIABLE -> {
+                when {
+                    refChild.isVariable() -> {
                         receiverName = refChild.text.removePrefix("$")
                     }
-                    PhpTokenTypes.IDENTIFIER -> {
+                    refChild.elementType == PhpTokenTypes.IDENTIFIER -> {
                         fieldName = refChild.text
                     }
                 }
@@ -297,14 +298,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         containingMethodOffset: Int = -1
     ) {
         // Track when we enter a CLASS_METHOD
-        val currentMethodOffset = if (node.elementType == PhpElementTypes.CLASS_METHOD) {
+        val currentMethodOffset = if (node.isClassMethod()) {
             node.startOffset
         } else {
             containingMethodOffset
         }
 
         // Check if this node represents a method reference
-        if (node.elementType == PhpElementTypes.METHOD_REFERENCE) {
+        if (node.isMethodReference()) {
             val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset)
             if (viewBuilderCall != null) {
                 result.add(viewBuilderCall)
@@ -353,11 +354,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Parse the outer method reference (setTemplate or setTemplatePath)
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.METHOD_REFERENCE -> {
+            when {
+                child.isMethodReference() -> {
                     receiverMethodRef = child
                 }
-                PhpElementTypes.PARAMETER_LIST -> {
+                child.isParameterList() -> {
                     // Extract single string parameter
                     val significantChildren = mutableListOf<ASTNode>()
                     var paramChild = child.firstChildNode
@@ -434,7 +435,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     private fun getReceiverMethodRef(node: ASTNode): ASTNode? {
         var child = node.firstChildNode
         while (child != null) {
-            if (child.elementType == PhpElementTypes.METHOD_REFERENCE) {
+            if (child.isMethodReference()) {
                 return child
             }
             child = child.treeNext
@@ -449,11 +450,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         var child = node.firstChildNode
         while (child != null) {
-            when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
+            when {
+                child.isVariable() -> {
                     receiverVariable = child.text.removePrefix("$")
                 }
-                PhpTokenTypes.IDENTIFIER -> {
+                child.elementType == PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
             }

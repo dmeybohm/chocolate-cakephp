@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.*
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
@@ -43,13 +44,13 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
     }
     
     private fun findMethodDeclarationsRecursive(node: ASTNode, result: MutableList<ASTMethodInfo>) {
-        if (node.elementType == PhpElementTypes.CLASS_METHOD) {
+        if (node.isClassMethod()) {
             val methodInfo = parseMethodDeclaration(node)
             if (methodInfo != null) {
                 result.add(methodInfo)
             }
         }
-        
+
         for (child in node.getChildren(null)) {
             findMethodDeclarationsRecursive(child, result)
         }
@@ -62,14 +63,14 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
         var methodName: String? = null
         
         for (child in children) {
-            when (child.elementType) {
-                PhpElementTypes.MODIFIER_LIST -> {
+            when {
+                child.isModifierList() -> {
                     val modifierText = child.text.trim()
                     if (modifierText in listOf("private", "protected", "public")) {
                         visibility = modifierText
                     }
                 }
-                PhpTokenTypes.IDENTIFIER -> {
+                child.elementType == PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
             }
@@ -92,13 +93,13 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
     }
     
     private fun findAssignmentExpressionsRecursive(node: ASTNode, result: MutableList<ASTAssignmentInfo>) {
-        if (node.elementType == PhpElementTypes.ASSIGNMENT_EXPRESSION) {
+        if (node.isAssignmentExpression()) {
             val assignmentInfo = parseAssignmentExpression(node)
             if (assignmentInfo != null) {
                 result.add(assignmentInfo)
             }
         }
-        
+
         for (child in node.getChildren(null)) {
             findAssignmentExpressionsRecursive(child, result)
         }
@@ -112,8 +113,8 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
         var valueType: String? = null
 
         for (child in children) {
-            when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
+            when {
+                child.isVariable() -> {
                     if (variableName == null) {
                         variableName = child.text.removePrefix("$")
                     } else {
@@ -121,11 +122,11 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
                         valueType = "variable"
                     }
                 }
-                PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
+                child.isArrayCreationExpression() -> {
                     valueText = child.text
                     valueType = "array"
                 }
-                PhpElementTypes.STRING -> {
+                child.isString() -> {
                     valueText = child.text
                     valueType = "string"
                 }
@@ -165,7 +166,7 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
     }
     
     private fun findSetCallsRecursive(node: ASTNode, result: MutableList<ASTSetCallInfo>) {
-        if (node.elementType == PhpElementTypes.METHOD_REFERENCE) {
+        if (node.isMethodReference()) {
             val setCall = parseSetCall(node)
             if (setCall != null) {
                 result.add(setCall)
@@ -188,14 +189,14 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
         var secondParameterType: String? = null
         
         for (child in children) {
-            when (child.elementType) {
-                PhpElementTypes.VARIABLE -> {
+            when {
+                child.isVariable() -> {
                     receiverName = child.text.removePrefix("$")
                 }
-                PhpTokenTypes.IDENTIFIER -> {
+                child.elementType == PhpTokenTypes.IDENTIFIER -> {
                     methodName = child.text
                 }
-                PhpElementTypes.PARAMETER_LIST -> {
+                child.isParameterList() -> {
                     val params = parseParameterList(child)
                     if (params.isNotEmpty()) {
                         firstParameterText = params[0].first
@@ -230,14 +231,14 @@ class ViewVariableASTParsingTest : BasePlatformTestCase() {
         val children = parameterListNode.getChildren(null).toList()
 
         for (child in children) {
-            when (child.elementType) {
-                PhpElementTypes.STRING -> {
+            when {
+                child.isString() -> {
                     parameters.add(Pair(child.text.removeSurrounding("'").removeSurrounding("\""), "string"))
                 }
-                PhpElementTypes.VARIABLE -> {
+                child.isVariable() -> {
                     parameters.add(Pair(child.text, "variable"))
                 }
-                PhpElementTypes.ARRAY_CREATION_EXPRESSION -> {
+                child.isArrayCreationExpression() -> {
                     parameters.add(Pair(child.text, "array"))
                 }
                 else -> {
