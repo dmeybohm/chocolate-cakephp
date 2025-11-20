@@ -21,7 +21,8 @@ The plugin understands CakePHP's conventions and provides navigation between MVC
 - Create view files from controller actions using the gutter icon menu
 - Support for multiple view formats (PHP, JSON, XML) with configurable data view types
 - Navigate from controller actions to their corresponding views
-- Navigate back from views to controllers using `Ctrl+Alt+Shift+Home` (Windows/Linux) or `Cmd+Option+Shift+Up` (Mac)
+- Navigate back from views to controllers using `Ctrl+Alt+Shift+Home`
+(Windows/Linux) or `Ctrl+Cmd+Shift+Up` (Mac)
 - Autocompletion for variables set in controllers when working in view files
 
 #### Model & Database Layer
@@ -83,9 +84,9 @@ Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 | Action                      | Windows/Linux                       | macOS                                  |
 |-----------------------------|-------------------------------------|----------------------------------------|
 | Navigate Controller → View  | Click gutter cake icon              | Click gutter icon                      |
-|                             | `Ctrl+Alt+Shift+Home`               | `Cmd+Option+Shift+Up`                  |
+|                             | `Ctrl+Alt+Shift+Home`               | `Ctrl+Cmd+Shift+Up`                    |
 | Navigate View → Controller  | Click floating cake icon in toolbar | Click floating cake icon in toolbar    |
-|                             | `Ctrl+Alt+Shift+Home`               | `Cmd+Option+Shift+Up`                  |
+|                             | `Ctrl+Alt+Shift+Home`               | `Ctrl+Cmd+Shift+Up`                    |
 | Create View from Controller | Click gutter icon                   | Click gutter icon                      |
 |                             | Ctrl+click gutter when view exists  | Cmd+Click gutter icon when view exists |
 | Navigate to element         | Ctrl+B on element name              | Cmd+B on element name                  |
