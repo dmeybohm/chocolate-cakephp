@@ -62,6 +62,14 @@ namespace Cake\ORM\Query {
         public function where(array|string|null $conditions = null, array $types = [], bool $overwrite = false): static {
             return $this;
         }
+
+        /**
+         * @param string|array $associations
+         * @return static
+         */
+        public function contain($associations) {
+            return $this;
+        }
     }
 }
 
