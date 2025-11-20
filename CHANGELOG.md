@@ -23,7 +23,9 @@
 - Add support for `$this->view` field assignment in CakePHP 2 controllers
 
 ### Changed
-- Change default keyboard shortcut for toggling between controller and view from `Ctrl-Alt-Up` to `Ctrl-Alt-Shift-Home` (Windows/Linux) and `Ctrl-Meta-Shift-Up` (Mac) to avoid conflicts
+- Change default keyboard shortcut for toggling between controller and view,
+which was broken on Windows/Linux to
+to `Ctrl-Alt-Shift-Home` (Windows/Linux) and on macOS from `Cmd-Option-Up` to `Ctrl-Cmd-Shift-Up` (Mac) to avoid conflicts
 - Rename toggle action from "Toggle between controller and view" to more descriptive name
 - Improve handling of nested elements in templates
 - Improve flexibility when handling plugin and theme template paths
