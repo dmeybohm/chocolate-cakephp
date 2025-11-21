@@ -2,8 +2,8 @@ package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.intellij.codeInsight.daemon.LineMarkerInfo
-import com.intellij.codeInsight.daemon.LineMarkerProvider
+import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
+import com.intellij.codeInsight.daemon.RelatedItemLineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.DumbService
@@ -18,9 +18,7 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.Variable
 
 
-class ControllerMethodLineMarker : LineMarkerProvider {
-
-    override fun getLineMarkerInfo(psiElement: PsiElement): LineMarkerInfo<*>? = null
+class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
 
     //
     // Add a Cake icon with a list of all the view files next to the action name.
@@ -29,7 +27,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement
-    ): LineMarkerInfo<*>? {
+    ): RelatedItemLineMarkerInfo<*>? {
         if (element.firstChild != null) {
             return null
         }
@@ -55,7 +53,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
-    ): LineMarkerInfo<*>? {
+    ): RelatedItemLineMarkerInfo<*>? {
         if (element.firstChild != null) {
             return null
         }
@@ -83,7 +81,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
-    ): LineMarkerInfo<*>? {
+    ): RelatedItemLineMarkerInfo<*>? {
         if (element.firstChild != null) {
             return null
         }
@@ -143,7 +141,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         project: Project,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
-    ): LineMarkerInfo<*>? {
+    ): RelatedItemLineMarkerInfo<*>? {
         if (element.firstChild != null) {
             return null
         }
@@ -214,7 +212,7 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
         useAltLabel: Boolean = false
-    ): LineMarkerInfo<PsiElement>? {
+    ): RelatedItemLineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
@@ -256,14 +254,14 @@ class ControllerMethodLineMarker : LineMarkerProvider {
     }
 
     private fun addLineMarkerUnique(
-        collection: MutableCollection<in LineMarkerInfo<*>>,
-        newMarker: LineMarkerInfo<*>?,
+        collection: MutableCollection<in RelatedItemLineMarkerInfo<*>>,
+        newMarker: RelatedItemLineMarkerInfo<*>?,
     ) {
         if (newMarker == null) {
             return
         }
         for (lineMarkerInfo in collection) {
-            val markerElement = lineMarkerInfo as? LineMarkerInfo<*> ?: continue
+            val markerElement = lineMarkerInfo as? RelatedItemLineMarkerInfo<*> ?: continue
             val element = markerElement.element ?: return
             val otherElement = newMarker.element
             if (element == otherElement) {
@@ -273,12 +271,11 @@ class ControllerMethodLineMarker : LineMarkerProvider {
         collection.add(newMarker)
     }
 
-    override fun collectSlowLineMarkers(
-        elements: MutableList<out PsiElement>,
-        result: MutableCollection<in LineMarkerInfo<*>>
+    override fun collectNavigationMarkers(
+        element: PsiElement,
+        result: MutableCollection<in RelatedItemLineMarkerInfo<*>>
     ) {
-        val first = elements.firstOrNull() ?: return
-        val project = first.project
+        val project = element.project
         if (DumbService.getInstance(project).isDumb) {
             return
         }
@@ -288,31 +285,29 @@ class ControllerMethodLineMarker : LineMarkerProvider {
             return
         }
 
-        for (element in elements) {
-            val file = element.containingFile ?: continue
-            val virtualFile = file.virtualFile ?: continue
+        val file = element.containingFile ?: return
+        val virtualFile = file.virtualFile ?: return
 
-            val controllerPath = controllerPathFromControllerFile(virtualFile) ?: continue
-            val relatedLookupInfo = RelatedLookupInfo(
-                project = project,
-                file = file,
-                settings = settings,
-                controllerPath = controllerPath
-            )
+        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
+        val relatedLookupInfo = RelatedLookupInfo(
+            project = project,
+            file = file,
+            settings = settings,
+            controllerPath = controllerPath
+        )
 
-            val allViewFilesMarker = markerForAllViewFilesInAction(project, relatedLookupInfo, element)
-            addLineMarkerUnique(result, allViewFilesMarker)
+        val allViewFilesMarker = markerForAllViewFilesInAction(project, relatedLookupInfo, element)
+        addLineMarkerUnique(result, allViewFilesMarker)
 
-            val renderViewMarker = markerForSingleRenderCallInAction(project, relatedLookupInfo, element)
-            addLineMarkerUnique(result, renderViewMarker)
+        val renderViewMarker = markerForSingleRenderCallInAction(project, relatedLookupInfo, element)
+        addLineMarkerUnique(result, renderViewMarker)
 
-            // Add line markers for ViewBuilder setTemplate calls
-            val viewBuilderMarker = markerForSingleViewBuilderCallInAction(project, relatedLookupInfo, element)
-            addLineMarkerUnique(result, viewBuilderMarker)
+        // Add line markers for ViewBuilder setTemplate calls
+        val viewBuilderMarker = markerForSingleViewBuilderCallInAction(project, relatedLookupInfo, element)
+        addLineMarkerUnique(result, viewBuilderMarker)
 
-            // Add line markers for $this->view assignments (CakePHP 2)
-            val viewAssignmentMarker = markerForViewAssignment(project, relatedLookupInfo, element)
-            addLineMarkerUnique(result, viewAssignmentMarker)
-        }
+        // Add line markers for $this->view assignments (CakePHP 2)
+        val viewAssignmentMarker = markerForViewAssignment(project, relatedLookupInfo, element)
+        addLineMarkerUnique(result, viewAssignmentMarker)
     }
 }
