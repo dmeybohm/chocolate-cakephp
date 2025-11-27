@@ -50,6 +50,8 @@
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerComponentsGotoDeclarationHandler" />
 
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker" />
+        <gotoRelatedProvider implementation="com.daveme.chocolateCakePHP.view.ViewToControllerGotoRelatedProvider" />
+        <gotoRelatedProvider implementation="com.daveme.chocolateCakePHP.view.ElementToUsagesGotoRelatedProvider" />
 
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex" />
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex" />

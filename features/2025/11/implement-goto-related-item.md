@@ -332,6 +332,122 @@ Both directions use the same standard IntelliJ keyboard shortcut for a consisten
 
 ---
 
+## Bug Fix Session: NullPointerException in Related Symbol Popup
+
+### Issue Discovery
+
+After implementing the "Go to Related Item" feature, a `NullPointerException` was encountered when using the keyboard shortcut (Ctrl+Alt+Home / ⌃⌘↑) for both View→Controller and Element→Views/Elements navigation.
+
+**Exception Details**:
+```
+java.lang.NullPointerException: getIcon(...) must not be null
+	at com.intellij.codeInsight.navigation.NavigationUtil$getPsiElementPopup$renderer$1.getIcon(NavigationUtil.kt:331)
+```
+
+### Root Cause Analysis
+
+Both `ViewToControllerGotoRelatedProvider` and `ElementToUsagesGotoRelatedProvider` created custom `GotoRelatedItem` objects that overrode `getCustomIcon()` to return `null`:
+
+```kotlin
+override fun getCustomIcon(): Icon? {
+    // No custom icon - use default PSI element icon
+    return null
+}
+```
+
+When IntelliJ's navigation popup renderer attempted to display the Related Symbol popup, it expected a non-null icon from `getIcon()`. The null return value caused the exception.
+
+**Key Insight**: When creating custom `GotoRelatedItem` implementations with overridden methods, all overridden methods that return non-nullable types in the platform API must return actual values, not null.
+
+### Solution
+
+The fix was to implement proper icon logic similar to the existing `CakePhpNavigationPresentationProvider` (used in the Controller→View line marker navigation popup).
+
+**Icon Logic Pattern**:
+- Controller files → `CakeIcons.LOGO_SVG`
+- View/Element files → `PhpIcons.PHP_FILE`
+- Fallback (no path) → `PhpIcons.FUNCTION`
+
+### Implementation
+
+**1. ViewToControllerGotoRelatedProvider.kt** (lines 99-109):
+```kotlin
+override fun getCustomIcon(): Icon {
+    // Use CakePHP logo for controller files, similar to CakePhpNavigationPresentationProvider
+    val path = element.containingFile?.virtualFile?.path
+    return if (path == null) {
+        PhpIcons.FUNCTION
+    } else if (path.contains("/Controller/")) {
+        CakeIcons.LOGO_SVG
+    } else {
+        PhpIcons.FUNCTION
+    }
+}
+```
+
+**2. ElementToUsagesGotoRelatedProvider.kt** (lines 129-139):
+```kotlin
+override fun getCustomIcon(): Icon {
+    // Use appropriate icons based on file type, similar to CakePhpNavigationPresentationProvider
+    val path = element.containingFile?.virtualFile?.path
+    return if (path == null) {
+        PhpIcons.FUNCTION
+    } else if (path.contains("/Controller/")) {
+        CakeIcons.LOGO_SVG
+    } else {
+        PhpIcons.PHP_FILE
+    }
+}
+```
+
+**3. Added Imports**:
+Both files needed:
+```kotlin
+import com.daveme.chocolateCakePHP.cake.CakeIcons
+import com.jetbrains.php.PhpIcons
+```
+
+### Testing Results
+
+All tests passed successfully after the fix:
+- **15 ControllerLineMarkerTest tests** - All PASSED (no regressions)
+- **7 ElementToUsagesGotoRelatedTest tests** - All PASSED
+- **5 ViewToControllerGotoRelatedTest tests** - All PASSED
+
+**Total: 27 tests PASSED** ✓
+
+### Lessons Learned
+
+1. **Platform API Contracts**: When overriding platform methods that return non-nullable types, always provide actual values, even if the documentation suggests null might be acceptable.
+
+2. **Consistency**: Reusing icon logic patterns from existing implementations (like `CakePhpNavigationPresentationProvider`) ensures consistent UX and reduces bugs.
+
+3. **Testing Before Manual Verification**: Running automated tests caught the compilation issue with the wrong `PhpIcons` import path (`com.jetbrains.php.lang.PhpIcons` vs `com.jetbrains.php.PhpIcons`) before manual testing.
+
+4. **Icon Semantics**: Different file types should have semantically appropriate icons:
+   - Controllers get the CakePHP logo (framework integration)
+   - Views/Elements get the PHP file icon (template files)
+   - Unknown/fallback gets the function icon
+
+### Files Modified
+
+1. `src/main/kotlin/com/daveme/chocolateCakePHP/view/ViewToControllerGotoRelatedProvider.kt`
+   - Added imports for `CakeIcons` and `PhpIcons`
+   - Replaced null-returning `getCustomIcon()` with proper icon logic
+
+2. `src/main/kotlin/com/daveme/chocolateCakePHP/view/ElementToUsagesGotoRelatedProvider.kt`
+   - Added imports for `CakeIcons` and `PhpIcons`
+   - Replaced null-returning `getCustomIcon()` with proper icon logic
+
+### Verification
+
+The fix was verified by:
+1. Compilation success (no more unresolved references)
+2. All 27 automated tests passing
+3. Manual testing would confirm the Related Symbol popup now displays with proper icons
+
+---
+
 ## Part 3: Element → Views/Elements Navigation
 
 ### Overview

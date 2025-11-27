@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.navigation.GotoRelatedItem
@@ -9,6 +10,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.jetbrains.php.PhpIcons
 import javax.swing.Icon
 
 /**
@@ -124,9 +126,16 @@ class ElementToUsagesGotoRelatedProvider : GotoRelatedProvider() {
                 }
             }
 
-            override fun getCustomIcon(): Icon? {
-                // No custom icon - use default PSI element icon
-                return null
+            override fun getCustomIcon(): Icon {
+                // Use appropriate icons based on file type, similar to CakePhpNavigationPresentationProvider
+                val path = element.containingFile?.virtualFile?.path
+                return if (path == null) {
+                    PhpIcons.FUNCTION
+                } else if (path.contains("/Controller/")) {
+                    CakeIcons.LOGO_SVG
+                } else {
+                    PhpIcons.PHP_FILE
+                }
             }
         }
     }
