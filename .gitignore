@@ -8,3 +8,4 @@ build/
 /worktree/
 /release/
 .intellijPlatform
+exception*.txt

@@ -1,21 +1,17 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.CakeIcons
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.navigation.CakeGotoRelatedItem
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.navigation.GotoRelatedProvider
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.lang.psi.elements.Method
-import javax.swing.Icon
 
 /**
  * Provides "Go to Related Item" navigation from view files to controller methods.
@@ -77,26 +73,13 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
         val containerName = computeContainerName(element)
         val iconPath = element.containingFile?.virtualFile?.path
 
-        return object : GotoRelatedItem(element, "Controllers") {
-            override fun getCustomName(): String {
-                return customName
-            }
-
-            override fun getCustomContainerName(): String? {
-                return containerName
-            }
-
-            override fun getCustomIcon(): Icon {
-                // Use pre-computed path to determine icon
-                return if (iconPath == null) {
-                    PhpIcons.FUNCTION
-                } else if (iconPath.contains("/Controller/")) {
-                    CakeIcons.LOGO_SVG
-                } else {
-                    PhpIcons.FUNCTION
-                }
-            }
-        }
+        return CakeGotoRelatedItem(
+            element = element,
+            group = "Controllers",
+            customName = customName,
+            containerName = containerName,
+            iconPath = iconPath
+        )
     }
 
     private fun computeCustomName(element: PsiElement): String {

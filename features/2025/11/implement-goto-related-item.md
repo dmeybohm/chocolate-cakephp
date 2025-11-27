@@ -676,6 +676,173 @@ This pattern ensures PSI access only occurs in safe threading contexts while mai
 
 ---
 
+## Refactoring Session: Simplified GotoRelatedItem Wrapper
+
+### Context
+
+After implementing EDT threading fixes with pre-computation, we researched how other mature plugins handle GotoRelatedItem to ensure we're following best practices.
+
+### Research: Symfony Plugin Pattern
+
+Examined the **Symfony Plugin** (targeting IntelliJ 2025.1) which implements GotoRelatedProvider extensively for Twig↔PHP navigation. Key findings:
+
+**Their Approach**:
+- Simple `PopupGotoRelatedItem` wrapper class
+- Pre-stores customName and icon (like our solution)
+- NO complex threading workarounds
+- NO BGT_DATA_PROVIDER or uiDataSnapshot overrides
+- Very clean, maintainable code
+
+**File**: `RelatedPopupGotoLineMarker.PopupGotoRelatedItem` (lines 40-81)
+
+### Refactoring Decision
+
+Instead of complex BGT_DATA_PROVIDER implementations, we simplified to match the Symfony plugin's proven pattern.
+
+### Implementation: CakeGotoRelatedItem
+
+Created a simple wrapper class following the Symfony plugin pattern:
+
+**File**: `src/main/kotlin/com/daveme/chocolateCakePHP/navigation/CakeGotoRelatedItem.kt`
+
+```kotlin
+class CakeGotoRelatedItem(
+    element: PsiElement,
+    group: String,
+    private val customName: String,
+    private val containerName: String?,
+    private val iconPath: String?
+) : GotoRelatedItem(element, group) {
+
+    override fun getCustomName(): String = customName
+
+    override fun getCustomContainerName(): String? = containerName
+
+    override fun getCustomIcon(): Icon {
+        return if (iconPath == null) {
+            PhpIcons.FUNCTION
+        } else if (iconPath.contains("/Controller/")) {
+            CakeIcons.LOGO_SVG
+        } else {
+            PhpIcons.PHP_FILE
+        }
+    }
+}
+```
+
+### Benefits of This Approach
+
+1. **Simpler Code**: Single reusable class instead of anonymous objects in each provider
+2. **Proven Pattern**: Follows mature Symfony plugin (targeting 2025.1)
+3. **Maintainable**: Clear, easy to understand and modify
+4. **Testable**: All 27 existing tests pass without changes
+5. **Consistent**: Same pattern used by other successful plugins
+
+### Updated Providers
+
+Both providers now use the simple wrapper:
+
+**ViewToControllerGotoRelatedProvider**:
+```kotlin
+private fun createGotoRelatedItem(element: PsiElement): GotoRelatedItem {
+    val customName = computeCustomName(element)
+    val containerName = computeContainerName(element)
+    val iconPath = element.containingFile?.virtualFile?.path
+
+    return CakeGotoRelatedItem(
+        element = element,
+        group = "Controllers",
+        customName = customName,
+        containerName = containerName,
+        iconPath = iconPath
+    )
+}
+```
+
+**ElementToUsagesGotoRelatedProvider**:
+```kotlin
+private fun createGotoRelatedItem(element: PsiElement, settings: Settings): GotoRelatedItem {
+    val containingFile = element.containingFile
+    val group = if (containingFile != null && isElementFile(containingFile, settings)) {
+        "Elements"
+    } else {
+        "Views"
+    }
+
+    val customName = computeCustomName(element)
+    val containerName = computeContainerName(element)
+    val iconPath = element.containingFile?.virtualFile?.path
+
+    return CakeGotoRelatedItem(
+        element = element,
+        group = group,
+        customName = customName,
+        containerName = containerName,
+        iconPath = iconPath
+    )
+}
+```
+
+### Testing Results
+
+All tests passed successfully:
+- **15 ControllerLineMarkerTest tests** - All PASSED ✓
+- **7 ElementToUsagesGotoRelatedTest tests** - All PASSED ✓
+- **5 ViewToControllerGotoRelatedTest tests** - All PASSED ✓
+
+**Total: 27 tests PASSED** ✓
+
+### Files Modified/Created
+
+1. **Created**: `src/main/kotlin/com/daveme/chocolateCakePHP/navigation/CakeGotoRelatedItem.kt`
+   - Simple wrapper class following Symfony plugin pattern
+
+2. **Modified**: `src/main/kotlin/com/daveme/chocolateCakePHP/view/ViewToControllerGotoRelatedProvider.kt`
+   - Simplified to use CakeGotoRelatedItem wrapper
+   - Removed anonymous object creation
+   - Cleaner imports
+
+3. **Modified**: `src/main/kotlin/com/daveme/chocolateCakePHP/view/ElementToUsagesGotoRelatedProvider.kt`
+   - Simplified to use CakeGotoRelatedItem wrapper
+   - Removed anonymous object creation
+   - Cleaner imports
+
+### Lessons Learned
+
+1. **Research Mature Plugins**: When solving complex problems, look at how established plugins handle similar cases
+2. **Simpler is Better**: The complex BGT_DATA_PROVIDER solution wasn't needed; pre-computation + simple wrapper suffices
+3. **Follow Proven Patterns**: The Symfony plugin has been successful with this simple approach across multiple IntelliJ versions
+4. **Avoid Over-Engineering**: Starting with the simplest solution that works is better than preemptively adding complexity
+
+### Final Threading Architecture
+
+**Complete Pattern** (pre-computation + simple wrapper):
+
+```
+getItems() called (safe context)
+    ↓
+For each element:
+    • Pre-compute customName (PSI access ✅)
+    • Pre-compute containerName (PSI access ✅)
+    • Pre-compute iconPath (VirtualFile ✅)
+    ↓
+    Create CakeGotoRelatedItem with pre-computed values
+    ↓
+    Return list
+
+Later... User opens Related Symbol popup (EDT)
+    ↓
+Popup renders items
+    ↓
+Calls getCustomName() → Returns pre-computed string ✅
+Calls getCustomContainerName() → Returns pre-computed string ✅
+Calls getCustomIcon() → Uses pre-computed path ✅
+```
+
+This clean pattern avoids EDT violations through pre-computation while keeping code simple and maintainable.
+
+---
+
 ## Part 3: Element → Views/Elements Navigation
 
 ### Overview
