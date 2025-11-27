@@ -72,41 +72,53 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
     }
 
     private fun createGotoRelatedItem(element: PsiElement): GotoRelatedItem {
+        // Pre-compute all data from PSI elements to avoid EDT access violations
+        val customName = computeCustomName(element)
+        val containerName = computeContainerName(element)
+        val iconPath = element.containingFile?.virtualFile?.path
+
         return object : GotoRelatedItem(element, "Controllers") {
             override fun getCustomName(): String {
-                // Try to get method name
-                val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
-                if (method != null) {
-                    val containingClass = method.containingClass
-                    return if (containingClass != null) {
-                        "${containingClass.name}::${method.name}()"
-                    } else {
-                        "${method.name}()"
-                    }
-                }
-
-                // Fallback to containing file name
-                val file = element.containingFile
-                return file?.name ?: element.text.take(50)
+                return customName
             }
 
             override fun getCustomContainerName(): String? {
-                // Show the controller file's parent directory
-                val file = element.containingFile
-                return file?.virtualFile?.parent?.name
+                return containerName
             }
 
             override fun getCustomIcon(): Icon {
-                // Use CakePHP logo for controller files, similar to CakePhpNavigationPresentationProvider
-                val path = element.containingFile?.virtualFile?.path
-                return if (path == null) {
+                // Use pre-computed path to determine icon
+                return if (iconPath == null) {
                     PhpIcons.FUNCTION
-                } else if (path.contains("/Controller/")) {
+                } else if (iconPath.contains("/Controller/")) {
                     CakeIcons.LOGO_SVG
                 } else {
                     PhpIcons.FUNCTION
                 }
             }
         }
+    }
+
+    private fun computeCustomName(element: PsiElement): String {
+        // Try to get method name
+        val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
+        if (method != null) {
+            val containingClass = method.containingClass
+            return if (containingClass != null) {
+                "${containingClass.name}::${method.name}()"
+            } else {
+                "${method.name}()"
+            }
+        }
+
+        // Fallback to containing file name
+        val file = element.containingFile
+        return file?.name ?: element.text.take(50)
+    }
+
+    private fun computeContainerName(element: PsiElement): String? {
+        // Show the controller file's parent directory
+        val file = element.containingFile
+        return file?.virtualFile?.parent?.name
     }
 }

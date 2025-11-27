@@ -92,51 +92,61 @@ class ElementToUsagesGotoRelatedProvider : GotoRelatedProvider() {
      * referencing file is a view or an element.
      */
     private fun createGotoRelatedItem(element: PsiElement, settings: Settings): GotoRelatedItem {
+        // Pre-compute all data from PSI elements to avoid EDT access violations
         val containingFile = element.containingFile
-
-        // Determine if the referencing file is itself an element
         val group = if (containingFile != null && isElementFile(containingFile, settings)) {
             "Elements"
         } else {
             "Views"
         }
 
+        val customName = computeCustomName(element)
+        val containerName = computeContainerName(element)
+        val iconPath = element.containingFile?.virtualFile?.path
+
         return object : GotoRelatedItem(element, group) {
             override fun getCustomName(): String {
-                // Show the file name and the element() call context
-                val file = element.containingFile
-                return file?.name ?: element.text.take(50)
+                return customName
             }
 
             override fun getCustomContainerName(): String? {
-                // Show the directory path
-                val file = element.containingFile
-                val vFile = file?.virtualFile ?: return null
-
-                // Get a meaningful path (e.g., "Movie" for "templates/Movie/index.php")
-                val parent = vFile.parent ?: return null
-                val grandParent = parent.parent
-
-                return if (grandParent != null && (parent.name == "element" || parent.name == "Element" || parent.name == "Elements")) {
-                    // Element in root: just show "element"
-                    parent.name
-                } else {
-                    // View or nested element: show parent directory
-                    parent.name
-                }
+                return containerName
             }
 
             override fun getCustomIcon(): Icon {
-                // Use appropriate icons based on file type, similar to CakePhpNavigationPresentationProvider
-                val path = element.containingFile?.virtualFile?.path
-                return if (path == null) {
+                // Use pre-computed path to determine icon
+                return if (iconPath == null) {
                     PhpIcons.FUNCTION
-                } else if (path.contains("/Controller/")) {
+                } else if (iconPath.contains("/Controller/")) {
                     CakeIcons.LOGO_SVG
                 } else {
                     PhpIcons.PHP_FILE
                 }
             }
+        }
+    }
+
+    private fun computeCustomName(element: PsiElement): String {
+        // Show the file name and the element() call context
+        val file = element.containingFile
+        return file?.name ?: element.text.take(50)
+    }
+
+    private fun computeContainerName(element: PsiElement): String? {
+        // Show the directory path
+        val file = element.containingFile
+        val vFile = file?.virtualFile ?: return null
+
+        // Get a meaningful path (e.g., "Movie" for "templates/Movie/index.php")
+        val parent = vFile.parent ?: return null
+        val grandParent = parent.parent
+
+        return if (grandParent != null && (parent.name == "element" || parent.name == "Element" || parent.name == "Elements")) {
+            // Element in root: just show "element"
+            parent.name
+        } else {
+            // View or nested element: show parent directory
+            parent.name
         }
     }
 }
