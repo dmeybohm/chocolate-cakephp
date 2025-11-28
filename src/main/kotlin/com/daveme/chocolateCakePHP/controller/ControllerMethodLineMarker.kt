@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerProvider
 import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder
+import com.intellij.codeInsight.navigation.impl.PsiTargetPresentationRenderer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -242,6 +243,7 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
                 .create(AllIcons.Actions.AddFile)
                 .setTargets(emptyTargets)
                 .setTooltipText("Click to create view file")
+                .setTargetRenderer { PsiTargetPresentationRenderer<PsiElement>() }
                 .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, emptyTargets, useAltLabel))
         } else {
             val filesList = files.toList()
@@ -249,6 +251,7 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
                 .create(CakeIcons.LOGO_PNG)
                 .setTooltipText("Click to navigate to view file, Ctrl-Click to create")
                 .setTargets(filesList)
+                .setTargetRenderer { PsiTargetPresentationRenderer<PsiElement>() }
                 .createLineMarkerInfo(element, NavigateToViewPopupHandler(allViewPaths, filesList, useAltLabel))
         }
     }
