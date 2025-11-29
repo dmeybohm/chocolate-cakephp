@@ -50,3 +50,24 @@ Completed full reorganization:
 3. **cake3** - Reorganized into GetTableLocatorTest, StaticTableRegistryGetTableLocatorTest, LocatorAwareTraitTest, StaticTableRegistryGetTest (for deprecated TableRegistry::get() API). TableLocatorGotoDeclarationTest kept as-is.
 
 All tests pass across all versions.
+
+### Session #2
+
+Merged GotoDeclaration tests into the completion test files, eliminating separate `*GotoDeclarationTest.kt` files.
+
+**Final Test Structure:**
+
+| Test File | Contents | cake3 | cake4 | cake5 |
+|-----------|----------|-------|-------|-------|
+| FetchTableTest | completion + goto | - | ✓ | ✓ |
+| GetTableLocatorTest | completion + goto | ✓ | ✓ | ✓ |
+| StaticTableRegistryGetTableLocatorTest | completion + goto | ✓ | ✓ | ✓ |
+| StaticTableRegistryGetTest | completion + goto | ✓ | - | - |
+| LocatorAwareTraitTest | completion only | ✓ | ✓ | ✓ |
+
+**Files deleted:**
+- cake5/FetchTableGotoDeclarationTest.kt
+- cake4/FetchTableGotoDeclarationTest.kt
+- cake3/TableLocatorGotoDeclarationTest.kt
+
+All tests pass across all versions.
