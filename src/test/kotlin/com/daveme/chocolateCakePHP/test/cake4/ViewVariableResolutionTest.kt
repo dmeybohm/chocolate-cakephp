@@ -1,10 +1,15 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.cake4
 
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableASTDataIndexer
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.indexing.FileContentImpl
 
-class ViewVariableResolutionTest : BasePlatformTestCase() {
+class ViewVariableResolutionTest : Cake4BaseTestCase() {
+
+    override fun setUpTestFiles() {
+        myFixture.configureByFiles(
+            "cake4/vendor/cakephp.php"
+        )
+    }
 
     fun `test compact with parameter resolves type correctly`() {
         val controllerCode = """
@@ -20,7 +25,7 @@ class ViewVariableResolutionTest : BasePlatformTestCase() {
         """.trimIndent()
 
         // Create controller file
-        val controllerFile = myFixture.addFileToProject("cake3/src/Controller/TestController.php", controllerCode)
+        val controllerFile = myFixture.addFileToProject("cake4/src4/Controller/TestController.php", controllerCode)
 
         // Index it
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)

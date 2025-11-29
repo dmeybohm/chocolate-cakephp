@@ -1,36 +1,38 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableASTDataIndexer
 import com.daveme.chocolateCakePHP.view.viewvariableindex.VarKind
 import com.daveme.chocolateCakePHP.view.viewvariableindex.SourceKind
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.indexing.FileContentImpl
 
-/**
- * Test for ViewVariableASTDataIndexer to verify AST-based parsing works correctly
- */
-class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
+class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
+
+    override fun setUpTestFiles() {
+        myFixture.configureByFiles(
+            "cake5/vendor/cakephp.php"
+        )
+    }
 
     fun `test AST parsing works correctly`() {
         val controllerCode = """
             <?php
             namespace App\Controller;
-            
+
             use Cake\Controller\Controller;
-            
+
             class MoviesController extends Controller {
                 public function index() {
                     ${'$'}user = "test";
                     ${'$'}title = "Movie Index";
-                    
-                    // Test PAIR case: $this->set('name', ${'$'}value)
+
+                    // Test PAIR case: ${'$'}this->set('name', ${'$'}value)
                     ${'$'}this->set('user', ${'$'}user);
                     ${'$'}this->set('title', ${'$'}title);
-                    
-                    // Test ARRAY case: $this->set(['key' => ${'$'}value])
+
+                    // Test ARRAY case: ${'$'}this->set(['key' => ${'$'}value])
                     ${'$'}this->set(['page' => ${'$'}title]);
-                    
-                    // Test COMPACT case: $this->set(compact('user'))
+
+                    // Test COMPACT case: ${'$'}this->set(compact('user'))
                     ${'$'}this->set(compact('user'));
                 }
             }
@@ -39,17 +41,17 @@ class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
         myFixture.configureByText("MoviesController.php", controllerCode)
         val controllerFile = myFixture.file
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
-        
+
         // Test that indexing works without exceptions
         val indexResult = ViewVariableASTDataIndexer.map(fileContent)
-        
+
         // Verify we get results
         assertFalse("Index result should not be empty", indexResult.isEmpty())
-        
+
         val controllerKey = "Movies:index"
         if (indexResult.containsKey(controllerKey)) {
             val viewVariables = indexResult[controllerKey]!!
-            
+
             // If we found variables, verify their structure
             viewVariables.forEach { (varName, rawVar) ->
                 assertNotNull("Variable name should not be null", varName)
@@ -62,11 +64,11 @@ class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
                 assertFalse("Symbol name should not be empty", rawVar.varHandle.symbolName.isEmpty())
             }
         }
-        
+
         // The main goal is to verify the AST parsing doesn't crash and produces valid data structures
         assertTrue("AST-based parsing completed successfully", true)
     }
-    
+
     fun `test PSI type resolution does not crash`() {
         val controllerCode = """
             <?php
@@ -118,8 +120,7 @@ class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
             }
         """.trimIndent()
 
-        // Use proper CakePHP directory structure: cake3/src/Controller/
-        val controllerFile = myFixture.addFileToProject("cake3/src/Controller/MoviesController.php", controllerCode)
+        val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
         val indexResult = ViewVariableASTDataIndexer.map(fileContent)
@@ -166,7 +167,7 @@ class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
             }
         """.trimIndent()
 
-        val controllerFile = myFixture.addFileToProject("cake3/src/Controller/MoviesController.php", controllerCode)
+        val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
         val indexResult = ViewVariableASTDataIndexer.map(fileContent)
@@ -198,7 +199,7 @@ class ViewVariableASTDataIndexerTest : BasePlatformTestCase() {
             }
         """.trimIndent()
 
-        val controllerFile = myFixture.addFileToProject("cake3/src/Controller/MoviesController.php", controllerCode)
+        val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
         val indexResult = ViewVariableASTDataIndexer.map(fileContent)
