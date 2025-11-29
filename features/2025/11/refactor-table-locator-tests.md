@@ -41,4 +41,12 @@ Reorganize the TableLocator tests into 5 distinct test classes across CakePHP ve
 
 ### Session #1
 
-Starting implementation with cake5 first per CLAUDE.md guidance.
+Completed full reorganization:
+
+1. **cake5** - Reorganized into FetchTableTest, GetTableLocatorTest, StaticTableRegistryGetTableLocatorTest, LocatorAwareTraitTest. Renamed GotoDeclaration test to FetchTableGotoDeclarationTest.
+
+2. **cake4** - Same structure as cake5.
+
+3. **cake3** - Reorganized into GetTableLocatorTest, StaticTableRegistryGetTableLocatorTest, LocatorAwareTraitTest, StaticTableRegistryGetTest (for deprecated TableRegistry::get() API). TableLocatorGotoDeclarationTest kept as-is.
+
+All tests pass across all versions.
