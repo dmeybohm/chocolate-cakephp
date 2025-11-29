@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
-class TableRegistryTest : Cake3BaseTestCase() {
+class StaticTableRegistryGetTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
@@ -20,40 +20,11 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function artist() {
                 TableRegistry::get('Articles')-><caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("myCustomArticleMethod"))
-    }
-
-    fun `test TableLocator get returns methods from the users custom namespace when stored in a variable`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\Locator\LocatorAwareTrait;
-        
-        class LocatorTester {
-            use LocatorAwareTrait;
-        }
-        
-        class MovieController extends Controller
-        {
-            public function artist() {
-                ${'$'}tester = new LocatorTester();
-                ${'$'}locator = ${'$'}tester->getTableLocator();
-                ${'$'}locator->get('Articles')-><caret>
             }
         }
         """.trimIndent())
@@ -72,12 +43,12 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function artist() {
                 ${'$'}articles = TableRegistry::get('Articles');
-                ${'$'}articles-><caret>     
+                ${'$'}articles-><caret>
             }
         }
         """.trimIndent())
@@ -96,7 +67,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function artist() {
@@ -119,7 +90,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
@@ -143,7 +114,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
@@ -167,7 +138,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
+
         class MovieController extends Controller
         {
             public function view(${'$'}id) {
@@ -185,7 +156,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("someArticleMethod"))
     }
 
-    fun `test get returns entity from associated table through TableRegistry and intermediate var1`() {
+    fun `test get returns entity from associated table through TableRegistry and intermediate var`() {
         myFixture.configureByText("MovieController.php", """
         <?php
 
@@ -193,57 +164,7 @@ class TableRegistryTest : Cake3BaseTestCase() {
 
         use Cake\Controller\Controller;
         use Cake\ORM\TableRegistry;
-        
-        class MovieController extends Controller
-        {
-            public function view(${'$'}id) {
-                ${'$'}movies = TableRegistry::get('Movies');
-                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
-                ${'$'}article-><caret>
-            }
-        }
-        """.trimIndent())
 
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("someArticleMethod"))
-    }
-
-    fun `test get returns entity from associated table through TableRegistry and intermediate var2`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\TableRegistry;
-        
-        class MovieController extends Controller
-        {
-            public function view(${'$'}id) {
-                ${'$'}movies = TableRegistry::get('Movies');
-                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
-                ${'$'}article-><caret>
-            }
-        }
-        """.trimIndent())
-
-        myFixture.completeBasic()
-        val result = myFixture.lookupElementStrings
-        assertNotEmpty(result)
-        assertTrue(result!!.contains("someArticleMethod"))
-    }
-
-    fun `test get returns entity from associated table through getTableLocator with intermediate var`() {
-        myFixture.configureByText("MovieController.php", """
-        <?php
-
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-        use Cake\ORM\TableRegistry;
-        
         class MovieController extends Controller
         {
             public function view(${'$'}id) {

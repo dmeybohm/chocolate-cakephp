@@ -1,0 +1,138 @@
+package com.daveme.chocolateCakePHP.test.cake3
+
+class StaticTableRegistryGetTableLocatorTest : Cake3BaseTestCase() {
+
+    override fun setUpTestFiles() {
+        myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/src/Model/Entity/Article.php",
+            "cake3/src/Model/Entity/Movie.php",
+            "cake3/vendor/cakephp.php"
+        )
+    }
+
+    fun `test static TableLocator get returns methods from the users custom namespace`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function artist() {
+                TableRegistry::getTableLocator()->get('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("myCustomArticleMethod"))
+    }
+
+    fun `test TableRegistry static method argument can be autocompleted with quotes`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function artist() {
+                ${'$'}result = TableRegistry::getTableLocator()->get('<caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("Articles"))
+    }
+
+    fun `test get returns entity from associated table through TableRegistry`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}article = TableRegistry::getTableLocator()
+                    ->get('Movies')
+                    ->Articles
+                    ->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    fun `test get returns entity from associated table through TableRegistry and intermediate var1`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}movies = TableRegistry::getTableLocator()->get('Movies');
+                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    fun `test get returns entity from associated table through TableRegistry and intermediate var2`() {
+        myFixture.configureByText("MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function view(${'$'}id) {
+                ${'$'}locator = TableRegistry::getTableLocator();
+                ${'$'}movies = ${'$'}locator->get('Movies')
+                ${'$'}article = ${'$'}movies->Articles->get(${'$'}id);
+                ${'$'}article-><caret>
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotEmpty(result)
+        assertTrue(result!!.contains("someArticleMethod"))
+    }
+}
