@@ -1,11 +1,16 @@
 package com.daveme.chocolateCakePHP.test.cake3
 
+import com.daveme.chocolateCakePHP.model.TableLocatorGotoDeclarationHandler
+import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+
 class StaticTableRegistryGetTableLocatorTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
+            "cake3/src/Controller/MovieController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
+            "cake3/src/Model/Table/MoviesTable.php",
             "cake3/src/Model/Entity/Article.php",
             "cake3/src/Model/Entity/Movie.php",
             "cake3/vendor/cakephp.php"
@@ -134,5 +139,28 @@ class StaticTableRegistryGetTableLocatorTest : Cake3BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotEmpty(result)
         assertTrue(result!!.contains("someArticleMethod"))
+    }
+
+    //
+    // GotoDeclaration tests
+    //
+
+    fun `test goto declaration from TableRegistry getTableLocator get method`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+        use Cake\ORM\TableRegistry;
+
+        class MovieController extends Controller
+        {
+            public function index() {
+                ${'$'}articlesTable = TableRegistry::getTableLocator()->get('<caret>Articles');
+            }
+        }
+        """.trimIndent())
+        val handler = TableLocatorGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToTableClass(handler, "ArticlesTable")
     }
 }
