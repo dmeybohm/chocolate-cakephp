@@ -4,7 +4,7 @@ import com.daveme.chocolateCakePHP.model.TableLocatorGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
-class TableLocatorGotoDeclarationTest : Cake5BaseTestCase() {
+class FetchTableGotoDeclarationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
