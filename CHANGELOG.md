@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Fix plugin name
+- Expand plugin compatibility back to PhpStorm / IntelliJ Ultimate 2023.3.6
+
 ## [1.0.0] - 2025-10-31
 
 ### Added

@@ -65,7 +65,6 @@ intellijPlatform {
 
         ideaVersion {
             sinceBuild = properties("pluginSinceBuild")
-            untilBuild = properties("pluginUntilBuild")
         }
     }
 
@@ -85,7 +84,7 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.2.6")
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2023.2")
         }
         freeArgs = listOf(
             "-mute",
