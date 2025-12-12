@@ -15,7 +15,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import org.jetbrains.annotations.Nls
 import java.util.HashSet
 
 class AssetGotoDeclarationHandler : GotoDeclarationHandler {
@@ -76,7 +75,7 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         return virtualFilesToPsiFiles(project, files).toTypedArray()
     }
 
-    override fun getActionText(context: DataContext): @Nls(capitalization = Nls.Capitalization.Title) String? = null
+    override fun getActionText(context: DataContext): String? = null
 
     fun extractAssetPathFromMethodCall(
         assetDir: AssetDirectory,
