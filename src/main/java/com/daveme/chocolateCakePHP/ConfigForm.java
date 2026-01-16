@@ -2,6 +2,9 @@ package com.daveme.chocolateCakePHP;
 
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
+import com.intellij.util.indexing.FileBasedIndex;
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexServiceKt;
+import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexServiceKt;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -152,6 +155,14 @@ class ConfigForm implements SearchableConfigurable {
     public void apply() {
         Settings settings = Settings.getInstance(project);
 
+        // Capture previous state for comparison
+        boolean wasEnabled = settings.getEnabled();
+        String oldTemplateExt = settings.getCakeTemplateExtension();
+        String oldCake2TemplateExt = settings.getCake2TemplateExtension();
+        String oldAppDir = settings.getAppDirectory();
+        String oldCake2AppDir = settings.getCake2AppDirectory();
+        String oldAppNamespace = settings.getAppNamespace();
+
         // Ensure namespace starts with backslash:
         String namespace = appNamespaceTextField.getText();
         if (
@@ -164,6 +175,35 @@ class ConfigForm implements SearchableConfigurable {
         }
 
         applyToSettings(settings);
+
+        // Check if any indexing-relevant settings changed
+        boolean needsReindex = false;
+
+        // Enable state changed
+        if (wasEnabled != settings.getEnabled()) {
+            needsReindex = true;
+        }
+
+        // Other settings changed (only check if enabled)
+        if (settings.getEnabled()) {
+            if (!oldTemplateExt.equals(settings.getCakeTemplateExtension()) ||
+                !oldCake2TemplateExt.equals(settings.getCake2TemplateExtension()) ||
+                !oldAppDir.equals(settings.getAppDirectory()) ||
+                !oldCake2AppDir.equals(settings.getCake2AppDirectory()) ||
+                !oldAppNamespace.equals(settings.getAppNamespace())) {
+                needsReindex = true;
+            }
+        }
+
+        if (needsReindex) {
+            requestIndexRebuild();
+        }
+    }
+
+    private void requestIndexRebuild() {
+        FileBasedIndex fileIndex = FileBasedIndex.getInstance();
+        fileIndex.requestRebuild(ViewFileIndexServiceKt.getVIEW_FILE_INDEX_KEY());
+        fileIndex.requestRebuild(ViewVariableIndexServiceKt.getVIEW_VARIABLE_INDEX_KEY());
     }
 
 }
