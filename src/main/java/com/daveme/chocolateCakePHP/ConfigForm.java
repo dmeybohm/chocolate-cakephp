@@ -155,8 +155,10 @@ class ConfigForm implements SearchableConfigurable {
     public void apply() {
         Settings settings = Settings.getInstance(project);
 
-        // Capture previous state for comparison
-        boolean wasEnabled = settings.getEnabled();
+        // Capture previous state for comparison - track INDIVIDUAL enable flags
+        boolean wasCake2Enabled = settings.getCake2Enabled();
+        boolean wasCake3Enabled = settings.getCake3Enabled();
+        boolean wasCake3ForceEnabled = settings.getCake3ForceEnabled();
         String oldTemplateExt = settings.getCakeTemplateExtension();
         String oldCake2TemplateExt = settings.getCake2TemplateExtension();
         String oldAppDir = settings.getAppDirectory();
@@ -179,8 +181,10 @@ class ConfigForm implements SearchableConfigurable {
         // Check if any indexing-relevant settings changed
         boolean needsReindex = false;
 
-        // Enable state changed
-        if (wasEnabled != settings.getEnabled()) {
+        // Check individual enable flags changed
+        if (wasCake2Enabled != settings.getCake2Enabled() ||
+            wasCake3Enabled != settings.getCake3Enabled() ||
+            wasCake3ForceEnabled != settings.getCake3ForceEnabled()) {
             needsReindex = true;
         }
 

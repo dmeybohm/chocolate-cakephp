@@ -30,10 +30,12 @@ Detect when plugin settings that affect indexing change, and request a rebuild o
 ### ConfigForm.java Changes
 
 Modified `apply()` to:
-1. Capture relevant settings values before applying changes
+1. Capture individual enable flags (`cake2Enabled`, `cake3Enabled`, `cake3ForceEnabled`) and other settings before applying changes
 2. Apply the new settings
-3. Compare old vs new values
+3. Compare old vs new values - importantly, check individual enable flags rather than the combined `enabled` property
 4. If any indexing-relevant setting changed, call `requestIndexRebuild()`
+
+**Note:** We track individual enable flags rather than just the combined `enabled` property because switching from Cake3-only to Cake2-only (or vice versa) keeps `enabled=true` but requires reindexing due to different indexing behavior.
 
 ### PluginForm.java Changes
 
