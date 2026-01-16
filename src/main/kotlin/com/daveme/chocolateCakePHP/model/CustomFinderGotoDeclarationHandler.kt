@@ -12,7 +12,6 @@ import com.jetbrains.php.lang.PhpLanguage
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import org.jetbrains.annotations.Nls
 
 class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -69,7 +68,7 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         return phpIndex.customFinderMethods(tableTypes, sourceElement.text).toTypedArray()
     }
 
-    override fun getActionText(context: DataContext): @Nls(capitalization = Nls.Capitalization.Title) String? {
+    override fun getActionText(context: DataContext): String? {
         return super<GotoDeclarationHandler>.getActionText(context)
     }
 
