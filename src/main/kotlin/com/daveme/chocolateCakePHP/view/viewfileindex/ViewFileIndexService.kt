@@ -84,6 +84,26 @@ fun lookupControllerFileInfo(controllerFile: VirtualFile, settings: Settings): C
     )
 }
 
+/**
+ * Check if a directory matches a potentially nested cake2AppDirectory path.
+ * For "src/app", verifies the directory is "app" and its parent is "src".
+ */
+private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings): Boolean {
+    val appDirPath = settings.cake2AppDirectory
+    if (!appDirPath.contains("/")) {
+        return directory.name == appDirPath
+    }
+    val pathParts = appDirPath.split("/").reversed()
+    var current: VirtualFile? = directory
+    for (part in pathParts) {
+        if (current == null || current.name != part) {
+            return false
+        }
+        current = current.parent
+    }
+    return true
+}
+
 private fun isCakeTwoController(
     controllerFile: VirtualFile,
     settings: Settings
@@ -97,7 +117,7 @@ private fun isCakeTwoController(
     }
     val topSourceDir = controllerDir.parent ?: return false
     val topDir = topSourceDir.parent ?: return false
-    return topSourceDir.name == settings.cake2AppDirectory &&
+    return matchesCake2AppDirectory(topSourceDir, settings) &&
         !topDir.children.any { it.nameWithoutExtension == "templates" } &&
             !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
