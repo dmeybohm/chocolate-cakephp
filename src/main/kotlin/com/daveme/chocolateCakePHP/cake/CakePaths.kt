@@ -155,25 +155,25 @@ fun templatesDirectoryOfViewFile(
         if (hasCakeFour && parent?.name == "templates") {
             return CakeFourTemplatesDir(parent)
         }
-        else if (hasCakeThree && parent?.name == settings.appDirectory && child.name == "Template") {
+        else if (hasCakeThree && parent != null && matchesAppDirectory(parent, settings) && child.name == "Template") {
             return CakeThreeTemplatesDir(child)
         }
         else if (hasCakeTwo) {
-            if (parent?.name == settings.cake2AppDirectory && child.name == "View") {
+            if (parent != null && matchesCake2AppDirectory(parent, settings) && child.name == "View") {
                 return CakeTwoTemplatesDir(child)
             }
             // plugins:
             if (child.name == "View") {
                 val grandparent = parent?.parent
                 val greatGrandparent = grandparent?.parent
-                if (greatGrandparent != null && greatGrandparent.name == settings.cake2AppDirectory) {
+                if (greatGrandparent != null && matchesCake2AppDirectory(greatGrandparent, settings)) {
                     return CakeTwoTemplatesDir(child)
                 }
             }
             // themes:
             if (child.name == "Themed") {
                 val grandparent = parent?.parent
-                if (grandparent != null && grandparent.name == settings.cake2AppDirectory) {
+                if (grandparent != null && matchesCake2AppDirectory(grandparent, settings)) {
                     return CakeTwoTemplatesDir(child)
                 }
             }
@@ -317,6 +317,52 @@ fun assetDirectoryFromViewFile(
     return AssetDirectory(webroot)
 }
 
+/**
+ * Check if the directory matches the cake2AppDirectory setting.
+ * Handles both simple ("app") and nested ("src/app") paths.
+ * For nested paths, verifies the directory hierarchy from bottom to top.
+ */
+private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings): Boolean {
+    return matchesNestedAppDirectory(directory, settings.cake2AppDirectory)
+}
+
+/**
+ * Check if the directory matches the appDirectory setting (CakePHP 3+).
+ * Handles both simple ("src") and nested ("foo/src") paths.
+ */
+private fun matchesAppDirectory(directory: VirtualFile, settings: Settings): Boolean {
+    return matchesNestedAppDirectory(directory, settings.appDirectory)
+}
+
+/**
+ * Check if a directory matches a potentially nested path.
+ * For "src/app", verifies the directory is "app" and its parent is "src".
+ */
+private fun matchesNestedAppDirectory(directory: VirtualFile, appDirPath: String): Boolean {
+    if (!appDirPath.contains("/")) {
+        // Simple case: just compare the directory name
+        return directory.name == appDirPath
+    }
+    // Nested case: verify the path from bottom to top
+    val pathParts = appDirPath.split("/").reversed()
+    var current: VirtualFile? = directory
+    for (part in pathParts) {
+        if (current == null || current.name != part) {
+            return false
+        }
+        current = current.parent
+    }
+    return true
+}
+
+/**
+ * Find a child directory by path, supporting nested paths like "foo/src".
+ * Uses findRelativeFile which already handles path splitting.
+ */
+private fun findNestedChild(parent: VirtualFile, path: String): VirtualFile? {
+    return findRelativeFile(parent, path)
+}
+
 private fun appOrSrcDirectoryFromSourceFile(
     settings: Settings,
     dir: VirtualFile?
@@ -324,13 +370,13 @@ private fun appOrSrcDirectoryFromSourceFile(
     var child: VirtualFile? = dir
     while (child != null) {
         if (settings.cake3Enabled) {
-            val appDirChild = child.findChild(settings.appDirectory)
+            val appDirChild = findNestedChild(child, settings.appDirectory)
             if (appDirChild != null) {
                 return SrcDirectory(appDirChild)
             }
         }
         if (settings.cake2Enabled) {
-            if (child.name == settings.cake2AppDirectory) {
+            if (matchesCake2AppDirectory(child, settings)) {
                 return AppDirectory(child)
             }
         }
