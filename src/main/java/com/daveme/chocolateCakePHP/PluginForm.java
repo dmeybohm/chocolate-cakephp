@@ -9,12 +9,16 @@ import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.table.TableView;
+import com.intellij.util.indexing.FileBasedIndex;
 import com.intellij.util.ui.ElementProducer;
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexServiceKt;
+import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexServiceKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.daveme.chocolateCakePHP.SettingsKt.*;
 
@@ -220,7 +224,29 @@ public class PluginForm implements SearchableConfigurable {
     @Override
     public void apply() throws ConfigurationException {
         Settings settings = Settings.getInstance(project);
+
+        // Capture previous plugin configs
+        List<PluginConfig> oldPluginConfigs = settings.getPluginConfigs();
+        List<ThemeConfig> oldThemeConfigs = settings.getThemeConfigs();
+
         applyToSettings(settings);
+
+        // Check if plugin/theme configs changed
+        if (settings.getEnabled()) {
+            List<PluginConfig> newPluginConfigs = settings.getPluginConfigs();
+            List<ThemeConfig> newThemeConfigs = settings.getThemeConfigs();
+
+            if (!oldPluginConfigs.equals(newPluginConfigs) ||
+                !oldThemeConfigs.equals(newThemeConfigs)) {
+                requestIndexRebuild();
+            }
+        }
+    }
+
+    private void requestIndexRebuild() {
+        FileBasedIndex fileIndex = FileBasedIndex.getInstance();
+        fileIndex.requestRebuild(ViewFileIndexServiceKt.getVIEW_FILE_INDEX_KEY());
+        fileIndex.requestRebuild(ViewVariableIndexServiceKt.getVIEW_VARIABLE_INDEX_KEY());
     }
 
 }
