@@ -102,7 +102,7 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             if (controllerClassNames.size > 0) {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
-                val modelSubclasses = phpIndex.getModelSubclasses(settings)
+                val modelSubclasses = phpIndex.getModelSubclasses(fieldReference.project, settings)
                 completionResultSet.completeFromClasses(
                         modelSubclasses,
                         removeFromEnd = "Table",
@@ -120,7 +120,7 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             val fieldName = fieldReferenceChild.name
 
             // Check if "child" (preceding $this->FieldReference) is in the list of model subclasses
-            val modelClasses = phpIndex.getModelSubclasses(settings)
+            val modelClasses = phpIndex.getModelSubclasses(fieldReferenceChild.project, settings)
             val fieldStr = "\\" + fieldName
             if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
                 return
