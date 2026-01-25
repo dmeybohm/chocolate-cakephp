@@ -171,9 +171,15 @@ fun templatesDirectoryOfViewFile(
                 }
             }
             // themes:
-            if (child.name == "Themed") {
-                val grandparent = parent?.parent
-                if (grandparent != null && matchesCake2AppDirectory(grandparent, settings)) {
+            // For themed views like app/View/Themed/MyTheme/Movie/view.ctp,
+            // the templates directory should be the theme directory (MyTheme),
+            // not the Themed directory itself.
+            if (parent?.name == "Themed") {
+                val grandparent = parent.parent  // View
+                val greatGrandparent = grandparent?.parent  // app
+                if (grandparent != null && grandparent.name == "View" &&
+                    greatGrandparent != null && matchesCake2AppDirectory(greatGrandparent, settings)) {
+                    // child is the theme directory (e.g., "MyTheme")
                     return CakeTwoTemplatesDir(child)
                 }
             }
