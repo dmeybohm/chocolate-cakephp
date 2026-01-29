@@ -1,8 +1,14 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
-import com.daveme.chocolateCakePHP.view.ViewToControllerGotoRelatedProvider
-import com.jetbrains.php.lang.psi.elements.Method
+import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
+/**
+ * Tests that themed views in CakePHP 2 correctly resolve to their controllers.
+ *
+ * The fix ensures that templatesDirectoryOfViewFile() returns the theme directory
+ * (e.g., "MyTheme") rather than the "Themed" directory, allowing proper view-to-controller
+ * resolution for themed views.
+ */
 class ThemedViewToControllerTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
@@ -13,39 +19,39 @@ class ThemedViewToControllerTest : Cake2BaseTestCase() {
         )
     }
 
-    fun `test themed view navigates to controller method`() {
-        // Open the themed view file
-        val viewFile = myFixture.configureByFile("cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp")
+    fun `test themed view receives variables from controller`() {
+        // The controller's themed_index() method sets 'title' and 'subtitle' variables
+        // If the themed view correctly resolves to its controller, these variables should be available
+        myFixture.configureByFilePathAndText("cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
 
-        // Get any element in the view file
-        val element = viewFile.firstChild
-        assertNotNull("View file should have content", element)
-
-        // Get related items from the provider
-        val provider = ViewToControllerGotoRelatedProvider()
-        val items = provider.getItems(element!!)
-
-        // Should find the themed_index() method
-        assertTrue("Should find at least one related controller method, but found: ${items.size}", items.isNotEmpty())
-
-        // Verify we found the correct method
-        val methods = items.mapNotNull { (it.element as? Method)?.name }
-        assertTrue("Should contain 'themed_index' method, found: $methods", methods.contains("themed_index"))
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Completion results should not be null - themed view should resolve to controller", result)
+        assertTrue("Should contain \$title variable from controller, but got: $result",
+                   result!!.contains("\$title"))
+        assertTrue("Should contain \$subtitle variable from controller, but got: $result",
+                   result.contains("\$subtitle"))
     }
 
-    fun `test themed view related items are grouped under Controllers`() {
-        val viewFile = myFixture.configureByFile("cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp")
-        val element = viewFile.firstChild
-        assertNotNull(element)
+    fun `test themed view variable has correct type`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
 
-        val provider = ViewToControllerGotoRelatedProvider()
-        val items = provider.getItems(element!!)
+        val elements = myFixture.lookupElements
+        assertNotNull("Lookup elements should not be null", elements)
 
-        assertTrue("Should have items", items.isNotEmpty())
+        val titleElement = elements!!.find { it.lookupString == "\$title" }
+        assertNotNull("Should find \$title in lookup elements", titleElement)
 
-        // Verify all items are in the "Controllers" group
-        items.forEach { item ->
-            assertEquals("Items should be in 'Controllers' group", "Controllers", item.group)
-        }
+        val presentation = com.intellij.codeInsight.lookup.LookupElementPresentation()
+        titleElement!!.renderElement(presentation)
+
+        assertEquals("string", presentation.typeText)
     }
 }
