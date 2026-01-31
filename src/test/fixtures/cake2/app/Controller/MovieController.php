@@ -77,4 +77,12 @@ class MovieController extends AppController
 		$this->set(['title' => 'Test Title', 'count' => 42, 'total' => $count]);
 	}
 
+	public function themed_index()
+	{
+		// This action uses the themed view
+		$this->set('title', 'Themed Index');
+		// Add a second variable to ensure completion popup appears in tests
+		$this->set('subtitle', 'My Theme');
+	}
+
 }
