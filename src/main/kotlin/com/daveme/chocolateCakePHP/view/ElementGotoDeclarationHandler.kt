@@ -48,8 +48,25 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return PsiElement.EMPTY_ARRAY
 
-        val allViewPaths = allViewPathsFromElementPath(allTemplatesPaths, settings, contents)
-        val files = allViewPathsToFiles(project, allViewPaths)
+        // Parse plugin prefix from element path
+        val pluginResourcePath = parsePluginResourcePath(contents)
+
+        val allViewPaths = if (pluginResourcePath.pluginName != null) {
+            // Plugin-prefixed element: look only in the plugin's template directory
+            val pluginConfig = settings.findPluginConfigByName(pluginResourcePath.pluginName)
+                ?: return PsiElement.EMPTY_ARRAY
+            allViewPathsFromPluginElementPath(
+                allTemplatesPaths,
+                settings,
+                pluginResourcePath.resourcePath,
+                pluginConfig
+            )
+        } else {
+            // No plugin prefix: search all template paths as before
+            allViewPathsFromElementPath(allTemplatesPaths, settings, contents)
+        }
+
+        val files = viewFilesFromAllViewPaths(project, allTemplatesPaths, allViewPaths)
 
         return files.toTypedArray()
     }
