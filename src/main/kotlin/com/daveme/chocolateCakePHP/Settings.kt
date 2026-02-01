@@ -94,6 +94,23 @@ data class CakeAutoDetectedValues(
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
 
+/**
+ * Finds a plugin config by its plugin name.
+ *
+ * The plugin name is matched against:
+ * - The exact namespace (without leading backslash)
+ * - The last segment of the namespace (e.g., "MyPlugin" matches "\App\MyPlugin")
+ *
+ * @param pluginName The plugin name to search for (e.g., "MyPlugin")
+ * @return The matching PluginConfig, or null if not found
+ */
+fun Settings.findPluginConfigByName(pluginName: String): PluginConfig? {
+    return pluginConfigs.find { config ->
+        val cleanNamespace = config.namespace.removePrefix("\\")
+        cleanNamespace == pluginName || cleanNamespace.endsWith("\\$pluginName")
+    }
+}
+
 @Service(Service.Level.PROJECT)
 class CakePhpAutoDetector(val project: Project)
 {

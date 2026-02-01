@@ -91,12 +91,31 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
-            settings,
-            actionNames
-        )
+        // Check if the template path has a plugin prefix
+        val templatePath = actionNames.defaultActionName.path
+        val pluginResourcePath = parsePluginResourcePath(templatePath)
+
+        val allViewPaths = if (pluginResourcePath.pluginName != null) {
+            // Plugin-prefixed template: look only in the plugin's template directory
+            val pluginConfig = settings.findPluginConfigByName(pluginResourcePath.pluginName)
+                ?: return null
+            val pluginActionName = actionNameFromPath(pluginResourcePath.resourcePath)
+            val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+            allViewPathsFromPluginTemplate(
+                allTemplatesPaths,
+                settings,
+                pluginActionNames,
+                pluginConfig
+            )
+        } else {
+            allViewPathsFromController(
+                controllerPath,
+                allTemplatesPaths,
+                settings,
+                actionNames
+            )
+        }
+
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
             allTemplatesPaths = allTemplatesPaths,
@@ -125,8 +144,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Get the assigned view name
         val viewName = stringLiteral.contents
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
 
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
@@ -138,12 +155,32 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
-            settings,
-            actionNames
-        )
+        // Check if the template path has a plugin prefix
+        val pluginResourcePath = parsePluginResourcePath(viewName)
+
+        val allViewPaths = if (pluginResourcePath.pluginName != null) {
+            // Plugin-prefixed template: look only in the plugin's template directory
+            val pluginConfig = settings.findPluginConfigByName(pluginResourcePath.pluginName)
+                ?: return null
+            val pluginActionName = actionNameFromPath(pluginResourcePath.resourcePath)
+            val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+            allViewPathsFromPluginTemplate(
+                allTemplatesPaths,
+                settings,
+                pluginActionNames,
+                pluginConfig
+            )
+        } else {
+            val actionName = actionNameFromPath(viewName)
+            val actionNames = ActionNames(defaultActionName = actionName)
+            allViewPathsFromController(
+                controllerPath,
+                allTemplatesPaths,
+                settings,
+                actionNames
+            )
+        }
+
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
             allTemplatesPaths = allTemplatesPaths,
@@ -246,9 +283,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
-
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             containingFile
@@ -259,12 +293,32 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
-            settings,
-            actionNames
-        )
+        // Check if the template path has a plugin prefix
+        val pluginResourcePath = parsePluginResourcePath(viewName)
+
+        val allViewPaths = if (pluginResourcePath.pluginName != null) {
+            // Plugin-prefixed template: look only in the plugin's template directory
+            val pluginConfig = settings.findPluginConfigByName(pluginResourcePath.pluginName)
+                ?: return null
+            val pluginActionName = actionNameFromPath(pluginResourcePath.resourcePath)
+            val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+            allViewPathsFromPluginTemplate(
+                allTemplatesPaths,
+                settings,
+                pluginActionNames,
+                pluginConfig
+            )
+        } else {
+            val actionName = actionNameFromPath(viewName)
+            val actionNames = ActionNames(defaultActionName = actionName)
+            allViewPathsFromController(
+                controllerPath,
+                allTemplatesPaths,
+                settings,
+                actionNames
+            )
+        }
+
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
             allTemplatesPaths = allTemplatesPaths,
@@ -309,9 +363,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val controllerPath = controllerPathFromControllerFile(virtualFile)
             ?: return null
 
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
-
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             containingFile
@@ -322,12 +373,32 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
-            settings,
-            actionNames
-        )
+        // Check if the template path has a plugin prefix
+        val pluginResourcePath = parsePluginResourcePath(viewName)
+
+        val allViewPaths = if (pluginResourcePath.pluginName != null) {
+            // Plugin-prefixed template: look only in the plugin's template directory
+            val pluginConfig = settings.findPluginConfigByName(pluginResourcePath.pluginName)
+                ?: return null
+            val pluginActionName = actionNameFromPath(pluginResourcePath.resourcePath)
+            val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+            allViewPathsFromPluginTemplate(
+                allTemplatesPaths,
+                settings,
+                pluginActionNames,
+                pluginConfig
+            )
+        } else {
+            val actionName = actionNameFromPath(viewName)
+            val actionNames = ActionNames(defaultActionName = actionName)
+            allViewPathsFromController(
+                controllerPath,
+                allTemplatesPaths,
+                settings,
+                actionNames
+            )
+        }
+
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
             allTemplatesPaths = allTemplatesPaths,
@@ -395,4 +466,3 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
     override fun getActionText(dataContext: DataContext): String? = null
 }
-

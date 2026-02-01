@@ -1,10 +1,12 @@
 package com.daveme.chocolateCakePHP.view
 
+import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.findRelativeFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -100,29 +102,67 @@ class AssetCompletionContributor : CompletionContributor() {
             }
 
             // Also scan plugin and theme assets if configured
-            val projectDir = project.guessProjectDir()
-            if (projectDir != null) {
+            // Use root directory from view file context to resolve plugin paths correctly
+            val rootDir = rootDirectoryFromViewFile(project, settings, virtualFile)
+            if (rootDir != null) {
                 for (config in settings.pluginAndThemeConfigs) {
                     val pluginWebrootPath = "${config.pluginPath}/${config.assetPath}/$subdirectory"
-                    val pluginWebroot = projectDir.findFileByRelativePath(pluginWebrootPath)
+                    val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
                     if (pluginWebroot != null) {
+                        // Extract plugin name from namespace (for PluginConfig) or use path for themes
+                        val pluginName = when (config) {
+                            is PluginConfig -> extractPluginNameFromNamespace(config.namespace)
+                            else -> null
+                        }
+
                         for (file in pluginWebroot.children) {
                             if (!file.isDirectory && !file.name.startsWith(".")) {
-                                val displayName = if (stripExtension && file.name.endsWith(extension)) {
+                                val baseName = if (stripExtension && file.name.endsWith(extension)) {
                                     file.name.substring(0, file.name.length - extension.length)
                                 } else {
                                     file.name
                                 }
 
+                                // For plugins, create completion with plugin prefix (e.g., "MyPlugin.stylesheet")
+                                // For themes (no pluginName), use just the base name
+                                val displayName = if (pluginName != null) {
+                                    "$pluginName.$baseName"
+                                } else {
+                                    baseName
+                                }
+
                                 val lookupElement = LookupElementBuilder.create(displayName as Any)
                                     .withIcon(file.fileType.icon)
                                     .withTypeText(file.name)
+                                    .withTailText(if (pluginName != null) " (plugin)" else null, true)
 
                                 result.addElement(lookupElement)
                             }
                         }
                     }
                 }
+            }
+        }
+
+        /**
+         * Extracts the plugin name from a namespace.
+         *
+         * Examples:
+         * - "\MyPlugin" -> "MyPlugin"
+         * - "\App\MyPlugin" -> "MyPlugin"
+         * - "MyPlugin" -> "MyPlugin"
+         * - "" -> null
+         */
+        private fun extractPluginNameFromNamespace(namespace: String): String? {
+            if (namespace.isEmpty()) {
+                return null
+            }
+            val cleanNamespace = namespace.removePrefix("\\")
+            val lastBackslash = cleanNamespace.lastIndexOf('\\')
+            return if (lastBackslash >= 0) {
+                cleanNamespace.substring(lastBackslash + 1)
+            } else {
+                cleanNamespace
             }
         }
     }
