@@ -3,12 +3,15 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.AssetDirectory
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.parseAndLookupPlugin
+import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -62,13 +65,20 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             return PsiElement.EMPTY_ARRAY
         }
 
+        val viewFile = sourceElement.containingFile.virtualFile
         val assetDir = assetDirectoryFromViewFile(
             sourceElement.project,
             settings,
-            sourceElement.containingFile.virtualFile
+            viewFile
         ) ?: return null
-        val virtualFile = extractAssetPathFromMethodCall(assetDir, method, stringLiteralArg)
-            ?: return null
+        val virtualFile = extractAssetPathFromMethodCall(
+            project,
+            settings,
+            viewFile,
+            assetDir,
+            method,
+            stringLiteralArg
+        ) ?: return PsiElement.EMPTY_ARRAY
 
         val files = HashSet<VirtualFile>()
         files.add(virtualFile)
@@ -78,6 +88,9 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getActionText(context: DataContext): String? = null
 
     fun extractAssetPathFromMethodCall(
+        project: Project,
+        settings: Settings,
+        viewFile: VirtualFile,
         assetDir: AssetDirectory,
         method: MethodReference,
         stringArg: StringLiteralExpression
@@ -89,6 +102,34 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
             else -> return null
         }
         val extension = if (prefix == "img") "" else ".${prefix}"
-        return findRelativeFile(assetDir.directory, "${prefix}/${stringArg.contents}${extension}")
+
+        val assetPath = stringArg.contents
+        val (pluginResourcePath, pluginConfig) = parseAndLookupPlugin(assetPath, settings)
+
+        // If there's a valid plugin prefix, resolve from plugin's webroot
+        if (pluginConfig != null) {
+            // This is a valid plugin prefix - resolve from plugin's webroot
+            // Get the root directory from the view file's context
+            // This ensures we resolve relative to the correct root (e.g., cake5/ in tests)
+            val rootDir = rootDirectoryFromViewFile(project, settings, viewFile) ?: return null
+            val pluginWebrootPath = "${pluginConfig.pluginPath}/${pluginConfig.assetPath}"
+            val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
+            if (pluginWebroot != null) {
+                val pluginAssetFile = findRelativeFile(
+                    pluginWebroot,
+                    "${prefix}/${pluginResourcePath.resourcePath}${extension}"
+                )
+                if (pluginAssetFile != null) {
+                    return pluginAssetFile
+                }
+            }
+            // Plugin exists but asset not found - don't fall back to main directory
+            return null
+        }
+        // Plugin name not recognized (or no plugin prefix) - fall through to treat as normal path
+        // (e.g., "pluginIcon.svg" where "pluginIcon" is not a plugin name)
+
+        // No plugin prefix or unrecognized plugin name - use main asset directory
+        return findRelativeFile(assetDir.directory, "${prefix}/${assetPath}${extension}")
     }
 }

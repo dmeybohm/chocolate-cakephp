@@ -41,6 +41,9 @@ interface ThemeOrPluginConfig {
 data class PluginConfig(
 
     @Property
+    val pluginName: String = "",
+
+    @Property
     val namespace: String = "",
 
     @Property
@@ -51,7 +54,25 @@ data class PluginConfig(
 
     @Property
     override val assetPath: String = "webroot",
-) : ThemeOrPluginConfig {}
+) : ThemeOrPluginConfig
+
+/**
+ * Returns the effective plugin name for this configuration.
+ *
+ * If pluginName is set, it is returned directly. Otherwise, for backwards
+ * compatibility, the plugin name is derived from the namespace by taking
+ * the last segment (e.g., "\Vendor\MyPlugin" -> "MyPlugin").
+ *
+ * @return The plugin name to use for CakePHP dot notation lookups
+ */
+fun PluginConfig.effectivePluginName(): String {
+    if (pluginName.isNotEmpty()) {
+        return pluginName
+    }
+    // Backwards compat: derive from namespace
+    val cleanNamespace = namespace.removePrefix("\\")
+    return cleanNamespace.substringAfterLast("\\", cleanNamespace)
+}
 
 @Tag("ThemeConfig")
 data class ThemeConfig (
@@ -93,6 +114,19 @@ data class CakeAutoDetectedValues(
     val namespace: String = DEFAULT_NAMESPACE,
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
+
+/**
+ * Finds a plugin configuration by its CakePHP plugin name.
+ *
+ * The plugin name is the identifier used in CakePHP dot notation
+ * (e.g., "MyPlugin" in "$this->element('MyPlugin.sidebar')").
+ *
+ * @param pluginName The plugin name to search for
+ * @return The matching PluginConfig, or null if not found
+ */
+fun Settings.findPluginConfigByName(pluginName: String): PluginConfig? {
+    return pluginConfigs.find { it.effectivePluginName() == pluginName }
+}
 
 @Service(Service.Level.PROJECT)
 class CakePhpAutoDetector(val project: Project)

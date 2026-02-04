@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.cake
 import com.daveme.chocolateCakePHP.PluginConfig
 
 data class PluginEntry(
+    var pluginName: String,
     var namespace: String,
     var pluginPath: String,
     var assetPath: String = "webroot",
@@ -12,6 +13,7 @@ data class PluginEntry(
         @JvmStatic
         fun fromPluginConfig(pluginConfig: PluginConfig): PluginEntry {
             return PluginEntry(
+                pluginName = pluginConfig.pluginName,
                 namespace = pluginConfig.namespace,
                 pluginPath = pluginConfig.pluginPath,
                 assetPath = pluginConfig.assetPath,
@@ -22,6 +24,7 @@ data class PluginEntry(
 
     fun toPluginConfig(): PluginConfig {
         return PluginConfig(
+            pluginName = pluginName,
             namespace = namespace,
             pluginPath = pluginPath,
             assetPath = assetPath,
