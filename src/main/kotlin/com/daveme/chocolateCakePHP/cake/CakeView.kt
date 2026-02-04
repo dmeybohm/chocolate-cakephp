@@ -48,6 +48,22 @@ fun parsePluginResourcePath(path: String): PluginResourcePath {
     }
 }
 
+/**
+ * Parses a plugin resource path and looks up the plugin config if present.
+ * Returns a pair of (PluginResourcePath, PluginConfig?) where the config is
+ * non-null only if a valid plugin prefix was found and matched.
+ */
+fun parseAndLookupPlugin(
+    path: String,
+    settings: Settings
+): Pair<PluginResourcePath, PluginConfig?> {
+    val pluginResourcePath = parsePluginResourcePath(path)
+    val pluginConfig = pluginResourcePath.pluginName?.let {
+        settings.findPluginConfigByName(it)
+    }
+    return Pair(pluginResourcePath, pluginConfig)
+}
+
 data class TemplatesDirWithPath(
     val templatesDir: TemplatesDir,
     val templatesPath: String
