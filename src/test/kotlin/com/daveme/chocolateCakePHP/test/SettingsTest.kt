@@ -1,7 +1,9 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.CakePhpAutoDetector
+import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.testFramework.HeavyPlatformTestCase
@@ -64,6 +66,55 @@ class SettingsTest() : HeavyPlatformTestCase() {
         // Verify that CakePHP was detected
         assertTrue("CakePHP should be detected after composer.json creation", newValues.cake3OrLaterPresent)
         assertEquals("src", newValues.appDirectory)
+    }
+
+    fun `test findPluginConfigByName exact match has priority`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(namespace = "\\Vendor\\Blog", pluginPath = "plugins/VendorBlog"),
+            PluginConfig(namespace = "Blog", pluginPath = "plugins/Blog")
+        )
+
+        // Exact match should win even though it's second in the list
+        val result = settings.findPluginConfigByName("Blog")
+        assertNotNull(result)
+        assertEquals("Blog", result!!.namespace)
+        assertEquals("plugins/Blog", result.pluginPath)
+    }
+
+    fun `test findPluginConfigByName suffix match works`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(namespace = "\\Vendor\\MyPlugin", pluginPath = "plugins/MyPlugin")
+        )
+
+        val result = settings.findPluginConfigByName("MyPlugin")
+        assertNotNull(result)
+        assertEquals("\\Vendor\\MyPlugin", result!!.namespace)
+    }
+
+    fun `test findPluginConfigByName multiple suffix matches returns first`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(namespace = "\\Vendor\\Foo\\Blog", pluginPath = "plugins/FooBlog"),
+            PluginConfig(namespace = "\\Vendor\\Bar\\Blog", pluginPath = "plugins/BarBlog")
+        )
+
+        // First configured plugin should win when multiple suffix matches exist
+        val result = settings.findPluginConfigByName("Blog")
+        assertNotNull(result)
+        assertEquals("\\Vendor\\Foo\\Blog", result!!.namespace)
+        assertEquals("plugins/FooBlog", result.pluginPath)
+    }
+
+    fun `test findPluginConfigByName returns null when no match`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(namespace = "\\Vendor\\MyPlugin", pluginPath = "plugins/MyPlugin")
+        )
+
+        val result = settings.findPluginConfigByName("NonExistent")
+        assertNull(result)
     }
 
 }
