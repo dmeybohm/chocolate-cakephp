@@ -3,7 +3,6 @@ package com.daveme.chocolateCakePHP
 import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -42,6 +41,9 @@ interface ThemeOrPluginConfig {
 data class PluginConfig(
 
     @Property
+    val pluginName: String = "",
+
+    @Property
     val namespace: String = "",
 
     @Property
@@ -52,7 +54,25 @@ data class PluginConfig(
 
     @Property
     override val assetPath: String = "webroot",
-) : ThemeOrPluginConfig {}
+) : ThemeOrPluginConfig
+
+/**
+ * Returns the effective plugin name for this configuration.
+ *
+ * If pluginName is set, it is returned directly. Otherwise, for backwards
+ * compatibility, the plugin name is derived from the namespace by taking
+ * the last segment (e.g., "\Vendor\MyPlugin" -> "MyPlugin").
+ *
+ * @return The plugin name to use for CakePHP dot notation lookups
+ */
+fun PluginConfig.effectivePluginName(): String {
+    if (pluginName.isNotEmpty()) {
+        return pluginName
+    }
+    // Backwards compat: derive from namespace
+    val cleanNamespace = namespace.removePrefix("\\")
+    return cleanNamespace.substringAfterLast("\\", cleanNamespace)
+}
 
 @Tag("ThemeConfig")
 data class ThemeConfig (
@@ -96,40 +116,16 @@ data class CakeAutoDetectedValues(
 )
 
 /**
- * Finds a plugin configuration by name.
+ * Finds a plugin configuration by its CakePHP plugin name.
  *
- * Matching precedence:
- * 1. Exact match on the full namespace (without leading backslash)
- * 2. Suffix match on the last namespace segment (e.g., "MyPlugin" matches "\Vendor\MyPlugin")
+ * The plugin name is the identifier used in CakePHP dot notation
+ * (e.g., "MyPlugin" in "$this->element('MyPlugin.sidebar')").
  *
- * If multiple plugins match by suffix (e.g., both "\Vendor\Foo\Blog" and "\Vendor\Bar\Blog"
- * matching "Blog"), the first configured plugin wins and a debug message is logged.
- *
- * @param pluginName The plugin name to search for (e.g., "MyPlugin")
+ * @param pluginName The plugin name to search for
  * @return The matching PluginConfig, or null if not found
  */
 fun Settings.findPluginConfigByName(pluginName: String): PluginConfig? {
-    // First, try exact match (highest priority)
-    val exactMatch = pluginConfigs.find { config ->
-        config.namespace.removePrefix("\\") == pluginName
-    }
-    if (exactMatch != null) {
-        return exactMatch
-    }
-
-    // Fall back to suffix match
-    val suffixMatches = pluginConfigs.filter { config ->
-        config.namespace.removePrefix("\\").endsWith("\\$pluginName")
-    }
-
-    if (suffixMatches.size > 1) {
-        thisLogger().debug(
-            "Multiple plugins match suffix '$pluginName': ${suffixMatches.map { it.namespace }}. " +
-            "Using first configured: ${suffixMatches.first().namespace}"
-        )
-    }
-
-    return suffixMatches.firstOrNull()
+    return pluginConfigs.find { it.effectivePluginName() == pluginName }
 }
 
 @Service(Service.Level.PROJECT)

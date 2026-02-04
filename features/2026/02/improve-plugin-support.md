@@ -94,3 +94,34 @@ Created `PluginSupportTest.kt` with 11 test cases covering:
 - Implemented path resolution fix across all affected handlers
 - Fixed edge case where filenames with dots (e.g., `pluginIcon.svg`) were incorrectly parsed as plugin prefixes
 - All 571 tests pass including 11 new plugin support tests
+
+### Session #2 (2026-02) - Add Explicit Plugin Name Field
+
+**Problem**: The original `PluginConfig` used suffix matching on namespace to resolve plugin names. This was backwards from how CakePHP works - plugins have an explicit short name used in:
+- `bin/cake plugin load MyPluginName`
+- Dot notation: `$this->element('MyPluginName.sidebar')`
+- `vendor/cakephp-plugins.php`: `'DebugKit' => $vendorDir . '/cakephp/debug_kit/'`
+
+**Solution**: Added explicit `pluginName` field with backwards compatibility.
+
+**Changes**:
+1. **Settings.kt**:
+   - Added `pluginName` field to `PluginConfig` data class
+   - Added `effectivePluginName()` extension function for backwards compat (derives from namespace if pluginName is empty)
+   - Simplified `findPluginConfigByName()` to use exact match on `effectivePluginName()`
+
+2. **PluginEntry.kt**:
+   - Added `pluginName` field to the UI model class
+   - Updated `fromPluginConfig()` and `toPluginConfig()` conversions
+
+3. **EditPluginEntryDialog.java/form**:
+   - Added "Plugin Name" field as first input (with tooltip explaining dot notation usage)
+   - Updated namespace label to "Plugin Namespace (Optional)"
+   - Focus now defaults to Plugin Name field
+
+4. **Tests**:
+   - Added 5 new `effectivePluginName()` tests verifying derivation logic
+   - Updated `findPluginConfigByName()` tests to cover new behavior and backwards compat
+   - Updated `Cake3BaseTestCase`, `Cake4BaseTestCase`, and `PluginSupportTest` to use explicit `pluginName`
+
+**Backwards Compatibility**: Existing configurations with only `namespace` set continue to work - `effectivePluginName()` derives the plugin name from the last segment of the namespace.

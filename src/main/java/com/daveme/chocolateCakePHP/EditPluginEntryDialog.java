@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 
 public class EditPluginEntryDialog extends DialogWrapper {
     private JPanel contentPane;
+    private JLabel pluginNameLabel;
+    private JTextField pluginNameTextField;
     private JLabel namespaceLabel;
     private JTextField namespaceTextField;
     private JTextField pluginPathTextField;
@@ -31,6 +33,7 @@ public class EditPluginEntryDialog extends DialogWrapper {
 
         this.project = project;
 
+        pluginNameTextField.setText(initialPluginConfig.getPluginName());
         namespaceTextField.setText(initialPluginConfig.getNamespace());
         pluginPathTextField.setText(initialPluginConfig.getPluginPath());
         sourcePathTextField.setText(initialPluginConfig.getSrcPath());
@@ -55,7 +58,7 @@ public class EditPluginEntryDialog extends DialogWrapper {
 
     @Override
     public @Nullable JComponent getPreferredFocusedComponent() {
-        return namespaceTextField;
+        return pluginNameTextField;
     }
 
     public JPanel getContentPane() {
@@ -71,9 +74,10 @@ public class EditPluginEntryDialog extends DialogWrapper {
 
     public PluginConfig getPluginConfig() {
         return new PluginConfig(
+            pluginNameTextField.getText(),
             namespaceTextField.getText(),
-            pluginPathTextField.getText(),
             sourcePathTextField.getText(),
+            pluginPathTextField.getText(),
             assetsPathTextField.getText()
         );
     }

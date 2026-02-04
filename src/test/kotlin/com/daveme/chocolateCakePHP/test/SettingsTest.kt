@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.test
 import com.daveme.chocolateCakePHP.CakePhpAutoDetector
 import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.project.guessProjectDir
@@ -68,53 +69,95 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertEquals("src", newValues.appDirectory)
     }
 
-    fun `test findPluginConfigByName exact match has priority`() {
+    // ========== effectivePluginName() Tests ==========
+
+    fun `test effectivePluginName returns pluginName when set`() {
+        val config = PluginConfig(pluginName = "MyPlugin", namespace = "\\Vendor\\SomethingElse")
+        assertEquals("MyPlugin", config.effectivePluginName())
+    }
+
+    fun `test effectivePluginName derives from namespace when pluginName is empty`() {
+        val config = PluginConfig(namespace = "\\Vendor\\MyPlugin")
+        assertEquals("MyPlugin", config.effectivePluginName())
+    }
+
+    fun `test effectivePluginName handles namespace without backslash prefix`() {
+        val config = PluginConfig(namespace = "Vendor\\MyPlugin")
+        assertEquals("MyPlugin", config.effectivePluginName())
+    }
+
+    fun `test effectivePluginName handles simple namespace`() {
+        val config = PluginConfig(namespace = "MyPlugin")
+        assertEquals("MyPlugin", config.effectivePluginName())
+    }
+
+    fun `test effectivePluginName handles empty namespace`() {
+        val config = PluginConfig(namespace = "")
+        assertEquals("", config.effectivePluginName())
+    }
+
+    // ========== findPluginConfigByName() Tests ==========
+
+    fun `test findPluginConfigByName finds by pluginName`() {
         val settings = Settings.getInstance(project)
         settings.state.pluginConfigs = listOf(
-            PluginConfig(namespace = "\\Vendor\\Blog", pluginPath = "plugins/VendorBlog"),
+            PluginConfig(pluginName = "Blog", namespace = "\\Vendor\\BlogPlugin", pluginPath = "plugins/Blog")
+        )
+
+        val result = settings.findPluginConfigByName("Blog")
+        assertNotNull(result)
+        assertEquals("Blog", result!!.pluginName)
+        assertEquals("plugins/Blog", result.pluginPath)
+    }
+
+    fun `test findPluginConfigByName backwards compat derives from namespace`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(namespace = "\\Vendor\\MyPlugin", pluginPath = "plugins/MyPlugin")
+        )
+
+        // Should find by deriving plugin name from namespace
+        val result = settings.findPluginConfigByName("MyPlugin")
+        assertNotNull(result)
+        assertEquals("\\Vendor\\MyPlugin", result!!.namespace)
+    }
+
+    fun `test findPluginConfigByName backwards compat with simple namespace`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
             PluginConfig(namespace = "Blog", pluginPath = "plugins/Blog")
         )
 
-        // Exact match should win even though it's second in the list
         val result = settings.findPluginConfigByName("Blog")
         assertNotNull(result)
         assertEquals("Blog", result!!.namespace)
         assertEquals("plugins/Blog", result.pluginPath)
     }
 
-    fun `test findPluginConfigByName suffix match works`() {
-        val settings = Settings.getInstance(project)
-        settings.state.pluginConfigs = listOf(
-            PluginConfig(namespace = "\\Vendor\\MyPlugin", pluginPath = "plugins/MyPlugin")
-        )
-
-        val result = settings.findPluginConfigByName("MyPlugin")
-        assertNotNull(result)
-        assertEquals("\\Vendor\\MyPlugin", result!!.namespace)
-    }
-
-    fun `test findPluginConfigByName multiple suffix matches returns first`() {
-        val settings = Settings.getInstance(project)
-        settings.state.pluginConfigs = listOf(
-            PluginConfig(namespace = "\\Vendor\\Foo\\Blog", pluginPath = "plugins/FooBlog"),
-            PluginConfig(namespace = "\\Vendor\\Bar\\Blog", pluginPath = "plugins/BarBlog")
-        )
-
-        // First configured plugin should win when multiple suffix matches exist
-        val result = settings.findPluginConfigByName("Blog")
-        assertNotNull(result)
-        assertEquals("\\Vendor\\Foo\\Blog", result!!.namespace)
-        assertEquals("plugins/FooBlog", result.pluginPath)
-    }
-
     fun `test findPluginConfigByName returns null when no match`() {
         val settings = Settings.getInstance(project)
         settings.state.pluginConfigs = listOf(
-            PluginConfig(namespace = "\\Vendor\\MyPlugin", pluginPath = "plugins/MyPlugin")
+            PluginConfig(pluginName = "MyPlugin", pluginPath = "plugins/MyPlugin")
         )
 
         val result = settings.findPluginConfigByName("NonExistent")
         assertNull(result)
+    }
+
+    fun `test findPluginConfigByName pluginName takes precedence over namespace derivation`() {
+        val settings = Settings.getInstance(project)
+        settings.state.pluginConfigs = listOf(
+            PluginConfig(pluginName = "DebugKit", namespace = "\\CakePHP\\DebugKit", pluginPath = "vendor/cakephp/debug_kit")
+        )
+
+        // Should find by explicit pluginName
+        val result = settings.findPluginConfigByName("DebugKit")
+        assertNotNull(result)
+        assertEquals("DebugKit", result!!.pluginName)
+
+        // Should NOT find by namespace-derived name since pluginName is set
+        val resultByNamespace = settings.findPluginConfigByName("CakePHP\\DebugKit")
+        assertNull(resultByNamespace)
     }
 
 }

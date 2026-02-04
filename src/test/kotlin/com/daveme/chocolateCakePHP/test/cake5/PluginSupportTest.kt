@@ -35,7 +35,8 @@ class PluginSupportTest : Cake5BaseTestCase() {
         val state = settings.state.copy()
         state.pluginConfigs = listOf(
             PluginConfig(
-                namespace = "TestPlugin",
+                pluginName = "TestPlugin",
+                namespace = "\\TestPlugin",
                 pluginPath = "plugins/TestPlugin",
                 srcPath = "src",
                 assetPath = "webroot"
