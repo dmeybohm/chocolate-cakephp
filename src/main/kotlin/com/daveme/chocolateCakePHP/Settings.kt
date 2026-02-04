@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP
 import com.daveme.chocolateCakePHP.cake.PluginEntry
 import com.daveme.chocolateCakePHP.cake.ThemeEntry
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -95,20 +96,40 @@ data class CakeAutoDetectedValues(
 )
 
 /**
- * Finds a plugin config by its plugin name.
+ * Finds a plugin configuration by name.
  *
- * The plugin name is matched against:
- * - The exact namespace (without leading backslash)
- * - The last segment of the namespace (e.g., "MyPlugin" matches "\App\MyPlugin")
+ * Matching precedence:
+ * 1. Exact match on the full namespace (without leading backslash)
+ * 2. Suffix match on the last namespace segment (e.g., "MyPlugin" matches "\Vendor\MyPlugin")
+ *
+ * If multiple plugins match by suffix (e.g., both "\Vendor\Foo\Blog" and "\Vendor\Bar\Blog"
+ * matching "Blog"), the first configured plugin wins and a debug message is logged.
  *
  * @param pluginName The plugin name to search for (e.g., "MyPlugin")
  * @return The matching PluginConfig, or null if not found
  */
 fun Settings.findPluginConfigByName(pluginName: String): PluginConfig? {
-    return pluginConfigs.find { config ->
-        val cleanNamespace = config.namespace.removePrefix("\\")
-        cleanNamespace == pluginName || cleanNamespace.endsWith("\\$pluginName")
+    // First, try exact match (highest priority)
+    val exactMatch = pluginConfigs.find { config ->
+        config.namespace.removePrefix("\\") == pluginName
     }
+    if (exactMatch != null) {
+        return exactMatch
+    }
+
+    // Fall back to suffix match
+    val suffixMatches = pluginConfigs.filter { config ->
+        config.namespace.removePrefix("\\").endsWith("\\$pluginName")
+    }
+
+    if (suffixMatches.size > 1) {
+        thisLogger().debug(
+            "Multiple plugins match suffix '$pluginName': ${suffixMatches.map { it.namespace }}. " +
+            "Using first configured: ${suffixMatches.first().namespace}"
+        )
+    }
+
+    return suffixMatches.firstOrNull()
 }
 
 @Service(Service.Level.PROJECT)

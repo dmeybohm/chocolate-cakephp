@@ -72,6 +72,10 @@ fun allTemplatePathsFromTopSourceDirectory(
 ): AllTemplatePaths? {
     val mainTemplatePaths : MutableList<TemplatesDirWithPath> = mutableListOf()
 
+    // Note: guessProjectDir() is used only for computing relative path strings for display/identification.
+    // Actual directory discovery uses appRootDir (derived from the view file context via topDir).
+    // If the IDE project is opened at a subdirectory, these relative paths may appear differently
+    // but navigation will still work correctly.
     val projectDir = project.guessProjectDir()
         ?: return null
 
