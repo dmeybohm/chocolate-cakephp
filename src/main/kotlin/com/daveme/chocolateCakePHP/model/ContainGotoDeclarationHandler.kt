@@ -6,13 +6,13 @@ import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import org.jetbrains.annotations.Nls
 
 class ContainGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getGotoDeclarationTargets(
@@ -26,6 +26,9 @@ class ContainGotoDeclarationHandler : GotoDeclarationHandler {
         val project = sourceElement.project
         val settings = Settings.getInstance(project)
         if (!settings.cake3Enabled) {
+            return PsiElement.EMPTY_ARRAY
+        }
+        if (DumbService.getInstance(project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
 
@@ -78,5 +81,5 @@ class ContainGotoDeclarationHandler : GotoDeclarationHandler {
         return virtualFilesToPsiFiles(project, virtualFiles).toTypedArray()
     }
 
-    override fun getActionText(context: DataContext): @Nls(capitalization = Nls.Capitalization.Title) String? = null
+    override fun getActionText(context: DataContext): String? = null
 }

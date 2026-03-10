@@ -12,7 +12,8 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/AuthorsTable.php",
             "cake3/src/Model/Table/CommentsTable.php",
             "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/vendor/cakephp.php",
+            "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
         )
     }
 
@@ -162,6 +163,27 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
 
         val handler = ContainGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "AuthorsTable.php")
+    }
+
+    fun `test can navigate to plugin table from contain`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}articles = ${'$'}this->getTableLocator()->get('Articles');
+                ${'$'}query = ${'$'}articles->find();
+                ${'$'}query->contain('<caret>PluginItems');
+            }
+        }
+        """.trimIndent())
+
+        val handler = ContainGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "PluginItemsTable.php")
     }
 
     fun `test navigation works in custom finder method with array`() {

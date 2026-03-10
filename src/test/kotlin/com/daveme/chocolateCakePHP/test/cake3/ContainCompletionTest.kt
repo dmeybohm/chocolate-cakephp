@@ -11,7 +11,8 @@ class ContainCompletionTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/AuthorsTable.php",
             "cake3/src/Model/Table/CommentsTable.php",
             "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/vendor/cakephp.php",
+            "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
         )
     }
 
@@ -111,6 +112,29 @@ class ContainCompletionTest : Cake3BaseTestCase() {
         assertNotNull(result)
         assertTrue(result!!.contains("Authors"))
         assertTrue(result.contains("Comments"))
+    }
+
+    fun `test completing plugin table names in contain`() {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}articles = ${'$'}this->getTableLocator()->get('Articles');
+                ${'$'}query = ${'$'}articles->find();
+                ${'$'}query->contain('<caret>');
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("PluginItems"))
     }
 
     fun `test contain completion in custom finder method`() {

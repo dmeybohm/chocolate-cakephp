@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.model
 import com.daveme.chocolateCakePHP.Settings
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.project.DumbService
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.PhpIndex
 
@@ -36,6 +37,9 @@ class ContainCompletionContributor : CompletionContributor() {
             if (!settings.cake3Enabled) {
                 return
             }
+            if (DumbService.getInstance(project).isDumb) {
+                return
+            }
 
             val phpIndex = PhpIndex.getInstance(project)
 
@@ -43,11 +47,13 @@ class ContainCompletionContributor : CompletionContributor() {
             val tableBaseClass = "\\Cake\\ORM\\Table"
             val tableClasses = phpIndex.getAllSubclasses(tableBaseClass)
 
+            // Collect allowed namespace prefixes: app + all plugins
+            val allowedPrefixes = mutableListOf(settings.appNamespace)
+            settings.pluginConfigs.forEach { allowedPrefixes.add(it.namespace) }
+
             tableClasses.forEach { phpClass ->
-                // Only show tables from the app namespace (not CakePHP core tables)
                 val fqn = phpClass.fqn
-                if (fqn.startsWith(settings.appNamespace)) {
-                    // Extract table name: "\App\Model\Table\ArticlesTable" → "Articles"
+                if (allowedPrefixes.any { fqn.startsWith(it) }) {
                     val className = phpClass.name
                     val tableName = className.removeSuffix("Table")
 
