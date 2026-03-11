@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.findRelativeFile
@@ -111,7 +112,7 @@ class AssetCompletionContributor : CompletionContributor() {
                     if (pluginWebroot != null) {
                         // Extract plugin name from namespace (for PluginConfig) or use path for themes
                         val pluginName = when (config) {
-                            is PluginConfig -> extractPluginNameFromNamespace(config.namespace)
+                            is PluginConfig -> config.effectivePluginName().ifEmpty { null }
                             else -> null
                         }
 
@@ -144,26 +145,5 @@ class AssetCompletionContributor : CompletionContributor() {
             }
         }
 
-        /**
-         * Extracts the plugin name from a namespace.
-         *
-         * Examples:
-         * - "\MyPlugin" -> "MyPlugin"
-         * - "\App\MyPlugin" -> "MyPlugin"
-         * - "MyPlugin" -> "MyPlugin"
-         * - "" -> null
-         */
-        private fun extractPluginNameFromNamespace(namespace: String): String? {
-            if (namespace.isEmpty()) {
-                return null
-            }
-            val cleanNamespace = namespace.removePrefix("\\")
-            val lastBackslash = cleanNamespace.lastIndexOf('\\')
-            return if (lastBackslash >= 0) {
-                cleanNamespace.substring(lastBackslash + 1)
-            } else {
-                cleanNamespace
-            }
-        }
     }
 }

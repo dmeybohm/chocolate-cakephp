@@ -20,7 +20,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
     /**
      * Resolves template view paths, handling plugin-prefixed paths.
-     * Returns null if a plugin prefix was specified but the plugin was not found in config.
      *
      * @param path The template path, possibly with plugin prefix
      * @param settings Plugin settings
@@ -35,19 +34,18 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         controllerPath: ControllerPath,
         allTemplatesPaths: AllTemplatePaths,
         existingActionNames: ActionNames? = null
-    ): AllViewPaths? {
-        val (pluginResourcePath, pluginConfig) = parseAndLookupPlugin(path, settings)
-
-        return if (pluginConfig != null) {
-            val pluginActionName = actionNameFromPath(pluginResourcePath.resourcePath)
-            val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
-            allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, pluginConfig)
-        } else if (pluginResourcePath.pluginName != null) {
-            // Plugin name parsed but not found in config
-            null
-        } else {
-            val actionNames = existingActionNames ?: ActionNames(defaultActionName = actionNameFromPath(path))
-            allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
+    ): AllViewPaths {
+        return when (val result = parseAndLookupPlugin(path, settings)) {
+            is PluginLookupResult.PluginFound -> {
+                val pluginActionName = actionNameFromPath(result.resourcePath)
+                val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+                allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, result.pluginConfig)
+            }
+            is PluginLookupResult.NoPlugin -> {
+                val actionNames = existingActionNames
+                    ?: ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
+                allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
+            }
         }
     }
 
@@ -131,7 +129,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             controllerPath,
             allTemplatesPaths,
             existingActionNames = actionNames
-        ) ?: return null
+        )
 
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
@@ -177,7 +175,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             settings,
             controllerPath,
             allTemplatesPaths
-        ) ?: return null
+        )
 
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
@@ -296,7 +294,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             settings,
             controllerPath,
             allTemplatesPaths
-        ) ?: return null
+        )
 
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,
@@ -357,7 +355,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             settings,
             controllerPath,
             allTemplatesPaths
-        ) ?: return null
+        )
 
         val files = viewFilesFromAllViewPaths(
             project = psiElement.project,

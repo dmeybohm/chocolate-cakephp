@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.AssetDirectory
+import com.daveme.chocolateCakePHP.cake.PluginLookupResult
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.cake.parseAndLookupPlugin
 import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
@@ -104,32 +105,19 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         val extension = if (prefix == "img") "" else ".${prefix}"
 
         val assetPath = stringArg.contents
-        val (pluginResourcePath, pluginConfig) = parseAndLookupPlugin(assetPath, settings)
-
-        // If there's a valid plugin prefix, resolve from plugin's webroot
-        if (pluginConfig != null) {
-            // This is a valid plugin prefix - resolve from plugin's webroot
-            // Get the root directory from the view file's context
-            // This ensures we resolve relative to the correct root (e.g., cake5/ in tests)
-            val rootDir = rootDirectoryFromViewFile(project, settings, viewFile) ?: return null
-            val pluginWebrootPath = "${pluginConfig.pluginPath}/${pluginConfig.assetPath}"
-            val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
-            if (pluginWebroot != null) {
-                val pluginAssetFile = findRelativeFile(
-                    pluginWebroot,
-                    "${prefix}/${pluginResourcePath.resourcePath}${extension}"
-                )
-                if (pluginAssetFile != null) {
-                    return pluginAssetFile
-                }
+        return when (val result = parseAndLookupPlugin(assetPath, settings)) {
+            is PluginLookupResult.PluginFound -> {
+                // Resolve from plugin's webroot
+                val rootDir = rootDirectoryFromViewFile(project, settings, viewFile) ?: return null
+                val pluginWebrootPath = "${result.pluginConfig.pluginPath}/${result.pluginConfig.assetPath}"
+                val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
+                    ?: return null
+                findRelativeFile(pluginWebroot, "${prefix}/${result.resourcePath}${extension}")
             }
-            // Plugin exists but asset not found - don't fall back to main directory
-            return null
+            is PluginLookupResult.NoPlugin -> {
+                // No plugin prefix or unrecognized plugin name - use main asset directory
+                findRelativeFile(assetDir.directory, "${prefix}/${result.originalPath}${extension}")
+            }
         }
-        // Plugin name not recognized (or no plugin prefix) - fall through to treat as normal path
-        // (e.g., "pluginIcon.svg" where "pluginIcon" is not a plugin name)
-
-        // No plugin prefix or unrecognized plugin name - use main asset directory
-        return findRelativeFile(assetDir.directory, "${prefix}/${assetPath}${extension}")
     }
 }

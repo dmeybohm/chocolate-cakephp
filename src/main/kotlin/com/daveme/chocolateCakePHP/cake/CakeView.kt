@@ -18,50 +18,48 @@ data class ControllerPath(
 }
 
 /**
- * Represents a parsed plugin resource path.
- * CakePHP uses dot notation to reference plugin resources: "PluginName.resource_path"
- */
-data class PluginResourcePath(
-    val pluginName: String?,  // null if no plugin prefix
-    val resourcePath: String  // path after the dot (or full path if no prefix)
-)
-
-/**
- * Parses a CakePHP plugin-prefixed resource path.
+ * Result of parsing and looking up a plugin-prefixed resource path.
  *
- * Examples:
- * - "MyPlugin.stylesheet" -> PluginResourcePath("MyPlugin", "stylesheet")
- * - "MyPlugin.subdir/file" -> PluginResourcePath("MyPlugin", "subdir/file")
- * - "regular/path" -> PluginResourcePath(null, "regular/path")
- * - ".something" -> PluginResourcePath(null, ".something") // empty plugin name
- *
- * The first dot is treated as the separator only if:
- * - There is at least one character before it
- * - The portion before the dot doesn't contain a slash
+ * This matches CakePHP's View::pluginSplit() behavior: when a dot-prefix is present
+ * but doesn't match a loaded plugin, the full string is treated as a literal path
+ * (i.e., falls back to NoPlugin).
  */
-fun parsePluginResourcePath(path: String): PluginResourcePath {
-    val dotIndex = path.indexOf('.')
-    return if (dotIndex > 0 && !path.substring(0, dotIndex).contains('/')) {
-        PluginResourcePath(path.substring(0, dotIndex), path.substring(dotIndex + 1))
-    } else {
-        PluginResourcePath(null, path)
-    }
+sealed class PluginLookupResult {
+    /** A known plugin was matched — use plugin-specific resolution */
+    data class PluginFound(val resourcePath: String, val pluginConfig: PluginConfig) : PluginLookupResult()
+    /** No plugin prefix present, or prefix didn't match any configured plugin — use normal resolution with the original full path */
+    data class NoPlugin(val originalPath: String) : PluginLookupResult()
 }
 
 /**
- * Parses a plugin resource path and looks up the plugin config if present.
- * Returns a pair of (PluginResourcePath, PluginConfig?) where the config is
- * non-null only if a valid plugin prefix was found and matched.
+ * Parses a CakePHP plugin-prefixed resource path and looks up the plugin config.
+ *
+ * If the path contains a dot prefix that matches a configured plugin, returns
+ * [PluginLookupResult.PluginFound] with the resource path after the dot.
+ * Otherwise returns [PluginLookupResult.NoPlugin] with the original path,
+ * matching CakePHP's fallback behavior.
+ *
+ * Examples:
+ * - "MyPlugin.stylesheet" (MyPlugin configured) -> PluginFound("stylesheet", config)
+ * - "MyPlugin.subdir/file" (MyPlugin configured) -> PluginFound("subdir/file", config)
+ * - "unknown.file" (unknown not configured) -> NoPlugin("unknown.file")
+ * - "regular/path" -> NoPlugin("regular/path")
+ * - ".something" -> NoPlugin(".something")
  */
 fun parseAndLookupPlugin(
     path: String,
     settings: Settings
-): Pair<PluginResourcePath, PluginConfig?> {
-    val pluginResourcePath = parsePluginResourcePath(path)
-    val pluginConfig = pluginResourcePath.pluginName?.let {
-        settings.findPluginConfigByName(it)
+): PluginLookupResult {
+    val dotIndex = path.indexOf('.')
+    if (dotIndex > 0 && !path.substring(0, dotIndex).contains('/')) {
+        val pluginName = path.substring(0, dotIndex)
+        val resourcePath = path.substring(dotIndex + 1)
+        val pluginConfig = settings.findPluginConfigByName(pluginName)
+        if (pluginConfig != null) {
+            return PluginLookupResult.PluginFound(resourcePath, pluginConfig)
+        }
     }
-    return Pair(pluginResourcePath, pluginConfig)
+    return PluginLookupResult.NoPlugin(path)
 }
 
 data class TemplatesDirWithPath(
