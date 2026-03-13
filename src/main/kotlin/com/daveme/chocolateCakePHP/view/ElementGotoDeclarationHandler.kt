@@ -66,14 +66,8 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        val files = when (result) {
-            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
-                project, allTemplatesPaths, allViewPaths, result.pluginConfig)
-            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
-                project, allTemplatesPaths, allViewPaths)
-        }
-
-        return files.toTypedArray()
+        val resolution = TemplatePathResolution(allViewPaths, result)
+        return resolution.toFiles(project, allTemplatesPaths).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null

@@ -98,6 +98,20 @@ fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPat
     )
 }
 
+data class TemplatePathResolution(
+    val allViewPaths: AllViewPaths,
+    val pluginLookupResult: PluginLookupResult,
+) {
+    fun toFiles(project: Project, allTemplatesPaths: AllTemplatePaths): Collection<PsiFile> {
+        return when (pluginLookupResult) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                project, allTemplatesPaths, allViewPaths, pluginLookupResult.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                project, allTemplatesPaths, allViewPaths)
+        }
+    }
+}
+
 fun viewFilesFromPluginViewPaths(
     project: Project,
     allTemplatesPaths: AllTemplatePaths,
