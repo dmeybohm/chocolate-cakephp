@@ -13,6 +13,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
@@ -115,7 +116,11 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         when (files.size) {
             0 -> {
                 val getContext = DataManager.getInstance().dataContextFromFocusAsync
-                getContext.then { context ->
+                getContext.then { parentContext ->
+                    val context = SimpleDataContext.builder()
+                        .add(CommonDataKeys.PROJECT, project)
+                        .setParent(parentContext)
+                        .build()
                     val popup = JBPopupFactory.getInstance()
                         .createActionGroupPopup(
                             "Create View File",

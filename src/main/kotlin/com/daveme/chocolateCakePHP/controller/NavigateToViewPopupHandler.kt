@@ -7,6 +7,8 @@ import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -23,13 +25,17 @@ class NavigateToViewPopupHandler(
 ) : GutterIconNavigationHandler<PsiElement> {
 
     override fun navigate(e: MouseEvent, elt: PsiElement?) {
-        val context = DataManager.getInstance().getDataContext(e.component)
+        val project = elt?.project ?: return
+        val parentContext = DataManager.getInstance().getDataContext(e.component)
+        val context = SimpleDataContext.builder()
+            .add(CommonDataKeys.PROJECT, project)
+            .setParent(parentContext)
+            .build()
         val validTargets = validTargets()
 
         val point = RelativePoint(e)
 
         if (e.mouseButton == MouseButton.Left) {
-            val project = elt?.project ?: return
             val hasTargets = !validTargets.isEmpty()
             if (e.isControlDown || !hasTargets) {
                 val popup = JBPopupFactory.getInstance()
