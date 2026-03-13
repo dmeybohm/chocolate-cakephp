@@ -6,7 +6,6 @@ import com.daveme.chocolateCakePHP.showPsiFilePopup
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
-import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -26,10 +25,8 @@ class NavigateToViewPopupHandler(
 
     override fun navigate(e: MouseEvent, elt: PsiElement?) {
         val project = elt?.project ?: return
-        val parentContext = DataManager.getInstance().getDataContext(e.component)
         val context = SimpleDataContext.builder()
             .add(CommonDataKeys.PROJECT, project)
-            .setParent(parentContext)
             .build()
         val validTargets = validTargets()
 

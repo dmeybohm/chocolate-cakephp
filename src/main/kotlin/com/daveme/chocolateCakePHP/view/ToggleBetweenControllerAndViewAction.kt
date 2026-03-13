@@ -8,7 +8,6 @@ import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
-import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -115,22 +114,18 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         when (files.size) {
             0 -> {
-                val getContext = DataManager.getInstance().dataContextFromFocusAsync
-                getContext.then { parentContext ->
-                    val context = SimpleDataContext.builder()
-                        .add(CommonDataKeys.PROJECT, project)
-                        .setParent(parentContext)
-                        .build()
-                    val popup = JBPopupFactory.getInstance()
-                        .createActionGroupPopup(
-                            "Create View File",
-                            createViewActionPopupFromAllViewPaths(allViewPaths),
-                            context,
-                            JBPopupFactory.ActionSelectionAid.NUMBERING,
-                            true,
-                        )
-                    popup.showInBestPositionFor(editor)
-                }
+                val context = SimpleDataContext.builder()
+                    .add(CommonDataKeys.PROJECT, project)
+                    .build()
+                val popup = JBPopupFactory.getInstance()
+                    .createActionGroupPopup(
+                        "Create View File",
+                        createViewActionPopupFromAllViewPaths(allViewPaths),
+                        context,
+                        JBPopupFactory.ActionSelectionAid.NUMBERING,
+                        true,
+                    )
+                popup.showInBestPositionFor(editor)
             }
             1 -> {
                 val first = files.first().virtualFile
