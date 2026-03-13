@@ -54,7 +54,8 @@ data class CakeTwoTemplatesDir(override val directory: VirtualFile): TemplatesDi
 }
 
 data class AssetDirectory(val directory: VirtualFile)
-data class RootDirectory(val directory: VirtualFile)
+data class PluginRootDirectory(val directory: VirtualFile)
+data class AppRootDirectory(val directory: VirtualFile)
 
 fun topSourceDirectoryFromSourceFile(settings: Settings, virtualFile: VirtualFile): TopSourceDirectory? {
     val originalFile = virtualFile.parent
@@ -79,13 +80,13 @@ fun allTemplatePathsFromTopSourceDirectory(
     val projectDir = project.guessProjectDir()
         ?: return null
 
-    // Determine the application root directory based on the top source directory.
-    // For CakePHP 4+, the src directory's parent is the app root.
-    // For CakePHP 2, the app directory is the app root.
-    val appRootDir = when (topDir) {
+    // Determine the application root directory.
+    // For all CakePHP versions, this is the project root (parent of src/ or app/).
+    // Plugin paths in settings are always relative to this directory.
+    val appRootDir = AppRootDirectory(when (topDir) {
         is SrcDirectory -> topDir.directory.parent
-        is AppDirectory -> topDir.directory
-    } ?: return null
+        is AppDirectory -> topDir.directory.parent
+    } ?: return null)
 
     if (settings.cake3Enabled) {
         val srcDir = topDir.directory
@@ -216,7 +217,7 @@ fun templatesDirectoryOfViewFile(
 }
 
 private fun pluginAndThemeTemplatePaths(
-    appRootDir: VirtualFile,
+    appRootDir: AppRootDirectory,
     settings: Settings,
 ): PluginAndThemeTemplatePaths {
     if (!settings.enabled) {
@@ -231,7 +232,7 @@ private fun pluginAndThemeTemplatePaths(
         val results = mutableListOf<TemplatesDirWithPath>()
         if (hasCakeThree) {
             val cakeFourTemplatesPath = "${pluginOrThemeConfig.pluginPath}/templates"
-            val cakeFourTemplateDir = findRelativeFile(appRootDir, cakeFourTemplatesPath)
+            val cakeFourTemplateDir = findRelativeFile(appRootDir.directory, cakeFourTemplatesPath)
             if (cakeFourTemplateDir != null) {
                 // Use the plugin path as the relative path (this is used for matching)
                 val templatesDir = TemplatesDirWithPath(
@@ -243,7 +244,7 @@ private fun pluginAndThemeTemplatePaths(
             when (pluginOrThemeConfig) {
                 is PluginConfig -> {
                     val cake3PluginTemplatePath = "${pluginOrThemeConfig.pluginPath}/${pluginOrThemeConfig.srcPath}/Template"
-                    val cakeThreePluginTemplateDir = findRelativeFile(appRootDir, cake3PluginTemplatePath)
+                    val cakeThreePluginTemplateDir = findRelativeFile(appRootDir.directory, cake3PluginTemplatePath)
                     if (cakeThreePluginTemplateDir != null) {
                         val templatesDir = TemplatesDirWithPath(
                             templatesDir = CakeThreeTemplatesDir(cakeThreePluginTemplateDir),
@@ -254,7 +255,7 @@ private fun pluginAndThemeTemplatePaths(
                 }
                 is ThemeConfig -> {
                     val cakeThreeThemeTemplatePath = "${pluginOrThemeConfig.pluginPath}/src/Template"
-                    val cakeThreeThemeTemplateDir = findRelativeFile(appRootDir, cakeThreeThemeTemplatePath)
+                    val cakeThreeThemeTemplateDir = findRelativeFile(appRootDir.directory, cakeThreeThemeTemplatePath)
                     if (cakeThreeThemeTemplateDir != null) {
                         val templatesDir = TemplatesDirWithPath(
                             templatesDir = CakeThreeTemplatesDir(cakeThreeThemeTemplateDir),
@@ -268,7 +269,7 @@ private fun pluginAndThemeTemplatePaths(
         if (hasCakeTwo) {
             when (pluginOrThemeConfig) {
                 is ThemeConfig -> {
-                    val cakeTwoThemeTemplateDir = findRelativeFile(appRootDir, pluginOrThemeConfig.pluginPath)
+                    val cakeTwoThemeTemplateDir = findRelativeFile(appRootDir.directory, pluginOrThemeConfig.pluginPath)
                     if (cakeTwoThemeTemplateDir != null) {
                         val templatesDir = TemplatesDirWithPath(
                             templatesDir = CakeTwoTemplatesDir(cakeTwoThemeTemplateDir),
@@ -279,7 +280,7 @@ private fun pluginAndThemeTemplatePaths(
                 }
                 is PluginConfig -> {
                     val viewPath = "${pluginOrThemeConfig.pluginPath}/View"
-                    val cakeTwoPluginTemplateDir = findRelativeFile(appRootDir, viewPath)
+                    val cakeTwoPluginTemplateDir = findRelativeFile(appRootDir.directory, viewPath)
                     if (cakeTwoPluginTemplateDir != null) {
                         val templatesDir = TemplatesDirWithPath(
                             templatesDir = CakeTwoTemplatesDir(cakeTwoPluginTemplateDir),
@@ -298,16 +299,13 @@ private fun pluginAndThemeTemplatePaths(
     )
 }
 
-fun rootDirectoryFromTemplatesDir(templatesDir: TemplatesDir): RootDirectory? {
-    val rootVirtualFile =  when (templatesDir) {
-        is CakeFourTemplatesDir -> {
-            templatesDir.directory.parent ?: return null
-        }
-        is CakeThreeTemplatesDir, is CakeTwoTemplatesDir -> {
-            templatesDir.directory.parent?.parent ?: return null
-        }
-    }
-    return RootDirectory(rootVirtualFile)
+fun pluginRootDirectoryFromTemplatesDir(templatesDir: TemplatesDir): PluginRootDirectory? {
+    val dir = when (templatesDir) {
+        is CakeFourTemplatesDir -> templatesDir.directory.parent     // templates -> root
+        is CakeThreeTemplatesDir -> templatesDir.directory.parent?.parent  // Template -> src -> root
+        is CakeTwoTemplatesDir -> templatesDir.directory.parent      // View -> root (app/ or plugin/)
+    } ?: return null
+    return PluginRootDirectory(dir)
 }
 
 fun assetDirectoryFromViewFile(
@@ -317,38 +315,67 @@ fun assetDirectoryFromViewFile(
 ): AssetDirectory? {
     val templatesDir = templatesDirectoryOfViewFile(project, settings, virtualFile)
         ?: return null
-    val startingDir = when (templatesDir) {
-        is CakeTwoTemplatesDir ->
-            templatesDir.directory.parent ?: return null
-        is CakeFourTemplatesDir, is CakeThreeTemplatesDir -> {
-            val rootDirectory = rootDirectoryFromTemplatesDir(templatesDir)
-                ?: return null
-            rootDirectory.directory
+    val pluginRoot = pluginRootDirectoryFromTemplatesDir(templatesDir) ?: return null
+    val webroot = findRelativeFile(pluginRoot.directory, "webroot")
+    if (webroot != null) return AssetDirectory(webroot)
+    // Fallback for themed views: walk up from the templates dir to find the app dir's webroot
+    if (templatesDir is CakeTwoTemplatesDir) {
+        var dir = templatesDir.directory.parent
+        while (dir != null) {
+            if (matchesCake2AppDirectory(dir, settings)) {
+                val appWebroot = findRelativeFile(dir, "webroot")
+                if (appWebroot != null) return AssetDirectory(appWebroot)
+                break
+            }
+            dir = dir.parent
         }
     }
-    val webroot = findRelativeFile(startingDir, "webroot") ?: return null
-    return AssetDirectory(webroot)
+    return null
 }
 
 /**
- * Gets the root directory from a view file.
+ * Gets the contextual root directory from a view file (plugin or app root).
  * For CakePHP 4+, this is the parent of the templates directory.
  * For CakePHP 3, this is the parent of the parent of the Template directory (parent of src).
  * For CakePHP 2, this is the parent of the View directory.
  */
-fun rootDirectoryFromViewFile(
+fun pluginRootDirectoryFromViewFile(
     project: Project,
     settings: Settings,
     virtualFile: VirtualFile
-): RootDirectory? {
-    val templatesDir = templatesDirectoryOfViewFile(project, settings, virtualFile)
-        ?: return null
-    return when (templatesDir) {
-        is CakeTwoTemplatesDir ->
-            templatesDir.directory.parent?.let { RootDirectory(it) }
-        is CakeFourTemplatesDir, is CakeThreeTemplatesDir ->
-            rootDirectoryFromTemplatesDir(templatesDir)
+): PluginRootDirectory? {
+    val templatesDir = templatesDirectoryOfViewFile(project, settings, virtualFile) ?: return null
+    return pluginRootDirectoryFromTemplatesDir(templatesDir)
+}
+
+/**
+ * Gets the main application root directory from a view file.
+ * Starts from the contextual plugin root and walks up looking for a directory
+ * that contains the app/src directory as a child.
+ * Plugin paths in settings are always relative to this directory.
+ */
+fun appRootDirectoryFromViewFile(
+    project: Project,
+    settings: Settings,
+    virtualFile: VirtualFile
+): AppRootDirectory? {
+    val pluginRoot = pluginRootDirectoryFromViewFile(project, settings, virtualFile) ?: return null
+    var current: VirtualFile? = pluginRoot.directory
+    val projectDir = project.guessProjectDir()
+    while (current != null) {
+        if (settings.cake3Enabled) {
+            val appDir = findRelativeFile(current, settings.appDirectory)
+            if (appDir != null) return AppRootDirectory(current)
+        }
+        if (settings.cake2Enabled) {
+            val cake2AppDir = findRelativeFile(current, settings.cake2AppDirectory)
+            if (cake2AppDir != null) return AppRootDirectory(current)
+        }
+        if (current == projectDir) break
+        current = current.parent
     }
+    // Fallback: project dir is the app root
+    return projectDir?.let { AppRootDirectory(it) }
 }
 
 /**
@@ -356,7 +383,7 @@ fun rootDirectoryFromViewFile(
  * Handles both simple ("app") and nested ("src/app") paths.
  * For nested paths, verifies the directory hierarchy from bottom to top.
  */
-private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings): Boolean {
+internal fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings): Boolean {
     return matchesNestedAppDirectory(directory, settings.cake2AppDirectory)
 }
 
@@ -364,7 +391,7 @@ private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings)
  * Check if the directory matches the appDirectory setting (CakePHP 3+).
  * Handles both simple ("src") and nested ("foo/src") paths.
  */
-private fun matchesAppDirectory(directory: VirtualFile, settings: Settings): Boolean {
+internal fun matchesAppDirectory(directory: VirtualFile, settings: Settings): Boolean {
     return matchesNestedAppDirectory(directory, settings.appDirectory)
 }
 

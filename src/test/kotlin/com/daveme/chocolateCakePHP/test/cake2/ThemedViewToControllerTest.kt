@@ -80,7 +80,7 @@ class ThemedViewToControllerTest : Cake2BaseTestCase() {
         val settings = Settings.getInstance(myFixture.project)
         val newState = settings.state.copy()
         newState.themeConfigs = listOf(ThemeConfig(
-            pluginPath = "View/Themed/MyTheme"
+            pluginPath = "app/View/Themed/MyTheme"
         ))
         settings.loadState(newState)
 

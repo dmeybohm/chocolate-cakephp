@@ -4,7 +4,7 @@ import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
-import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.appRootDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -103,12 +103,12 @@ class AssetCompletionContributor : CompletionContributor() {
             }
 
             // Also scan plugin and theme assets if configured
-            // Use root directory from view file context to resolve plugin paths correctly
-            val rootDir = rootDirectoryFromViewFile(project, settings, virtualFile)
-            if (rootDir != null) {
+            // Use app root directory to resolve plugin paths (always relative to project root)
+            val appRoot = appRootDirectoryFromViewFile(project, settings, virtualFile)
+            if (appRoot != null) {
                 for (config in settings.pluginAndThemeConfigs) {
                     val pluginWebrootPath = "${config.pluginPath}/${config.assetPath}/$subdirectory"
-                    val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
+                    val pluginWebroot = findRelativeFile(appRoot.directory, pluginWebrootPath)
                     if (pluginWebroot != null) {
                         // Extract plugin name from namespace (for PluginConfig) or use path for themes
                         val pluginName = when (config) {

@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.cake.AssetDirectory
 import com.daveme.chocolateCakePHP.cake.PluginLookupResult
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.cake.parseAndLookupPlugin
-import com.daveme.chocolateCakePHP.cake.rootDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.appRootDirectoryFromViewFile
 import com.daveme.chocolateCakePHP.findRelativeFile
 import com.daveme.chocolateCakePHP.virtualFilesToPsiFiles
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -108,9 +108,9 @@ class AssetGotoDeclarationHandler : GotoDeclarationHandler {
         return when (val result = parseAndLookupPlugin(assetPath, settings)) {
             is PluginLookupResult.PluginFound -> {
                 // Resolve from plugin's webroot
-                val rootDir = rootDirectoryFromViewFile(project, settings, viewFile) ?: return null
+                val appRoot = appRootDirectoryFromViewFile(project, settings, viewFile) ?: return null
                 val pluginWebrootPath = "${result.pluginConfig.pluginPath}/${result.pluginConfig.assetPath}"
-                val pluginWebroot = findRelativeFile(rootDir.directory, pluginWebrootPath)
+                val pluginWebroot = findRelativeFile(appRoot.directory, pluginWebrootPath)
                     ?: return null
                 findRelativeFile(pluginWebroot, "${prefix}/${result.resourcePath}${extension}")
             }
