@@ -34,8 +34,9 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         controllerPath: ControllerPath,
         allTemplatesPaths: AllTemplatePaths,
         existingActionNames: ActionNames? = null
-    ): AllViewPaths {
-        return when (val result = parseAndLookupPlugin(path, settings)) {
+    ): Pair<AllViewPaths, PluginLookupResult> {
+        val result = parseAndLookupPlugin(path, settings)
+        val allViewPaths = when (result) {
             is PluginLookupResult.PluginFound -> {
                 val pluginActionName = actionNameFromPath(result.resourcePath)
                 val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
@@ -47,6 +48,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
                 allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
             }
         }
+        return allViewPaths to result
     }
 
     override fun getGotoDeclarationTargets(
@@ -123,7 +125,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         ) ?: return null
 
         val templatePath = actionNames.defaultActionName.path
-        val allViewPaths = resolveTemplateViewPaths(
+        val (allViewPaths, pluginLookup) = resolveTemplateViewPaths(
             templatePath,
             settings,
             controllerPath,
@@ -131,11 +133,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             existingActionNames = actionNames
         )
 
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
+        val files = when (pluginLookup) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths, pluginLookup.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths)
+        }
         return files.toTypedArray()
     }
 
@@ -170,18 +173,19 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = resolveTemplateViewPaths(
+        val (allViewPaths, pluginLookup) = resolveTemplateViewPaths(
             viewName,
             settings,
             controllerPath,
             allTemplatesPaths
         )
 
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
+        val files = when (pluginLookup) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths, pluginLookup.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths)
+        }
         return files.toTypedArray()
     }
 
@@ -289,18 +293,19 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = resolveTemplateViewPaths(
+        val (allViewPaths, pluginLookup) = resolveTemplateViewPaths(
             viewName,
             settings,
             controllerPath,
             allTemplatesPaths
         )
 
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
+        val files = when (pluginLookup) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths, pluginLookup.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths)
+        }
         return files.toTypedArray()
     }
 
@@ -350,18 +355,19 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = resolveTemplateViewPaths(
+        val (allViewPaths, pluginLookup) = resolveTemplateViewPaths(
             viewName,
             settings,
             controllerPath,
             allTemplatesPaths
         )
 
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
+        val files = when (pluginLookup) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths, pluginLookup.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                psiElement.project, allTemplatesPaths, allViewPaths)
+        }
         return files.toTypedArray()
     }
 

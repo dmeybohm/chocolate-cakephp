@@ -23,6 +23,8 @@ class PluginSupportTest : Cake5BaseTestCase() {
             "cake5/plugins/TestPlugin/webroot/img/plugin_logo.png",
             "cake5/plugins/TestPlugin/templates/element/sidebar.php",
             "cake5/plugins/TestPlugin/templates/TestController/index.php",
+            "cake5/plugins/TestPluginExtra/templates/element/extra_sidebar.php",
+            "cake5/plugins/TestPluginExtra/templates/TestController/index.php",
             "cake5/vendor/cakephp.php",
         )
     }
@@ -38,6 +40,13 @@ class PluginSupportTest : Cake5BaseTestCase() {
                 pluginName = "TestPlugin",
                 namespace = "\\TestPlugin",
                 pluginPath = "plugins/TestPlugin",
+                srcPath = "src",
+                assetPath = "webroot"
+            ),
+            PluginConfig(
+                pluginName = "TestPluginExtra",
+                namespace = "\\TestPluginExtra",
+                pluginPath = "plugins/TestPluginExtra",
                 srcPath = "src",
                 assetPath = "webroot"
             )
@@ -172,6 +181,46 @@ class PluginSupportTest : Cake5BaseTestCase() {
         val targets = gotoDeclarationHandlerTargets(handler)
         assertNotNull(targets)
         assertEmpty(targets!!)
+    }
+
+    // ========== Plugin Prefix Collision Tests ==========
+
+    fun `test plugin template does not match prefix-colliding plugin`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends AppController {
+            public function index() {
+                ${'$'}this->render('<caret>TestPlugin.TestController/index');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val targets = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(targets)
+        assertTrue("Should find exactly one target, not targets from TestPluginExtra", targets!!.size == 1)
+        assertEquals("index.php", targets[0].containingFile.name)
+        assertTrue("Should resolve to TestPlugin, not TestPluginExtra",
+            targets[0].containingFile.virtualFile.path.contains("/TestPlugin/"))
+        assertFalse("Should not resolve to TestPluginExtra",
+            targets[0].containingFile.virtualFile.path.contains("/TestPluginExtra/"))
+    }
+
+    fun `test plugin element does not match prefix-colliding plugin`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->element('<caret>TestPlugin.sidebar');
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        val targets = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(targets)
+        assertTrue("Should find exactly one target, not targets from TestPluginExtra", targets!!.size == 1)
+        assertEquals("sidebar.php", targets[0].containingFile.name)
+        assertTrue("Should resolve to TestPlugin, not TestPluginExtra",
+            targets[0].containingFile.virtualFile.path.contains("/TestPlugin/"))
+        assertFalse("Should not resolve to TestPluginExtra",
+            targets[0].containingFile.virtualFile.path.contains("/TestPluginExtra/"))
     }
 
 }

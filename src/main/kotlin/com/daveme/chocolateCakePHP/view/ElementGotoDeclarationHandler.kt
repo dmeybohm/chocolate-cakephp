@@ -49,7 +49,8 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             ?: return PsiElement.EMPTY_ARRAY
 
         // Parse plugin prefix from element path
-        val allViewPaths = when (val result = parseAndLookupPlugin(contents, settings)) {
+        val result = parseAndLookupPlugin(contents, settings)
+        val allViewPaths = when (result) {
             is PluginLookupResult.PluginFound -> {
                 // Plugin-prefixed element: look only in the plugin's template directory
                 allViewPathsFromPluginElementPath(
@@ -65,7 +66,12 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        val files = viewFilesFromAllViewPaths(project, allTemplatesPaths, allViewPaths)
+        val files = when (result) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                project, allTemplatesPaths, allViewPaths, result.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                project, allTemplatesPaths, allViewPaths)
+        }
 
         return files.toTypedArray()
     }
