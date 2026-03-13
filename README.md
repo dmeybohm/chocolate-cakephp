@@ -107,6 +107,7 @@ Marketplace](https://plugins.jetbrains.com/plugin/10006-chocolate-cakephp)
 
 | Plugin Version | CakePHP Versions    | PhpStorm Version | IntelliJ IDEA        |
 |----------------|---------------------|------------------|----------------------|
+| 1.0.1          | 5.x, 4.x, 3.x, 2.x* | 2023.2+          | 2023.2+ (Ultimate)   |
 | 1.0.0          | 5.x, 4.x, 3.x, 2.x* | 2024.2.6+        | 2024.2.6+ (Ultimate) |
 | 0.9.x          | 5.x, 4.x, 3.x, 2.x* | 2022.1+          | 2022.1+ (Ultimate)   |
 
