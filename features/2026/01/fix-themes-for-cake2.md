@@ -37,3 +37,11 @@ The key change was:
 - Added test fixtures and test case
 - All cake2 tests pass
 - Full test suite passes
+
+### Session #2
+
+- Rebased onto `improve-plugin-support` branch
+- Added GotoRelated test: verifies `ViewToControllerGotoRelatedProvider` finds the `themed_index` method when navigating from the themed view
+- Added LineMarker test: verifies `ControllerMethodLineMarker` navigates from `themed_index()` controller method to the themed view file, using a `ThemeConfig` with `pluginPath = "View/Themed/MyTheme"` (relative to the CakePHP 2 app directory)
+- Controller → view navigation already works on `improve-plugin-support` branch when a ThemeConfig is configured — no code fix needed
+- All cake2 and full test suite pass

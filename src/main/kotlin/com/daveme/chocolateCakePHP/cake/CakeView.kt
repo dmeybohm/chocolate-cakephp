@@ -17,6 +17,51 @@ data class ControllerPath(
             "${prefix}/${name}/"
 }
 
+/**
+ * Result of parsing and looking up a plugin-prefixed resource path.
+ *
+ * This matches CakePHP's View::pluginSplit() behavior: when a dot-prefix is present
+ * but doesn't match a loaded plugin, the full string is treated as a literal path
+ * (i.e., falls back to NoPlugin).
+ */
+sealed class PluginLookupResult {
+    /** A known plugin was matched — use plugin-specific resolution */
+    data class PluginFound(val resourcePath: String, val pluginConfig: PluginConfig) : PluginLookupResult()
+    /** No plugin prefix present, or prefix didn't match any configured plugin — use normal resolution with the original full path */
+    data class NoPlugin(val originalPath: String) : PluginLookupResult()
+}
+
+/**
+ * Parses a CakePHP plugin-prefixed resource path and looks up the plugin config.
+ *
+ * If the path contains a dot prefix that matches a configured plugin, returns
+ * [PluginLookupResult.PluginFound] with the resource path after the dot.
+ * Otherwise returns [PluginLookupResult.NoPlugin] with the original path,
+ * matching CakePHP's fallback behavior.
+ *
+ * Examples:
+ * - "MyPlugin.stylesheet" (MyPlugin configured) -> PluginFound("stylesheet", config)
+ * - "MyPlugin.subdir/file" (MyPlugin configured) -> PluginFound("subdir/file", config)
+ * - "unknown.file" (unknown not configured) -> NoPlugin("unknown.file")
+ * - "regular/path" -> NoPlugin("regular/path")
+ * - ".something" -> NoPlugin(".something")
+ */
+fun parseAndLookupPlugin(
+    path: String,
+    settings: Settings
+): PluginLookupResult {
+    val dotIndex = path.indexOf('.')
+    if (dotIndex > 0 && !path.substring(0, dotIndex).contains('/')) {
+        val pluginName = path.substring(0, dotIndex)
+        val resourcePath = path.substring(dotIndex + 1)
+        val pluginConfig = settings.findPluginConfigByName(pluginName)
+        if (pluginConfig != null) {
+            return PluginLookupResult.PluginFound(resourcePath, pluginConfig)
+        }
+    }
+    return PluginLookupResult.NoPlugin(path)
+}
+
 data class TemplatesDirWithPath(
     val templatesDir: TemplatesDir,
     val templatesPath: String
@@ -51,6 +96,36 @@ fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPat
         prefix = prefix.reversed().joinToString("/"),
         name = baseName
     )
+}
+
+data class TemplatePathResolution(
+    val allViewPaths: AllViewPaths,
+    val pluginLookupResult: PluginLookupResult,
+) {
+    fun toFiles(project: Project, allTemplatesPaths: AllTemplatePaths): Collection<PsiFile> {
+        return when (pluginLookupResult) {
+            is PluginLookupResult.PluginFound -> viewFilesFromPluginViewPaths(
+                project, allTemplatesPaths, allViewPaths, pluginLookupResult.pluginConfig)
+            is PluginLookupResult.NoPlugin -> viewFilesFromAllViewPaths(
+                project, allTemplatesPaths, allViewPaths)
+        }
+    }
+}
+
+fun viewFilesFromPluginViewPaths(
+    project: Project,
+    allTemplatesPaths: AllTemplatePaths,
+    allViewPaths: AllViewPaths,
+    pluginConfig: PluginConfig,
+): Collection<PsiFile> {
+    val pluginTemplatePaths = allTemplatesPaths.pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
+        templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
+    }
+    val filteredTemplatePaths = AllTemplatePaths(
+        mainTemplatePaths = listOf(),
+        pluginAndThemeTemplatePaths = PluginAndThemeTemplatePaths(pluginTemplatePaths)
+    )
+    return viewFilesFromAllViewPaths(project, filteredTemplatePaths, allViewPaths)
 }
 
 fun viewFilesFromAllViewPaths(
@@ -167,6 +242,52 @@ fun allViewPathsFromController(
     )
 }
 
+/**
+ * Creates AllViewPaths for a template, filtering to only include a specific plugin's template paths.
+ *
+ * @param allTemplatePaths All available template paths
+ * @param settings Plugin settings
+ * @param actionNames The action names (template paths) to resolve
+ * @param pluginConfig The plugin configuration to filter to
+ * @return AllViewPaths containing only paths from the specified plugin
+ */
+fun allViewPathsFromPluginTemplate(
+    allTemplatePaths: AllTemplatePaths,
+    settings: Settings,
+    actionNames: ActionNames,
+    pluginConfig: PluginConfig,
+): AllViewPaths {
+    // Filter template paths to only include those from the specified plugin
+    val pluginTemplatePaths = allTemplatePaths.pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
+        templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
+    }
+
+    if (pluginTemplatePaths.isEmpty()) {
+        return AllViewPaths(
+            defaultViewPaths = listOf(),
+            otherViewPaths = listOf(),
+            dataViewPaths = listOf()
+        )
+    }
+
+    // Use empty controller path since plugin templates use absolute paths
+    val emptyControllerPath = ControllerPath(name = "", prefix = "")
+
+    return AllViewPaths(
+        defaultViewPaths = viewPathsFromControllerNameAndActionName(
+            templatesPaths = pluginTemplatePaths.asSequence(),
+            settings = settings,
+            label = "Default",
+            altLabel = actionNames.defaultActionName.path,
+            controllerPath = emptyControllerPath,
+            actionName = actionNames.defaultActionName,
+            convertCase = true,
+        ),
+        otherViewPaths = listOf(),
+        dataViewPaths = listOf(),
+    )
+}
+
 private fun elementViewPaths(
     allTemplatesPaths: AllTemplatePaths,
     settings: Settings,
@@ -196,6 +317,51 @@ fun allViewPathsFromElementPath(
     return AllViewPaths(
         defaultViewPaths = elementViewPaths(
             allTemplatesPaths = allTemplatePaths,
+            settings = settings,
+            elementPath = elementPath,
+        ),
+        otherViewPaths = listOf(),
+        dataViewPaths = listOf()
+    )
+}
+
+/**
+ * Creates AllViewPaths for an element, filtering to only include a specific plugin's template paths.
+ *
+ * @param allTemplatePaths All available template paths
+ * @param settings Plugin settings
+ * @param elementPath The element path (without plugin prefix)
+ * @param pluginConfig The plugin configuration to filter to
+ * @return AllViewPaths containing only paths from the specified plugin
+ */
+fun allViewPathsFromPluginElementPath(
+    allTemplatePaths: AllTemplatePaths,
+    settings: Settings,
+    elementPath: String,
+    pluginConfig: PluginConfig,
+): AllViewPaths {
+    // Filter template paths to only include those from the specified plugin
+    val pluginTemplatePaths = allTemplatePaths.pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
+        templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
+    }
+
+    if (pluginTemplatePaths.isEmpty()) {
+        return AllViewPaths(
+            defaultViewPaths = listOf(),
+            otherViewPaths = listOf(),
+            dataViewPaths = listOf()
+        )
+    }
+
+    // Create a filtered AllTemplatePaths with only the plugin's template paths
+    val filteredTemplatePaths = AllTemplatePaths(
+        mainTemplatePaths = listOf(), // No main template paths when looking up plugin elements
+        pluginAndThemeTemplatePaths = PluginAndThemeTemplatePaths(pluginTemplatePaths)
+    )
+
+    return AllViewPaths(
+        defaultViewPaths = elementViewPaths(
+            allTemplatesPaths = filteredTemplatePaths,
             settings = settings,
             elementPath = elementPath,
         ),
