@@ -8,11 +8,11 @@ import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
-import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
@@ -114,18 +114,18 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         when (files.size) {
             0 -> {
-                val getContext = DataManager.getInstance().dataContextFromFocusAsync
-                getContext.then { context ->
-                    val popup = JBPopupFactory.getInstance()
-                        .createActionGroupPopup(
-                            "Create View File",
-                            createViewActionPopupFromAllViewPaths(allViewPaths),
-                            context,
-                            JBPopupFactory.ActionSelectionAid.NUMBERING,
-                            true,
-                        )
-                    popup.showInBestPositionFor(editor)
-                }
+                val context = SimpleDataContext.builder()
+                    .add(CommonDataKeys.PROJECT, project)
+                    .build()
+                val popup = JBPopupFactory.getInstance()
+                    .createActionGroupPopup(
+                        "Create View File",
+                        createViewActionPopupFromAllViewPaths(allViewPaths),
+                        context,
+                        JBPopupFactory.ActionSelectionAid.NUMBERING,
+                        true,
+                    )
+                popup.showInBestPositionFor(editor)
             }
             1 -> {
                 val first = files.first().virtualFile
