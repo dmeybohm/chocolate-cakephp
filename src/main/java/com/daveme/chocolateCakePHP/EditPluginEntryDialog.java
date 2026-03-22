@@ -5,8 +5,13 @@ import com.intellij.openapi.ui.DialogWrapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.daveme.chocolateCakePHP.cake.PluginEntry;
+
 import javax.swing.*;
+import java.util.List;
 import java.util.function.Consumer;
+
+import static com.daveme.chocolateCakePHP.SettingsKt.effectivePluginName;
 
 public class EditPluginEntryDialog extends DialogWrapper {
     private JPanel contentPane;
@@ -21,17 +26,23 @@ public class EditPluginEntryDialog extends DialogWrapper {
     private JTextField assetsPathTextField;
 
     final private Project project;
+    private final List<PluginEntry> existingEntries;
+    private final int editingIndex;
 
     private Consumer<PluginConfig> action;
 
     public EditPluginEntryDialog(
         @Nullable Project project,
         @NotNull String title,
-        @NotNull PluginConfig initialPluginConfig
+        @NotNull PluginConfig initialPluginConfig,
+        @NotNull List<PluginEntry> existingEntries,
+        int editingIndex
     ) {
         super(project, true, true);
 
         this.project = project;
+        this.existingEntries = existingEntries;
+        this.editingIndex = editingIndex;
 
         pluginNameTextField.setText(initialPluginConfig.getPluginName());
         namespaceTextField.setText(initialPluginConfig.getNamespace());
@@ -50,8 +61,23 @@ public class EditPluginEntryDialog extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
+        PluginConfig newConfig = getPluginConfig();
+        String newName = effectivePluginName(newConfig);
+
+        if (!newName.isEmpty()) {
+            for (int i = 0; i < existingEntries.size(); i++) {
+                if (i == editingIndex) continue;
+                PluginEntry entry = existingEntries.get(i);
+                String existingName = effectivePluginName(entry.toPluginConfig());
+                if (newName.equals(existingName)) {
+                    setErrorText("A plugin with the name '" + newName + "' already exists.", pluginNameTextField);
+                    return;
+                }
+            }
+        }
+
         if (action != null) {
-            action.accept(getPluginConfig());
+            action.accept(newConfig);
         }
         super.doOKAction();
     }
