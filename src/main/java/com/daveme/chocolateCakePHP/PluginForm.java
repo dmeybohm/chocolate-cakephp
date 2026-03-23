@@ -184,6 +184,7 @@ public class PluginForm implements SearchableConfigurable {
     }
 
     private void setPluginConfig(PluginConfig pluginConfig, int selectedRow) {
+        String pluginName = pluginConfig.getPluginName();
         String withBackslash = pluginConfig.getNamespace().startsWith("\\")
                 ? pluginConfig.getNamespace()
                 : "\\" + pluginConfig.getNamespace();
@@ -191,10 +192,11 @@ public class PluginForm implements SearchableConfigurable {
         String sourcePath = pluginConfig.getSrcPath();
         String assetPath = pluginConfig.getAssetPath();
 
-        pluginTableModel.setValueAt(withBackslash, selectedRow, 0);
-        pluginTableModel.setValueAt(templatePath, selectedRow, 1);
-        pluginTableModel.setValueAt(sourcePath, selectedRow, 2);
-        pluginTableModel.setValueAt(assetPath, selectedRow, 3);
+        pluginTableModel.setValueAt(pluginName, selectedRow, 0);
+        pluginTableModel.setValueAt(withBackslash, selectedRow, 1);
+        pluginTableModel.setValueAt(templatePath, selectedRow, 2);
+        pluginTableModel.setValueAt(sourcePath, selectedRow, 3);
+        pluginTableModel.setValueAt(assetPath, selectedRow, 4);
     }
 
     private void setThemeConfig(ThemeConfig themeConfig, int selectedRow) {
