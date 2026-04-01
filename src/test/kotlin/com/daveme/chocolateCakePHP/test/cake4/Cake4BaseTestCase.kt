@@ -16,6 +16,7 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         newState.cake2Enabled = false
         newState.appDirectory = "src4"
         newState.pluginConfigs = listOf(PluginConfig(
+            pluginName = "TestPlugin",
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"
         ))

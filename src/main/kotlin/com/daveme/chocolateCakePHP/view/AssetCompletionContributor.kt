@@ -1,10 +1,13 @@
 package com.daveme.chocolateCakePHP.view
 
+import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.cake.assetDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.cake.appRootDirectoryFromViewFile
+import com.daveme.chocolateCakePHP.findRelativeFile
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -100,23 +103,39 @@ class AssetCompletionContributor : CompletionContributor() {
             }
 
             // Also scan plugin and theme assets if configured
-            val projectDir = project.guessProjectDir()
-            if (projectDir != null) {
+            // Use app root directory to resolve plugin paths (always relative to project root)
+            val appRoot = appRootDirectoryFromViewFile(project, settings, virtualFile)
+            if (appRoot != null) {
                 for (config in settings.pluginAndThemeConfigs) {
                     val pluginWebrootPath = "${config.pluginPath}/${config.assetPath}/$subdirectory"
-                    val pluginWebroot = projectDir.findFileByRelativePath(pluginWebrootPath)
+                    val pluginWebroot = findRelativeFile(appRoot.directory, pluginWebrootPath)
                     if (pluginWebroot != null) {
+                        // Extract plugin name from namespace (for PluginConfig) or use path for themes
+                        val pluginName = when (config) {
+                            is PluginConfig -> config.effectivePluginName().ifEmpty { null }
+                            else -> null
+                        }
+
                         for (file in pluginWebroot.children) {
                             if (!file.isDirectory && !file.name.startsWith(".")) {
-                                val displayName = if (stripExtension && file.name.endsWith(extension)) {
+                                val baseName = if (stripExtension && file.name.endsWith(extension)) {
                                     file.name.substring(0, file.name.length - extension.length)
                                 } else {
                                     file.name
                                 }
 
+                                // For plugins, create completion with plugin prefix (e.g., "MyPlugin.stylesheet")
+                                // For themes (no pluginName), use just the base name
+                                val displayName = if (pluginName != null) {
+                                    "$pluginName.$baseName"
+                                } else {
+                                    baseName
+                                }
+
                                 val lookupElement = LookupElementBuilder.create(displayName as Any)
                                     .withIcon(file.fileType.icon)
                                     .withTypeText(file.name)
+                                    .withTailText(if (pluginName != null) " (plugin)" else null, true)
 
                                 result.addElement(lookupElement)
                             }
@@ -125,5 +144,6 @@ class AssetCompletionContributor : CompletionContributor() {
                 }
             }
         }
+
     }
 }

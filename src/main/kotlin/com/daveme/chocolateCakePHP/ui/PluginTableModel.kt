@@ -53,12 +53,14 @@ class PluginTableModel private constructor(
     override fun getValueAt(i: Int, i1: Int): Any {
         return when (i1) {
             0 ->
-                pluginEntries[i].namespace
+                pluginEntries[i].pluginName
             1 ->
-                pluginEntries[i].pluginPath
+                pluginEntries[i].namespace
             2 ->
-                pluginEntries[i].srcPath
+                pluginEntries[i].pluginPath
             3 ->
+                pluginEntries[i].srcPath
+            4 ->
                 pluginEntries[i].assetPath
             else ->
                 throw RuntimeException("Invalid column")
@@ -69,12 +71,14 @@ class PluginTableModel private constructor(
         val existingEntry = pluginEntries[i]
         when (i1) {
             0 ->
-                existingEntry.namespace = o.toString()
+                existingEntry.pluginName = o.toString()
             1 ->
-                existingEntry.pluginPath = o.toString()
+                existingEntry.namespace = o.toString()
             2 ->
-                existingEntry.srcPath = o.toString()
+                existingEntry.pluginPath = o.toString()
             3 ->
+                existingEntry.srcPath = o.toString()
+            4 ->
                 existingEntry.assetPath = o.toString()
             else ->
                 throw RuntimeException("Invalid column")
@@ -92,6 +96,11 @@ class PluginTableModel private constructor(
     override fun removeRow(idx: Int) {
         pluginEntries.removeAt(idx)
         fireTableRowsDeleted(idx, idx)
+    }
+
+    class PluginNameColumn : ColumnInfo<PluginEntry, String>("Plugin Name") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            pluginEntry.pluginName
     }
 
     class NamespaceColumn : ColumnInfo<PluginEntry, String>("Plugin Namespace") {
@@ -117,6 +126,7 @@ class PluginTableModel private constructor(
     companion object {
         private val myColumns =
             arrayOf(
+                PluginNameColumn(),
                 NamespaceColumn(),
                 PluginPathColumn(),
                 SourcePathColumn(),

@@ -18,6 +18,39 @@ import com.jetbrains.php.lang.psi.elements.Variable
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
+    /**
+     * Resolves template view paths, handling plugin-prefixed paths.
+     *
+     * @param path The template path, possibly with plugin prefix
+     * @param settings Plugin settings
+     * @param controllerPath The controller path for non-plugin lookups
+     * @param allTemplatesPaths All available template paths
+     * @param existingActionNames Optional pre-built ActionNames to use for non-plugin case.
+     *                            If null, ActionNames will be created from the path.
+     */
+    private fun resolveTemplateViewPaths(
+        path: String,
+        settings: Settings,
+        controllerPath: ControllerPath,
+        allTemplatesPaths: AllTemplatePaths,
+        existingActionNames: ActionNames? = null
+    ): TemplatePathResolution {
+        val result = parseAndLookupPlugin(path, settings)
+        val allViewPaths = when (result) {
+            is PluginLookupResult.PluginFound -> {
+                val pluginActionName = actionNameFromPath(result.resourcePath)
+                val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
+                allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, result.pluginConfig)
+            }
+            is PluginLookupResult.NoPlugin -> {
+                val actionNames = existingActionNames
+                    ?: ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
+                allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
+            }
+        }
+        return TemplatePathResolution(allViewPaths, result)
+    }
+
     override fun getGotoDeclarationTargets(
         psiElement: PsiElement?,
         i: Int,
@@ -91,18 +124,15 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
+        val templatePath = actionNames.defaultActionName.path
+        val resolution = resolveTemplateViewPaths(
+            templatePath,
+            settings,
             controllerPath,
             allTemplatesPaths,
-            settings,
-            actionNames
+            existingActionNames = actionNames
         )
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
-        return files.toTypedArray()
+        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
     }
 
     private fun handleViewFieldAssignment(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
@@ -125,8 +155,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Get the assigned view name
         val viewName = stringLiteral.contents
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
 
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
@@ -138,18 +166,13 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
+        val resolution = resolveTemplateViewPaths(
+            viewName,
             settings,
-            actionNames
+            controllerPath,
+            allTemplatesPaths
         )
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
-        return files.toTypedArray()
+        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
     }
 
     private fun handleViewBuilderCall(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
@@ -246,9 +269,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
-
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             containingFile
@@ -259,18 +279,13 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
+        val resolution = resolveTemplateViewPaths(
+            viewName,
             settings,
-            actionNames
+            controllerPath,
+            allTemplatesPaths
         )
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
-        return files.toTypedArray()
+        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
     }
 
     /**
@@ -309,9 +324,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         val controllerPath = controllerPathFromControllerFile(virtualFile)
             ?: return null
 
-        val actionName = actionNameFromPath(viewName)
-        val actionNames = ActionNames(defaultActionName = actionName)
-
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
             containingFile
@@ -322,18 +334,13 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val allViewPaths = allViewPathsFromController(
-            controllerPath,
-            allTemplatesPaths,
+        val resolution = resolveTemplateViewPaths(
+            viewName,
             settings,
-            actionNames
+            controllerPath,
+            allTemplatesPaths
         )
-        val files = viewFilesFromAllViewPaths(
-            project = psiElement.project,
-            allTemplatesPaths = allTemplatesPaths,
-            allViewPaths = allViewPaths
-        )
-        return files.toTypedArray()
+        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
     }
 
     private fun getTemplatePathPreceeding(
@@ -395,4 +402,3 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
     override fun getActionText(dataContext: DataContext): String? = null
 }
-

@@ -48,10 +48,26 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
         val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topSourceDirectory)
             ?: return PsiElement.EMPTY_ARRAY
 
-        val allViewPaths = allViewPathsFromElementPath(allTemplatesPaths, settings, contents)
-        val files = allViewPathsToFiles(project, allViewPaths)
+        // Parse plugin prefix from element path
+        val result = parseAndLookupPlugin(contents, settings)
+        val allViewPaths = when (result) {
+            is PluginLookupResult.PluginFound -> {
+                // Plugin-prefixed element: look only in the plugin's template directory
+                allViewPathsFromPluginElementPath(
+                    allTemplatesPaths,
+                    settings,
+                    result.resourcePath,
+                    result.pluginConfig
+                )
+            }
+            is PluginLookupResult.NoPlugin -> {
+                // No plugin prefix or unrecognized: search all template paths
+                allViewPathsFromElementPath(allTemplatesPaths, settings, result.originalPath)
+            }
+        }
 
-        return files.toTypedArray()
+        val resolution = TemplatePathResolution(allViewPaths, result)
+        return resolution.toFiles(project, allTemplatesPaths).toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
