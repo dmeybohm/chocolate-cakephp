@@ -102,7 +102,7 @@ fun createViewActionPopupFromAllViewPaths(
             allowEdit = false
         )
     )
-    allViewPaths.otherViewPaths.map { otherViewPath ->
+    allViewPaths.otherViewPaths.distinctBy { it.label }.map { otherViewPath ->
         defaultActionGroup.add(
             CreateViewFileAction(
                 title = "Create ${otherViewPath.label}",
@@ -119,7 +119,7 @@ fun createViewActionPopupFromAllViewPaths(
             allowEdit = true
         )
     )
-    allViewPaths.dataViewPaths.map { dataViewPath ->
+    allViewPaths.dataViewPaths.distinctBy { it.label }.map { dataViewPath ->
         defaultActionGroup.add(
             CreateViewFileAction(
                 title = "Create ${dataViewPath.label} View File",
