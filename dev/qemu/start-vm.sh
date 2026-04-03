@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VM_DIR="$SCRIPT_DIR/vm-data"
 DISK_FILE="$VM_DIR/disk.qcow2"
 SEED_ISO="$VM_DIR/seed.iso"
-RAM="2048"
-CPUS="2"
+RAM="4096"
+CPUS="4"
 SSH_PORT="2222"
 
 if [ ! -f "$DISK_FILE" ] || [ ! -f "$SEED_ISO" ]; then
