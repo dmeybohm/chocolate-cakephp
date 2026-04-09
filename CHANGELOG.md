@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-09
+
+### Added
+- Add "Go to Related Symbol" navigation between views, controllers, and elements
+- Add autocompletion and go-to-declaration for table names in `contain()` method calls
+- Add plugin name column to plugin settings table
+- Add duplicate plugin name validation in plugin settings dialog
+- Add path resolution hints to Plugins/Themes settings UI
+
+### Fixed
+- Fix CakePHP 2 themed view to controller navigation
+- Fix "Create View File" popup showing "Nothing to show" in remote development
+- Fix duplicate menu items in remote development
+- Fix plugin template filtering to prevent prefix collisions
+- Fix plugin path resolution for assets, elements, and templates
+
 ## [1.0.1] - 2026-01-16
 
 ### Added
@@ -15,7 +31,6 @@
 
 ### Changed
 - Expand plugin compatibility back to PhpStorm / IntelliJ Ultimate 2023.2
->>>>>>> d62d062 (Update Changelog for 1.0.1)
 
 ## [1.0.0] - 2025-10-31
 
@@ -176,7 +191,8 @@ on values returned from dynamic properties
 ### Added
 - Initial release supporting CakePHP 2
 
-[Unreleased]: https://github.com/dmeybohm/chocolate-cakephp/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/dmeybohm/chocolate-cakephp/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/dmeybohm/chocolate-cakephp/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/dmeybohm/chocolate-cakephp/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/dmeybohm/chocolate-cakephp/compare/v0.9.2...v1.0.0
 [0.9.2]: https://github.com/dmeybohm/chocolate-cakephp/compare/v0.9.1...v0.9.2
