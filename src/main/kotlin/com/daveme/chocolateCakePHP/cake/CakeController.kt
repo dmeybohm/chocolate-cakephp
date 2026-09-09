@@ -7,11 +7,13 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.Function
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.PhpMatchExpression
+import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.TernaryExpression
 import com.jetbrains.php.lang.psi.elements.Variable
@@ -106,23 +108,83 @@ fun actionNamesFromTemplateNames(templateNames: List<String>): ActionNames? {
  *   $cond ?: 'b'                            -> ["b"]
  *   match ($x) { 1 => 'a', default => 'b' } -> ["a", "b"]  (arm conditions are never inspected)
  *   ('a')                                   -> ["a"]
- * These nest, so a ternary inside a match arm works too. Anything else yields no values.
+ *   $var                                    -> the values of every `$var = <expr>` that precedes
+ *                                              the use in the same scope (see templateNamesFromVariable)
+ * These nest, so a ternary inside a match arm works too, and a variable may be assigned a
+ * ternary of other variables. Anything else yields no values.
+ *
+ * This mirrors the AST-level rules in ViewFileDataIndexer so the gutter markers and the
+ * view file index always agree.
  */
 fun templateNamesFromExpression(expression: PsiElement?): List<String> {
+    return templateNamesFromExpression(expression, HashSet())
+}
+
+private fun templateNamesFromExpression(
+    expression: PsiElement?,
+    visited: MutableSet<AssignmentExpression>
+): List<String> {
     return when (expression) {
         null -> emptyList()
         is StringLiteralExpression -> listOf(expression.contents)
+        is Variable -> templateNamesFromVariable(expression, visited)
         is TernaryExpression ->
-            templateNamesFromExpression(expression.trueVariant) +
-                templateNamesFromExpression(expression.falseVariant)
+            templateNamesFromExpression(expression.trueVariant, visited) +
+                templateNamesFromExpression(expression.falseVariant, visited)
         is PhpMatchExpression ->
             // getMatchArms() may or may not include the default arm depending on plugin version
             (expression.matchArms + listOfNotNull(expression.defaultMatchArm))
                 .distinct()
-                .flatMap { templateNamesFromExpression(it.bodyExpression) }
-        is ParenthesizedExpression -> templateNamesFromExpression(expression.argument)
+                .flatMap { templateNamesFromExpression(it.bodyExpression, visited) }
+        is ParenthesizedExpression -> templateNamesFromExpression(expression.argument, visited)
         else -> emptyList()
     }
+}
+
+/**
+ * Resolve a `$name` use to the template names of every plain `$name = <expr>` assignment
+ * that textually precedes the use in the same scope (method, function, closure, or file).
+ * All preceding assignments count, so both branches of an if/else are found; a stale
+ * earlier value after a sequential reassignment is included too, which is preferred over
+ * missing a branch.
+ *
+ * Not resolved: `$this`, method parameters, properties, `.=` and other compound
+ * assignments, or anything assigned in a nested closure.
+ *
+ * The visited set holds assignments already expanded on the current path and stops
+ * cycles such as `$a = $b; $b = $a;` or `$a = $a ?: 'x'`.
+ */
+private fun templateNamesFromVariable(
+    variable: Variable,
+    visited: MutableSet<AssignmentExpression>
+): List<String> {
+    val name = variable.name
+    if (name == "this") {
+        return emptyList()
+    }
+    val scope: PsiElement = PsiTreeUtil.getParentOfType(variable, Function::class.java)
+        ?: variable.containingFile
+        ?: return emptyList()
+    val useOffset = variable.textRange.startOffset
+
+    val assignments = PsiTreeUtil.findChildrenOfType(scope, AssignmentExpression::class.java)
+        .filter { assignment ->
+            assignment !is SelfAssignmentExpression &&
+                (assignment.variable as? Variable)?.name == name &&
+                assignment.textRange.startOffset < useOffset &&
+                PsiTreeUtil.getParentOfType(assignment, Function::class.java) == (scope as? Function)
+        }
+        .sortedBy { it.textRange.startOffset }
+
+    val result = mutableListOf<String>()
+    for (assignment in assignments) {
+        if (!visited.add(assignment)) {
+            continue
+        }
+        result += templateNamesFromExpression(assignment.value, visited)
+        visited.remove(assignment)
+    }
+    return result
 }
 
 /**

@@ -143,4 +143,16 @@ class MovieController extends Controller
 		$this->set(compact('moviesTable'));
 	}
 
+	public function variableTemplateTest() {
+		// Template chosen through a local variable assigned in two branches
+		$template = 'variable_one';
+		if ($this->request->is('ajax')) {
+			$template = 'variable_two';
+		}
+		$this->viewBuilder()->setTemplate($template);
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set('variableVar', 'Variable');
+		$this->set(compact('moviesTable'));
+	}
+
 }

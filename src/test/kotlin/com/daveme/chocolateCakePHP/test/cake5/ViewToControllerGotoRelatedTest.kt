@@ -165,4 +165,24 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
         val methods = items.mapNotNull { PsiTreeUtil.getParentOfType(it.element, Method::class.java, false)?.name }
         assertTrue("Should contain 'matchTemplateTest' method, found: $methods", methods.contains("matchTemplateTest"))
     }
+
+    fun `test view referenced through a local variable navigates to controller method`() {
+        myFixture.configureByFiles(
+            "cake5/src5/Controller/AppController.php",
+            "cake5/vendor/cakephp.php",
+            "cake5/templates/Movie/variable_two.php",
+            "cake5/src5/Controller/MovieController.php",
+        )
+
+        val viewFile = myFixture.configureByFile("cake5/templates/Movie/variable_two.php")
+        val element = viewFile.firstChild
+        assertNotNull(element)
+
+        val provider = ViewToControllerGotoRelatedProvider()
+        val items = provider.getItems(element!!)
+
+        // The indexed element is the setTemplate() call, so resolve its containing method
+        val methods = items.mapNotNull { PsiTreeUtil.getParentOfType(it.element, Method::class.java, false)?.name }
+        assertTrue("Should contain 'variableTemplateTest' method, found: $methods", methods.contains("variableTemplateTest"))
+    }
 }

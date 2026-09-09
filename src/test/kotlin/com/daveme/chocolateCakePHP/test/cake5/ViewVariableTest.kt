@@ -597,4 +597,35 @@ class ViewVariableTest: Cake5BaseTestCase() {
             assertTrue("Expected \$moviesTable in $view, got: $result", result.contains("${'$'}moviesTable"))
         }
     }
+
+    // Local variable template tests
+
+    fun `test variable list is communicated to both views of a variable setTemplate`() {
+        for (view in listOf("variable_one", "variable_two")) {
+            myFixture.configureByFilePathAndText("cake5/templates/Movie/$view.php", """
+            <?php
+            echo ${'$'}<caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected \$variableVar in $view, got: $result", result!!.contains("${'$'}variableVar"))
+            assertTrue("Expected \$moviesTable in $view, got: $result", result.contains("${'$'}moviesTable"))
+        }
+    }
+
+    fun `test variable type is communicated to both views of a variable setTemplate`() {
+        for (view in listOf("variable_one", "variable_two")) {
+            myFixture.configureByFilePathAndText("cake5/templates/Movie/$view.php", """
+            <?php
+            echo ${'$'}moviesTable-><caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected findOwnedBy in $view, got: $result", result!!.contains("findOwnedBy"))
+        }
+    }
 }

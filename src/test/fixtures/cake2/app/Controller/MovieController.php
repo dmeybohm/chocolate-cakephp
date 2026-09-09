@@ -106,4 +106,15 @@ class MovieController extends AppController
 		$this->set(compact('movieModel'));
 	}
 
+	public function variable_view_test()
+	{
+		// View chosen through a ternary of two local variables
+		$one = 'variable_one';
+		$two = 'variable_two';
+		$this->view = $this->request->is('ajax') ? $one : $two;
+		$movieModel = ClassRegistry::init('Movie');
+		$this->set('variableVar', 'Variable');
+		$this->set(compact('movieModel'));
+	}
+
 }

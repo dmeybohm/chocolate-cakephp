@@ -300,4 +300,48 @@ class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
     }
+
+    // Local variable template tests
+
+    fun `test goto declaration on setTemplate after a variable setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function pathTest() {
+                ${'$'}path = 'Movie/Nested';
+                ${'$'}this->viewBuilder()->setTemplatePath(${'$'}path);
+                ${'$'}this->viewBuilder()->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test goto declaration on the variable itself yields no targets from the template handler`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}template = 'film_director';
+                ${'$'}this->render(${'$'}temp<caret>late);
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // PhpStorm's own navigation to the variable's assignment must win
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
 }

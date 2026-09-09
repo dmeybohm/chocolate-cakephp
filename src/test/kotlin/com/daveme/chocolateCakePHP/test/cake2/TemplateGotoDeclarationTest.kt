@@ -149,4 +149,24 @@ class TemplateGotoDeclarationTest : Cake2BaseTestCase() {
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.ctp")
     }
+
+    // Local variable template tests
+
+    fun `test goto declaration on the variable itself yields no targets from the template handler`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function artist() {
+                ${'$'}template = 'film_director';
+                ${'$'}this->render(${'$'}temp<caret>late);
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // PhpStorm's own navigation to the variable's assignment must win
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
 }
