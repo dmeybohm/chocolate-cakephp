@@ -128,3 +128,62 @@ Cake 5 first, then Cake 4, 3 and 2.
   are added for this so existing count-based assertions are untouched.
 - `ViewToControllerGotoRelatedTest` (Cake 5): a view referenced only through a
   ternary navigates back to its controller method.
+
+## Implementation Progress
+
+### Session #1 (2026-09-08)
+
+Implemented as designed, in one pass, on branch `support-ternary-template-link`.
+
+**Source changes**
+
+- `ASTNodes.kt`: added `isTernaryExpression()`, `isMatchExpression()`,
+  `isMatchArm()`, `isDefaultMatchArm()` and `isParenthesizedExpression()`.
+  The PHP plugin uses a separate `DEFAULT_MATCH_ARM` element type for
+  `default =>` arms, so it needs its own check on the AST side. On the PSI
+  side `PhpDefaultMatchArm` extends `PhpMatchArm`, so one `is` check covers
+  both, but `getMatchArms()` and `getDefaultMatchArm()` are both consulted in
+  case a plugin version excludes the default arm from the list.
+- `ViewFileDataIndexer.kt`: `extractStringLiteral` no longer pretends
+  non-literals are literals. New `extractTemplateNames` returns the list of
+  possible names. All three info records carry a `List<String>` and the
+  indexing loops iterate it. `setTemplatePath` state is a list.
+  `ViewFileIndex` version bumped 17 to 18.
+- `CakeController.kt`: new `templateNamesFromExpression` and
+  `actionNamesFromTemplateNames`. `ViewBuilderCall.parameterValues` is a list.
+  New `actionNamesBySetTemplateCall` keeps names grouped per call so
+  `actionNamesFromViewBuilderCall` looks up by offset instead of by index.
+- `TemplateGotoDeclarationHandler.kt`: new `templateArgumentFromLiteral` walks
+  from the clicked literal up to the argument; `navigateToView` became
+  `navigateToViews` and takes a list. The old `PlatformPatterns` pattern for
+  render() was replaced by the same walk plus `RenderMethodPattern.accepts`.
+
+**Tests** (23 new, all passing, plus the existing suites they live in)
+
+- Cake 5 `TemplateGotoDeclarationTest`: 12 cases covering both ternary
+  branches, short ternary, nested parenthesized ternary, match arms (default
+  and non-default, multi-condition), condition literals not navigating, and
+  ternaries in chained and preceding `setTemplatePath`.
+- Cake 4 and Cake 3 `TemplateGotoDeclarationTest`: 4 cases each.
+- Cake 2 `TemplateGotoDeclarationTest`: 5 cases for `render()` and `$this->view`.
+- Cake 5 and Cake 2 `ViewVariableTest`: completion of variables in both
+  target views of a ternary and every arm of a match (exercises the index).
+- Cake 5 `ViewToControllerGotoRelatedTest`: related-symbol navigation from a
+  view reached only through a ternary or a match.
+- Cake 3 `ControllerLineMarkerTest`: render, setTemplate, chained
+  setTemplatePath, `$this->view` and method-level markers list every branch.
+
+New fixtures: `ternary_one`, `ternary_two`, `match_one`, `match_two`
+templates for Cake 5 and Cake 2, `Nested/other.ctp` for Cake 3, and
+`ternaryTemplateTest()` / `matchTemplateTest()` (Cake 5) and
+`ternary_view_test()` / `match_view_test()` (Cake 2) controller methods.
+
+**Notes**
+
+- The `ViewToControllerGotoRelatedProvider` returns the indexed PSI element,
+  which for `setTemplate()` is the `MethodReference`, not the enclosing
+  `Method`. Tests that want the method name must walk up with
+  `PsiTreeUtil.getParentOfType`.
+- The test project parses `match` without any language level configuration,
+  so the Cake 2 fixtures can use it even though real Cake 2 apps rarely run
+  on PHP 8.

@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Added
+- Support ternary and `match` expressions in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every branch is navigable and indexed
+
 ## [1.1.0] - 2026-04-09
 
 ### Added
