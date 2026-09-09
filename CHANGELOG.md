@@ -5,7 +5,7 @@
 ## [Unreleased]
 
 ### Added
-- Support ternary and `match` expressions in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every branch is navigable and indexed
+- Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
 
 ## [1.1.0] - 2026-04-09
 

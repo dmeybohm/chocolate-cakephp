@@ -187,3 +187,88 @@ templates for Cake 5 and Cake 2, `Nested/other.ctp` for Cake 3, and
 - The test project parses `match` without any language level configuration,
   so the Cake 2 fixtures can use it even though real Cake 2 apps rarely run
   on PHP 8.
+
+### Session #2 (2026-09-08): local variables as template names
+
+Follow-up requested after Session #1: resolve a `$var` argument to the
+template names it was assigned, both directly and inside the ternary / match
+forms from Session #1:
+
+```php
+$var = 'somewhere';
+$this->view = $var;
+
+$one = 'one'; $two = 'two';
+$this->viewBuilder()->setTemplate($cond ? $one : $two);
+```
+
+Exploration confirmed this was not implemented anywhere before: the index,
+the gutter markers and go-to-declaration all dropped a `$var` argument. The
+only variable resolution in the codebase was the `$this->set($key, ...)`
+heuristic in `ViewVariableIndexService`, which is PSI-side and takes the
+single last preceding assignment.
+
+**Decisions** (asked and answered by the maintainer)
+
+- *Resolution rule:* the union of **all** plain `$name = <expr>` assignments
+  that textually precede the use in the same scope (method, function, closure,
+  or the file for view templates). This finds both branches of an `if/else`.
+  After sequential reassignment a stale earlier value is included too; a
+  superset is preferred over a dropped branch, in line with the "prefer false
+  positives" stance of `features/2025/10/optimize-view-variable-suppression.md`.
+  The same rule is implemented at the AST level (index) and the PSI level
+  (gutter, navigation) so they always agree.
+- *No go-to-declaration on the variable itself.* Ctrl+click on `$var` keeps
+  PhpStorm's jump to the assignment. Variable-backed templates surface through
+  the gutter markers, view-to-controller navigation and view-variable
+  completion. A test per version pins this.
+
+**Not resolved** (the reference is simply skipped, as before): `$this`,
+method parameters, properties, compound assignment (`.=`), concatenation,
+function results, and anything assigned inside a nested closure.
+
+**Source changes**
+
+- `ASTNodes.kt`: `isFunction()` (string comparison, since `FUNCTION` and
+  `CLASS_METHOD` are stub element types), `isClosure()`, `isScopeNode()`.
+- `ViewFileDataIndexer.kt`: a per-`map()` `TemplateNameContext` caches the
+  assignments of each scope, grouped by variable name in document order, built
+  by one walk that does not enter nested scopes. `collectTemplateNames` gained
+  a `VARIABLE` branch (`resolveVariable`) that expands every preceding
+  assignment's right-hand side through the same collector, with a `visited`
+  set of assignment nodes to stop cycles (`$a = $b; $b = $a;`,
+  `$a = $a ?: 'x'`). `SELF_ASSIGNMENT_EXPRESSION` is a distinct element type,
+  so `.=` is excluded for free. Index version 18 to 19.
+- `CakeController.kt`: `templateNamesFromExpression` gained an `is Variable`
+  branch (`templateNamesFromVariable`) using the nearest enclosing `Function`
+  (`Method` and closures are `Function`s) or the file as scope,
+  `PsiTreeUtil.findChildrenOfType(scope, AssignmentExpression)` filtered by
+  name, offset, `!is SelfAssignmentExpression` (it *extends*
+  `AssignmentExpression`, so this check is required) and same nearest
+  `Function`. Every caller benefits with no further change.
+- `TemplateGotoDeclarationHandler.kt`: unchanged.
+
+**Tests** (35 new, all passing; full suite 709)
+
+- New `cake5/ViewFileDataIndexerVariableTest` drives `ViewFileDataIndexer.map`
+  directly and asserts on index keys: literal via variable in `setTemplate`,
+  `render` and `$this->view`; if/else; ternary of variables; variable holding
+  a ternary; variable chain; later assignment ignored; `setTemplatePath` via
+  variable; closure assignment ignored; parameter yields nothing;
+  self-reference and mutual reference terminate; `.=` ignored; `$this` never
+  resolved; `element($name)` at view-file scope.
+- `cake3/ControllerLineMarkerTest`: render, setTemplate, if/else, ternary of
+  variables, chained setTemplatePath, `$this->view`, parameter (no marker),
+  and the method-level marker.
+- `cake5`/`cake2` `ViewVariableTest` and `cake5/ViewToControllerGotoRelatedTest`
+  through new fixtures `variable_one` / `variable_two` and the controller
+  methods `variableTemplateTest()` (Cake 5, if/else) and
+  `variable_view_test()` (Cake 2, ternary of two variables).
+- `TemplateGotoDeclarationTest` for Cake 5, 4, 3: `setTemplatePath($path)`
+  resolves for a later `setTemplate('custom')` click; for all four versions:
+  the caret on `$var` returns no targets from this handler.
+
+**Gotcha found while testing:** writing a Kotlin test file through an
+unquoted shell heredoc silently stripped `$methodBody` / `$methodSignature`
+Kotlin templates, leaving an empty controller and an empty index. Quote the
+heredoc delimiter or generate test files from Python.
