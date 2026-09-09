@@ -303,22 +303,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         return emptyList()
     }
     
-    // Extract parameter nodes from a parameter list (returns actual AST nodes, not just strings)
-    private fun extractParameterNodes(paramListNode: ASTNode): List<ASTNode> {
-        val paramNodes = mutableListOf<ASTNode>()
-        
-        var child = paramListNode.firstChildNode
-        while (child != null) {
-            if (child.elementType != TokenType.WHITE_SPACE && 
-                child.elementType != PhpTokenTypes.opCOMMA) {
-                paramNodes.add(child)
-            }
-            child = child.treeNext
-        }
-        
-        return paramNodes
-    }
-    
+    private fun extractParameterNodes(paramListNode: ASTNode): List<ASTNode> = paramListNode.parameterNodes()
+
     // Extract variables from array creation expression: ['name' => $value, 'title' => $pageTitle]
     // Parses hash array elements to extract key-value pairs
     private fun extractVariablesFromArrayCreation(arrayNode: ASTNode): List<SetCallInfo> {
@@ -580,34 +566,5 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         ))
     }
     
-    // Extract string literal from AST node (borrowed from ViewFileDataIndexer)
-    private fun extractStringLiteral(node: ASTNode): String? {
-        // First check if this node itself is a STRING
-        if (node.isString()) {
-            val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
-            val text = (lit ?: node).text
-            return text.removeSurrounding("'").removeSurrounding("\"")
-        }
-
-        // If not, try to find a STRING child (e.g., for "Array key" nodes that contain STRING)
-        var stringChild: ASTNode? = null
-        var child = node.firstChildNode
-        while (child != null) {
-            if (child.isString()) {
-                stringChild = child
-                break
-            }
-            child = child.treeNext
-        }
-
-        if (stringChild != null) {
-            val lit = stringChild.findChildByType(PhpTokenTypes.STRING_LITERAL)
-            val text = (lit ?: stringChild).text
-            return text.removeSurrounding("'").removeSurrounding("\"")
-        }
-
-        // If it's a VARIABLE or other non-string type, return null
-        // This prevents variables like $key from being treated as string literals
-        return null
-    }
+    private fun extractStringLiteral(node: ASTNode): String? = node.stringLiteralValue()
 }
