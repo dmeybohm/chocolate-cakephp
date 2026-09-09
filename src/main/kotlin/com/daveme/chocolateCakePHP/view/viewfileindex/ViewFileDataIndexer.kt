@@ -38,7 +38,7 @@ private val cakeSkipRenderingMethods : HashSet<String> = listOf(
 data class MethodCallInfo(
     val methodName: String,
     val receiverText: String?,
-    val firstParameterText: String?,
+    val firstParameterValues: List<String>,  // All literal values the first parameter can take
     val offset: Int
 )
 
@@ -51,13 +51,13 @@ data class MethodInfo(
 data class FieldAssignmentInfo(
     val fieldName: String,
     val receiverText: String?,
-    val assignedValue: String?,
+    val assignedValues: List<String>,  // All literal values the assigned expression can take
     val offset: Int
 )
 
 data class ViewBuilderCallInfo(
-    val methodName: String,        // "setTemplate" or "setTemplatePath"
-    val parameterValue: String?,   // The template name or path
+    val methodName: String,            // "setTemplate" or "setTemplatePath"
+    val parameterValues: List<String>, // All literal template names or paths the parameter can take
     val offset: Int,
     val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
 )
@@ -67,15 +67,89 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     val logger = this.thisLogger()
 
     // Robust string literal extraction that handles different PHP plugin versions
-    private fun extractStringLiteral(node: ASTNode): String? {
-        // Accept either STRING wrapper or direct STRING_LITERAL token
-        val strNode = node.takeIf { it.isString() } ?: node
-
+    private fun extractStringLiteral(node: ASTNode): String {
         // Try child token
-        val lit = strNode.findChildByType(PhpTokenTypes.STRING_LITERAL)
-        val text = (lit ?: strNode).text
+        val lit = node.findChildByType(PhpTokenTypes.STRING_LITERAL)
+        val text = (lit ?: node).text
         // Strip quotes if present
         return text.removeSurrounding("'").removeSurrounding("\"")
+    }
+
+    /**
+     * Collect every literal string a template expression can evaluate to.
+     *
+     * Handles:
+     *   'literal'                          -> ["literal"]
+     *   $cond ? 'a' : 'b'                  -> ["a", "b"]   (the condition is never inspected)
+     *   $cond ?: 'b'                       -> ["b"]
+     *   match ($x) { 1 => 'a', default => 'b' } -> ["a", "b"]  (arm conditions are never inspected)
+     *   ('a')                              -> ["a"]
+     * These nest, so a ternary inside a match arm works too. Anything else yields no values.
+     */
+    private fun extractTemplateNames(node: ASTNode): List<String> {
+        val result = mutableListOf<String>()
+        collectTemplateNames(node, result)
+        return result
+    }
+
+    private fun collectTemplateNames(node: ASTNode, result: MutableList<String>) {
+        when {
+            node.isString() -> {
+                result.add(extractStringLiteral(node))
+            }
+            node.isTernaryExpression() -> {
+                // Children: <condition> ? <true> : <false>   or   <condition> ?: <false>
+                // Only the expression nodes after the "?" are possible template names.
+                var afterQuestion = false
+                var child = node.firstChildNode
+                while (child != null) {
+                    if (child.elementType == PhpTokenTypes.opQUEST) {
+                        afterQuestion = true
+                    } else if (afterQuestion && isExpressionNode(child)) {
+                        collectTemplateNames(child, result)
+                    }
+                    child = child.treeNext
+                }
+            }
+            node.isMatchExpression() -> {
+                var child = node.firstChildNode
+                while (child != null) {
+                    if (child.isMatchArm() || child.isDefaultMatchArm()) {
+                        collectMatchArmBodyNames(child, result)
+                    }
+                    child = child.treeNext
+                }
+            }
+            node.isParenthesizedExpression() -> {
+                var child = node.firstChildNode
+                while (child != null) {
+                    if (isExpressionNode(child)) {
+                        collectTemplateNames(child, result)
+                    }
+                    child = child.treeNext
+                }
+            }
+        }
+    }
+
+    private fun collectMatchArmBodyNames(armNode: ASTNode, result: MutableList<String>) {
+        // Children: <cond>, <cond>, ... => <body>
+        // Only the expression after "=>" is a possible template name.
+        var afterArrow = false
+        var child = armNode.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.opHASH_ARRAY) {
+                afterArrow = true
+            } else if (afterArrow && isExpressionNode(child)) {
+                collectTemplateNames(child, result)
+            }
+            child = child.treeNext
+        }
+    }
+
+    // Composite nodes are expressions; leaf tokens (operators, whitespace, comments) are not.
+    private fun isExpressionNode(node: ASTNode): Boolean {
+        return node.firstChildNode != null
     }
 
     // AST-based parsing implementation (tested and proven)
@@ -110,7 +184,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Look for VARIABLE, arrow, identifier, parameter list pattern
         var receiverName: String? = null
         var methodName: String? = null
-        var parameterValue: String? = null
+        var parameterValues: List<String> = emptyList()
         
         // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...) - avoid toList()
         var child = node.firstChildNode
@@ -123,18 +197,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     methodName = child.text
                 }
                 child.isParameterList() -> {
-                    // Extract the first string parameter, ignoring additional parameters
+                    // Extract the first parameter, ignoring additional parameters
                     // Both element() and render() accept optional parameters - we only need the first one
                     var paramChild = child.firstChildNode
                     while (paramChild != null) {
-                        // Skip whitespace and commas to find actual parameters
+                        // Skip whitespace and commas to find the first actual parameter
                         if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
-                            // Try to extract string literal from the first parameter we encounter
-                            val extractedValue = extractStringLiteral(paramChild)
-                            if (extractedValue != null) {
-                                parameterValue = extractedValue
-                                break  // Found the first string parameter, stop looking
-                            }
+                            parameterValues = extractTemplateNames(paramChild)
+                            break
                         }
                         paramChild = paramChild.treeNext
                     }
@@ -145,11 +215,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         
         // Only return if method name matches target and we have all required parts
         if (methodName?.equals(targetMethodName, ignoreCase = true) == true && 
-            receiverName != null && parameterValue != null) {
+            receiverName != null && parameterValues.isNotEmpty()) {
             return MethodCallInfo(
                 methodName = methodName,
                 receiverText = receiverName,
-                firstParameterText = parameterValue,
+                firstParameterValues = parameterValues,
                 offset = node.startOffset
             )
         }
@@ -236,26 +306,26 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
     private fun parseFieldAssignment(node: ASTNode, targetFieldName: String): FieldAssignmentInfo? {
-        // Look for: $this->view = 'template_name'
-        // AST structure: ASSIGNMENT_EXPRESSION -> FIELD_REFERENCE (left) -> STRING (right)
+        // Look for: $this->view = 'template_name'   (or a ternary / match of template names)
+        // AST structure: ASSIGNMENT_EXPRESSION -> FIELD_REFERENCE (left) -> "=" -> <expression> (right)
         var fieldReference: ASTNode? = null
-        var assignedValue: String? = null
+        var assignedValues: List<String> = emptyList()
 
         var child = node.firstChildNode
         while (child != null) {
             when {
-                child.isFieldReference() -> {
+                fieldReference == null && child.isFieldReference() -> {
                     fieldReference = child
                 }
-                child.isString() -> {
-                    assignedValue = extractStringLiteral(child)
+                fieldReference != null && isExpressionNode(child) -> {
+                    assignedValues = extractTemplateNames(child)
                 }
             }
             child = child.treeNext
         }
 
         // Parse the field reference to ensure it's $this->view
-        if (fieldReference != null && assignedValue != null) {
+        if (fieldReference != null && assignedValues.isNotEmpty()) {
             var receiverName: String? = null
             var fieldName: String? = null
 
@@ -276,7 +346,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 return FieldAssignmentInfo(
                     fieldName = fieldName,
                     receiverText = receiverName,
-                    assignedValue = assignedValue,
+                    assignedValues = assignedValues,
                     offset = fieldReference.startOffset
                 )
             }
@@ -347,7 +417,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
 
         // Now parse the rest of the structure
-        var parameterValue: String? = null
+        var parameterValues: List<String> = emptyList()
         var receiverMethodRef: ASTNode? = null
 
         // Parse the outer method reference (setTemplate or setTemplatePath)
@@ -368,7 +438,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                         paramChild = paramChild.treeNext
                     }
                     if (significantChildren.size == 1) {
-                        parameterValue = extractStringLiteral(significantChildren[0])
+                        parameterValues = extractTemplateNames(significantChildren[0])
                     }
                 }
             }
@@ -384,7 +454,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             // Use passed-in offset instead of walking up tree
             return ViewBuilderCallInfo(
                 methodName = methodName,
-                parameterValue = parameterValue,
+                parameterValues = parameterValues,
                 offset = node.startOffset,
                 containingMethodStartOffset = containingMethodOffset
             )
@@ -401,7 +471,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 // Return as normal setTemplate - state tracking will handle the path
                 return ViewBuilderCallInfo(
                     methodName = "setTemplate",
-                    parameterValue = parameterValue,  // Just the template name, not combined!
+                    parameterValues = parameterValues,  // Just the template names, not combined!
                     offset = node.startOffset,
                     containingMethodStartOffset = containingMethodOffset
                 )
@@ -482,11 +552,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Use AST traversal instead of PSI for method calls
         val rootNode = psiFile.node ?: return result
         val astRenderCalls = findMethodCallsByName(rootNode, "render")
-            .filter { it.receiverText == "this" && it.firstParameterText != null }
+            .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
         val astElementCalls = findMethodCallsByName(rootNode, "element")
-            .filter { it.receiverText == "this" && it.firstParameterText != null }
+            .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
         val astViewFieldAssignments = findFieldAssignments(rootNode, "view")
-            .filter { it.receiverText == "this" && it.assignedValue != null }
+            .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
 
         // Early bailout: Quick text scan before AST traversal for viewBuilder calls
         val astViewBuilderCalls = if (!inputData.contentAsText.contains("viewBuilder")) {
@@ -494,7 +564,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             emptyList()
         } else {
             findViewBuilderCalls(rootNode)
-                .filter { it.parameterValue != null }
+                .filter { it.parameterValues.isNotEmpty() }
         }
 
         val isController = isCakeControllerFile(virtualFile)
@@ -570,22 +640,20 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             ?: return
 
         for (assignment in fieldAssignments) {
-            val assignedValue = assignment.assignedValue ?: continue
-            val renderPath = RenderPath(assignedValue)
+            for (assignedValue in assignment.assignedValues) {
+                val renderPath = RenderPath(assignedValue)
 
-            if (renderPath.path.isEmpty()) {
-                continue
+                if (renderPath.path.isEmpty()) {
+                    continue
+                }
+
+                val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
+                addViewReference(result, fullViewPath, ViewReferenceData(
+                    methodName = assignment.fieldName,
+                    elementType = ElementType.FIELD_ASSIGNMENT,
+                    offset = assignment.offset
+                ))
             }
-
-            val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
-            val oldList = result.getOrDefault(fullViewPath, emptyList())
-            val newViewReferenceData = ViewReferenceData(
-                methodName = assignment.fieldName,
-                elementType = ElementType.FIELD_ASSIGNMENT,
-                offset = assignment.offset
-            )
-            val newList = oldList + listOf(newViewReferenceData)
-            result[fullViewPath] = newList
         }
     }
 
@@ -609,42 +677,44 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             // Sort by offset to maintain order
             val sortedCalls = calls.sortedBy { it.offset }
 
-            // Track the most recent setTemplatePath
-            var currentTemplatePath: String? = null
+            // Track the most recent setTemplatePath. It is a list because the path itself
+            // may be a ternary or match expression with several possible values.
+            var currentTemplatePaths: List<String>? = null
 
             for (call in sortedCalls) {
-                val parameterValue = call.parameterValue ?: continue
+                if (call.parameterValues.isEmpty()) continue
 
                 when (call.methodName) {
                     "setTemplatePath" -> {
                         // Update the current template path for subsequent setTemplate calls
-                        currentTemplatePath = parameterValue
+                        currentTemplatePaths = call.parameterValues
                         // Note: We don't index setTemplatePath calls directly
                     }
                     "setTemplate" -> {
-                        // Build the final path combining setTemplatePath (if any) with setTemplate
-                        val finalPath = if (currentTemplatePath != null) {
+                        // Build the final paths combining setTemplatePath (if any) with setTemplate
+                        val finalPaths = if (currentTemplatePaths != null) {
                             // setTemplatePath provides an absolute path from templates root
                             // Prefix with "/" to make it absolute so it's not combined with controller path
-                            "/$currentTemplatePath/$parameterValue"
+                            currentTemplatePaths.flatMap { templatePath ->
+                                call.parameterValues.map { "/$templatePath/$it" }
+                            }
                         } else {
-                            parameterValue
+                            call.parameterValues
                         }
 
-                        val renderPath = RenderPath(finalPath)
-                        if (renderPath.path.isEmpty()) {
-                            continue
-                        }
+                        for (finalPath in finalPaths) {
+                            val renderPath = RenderPath(finalPath)
+                            if (renderPath.path.isEmpty()) {
+                                continue
+                            }
 
-                        val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
-                        val oldList = result.getOrDefault(fullViewPath, emptyList())
-                        val newViewReferenceData = ViewReferenceData(
-                            methodName = call.methodName,
-                            elementType = ElementType.VIEW_BUILDER,
-                            offset = call.offset
-                        )
-                        val newList = oldList + listOf(newViewReferenceData)
-                        result[fullViewPath] = newList
+                            val fullViewPath = fullExplicitViewPath(viewPathPrefix, renderPath)
+                            addViewReference(result, fullViewPath, ViewReferenceData(
+                                methodName = call.methodName,
+                                elementType = ElementType.VIEW_BUILDER,
+                                offset = call.offset
+                            ))
+                        }
                     }
                 }
             }
@@ -692,25 +762,32 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         result: MutableMap<String, List<ViewReferenceData>>
     ) {
         for (methodCall in methodCalls) {
-            val parameterText = methodCall.firstParameterText ?: continue
-            val content = RenderPath(parameterText)
+            for (parameterText in methodCall.firstParameterValues) {
+                val content = RenderPath(parameterText)
 
-            if (content.path.isEmpty()) {
-                continue
+                if (content.path.isEmpty()) {
+                    continue
+                }
+                val fullViewPath = fullExplicitViewPath(
+                    viewPathPrefix,
+                    content
+                )
+                addViewReference(result, fullViewPath, ViewReferenceData(
+                    methodName = methodCall.methodName,
+                    elementType = ElementType.METHOD_REFERENCE,
+                    offset = methodCall.offset
+                ))
             }
-            val fullViewPath = fullExplicitViewPath(
-                viewPathPrefix,
-                content
-            )
-            val oldList = result.getOrDefault(fullViewPath, emptyList())
-            val newViewReferenceData = ViewReferenceData(
-                methodName = methodCall.methodName,
-                elementType = ElementType.METHOD_REFERENCE,
-                offset = methodCall.offset
-            )
-            val newList = oldList + listOf(newViewReferenceData)
-            result[fullViewPath] = newList
         }
+    }
+
+    private fun addViewReference(
+        result: MutableMap<String, List<ViewReferenceData>>,
+        fullViewPath: String,
+        data: ViewReferenceData
+    ) {
+        val oldList = result.getOrDefault(fullViewPath, emptyList())
+        result[fullViewPath] = oldList + listOf(data)
     }
 
 }

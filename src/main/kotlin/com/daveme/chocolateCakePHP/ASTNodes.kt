@@ -76,3 +76,8 @@ fun ASTNode.isArrayAccessExpression() = this.elementType == PhpElementTypes.ARRA
 fun ASTNode.isHashArrayElement() = this.elementType == PhpElementTypes.HASH_ARRAY_ELEMENT
 fun ASTNode.isArrayKey() = this.elementType == PhpElementTypes.ARRAY_KEY
 fun ASTNode.isArrayValue() = this.elementType == PhpElementTypes.ARRAY_VALUE
+fun ASTNode.isTernaryExpression() = this.elementType == PhpElementTypes.TERNARY_EXPRESSION
+fun ASTNode.isMatchExpression() = this.elementType == PhpElementTypes.MATCH_EXPRESSION
+fun ASTNode.isMatchArm() = this.elementType == PhpElementTypes.MATCH_ARM
+fun ASTNode.isParenthesizedExpression() = this.elementType == PhpElementTypes.PARENTHESIZED_EXPRESSION
+fun ASTNode.isDefaultMatchArm() = this.elementType == PhpElementTypes.DEFAULT_MATCH_ARM

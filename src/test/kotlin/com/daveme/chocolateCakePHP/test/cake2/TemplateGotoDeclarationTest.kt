@@ -72,4 +72,81 @@ class TemplateGotoDeclarationTest : Cake2BaseTestCase() {
         val handler = TemplateGotoDeclarationHandler()
         assertGotoDeclarationHandlerGoesToFilename(handler, "artist.ctp")
     }
+
+    // Ternary / match expression tests (issue #280)
+
+    fun `test goto declaration on ternary in render`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function artist() {
+                ${'$'}this->render(${'$'}this->request->is('ajax') ? '<caret>film_director' : 'artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.ctp")
+    }
+
+    fun `test goto declaration on true branch of ternary view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function viewFieldTest() {
+                ${'$'}this->view = ${'$'}this->request->is('ajax') ? '<caret>artist' : 'film_director';
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.ctp")
+    }
+
+    fun `test goto declaration on false branch of ternary view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function viewFieldTest() {
+                ${'$'}this->view = ${'$'}this->request->is('ajax') ? 'artist' : '<caret>film_director';
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.ctp")
+    }
+
+    fun `test goto declaration on ternary condition in view field assignment does not navigate`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function viewFieldTest() {
+                ${'$'}this->view = ${'$'}this->kind === '<caret>artist' ? 'artist' : 'film_director';
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test goto declaration on match arm in view field assignment`() {
+        myFixture.configureByFilePathAndText("cake2/app/Controller/MovieController.php", """
+        <?php
+
+        class MovieController extends AppController {
+            public function viewFieldTest() {
+                ${'$'}this->view = match (${'$'}this->request->param('kind')) {
+                    'one' => 'artist',
+                    default => '<caret>film_director',
+                };
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.ctp")
+    }
 }

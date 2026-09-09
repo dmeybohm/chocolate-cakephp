@@ -19,7 +19,7 @@ class ViewFileIndex : FileBasedIndexExtension<String, List<ViewReferenceData>>()
         ViewReferenceDataExternalizer
 
     override fun getVersion(): Int {
-        return 17
+        return 18
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {

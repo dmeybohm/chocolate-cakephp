@@ -223,4 +223,81 @@ class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
         assertNotNull("Expected goto declaration to work with chained viewBuilder calls", elements)
         assertFalse("Expected to find navigation target for chained viewBuilder call", elements!!.isEmpty())
     }
+
+    // Ternary / match expression tests (issue #280)
+
+    fun `test goto declaration on ternary in render`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}this->render(${'$'}this->request->is('ajax') ? '<caret>film_director' : 'artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on ternary in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function ternaryTest() {
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}this->request->is('ajax') ? 'artist' : '<caret>film_director');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on match arm in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function matchTest() {
+                ${'$'}this->viewBuilder()->setTemplate(match (${'$'}this->request->getParam('kind')) {
+                    'one' => '<caret>artist',
+                    default => 'film_director',
+                });
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.php")
+    }
+
+    fun `test goto declaration on ternary template in chained viewBuilder call`() {
+        myFixture.configureByFilePathAndText("cake4/src4/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate(${'$'}x ? 'missing' : '<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
 }
