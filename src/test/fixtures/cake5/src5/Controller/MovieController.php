@@ -124,4 +124,35 @@ class MovieController extends Controller
 		$this->set(compact('metadata', 'moviesTable'));
 	}
 
+	public function ternaryTemplateTest() {
+		// Template chosen with a ternary expression: both branches should be linked
+		$this->viewBuilder()->setTemplate($this->request->is('ajax') ? 'ternary_one' : 'ternary_two');
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set('ternaryVar', 'Ternary');
+		$this->set(compact('moviesTable'));
+	}
+
+	public function matchTemplateTest() {
+		// Template chosen with a match expression: every arm should be linked
+		$this->viewBuilder()->setTemplate(match ($this->request->getParam('kind')) {
+			'one' => 'match_one',
+			default => 'match_two',
+		});
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set('matchVar', 'Match');
+		$this->set(compact('moviesTable'));
+	}
+
+	public function variableTemplateTest() {
+		// Template chosen through a local variable assigned in two branches
+		$template = 'variable_one';
+		if ($this->request->is('ajax')) {
+			$template = 'variable_two';
+		}
+		$this->viewBuilder()->setTemplate($template);
+		$moviesTable = $this->fetchTable('Movies');
+		$this->set('variableVar', 'Variable');
+		$this->set(compact('moviesTable'));
+	}
+
 }

@@ -7,10 +7,15 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.Function
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
+import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import com.jetbrains.php.lang.psi.elements.PhpMatchExpression
+import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.TernaryExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
 data class ActionName(
@@ -80,12 +85,123 @@ data class ActionNames(
 }
 
 /**
+ * Build ActionNames from a list of template paths: the first is the default, the rest are "other".
+ * Returns null when the list is empty.
+ */
+fun actionNamesFromTemplateNames(templateNames: List<String>): ActionNames? {
+    if (templateNames.isEmpty()) {
+        return null
+    }
+    val actionNames = templateNames.map { actionNameFromPath(it) }
+    return ActionNames(
+        defaultActionName = actionNames.first(),
+        otherActionNames = actionNames.drop(1)
+    )
+}
+
+/**
+ * Collect every literal string a template expression can evaluate to.
+ *
+ * Handles:
+ *   'literal'                               -> ["literal"]
+ *   $cond ? 'a' : 'b'                       -> ["a", "b"]   (the condition is never inspected)
+ *   $cond ?: 'b'                            -> ["b"]
+ *   match ($x) { 1 => 'a', default => 'b' } -> ["a", "b"]  (arm conditions are never inspected)
+ *   ('a')                                   -> ["a"]
+ *   $var                                    -> the values of every `$var = <expr>` that precedes
+ *                                              the use in the same scope (see templateNamesFromVariable)
+ * These nest, so a ternary inside a match arm works too, and a variable may be assigned a
+ * ternary of other variables. Anything else yields no values.
+ *
+ * This mirrors the AST-level rules in ViewFileDataIndexer so the gutter markers and the
+ * view file index always agree.
+ */
+fun templateNamesFromExpression(expression: PsiElement?): List<String> {
+    return templateNamesFromExpression(expression, HashSet())
+}
+
+private fun templateNamesFromExpression(
+    expression: PsiElement?,
+    visited: MutableSet<AssignmentExpression>
+): List<String> {
+    return when (expression) {
+        null -> emptyList()
+        is StringLiteralExpression -> listOf(expression.contents)
+        is Variable -> templateNamesFromVariable(expression, visited)
+        is TernaryExpression ->
+            templateNamesFromExpression(expression.trueVariant, visited) +
+                templateNamesFromExpression(expression.falseVariant, visited)
+        is PhpMatchExpression ->
+            // getMatchArms() may or may not include the default arm depending on plugin version
+            (expression.matchArms + listOfNotNull(expression.defaultMatchArm))
+                .distinct()
+                .flatMap { templateNamesFromExpression(it.bodyExpression, visited) }
+        is ParenthesizedExpression -> templateNamesFromExpression(expression.argument, visited)
+        else -> emptyList()
+    }
+}
+
+/**
+ * Resolve a `$name` use to the template names of every plain `$name = <expr>` assignment
+ * that textually precedes the use in the same scope (method, function, closure, or file).
+ * All preceding assignments count, so both branches of an if/else are found; a stale
+ * earlier value after a sequential reassignment is included too, which is preferred over
+ * missing a branch.
+ *
+ * Not resolved: `$this`, method parameters, properties, `.=` and other compound
+ * assignments, or anything assigned in a nested closure.
+ *
+ * The visited set holds assignments already expanded on the current path and stops
+ * cycles such as `$a = $b; $b = $a;` or `$a = $a ?: 'x'`.
+ */
+private fun templateNamesFromVariable(
+    variable: Variable,
+    visited: MutableSet<AssignmentExpression>
+): List<String> {
+    val name = variable.name
+    if (name == "this") {
+        return emptyList()
+    }
+    val scope: PsiElement = PsiTreeUtil.getParentOfType(variable, Function::class.java)
+        ?: variable.containingFile
+        ?: return emptyList()
+    val useOffset = variable.textRange.startOffset
+
+    val assignments = PsiTreeUtil.findChildrenOfType(scope, AssignmentExpression::class.java)
+        .filter { assignment ->
+            assignment !is SelfAssignmentExpression &&
+                (assignment.variable as? Variable)?.name == name &&
+                assignment.textRange.startOffset < useOffset &&
+                PsiTreeUtil.getParentOfType(assignment, Function::class.java) == (scope as? Function)
+        }
+        .sortedBy { it.textRange.startOffset }
+
+    val result = mutableListOf<String>()
+    for (assignment in assignments) {
+        if (!visited.add(assignment)) {
+            continue
+        }
+        result += templateNamesFromExpression(assignment.value, visited)
+        visited.remove(assignment)
+    }
+    return result
+}
+
+/**
  * Represents a ViewBuilder method call (setTemplate or setTemplatePath).
  */
 data class ViewBuilderCall(
-    val methodName: String,        // "setTemplate" or "setTemplatePath"
-    val parameterValue: String,     // The template name or path
-    val offset: Int                 // Text offset for ordering
+    val methodName: String,            // "setTemplate" or "setTemplatePath"
+    val parameterValues: List<String>, // The template names or paths (several for ternary / match)
+    val offset: Int                    // Text offset for ordering
+)
+
+/**
+ * The ActionNames produced by one setTemplate() call.
+ */
+data class ViewBuilderCallActionNames(
+    val call: ViewBuilderCall,
+    val actionNames: List<ActionName>
 )
 
 /**
@@ -152,14 +268,16 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
                 }
             }
 
-            // Extract the string parameter
+            // Extract the string parameter (or every branch of a ternary / match)
             val parameterList = methodRef.parameterList
-            val firstParam = parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-                ?: return@mapNotNull null
+            val parameterValues = templateNamesFromExpression(parameterList?.parameters?.getOrNull(0))
+            if (parameterValues.isEmpty()) {
+                return@mapNotNull null
+            }
 
             return@mapNotNull ViewBuilderCall(
                 methodName = methodName,
-                parameterValue = firstParam.contents,
+                parameterValues = parameterValues,
                 offset = methodRef.textRange.startOffset
             )
         }
@@ -181,21 +299,25 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             }
             if (!isThisVariable) return@mapNotNull null
 
-            // Extract BOTH path and template parameters structurally
-            val pathParam = receiverMethodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-                ?: return@mapNotNull null
-            val templateParam = methodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-                ?: return@mapNotNull null
+            // Extract BOTH path and template parameters structurally.
+            // Either may be a ternary / match, so combine every path with every template.
+            val pathValues = templateNamesFromExpression(receiverMethodRef.parameterList?.parameters?.getOrNull(0))
+            val templateValues = templateNamesFromExpression(methodRef.parameterList?.parameters?.getOrNull(0))
+            if (pathValues.isEmpty() || templateValues.isEmpty()) {
+                return@mapNotNull null
+            }
 
-            // Combine the path immediately using joinViewPath for normalization
+            // Combine the paths immediately using joinViewPath for normalization
             // This handles whitespace, comments, newlines - all preserved in PSI structure
-            val combinedPath = joinViewPath(pathParam.contents, templateParam.contents)
+            val combinedPaths = pathValues.flatMap { path ->
+                templateValues.map { template -> joinViewPath(path, template) }
+            }
 
-            // Return a setTemplate call with the COMBINED path
+            // Return a setTemplate call with the COMBINED paths
             // This eliminates the need for offset-based proximity detection later
             return@mapNotNull ViewBuilderCall(
                 methodName = "setTemplate",
-                parameterValue = combinedPath,
+                parameterValues = combinedPaths,
                 offset = methodRef.textRange.startOffset
             )
         }
@@ -233,8 +355,19 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
  * @return List of ActionName objects
  */
 fun actionNamesFromViewBuilderCalls(viewBuilderCalls: List<ViewBuilderCall>): List<ActionName> {
-    val result = mutableListOf<ActionName>()
-    var currentTemplatePath: String? = null
+    return actionNamesBySetTemplateCall(viewBuilderCalls).flatMap { it.actionNames }
+}
+
+/**
+ * Like actionNamesFromViewBuilderCalls, but keeps the ActionNames grouped by the
+ * setTemplate() call that produced them, so a caller can look up one specific call.
+ *
+ * setTemplatePath() state is a list because the path itself may be a ternary or
+ * match expression; every current path is combined with every template name.
+ */
+fun actionNamesBySetTemplateCall(viewBuilderCalls: List<ViewBuilderCall>): List<ViewBuilderCallActionNames> {
+    val result = mutableListOf<ViewBuilderCallActionNames>()
+    var currentTemplatePaths: List<String>? = null
 
     for (call in viewBuilderCalls) {
         when (call.methodName) {
@@ -242,25 +375,24 @@ fun actionNamesFromViewBuilderCalls(viewBuilderCalls: List<ViewBuilderCall>): Li
                 // Update the current template path for subsequent separate setTemplate calls
                 // Example: $this->viewBuilder()->setTemplatePath('path');
                 //          $this->viewBuilder()->setTemplate('name');
-                currentTemplatePath = call.parameterValue
+                currentTemplatePaths = call.parameterValues
             }
             "setTemplate" -> {
-                // Build the final path
-                val viewName = if (call.parameterValue.contains('/')) {
-                    // Path already combined (from chained detection)
-                    // Prepend "/" to make it absolute
-                    "/${call.parameterValue}"
-                } else if (currentTemplatePath != null) {
-                    // Separate calls - combine with current state
-                    // Prepend "/" to make it absolute so the controller path is not prepended
-                    "/$currentTemplatePath/${call.parameterValue}"
-                } else {
-                    // No path, just the template name
-                    call.parameterValue
+                val viewNames = call.parameterValues.flatMap { parameterValue ->
+                    if (parameterValue.contains('/')) {
+                        // Path already combined (from chained detection)
+                        // Prepend "/" to make it absolute
+                        listOf("/${parameterValue}")
+                    } else if (currentTemplatePaths != null) {
+                        // Separate calls - combine with current state
+                        // Prepend "/" to make it absolute so the controller path is not prepended
+                        currentTemplatePaths.map { "/$it/${parameterValue}" }
+                    } else {
+                        // No path, just the template name
+                        listOf(parameterValue)
+                    }
                 }
-
-                val actionName = actionNameFromPath(viewName)
-                result.add(actionName)
+                result.add(ViewBuilderCallActionNames(call, viewNames.map { actionNameFromPath(it) }))
             }
         }
     }
@@ -289,13 +421,11 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
     val defaultActionName = actionNameFromMethod(method)
 
     // Collect render() action names
-    val renderActionNames: List<ActionName> = renderCalls.mapNotNull {
+    val renderActionNames: List<ActionName> = renderCalls.flatMap {
         if (it.name != "render") {
-            return@mapNotNull null
+            return@flatMap emptyList()
         }
-        val firstParameter = it.parameterList?.getParameter(0) as? StringLiteralExpression
-            ?: return@mapNotNull null
-        return@mapNotNull actionNameFromPath(firstParameter.contents)
+        templateNamesFromExpression(it.parameterList?.getParameter(0)).map { name -> actionNameFromPath(name) }
     }
 
     // Collect ViewBuilder action names (setTemplate/setTemplatePath)
@@ -304,18 +434,17 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
 
     // Collect $this->view = 'template' field assignments (CakePHP 2)
     val fieldAssignments = PsiTreeUtil.findChildrenOfType(method, AssignmentExpression::class.java)
-    val fieldAssignmentActionNames: List<ActionName> = fieldAssignments.mapNotNull { assignment ->
-        val fieldRef = assignment.variable as? FieldReference ?: return@mapNotNull null
-        val variable = fieldRef.classReference as? Variable ?: return@mapNotNull null
+    val fieldAssignmentActionNames: List<ActionName> = fieldAssignments.flatMap { assignment ->
+        val fieldRef = assignment.variable as? FieldReference ?: return@flatMap emptyList()
+        val variable = fieldRef.classReference as? Variable ?: return@flatMap emptyList()
 
         // Check it's $this->view
         if (variable.name != "this" || fieldRef.name != "view") {
-            return@mapNotNull null
+            return@flatMap emptyList()
         }
 
-        // Get the assigned value
-        val stringLiteral = assignment.value as? StringLiteralExpression ?: return@mapNotNull null
-        return@mapNotNull actionNameFromPath(stringLiteral.contents)
+        // Get the assigned value(s)
+        templateNamesFromExpression(assignment.value).map { name -> actionNameFromPath(name) }
     }
 
     // Combine all action names
@@ -338,15 +467,8 @@ fun actionNamesFromRenderCall(methodReference: MethodReference): ActionNames? {
     if (methodReference.name != "render") {
         return null
     }
-    val firstParameter = methodReference.parameterList?.getParameter(0) as? StringLiteralExpression
-        ?: return null
-
-    val renderParameter = firstParameter.contents
-    val actionName = actionNameFromPath(renderParameter)
-    return ActionNames(
-        defaultActionName = actionName,
-        otherActionNames = listOf()
-    )
+    val templateNames = templateNamesFromExpression(methodReference.parameterList?.getParameter(0))
+    return actionNamesFromTemplateNames(templateNames)
 }
 
 /**
@@ -377,30 +499,19 @@ fun actionNamesFromViewBuilderCall(methodReference: MethodReference): ActionName
     // Find all ViewBuilder calls in the method (preserves state tracking)
     val allViewBuilderCalls = findViewBuilderCalls(containingMethod)
 
-    // Find this specific setTemplate call in the list
+    // Convert to ActionNames using state tracking, then pick out this specific setTemplate call
     val currentOffset = methodReference.textRange.startOffset
-    val matchingCall = allViewBuilderCalls.find {
-        it.methodName == "setTemplate" && it.offset == currentOffset
+    val matching = actionNamesBySetTemplateCall(allViewBuilderCalls).find {
+        it.call.methodName == "setTemplate" && it.call.offset == currentOffset
     } ?: return null
 
-    // Convert to ActionNames using state tracking
-    val allActionNames = actionNamesFromViewBuilderCalls(allViewBuilderCalls)
-
-    // Find the ActionName that corresponds to this setTemplate call
-    // Since actionNamesFromViewBuilderCalls only returns ActionNames for setTemplate calls,
-    // we need to find which one matches our offset
-
-    // Count how many setTemplate calls come before this one
-    val setTemplateCallsBefore = allViewBuilderCalls
-        .filter { it.methodName == "setTemplate" && it.offset < currentOffset }
-        .size
-
-    // Get the corresponding ActionName (it's at the same index)
-    val actionName = allActionNames.getOrNull(setTemplateCallsBefore) ?: return null
-
+    val actionNames = matching.actionNames
+    if (actionNames.isEmpty()) {
+        return null
+    }
     return ActionNames(
-        defaultActionName = actionName,
-        otherActionNames = listOf()
+        defaultActionName = actionNames.first(),
+        otherActionNames = actionNames.drop(1)
     )
 }
 
@@ -422,15 +533,9 @@ fun actionNamesFromViewAssignment(assignmentExpression: AssignmentExpression): A
         return null
     }
 
-    // Get the assigned value
-    val stringLiteral = assignmentExpression.value as? StringLiteralExpression ?: return null
-    val viewName = stringLiteral.contents
-
-    val actionName = actionNameFromPath(viewName)
-    return ActionNames(
-        defaultActionName = actionName,
-        otherActionNames = listOf()
-    )
+    // Get the assigned value(s)
+    val templateNames = templateNamesFromExpression(assignmentExpression.value)
+    return actionNamesFromTemplateNames(templateNames)
 }
 
 fun viewFilenameToActionName(

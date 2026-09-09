@@ -666,4 +666,300 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
         assertEquals(expected, infos)
     }
 
+    // Ternary / match expression tests (issue #280)
+
+    private fun configureMovieController(body: String, vararg templates: String) {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            *templates,
+            "cake3/src/Controller/MovieController.php",
+        )
+
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie() {
+                $body
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+    }
+
+    fun `test that render line marker lists both branches of a ternary`() {
+        configureMovieController(
+            "${'$'}this->render(${'$'}this->request->is('ajax') ? 'artist' : 'film_director');",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+
+        val renderRef = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+            .find { it.name == "render" }
+        assertNotNull(renderRef)
+
+        val markers = calculateLineMarkers(renderRef!!.firstChild!!.firstChild!!, ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        val expected = setOf(
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that setTemplate line marker lists every arm of a match`() {
+        configureMovieController(
+            """
+                ${'$'}this->viewBuilder()->setTemplate(match (${'$'}this->request->getParam('kind')) {
+                    'one' => 'artist',
+                    default => 'film_director',
+                });
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+
+        val viewBuilderRef = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+            .find { it.name == "viewBuilder" }
+        assertNotNull(viewBuilderRef)
+
+        val markers = calculateLineMarkers(viewBuilderRef!!.firstChild!!.firstChild!!, ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        val expected = setOf(
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that chained setTemplatePath line marker lists both branches of a ternary template`() {
+        configureMovieController(
+            "${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate(${'$'}x ? 'custom' : 'other');",
+            "cake3/src/Template/Movie/Nested/custom.ctp",
+            "cake3/src/Template/Movie/Nested/other.ctp",
+        )
+
+        val viewBuilderRef = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+            .find { it.name == "viewBuilder" }
+        assertNotNull(viewBuilderRef)
+
+        val markers = calculateLineMarkers(viewBuilderRef!!.firstChild!!.firstChild!!, ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        val expected = setOf(
+            RelatedItemInfo(filename = "custom.ctp", containingDir = "Nested"),
+            RelatedItemInfo(filename = "other.ctp", containingDir = "Nested"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that view field assignment line marker lists both branches of a ternary`() {
+        configureMovieController(
+            "${'$'}this->view = ${'$'}this->request->is('ajax') ? 'artist' : 'film_director';",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+
+        val viewAssignment = PsiTreeUtil.findChildrenOfType(myFixture.file, AssignmentExpression::class.java)
+            .find { (it.variable as? FieldReference)?.name == "view" }
+        assertNotNull(viewAssignment)
+
+        val fieldRef = viewAssignment!!.variable as FieldReference
+        val thisVariable = fieldRef.classReference as Variable
+        val markers = calculateLineMarkers(thisVariable.firstChild!!, ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        val expected = setOf(
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    fun `test that method line marker lists both branches of a ternary render`() {
+        configureMovieController(
+            "${'$'}this->render(${'$'}this->request->is('ajax') ? 'artist' : 'film_director');",
+            "cake3/src/Template/Movie/movie.ctp",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+
+        val method = PsiTreeUtil.findChildOfType(myFixture.file, Method::class.java)
+        assertNotNull(method)
+
+        val markers = calculateLineMarkers(method!!.nameIdentifier!!, ControllerMethodLineMarker::class)
+        assertEquals(1, markers.size)
+
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        val expected = setOf(
+            RelatedItemInfo(filename = "movie.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"),
+        )
+        assertEquals(expected, infos)
+    }
+
+    // Local variable template tests
+
+    private fun markersOnThisOfMethodCall(methodName: String) : List<com.intellij.codeInsight.daemon.LineMarkerInfo<*>> {
+        val ref = PsiTreeUtil.findChildrenOfType(myFixture.file, MethodReference::class.java)
+            .find { it.name == methodName }
+        assertNotNull("Expected a $methodName() call", ref)
+        return calculateLineMarkers(ref!!.firstChild!!.firstChild!!, ControllerMethodLineMarker::class)
+    }
+
+    private fun assertMarkerTargets(markers: List<com.intellij.codeInsight.daemon.LineMarkerInfo<*>>, vararg expected: RelatedItemInfo) {
+        assertEquals(1, markers.size)
+        val infos = getRelatedItemInfos(gotoRelatedItems(markers.first()))
+        assertEquals(expected.toSet(), infos)
+    }
+
+    fun `test that render line marker resolves a local variable`() {
+        configureMovieController(
+            """
+                ${'$'}template = 'artist';
+                ${'$'}this->render(${'$'}template);
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+        )
+        assertMarkerTargets(markersOnThisOfMethodCall("render"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"))
+    }
+
+    fun `test that setTemplate line marker resolves a local variable`() {
+        configureMovieController(
+            """
+                ${'$'}template = 'artist';
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}template);
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+        )
+        assertMarkerTargets(markersOnThisOfMethodCall("viewBuilder"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"))
+    }
+
+    fun `test that setTemplate line marker lists both if else assignments of a local variable`() {
+        configureMovieController(
+            """
+                if (${'$'}this->request->is('ajax')) {
+                    ${'$'}template = 'artist';
+                } else {
+                    ${'$'}template = 'film_director';
+                }
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}template);
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+        assertMarkerTargets(markersOnThisOfMethodCall("viewBuilder"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"))
+    }
+
+    fun `test that setTemplate line marker resolves a ternary of two local variables`() {
+        configureMovieController(
+            """
+                ${'$'}one = 'artist';
+                ${'$'}two = 'film_director';
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}this->request->is('ajax') ? ${'$'}one : ${'$'}two);
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+        assertMarkerTargets(markersOnThisOfMethodCall("viewBuilder"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"))
+    }
+
+    fun `test that chained setTemplatePath line marker resolves a local variable path`() {
+        configureMovieController(
+            """
+                ${'$'}path = 'Movie/Nested';
+                ${'$'}this->viewBuilder()->setTemplatePath(${'$'}path)->setTemplate('custom');
+            """.trimIndent(),
+            "cake3/src/Template/Movie/Nested/custom.ctp",
+        )
+        assertMarkerTargets(markersOnThisOfMethodCall("viewBuilder"),
+            RelatedItemInfo(filename = "custom.ctp", containingDir = "Nested"))
+    }
+
+    fun `test that view field assignment line marker resolves a local variable`() {
+        configureMovieController(
+            """
+                ${'$'}template = 'artist';
+                ${'$'}this->view = ${'$'}template;
+            """.trimIndent(),
+            "cake3/src/Template/Movie/artist.ctp",
+        )
+
+        val viewAssignment = PsiTreeUtil.findChildrenOfType(myFixture.file, AssignmentExpression::class.java)
+            .find { (it.variable as? FieldReference)?.name == "view" }
+        assertNotNull(viewAssignment)
+        val thisVariable = (viewAssignment!!.variable as FieldReference).classReference as Variable
+        val markers = calculateLineMarkers(thisVariable.firstChild!!, ControllerMethodLineMarker::class)
+        assertMarkerTargets(markers, RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"))
+    }
+
+    fun `test that no line marker is added when the variable is a method parameter`() {
+        val files = myFixture.configureByFiles(
+            "cake3/src/Controller/AppController.php",
+            "cake3/vendor/cakephp.php",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Controller/MovieController.php",
+        )
+        val lastFile = files.last()
+        myFixture.saveText(lastFile.virtualFile, """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function movie(${'$'}template) {
+                ${'$'}this->render(${'$'}template);
+            }
+        }
+        """.trimIndent())
+        myFixture.openFileInEditor(lastFile.virtualFile)
+
+        assertEquals(0, markersOnThisOfMethodCall("render").size)
+    }
+
+    fun `test that method line marker lists views chosen through local variables`() {
+        configureMovieController(
+            """
+                ${'$'}template = 'artist';
+                if (${'$'}this->request->is('ajax')) {
+                    ${'$'}template = 'film_director';
+                }
+                ${'$'}this->render(${'$'}template);
+            """.trimIndent(),
+            "cake3/src/Template/Movie/movie.ctp",
+            "cake3/src/Template/Movie/artist.ctp",
+            "cake3/src/Template/Movie/film_director.ctp",
+        )
+
+        val method = PsiTreeUtil.findChildOfType(myFixture.file, Method::class.java)
+        assertNotNull(method)
+        val markers = calculateLineMarkers(method!!.nameIdentifier!!, ControllerMethodLineMarker::class)
+        assertMarkerTargets(markers,
+            RelatedItemInfo(filename = "movie.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "artist.ctp", containingDir = "Movie"),
+            RelatedItemInfo(filename = "film_director.ctp", containingDir = "Movie"))
+    }
 }

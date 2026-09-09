@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.view.ViewToControllerGotoRelatedProvider
+import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
 
 class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
@@ -121,5 +122,67 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
         val items = provider.getItems(element!!)
 
         assertTrue("Should return empty for non-view file", items.isEmpty())
+    }
+
+    // Ternary / match expression tests (issue #280)
+
+    fun `test view referenced through ternary setTemplate navigates to controller method`() {
+        myFixture.configureByFiles(
+            "cake5/src5/Controller/AppController.php",
+            "cake5/vendor/cakephp.php",
+            "cake5/templates/Movie/ternary_two.php",
+            "cake5/src5/Controller/MovieController.php",
+        )
+
+        val viewFile = myFixture.configureByFile("cake5/templates/Movie/ternary_two.php")
+        val element = viewFile.firstChild
+        assertNotNull(element)
+
+        val provider = ViewToControllerGotoRelatedProvider()
+        val items = provider.getItems(element!!)
+
+        // The indexed element is the setTemplate() call, so resolve its containing method
+        val methods = items.mapNotNull { PsiTreeUtil.getParentOfType(it.element, Method::class.java, false)?.name }
+        assertTrue("Should contain 'ternaryTemplateTest' method, found: $methods", methods.contains("ternaryTemplateTest"))
+    }
+
+    fun `test view referenced through match setTemplate navigates to controller method`() {
+        myFixture.configureByFiles(
+            "cake5/src5/Controller/AppController.php",
+            "cake5/vendor/cakephp.php",
+            "cake5/templates/Movie/match_one.php",
+            "cake5/src5/Controller/MovieController.php",
+        )
+
+        val viewFile = myFixture.configureByFile("cake5/templates/Movie/match_one.php")
+        val element = viewFile.firstChild
+        assertNotNull(element)
+
+        val provider = ViewToControllerGotoRelatedProvider()
+        val items = provider.getItems(element!!)
+
+        // The indexed element is the setTemplate() call, so resolve its containing method
+        val methods = items.mapNotNull { PsiTreeUtil.getParentOfType(it.element, Method::class.java, false)?.name }
+        assertTrue("Should contain 'matchTemplateTest' method, found: $methods", methods.contains("matchTemplateTest"))
+    }
+
+    fun `test view referenced through a local variable navigates to controller method`() {
+        myFixture.configureByFiles(
+            "cake5/src5/Controller/AppController.php",
+            "cake5/vendor/cakephp.php",
+            "cake5/templates/Movie/variable_two.php",
+            "cake5/src5/Controller/MovieController.php",
+        )
+
+        val viewFile = myFixture.configureByFile("cake5/templates/Movie/variable_two.php")
+        val element = viewFile.firstChild
+        assertNotNull(element)
+
+        val provider = ViewToControllerGotoRelatedProvider()
+        val items = provider.getItems(element!!)
+
+        // The indexed element is the setTemplate() call, so resolve its containing method
+        val methods = items.mapNotNull { PsiTreeUtil.getParentOfType(it.element, Method::class.java, false)?.name }
+        assertTrue("Should contain 'variableTemplateTest' method, found: $methods", methods.contains("variableTemplateTest"))
     }
 }

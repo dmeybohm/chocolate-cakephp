@@ -291,4 +291,280 @@ class TemplateGotoDeclarationTest : Cake5BaseTestCase() {
         assertNotNull("Expected goto declaration to normalize path with whitespace", elements)
         assertFalse("Expected to find navigation target with normalized path", elements!!.isEmpty())
     }
+
+    // Ternary / match expression tests (issue #280)
+
+    fun `test goto declaration on true branch of ternary in render`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}this->render(${'$'}this->request->is('ajax') ? '<caret>film_director' : 'artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on false branch of ternary in render`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}this->render(${'$'}this->request->is('ajax') ? 'film_director' : '<caret>artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.php")
+    }
+
+    fun `test goto declaration on ternary condition literal does not navigate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}this->render(${'$'}this->kind === '<caret>artist' ? 'film_director' : 'artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test goto declaration on ternary in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function ternaryTest() {
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}this->request->is('ajax') ? 'artist' : '<caret>film_director');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on short ternary in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function ternaryTest() {
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}this->template ?: '<caret>artist');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.php")
+    }
+
+    fun `test goto declaration on nested parenthesized ternary in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function ternaryTest() {
+                ${'$'}this->viewBuilder()->setTemplate(${'$'}a ? 'artist' : (${'$'}b ? '<caret>film_director' : 'artist'));
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on match arm in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function matchTest() {
+                ${'$'}this->viewBuilder()->setTemplate(match (${'$'}this->request->getParam('kind')) {
+                    'one' => 'artist',
+                    default => '<caret>film_director',
+                });
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "film_director.php")
+    }
+
+    fun `test goto declaration on non-default match arm in setTemplate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function matchTest() {
+                ${'$'}this->viewBuilder()->setTemplate(match (${'$'}this->request->getParam('kind')) {
+                    'one', 'two' => '<caret>artist',
+                    default => 'film_director',
+                });
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "artist.php")
+    }
+
+    fun `test goto declaration on match arm condition does not navigate`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function matchTest() {
+                ${'$'}this->viewBuilder()->setTemplate(match (${'$'}this->request->getParam('kind')) {
+                    '<caret>artist' => 'film_director',
+                    default => 'artist',
+                });
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test goto declaration on ternary template in chained viewBuilder call`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('Movie/Nested')->setTemplate(${'$'}x ? 'missing' : '<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test goto declaration on path of chained viewBuilder call with ternary template`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function chainedTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath('<caret>Movie/Nested')->setTemplate(${'$'}x ? 'missing' : 'custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test goto declaration on setTemplate after ternary setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function pathTest() {
+                ${'$'}this->viewBuilder()->setTemplatePath(${'$'}x ? 'Movie/AnotherPath' : 'Movie/Nested');
+                ${'$'}this->viewBuilder()->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    // Local variable template tests
+
+    fun `test goto declaration on setTemplate after a variable setTemplatePath`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function pathTest() {
+                ${'$'}path = 'Movie/Nested';
+                ${'$'}this->viewBuilder()->setTemplatePath(${'$'}path);
+                ${'$'}this->viewBuilder()->setTemplate('<caret>custom');
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "custom.php")
+    }
+
+    fun `test goto declaration on the variable itself yields no targets from the template handler`() {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller {
+            public function artist() {
+                ${'$'}template = 'film_director';
+                ${'$'}this->render(${'$'}temp<caret>late);
+            }
+        }
+        """.trimIndent())
+        val handler = TemplateGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        // PhpStorm's own navigation to the variable's assignment must win
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
 }

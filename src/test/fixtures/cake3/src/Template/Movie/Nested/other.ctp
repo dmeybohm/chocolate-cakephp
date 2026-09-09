@@ -1,0 +1,2 @@
+<?php
+// other view

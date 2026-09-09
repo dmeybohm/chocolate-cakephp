@@ -6,14 +6,17 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.DumbService
-import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.ProcessingContext
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
+import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
+import com.jetbrains.php.lang.psi.elements.PhpMatchArm
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.TernaryExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
@@ -90,56 +93,60 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
     }
 
     private fun handleRenderCall(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
-        val stringLiteralPattern = psiElement(StringLiteralExpression::class.java)
-            .withParent(
-                psiElement(ParameterList::class.java)
-                    .withParent(
-                        psiElement(MethodReference::class.java)
-                            .with(RenderMethodPattern)
-                    )
-            )
-        if (!stringLiteralPattern.accepts(psiElement.context)) {
+        // Pattern: $this->render('template_name')
+        // The literal may sit inside a ternary / match / parentheses in the first parameter.
+        val stringLiteral = psiElement.context as? StringLiteralExpression ?: return null
+        val argument = templateArgumentFromLiteral(stringLiteral) ?: return null
+        val parameterList = argument.parent as? ParameterList ?: return null
+        val method = parameterList.parent as? MethodReference ?: return null
+        if (!RenderMethodPattern.accepts(method, ProcessingContext())) {
             return null
         }
-        val containingFile = psiElement.containingFile
-        val virtualFile = containingFile.virtualFile
-        val controllerPath = controllerPathFromControllerFile(virtualFile)
-            ?: return null
-
-        val method = findParentWithClass(psiElement, MethodReference::class.java)
-                as? MethodReference ?: return null
-        if (method.name != "render") {
+        if (parameterList.parameters.getOrNull(0) != argument) {
             return null
         }
 
-        val actionNames = actionNamesFromRenderCall(method)
-            ?: return null
-        val topSourceDirectory = topSourceDirectoryFromSourceFile(
-            settings,
-            containingFile
-        ) ?: return null
-        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(
-            psiElement.project,
-            settings,
-            topSourceDirectory
-        ) ?: return null
+        // Navigate to the branch that was clicked, not every branch
+        return navigateToViews(psiElement, settings, listOf(stringLiteral.contents))
+    }
 
-        val templatePath = actionNames.defaultActionName.path
-        val resolution = resolveTemplateViewPaths(
-            templatePath,
-            settings,
-            controllerPath,
-            allTemplatesPaths,
-            existingActionNames = actionNames
-        )
-        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
+    /**
+     * Walk up from a clicked string literal through ternary branches, match arm bodies and
+     * parentheses to the outermost expression that forms the whole template argument.
+     *
+     * Returns null when the literal is in a position that is never a template name, such as
+     * the condition of a ternary or the condition of a match arm.
+     */
+    private fun templateArgumentFromLiteral(stringLiteral: StringLiteralExpression): PsiElement? {
+        var current: PsiElement = stringLiteral
+        while (true) {
+            val parent = current.parent ?: return null
+            current = when (parent) {
+                is TernaryExpression -> {
+                    if (parent.condition == current) return null
+                    parent
+                }
+                is ParenthesizedExpression -> parent
+                is PhpMatchArm -> {
+                    if (parent.bodyExpression != current) return null
+                    // The arm's parent is the match expression itself
+                    parent.parent ?: return null
+                }
+                else -> return current
+            }
+        }
     }
 
     private fun handleViewFieldAssignment(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
         // Pattern: $this->view = 'template_name'
-        // We want to match when clicking on the string literal in the assignment
+        // We want to match when clicking on the string literal in the assignment.
+        // The literal may sit inside a ternary / match / parentheses.
         val stringLiteral = psiElement.context as? StringLiteralExpression ?: return null
-        val assignment = stringLiteral.parent as? AssignmentExpression ?: return null
+        val argument = templateArgumentFromLiteral(stringLiteral) ?: return null
+        val assignment = argument.parent as? AssignmentExpression ?: return null
+        if (assignment.value != argument) {
+            return null
+        }
         val fieldRef = assignment.variable as? FieldReference ?: return null
 
         // Check it's $this->view
@@ -179,9 +186,11 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         // Patterns:
         // 1. $this->viewBuilder()->setTemplate('template_name')
         // 2. $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
-        // We want to match when clicking on the string literal
+        // We want to match when clicking on the string literal.
+        // The literal may sit inside a ternary / match / parentheses.
         val stringLiteral = psiElement.context as? StringLiteralExpression ?: return null
-        val parameterList = stringLiteral.parent as? ParameterList ?: return null
+        val argument = templateArgumentFromLiteral(stringLiteral) ?: return null
+        val parameterList = argument.parent as? ParameterList ?: return null
         val methodRef = parameterList.parent as? MethodReference ?: return null
 
         // Check if this is a setTemplate or setTemplatePath call
@@ -195,9 +204,9 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Handle chained calls: ->setTemplatePath('path')->setTemplate('name')
         if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
-            // User clicked on template in a chained call
-            val pathParam = receiverMethodRef.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-                ?: return null
+            // User clicked on template in a chained call. The path may be a ternary / match.
+            val pathValues = templateNamesFromExpression(receiverMethodRef.parameterList?.parameters?.getOrNull(0))
+            if (pathValues.isEmpty()) return null
 
             // Verify chain goes back to viewBuilder()
             val viewBuilderRef = receiverMethodRef.classReference as? MethodReference ?: return null
@@ -205,11 +214,11 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             val thisVar = viewBuilderRef.classReference as? Variable ?: return null
             if (thisVar.name != "this") return null
 
-            // Navigate with combined path
+            // Navigate with combined paths
             val viewContents = stringLiteral.contents
-            val viewName = "/" + joinViewPath(pathParam.contents, viewContents)
+            val viewNames = pathValues.map { "/" + joinViewPath(it, viewContents) }
 
-            return navigateToView(psiElement, settings, viewName)
+            return navigateToViews(psiElement, settings, viewNames)
         }
 
         // Handle setTemplatePath in a chain (user clicked on the path)
@@ -225,13 +234,13 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             val chainedSetTemplate = findChainedSetTemplate(methodRef, containingMethod)
 
             if (chainedSetTemplate != null) {
-                // This is chained - navigate to the final view
-                val templateParam = chainedSetTemplate.parameterList?.parameters?.getOrNull(0) as? StringLiteralExpression
-                    ?: return null
+                // This is chained - navigate to the final view(s). The template may be a ternary / match.
+                val templateValues = templateNamesFromExpression(chainedSetTemplate.parameterList?.parameters?.getOrNull(0))
+                if (templateValues.isEmpty()) return null
                 val viewContents = stringLiteral.contents
-                val viewName = "/" + joinViewPath(viewContents, templateParam.contents)
+                val viewNames = templateValues.map { "/" + joinViewPath(viewContents, it) }
 
-                return navigateToView(psiElement, settings, viewName)
+                return navigateToViews(psiElement, settings, viewNames)
             }
 
             // Standalone setTemplatePath - not supported for goto-declaration
@@ -247,45 +256,24 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             return null
         }
 
-        val containingFile = psiElement.containingFile
-        val virtualFile = containingFile.virtualFile
-        val controllerPath = controllerPathFromControllerFile(virtualFile)
-            ?: return null
-
-        // Get the template name or path, as well as
-        // the previous `setTemplatePath call, if any:
-        val viewContents = stringLiteral.contents
-        val templatePathLiteral = getTemplatePathPreceeding(stringLiteral)
-        val viewName = if (templatePathLiteral != null) {
-            // Prepend "/" to make it absolute so the controller path is not prepended
-            // Use joinViewPath to normalize the path (handles whitespace, slashes, etc.)
-            "/" + joinViewPath(templatePathLiteral.contents, viewContents)
-        } else {
-            viewContents
-        }
-
         // For now, only handle setTemplate calls (not setTemplatePath)
         if (methodName != "setTemplate") {
             return null
         }
 
-        val topSourceDirectory = topSourceDirectoryFromSourceFile(
-            settings,
-            containingFile
-        ) ?: return null
-        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(
-            psiElement.project,
-            settings,
-            topSourceDirectory
-        ) ?: return null
+        // Get the template name or path, as well as
+        // the previous `setTemplatePath call, if any (which may itself be a ternary / match):
+        val viewContents = stringLiteral.contents
+        val templatePaths = getTemplatePathsPreceding(stringLiteral)
+        val viewNames = if (templatePaths.isNotEmpty()) {
+            // Prepend "/" to make it absolute so the controller path is not prepended
+            // Use joinViewPath to normalize the path (handles whitespace, slashes, etc.)
+            templatePaths.map { "/" + joinViewPath(it, viewContents) }
+        } else {
+            listOf(viewContents)
+        }
 
-        val resolution = resolveTemplateViewPaths(
-            viewName,
-            settings,
-            controllerPath,
-            allTemplatesPaths
-        )
-        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
+        return navigateToViews(psiElement, settings, viewNames)
     }
 
     /**
@@ -312,12 +300,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
     }
 
     /**
-     * Helper to navigate to a view file with the given view name.
+     * Helper to navigate to the view files with the given view names.
      */
-    private fun navigateToView(
+    private fun navigateToViews(
         psiElement: PsiElement,
         settings: Settings,
-        viewName: String
+        viewNames: List<String>
     ): Array<PsiElement>? {
         val containingFile = psiElement.containingFile
         val virtualFile = containingFile.virtualFile
@@ -334,23 +322,30 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             topSourceDirectory
         ) ?: return null
 
-        val resolution = resolveTemplateViewPaths(
-            viewName,
-            settings,
-            controllerPath,
-            allTemplatesPaths
-        )
-        return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
+        return viewNames.flatMap { viewName ->
+            val resolution = resolveTemplateViewPaths(
+                viewName,
+                settings,
+                controllerPath,
+                allTemplatesPaths
+            )
+            resolution.toFiles(psiElement.project, allTemplatesPaths)
+        }.distinct().toTypedArray()
     }
 
-    private fun getTemplatePathPreceeding(
+    /**
+     * Find the template path values set by the closest preceding
+     * `$this->viewBuilder()->setTemplatePath(...)` call in the same method.
+     * Returns an empty list when there is none.
+     */
+    private fun getTemplatePathsPreceding(
         stringLiteral: StringLiteralExpression
-    ): StringLiteralExpression? {
+    ): List<String> {
         // Find the containing method to limit our search scope
         val containingMethod = PsiTreeUtil.getParentOfType(
             stringLiteral,
             com.jetbrains.php.lang.psi.elements.Method::class.java
-        ) ?: return null
+        ) ?: return emptyList()
 
         // Get the text offset of the current setTemplate call
         val currentOffset = stringLiteral.textRange.startOffset
@@ -390,14 +385,13 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        // Extract the string literal from the parameter list
+        // Extract the path value(s) from the parameter list
         if (closestCall != null) {
             val parameterList = closestCall.parameterList
-            val firstParam = parameterList?.parameters?.getOrNull(0)
-            return firstParam as? StringLiteralExpression
+            return templateNamesFromExpression(parameterList?.parameters?.getOrNull(0))
         }
 
-        return null
+        return emptyList()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
