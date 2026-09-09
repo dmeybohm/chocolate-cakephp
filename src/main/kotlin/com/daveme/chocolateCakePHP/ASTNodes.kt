@@ -17,6 +17,7 @@ import com.jetbrains.php.lang.parser.PhpElementTypes;
 private const val VARIABLE = "VARIABLE"
 private const val CLASS_METHOD = "CLASS_METHOD"
 private const val IDENTIFIER = "IDENTIFIER"
+private const val FUNCTION = "FUNCTION"
 
 /**
  * Compares two strings by matching only alphabetic characters, case-insensitively.
@@ -81,3 +82,8 @@ fun ASTNode.isMatchExpression() = this.elementType == PhpElementTypes.MATCH_EXPR
 fun ASTNode.isMatchArm() = this.elementType == PhpElementTypes.MATCH_ARM
 fun ASTNode.isParenthesizedExpression() = this.elementType == PhpElementTypes.PARENTHESIZED_EXPRESSION
 fun ASTNode.isDefaultMatchArm() = this.elementType == PhpElementTypes.DEFAULT_MATCH_ARM
+fun ASTNode.isFunction() = equalsAlphaIgnoreCase(this.elementType.toString(), FUNCTION)
+fun ASTNode.isClosure() = this.elementType == PhpElementTypes.CLOSURE
+
+/** A node that introduces a new local variable scope: a method, a function, or a closure. */
+fun ASTNode.isScopeNode() = this.isClassMethod() || this.isFunction() || this.isClosure()

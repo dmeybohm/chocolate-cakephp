@@ -76,6 +76,18 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
     /**
+     * Per-file state for template name extraction.
+     *
+     * Caches the plain `$name = <expr>` assignments of each scope (method, function,
+     * closure, or the file itself) so that resolving several variables in one method
+     * only scans that method once. One instance is created per map() call, so
+     * concurrent indexing of different files never shares state.
+     */
+    private class TemplateNameContext {
+        val assignmentsByScope = HashMap<ASTNode, Map<String, List<ASTNode>>>()
+    }
+
+    /**
      * Collect every literal string a template expression can evaluate to.
      *
      * Handles:
@@ -84,18 +96,29 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
      *   $cond ?: 'b'                       -> ["b"]
      *   match ($x) { 1 => 'a', default => 'b' } -> ["a", "b"]  (arm conditions are never inspected)
      *   ('a')                              -> ["a"]
-     * These nest, so a ternary inside a match arm works too. Anything else yields no values.
+     *   $var                               -> the values of every `$var = <expr>` that precedes
+     *                                         the use in the same scope (see resolveVariable)
+     * These nest, so a ternary inside a match arm works too, and a variable may be assigned
+     * a ternary of other variables. Anything else yields no values.
      */
-    private fun extractTemplateNames(node: ASTNode): List<String> {
+    private fun extractTemplateNames(node: ASTNode, ctx: TemplateNameContext): List<String> {
         val result = mutableListOf<String>()
-        collectTemplateNames(node, result)
+        collectTemplateNames(node, result, ctx, HashSet())
         return result
     }
 
-    private fun collectTemplateNames(node: ASTNode, result: MutableList<String>) {
+    private fun collectTemplateNames(
+        node: ASTNode,
+        result: MutableList<String>,
+        ctx: TemplateNameContext,
+        visited: MutableSet<ASTNode>
+    ) {
         when {
             node.isString() -> {
                 result.add(extractStringLiteral(node))
+            }
+            node.isVariable() -> {
+                resolveVariable(node, result, ctx, visited)
             }
             node.isTernaryExpression() -> {
                 // Children: <condition> ? <true> : <false>   or   <condition> ?: <false>
@@ -106,7 +129,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     if (child.elementType == PhpTokenTypes.opQUEST) {
                         afterQuestion = true
                     } else if (afterQuestion && isExpressionNode(child)) {
-                        collectTemplateNames(child, result)
+                        collectTemplateNames(child, result, ctx, visited)
                     }
                     child = child.treeNext
                 }
@@ -115,7 +138,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 var child = node.firstChildNode
                 while (child != null) {
                     if (child.isMatchArm() || child.isDefaultMatchArm()) {
-                        collectMatchArmBodyNames(child, result)
+                        collectMatchArmBodyNames(child, result, ctx, visited)
                     }
                     child = child.treeNext
                 }
@@ -124,7 +147,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 var child = node.firstChildNode
                 while (child != null) {
                     if (isExpressionNode(child)) {
-                        collectTemplateNames(child, result)
+                        collectTemplateNames(child, result, ctx, visited)
                     }
                     child = child.treeNext
                 }
@@ -132,7 +155,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
     }
 
-    private fun collectMatchArmBodyNames(armNode: ASTNode, result: MutableList<String>) {
+    private fun collectMatchArmBodyNames(
+        armNode: ASTNode,
+        result: MutableList<String>,
+        ctx: TemplateNameContext,
+        visited: MutableSet<ASTNode>
+    ) {
         // Children: <cond>, <cond>, ... => <body>
         // Only the expression after "=>" is a possible template name.
         var afterArrow = false
@@ -141,10 +169,119 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             if (child.elementType == PhpTokenTypes.opHASH_ARRAY) {
                 afterArrow = true
             } else if (afterArrow && isExpressionNode(child)) {
-                collectTemplateNames(child, result)
+                collectTemplateNames(child, result, ctx, visited)
             }
             child = child.treeNext
         }
+    }
+
+    /**
+     * Resolve a `$name` use to the template names of every plain `$name = <expr>` assignment
+     * that textually precedes the use in the same scope. All preceding assignments count, so
+     * assignments in both branches of an if/else are found; a stale earlier value after a
+     * sequential reassignment is included too, which is preferred over missing a branch.
+     *
+     * Not resolved: `$this`, method parameters, properties, `.=` and other compound
+     * assignments, or anything assigned in a nested closure.
+     *
+     * The visited set holds assignment nodes already expanded on the current path and
+     * stops cycles such as `$a = $b; $b = $a;` or `$a = $a ?: 'x'`.
+     */
+    private fun resolveVariable(
+        variableNode: ASTNode,
+        result: MutableList<String>,
+        ctx: TemplateNameContext,
+        visited: MutableSet<ASTNode>
+    ) {
+        val name = variableNode.text.removePrefix("$")
+        if (name == "this") {
+            return
+        }
+        val scope = scopeNodeOf(variableNode)
+        val assignmentsByName = ctx.assignmentsByScope.getOrPut(scope) { collectAssignmentsInScope(scope) }
+        val assignments = assignmentsByName[name] ?: return
+        val useOffset = variableNode.startOffset
+
+        for (assignment in assignments) {
+            if (assignment.startOffset >= useOffset) {
+                break  // Assignments are in document order
+            }
+            if (!visited.add(assignment)) {
+                continue
+            }
+            val value = assignmentValueNode(assignment)
+            if (value != null) {
+                collectTemplateNames(value, result, ctx, visited)
+            }
+            visited.remove(assignment)
+        }
+    }
+
+    /** The nearest enclosing method, function or closure, or the file root. */
+    private fun scopeNodeOf(node: ASTNode): ASTNode {
+        var current = node
+        while (true) {
+            val parent = current.treeParent ?: return current
+            if (parent.isScopeNode()) {
+                return parent
+            }
+            current = parent
+        }
+    }
+
+    /**
+     * All `$name = <expr>` assignments directly within a scope, grouped by variable name and
+     * kept in document order. Nested scopes (closures, functions, methods) are not entered.
+     * SELF_ASSIGNMENT_EXPRESSION (`.=`, `+=`, ...) is a different element type and is skipped
+     * by isAssignmentExpression().
+     */
+    private fun collectAssignmentsInScope(scope: ASTNode): Map<String, List<ASTNode>> {
+        val result = HashMap<String, MutableList<ASTNode>>()
+        collectAssignmentsRecursive(scope, result)
+        return result
+    }
+
+    private fun collectAssignmentsRecursive(node: ASTNode, result: MutableMap<String, MutableList<ASTNode>>) {
+        if (node.isAssignmentExpression()) {
+            val target = firstExpressionChild(node)
+            if (target != null && target.isVariable()) {
+                val name = target.text.removePrefix("$")
+                result.getOrPut(name) { mutableListOf() }.add(node)
+            }
+        }
+        var child = node.firstChildNode
+        while (child != null) {
+            if (!child.isScopeNode()) {
+                collectAssignmentsRecursive(child, result)
+            }
+            child = child.treeNext
+        }
+    }
+
+    /** The right-hand side of an ASSIGNMENT_EXPRESSION: the first expression after "=". */
+    private fun assignmentValueNode(assignment: ASTNode): ASTNode? {
+        var afterAssign = false
+        var child = assignment.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.opASGN) {
+                afterAssign = true
+            } else if (afterAssign && isExpressionNode(child)) {
+                return child
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun firstExpressionChild(node: ASTNode): ASTNode? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (isExpressionNode(child)) {
+                return child
+            }
+            child = child.treeNext
+        }
+        return null
     }
 
     // Composite nodes are expressions; leaf tokens (operators, whitespace, comments) are not.
@@ -153,16 +290,21 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
     // AST-based parsing implementation (tested and proven)
-    private fun findMethodCallsByName(node: ASTNode, methodName: String): List<MethodCallInfo> {
+    private fun findMethodCallsByName(node: ASTNode, methodName: String, ctx: TemplateNameContext): List<MethodCallInfo> {
         val result = mutableListOf<MethodCallInfo>()
-        findMethodCallsRecursive(node, methodName, result)
+        findMethodCallsRecursive(node, methodName, result, ctx)
         return result
     }
     
-    private fun findMethodCallsRecursive(node: ASTNode, targetMethodName: String, result: MutableList<MethodCallInfo>) {
+    private fun findMethodCallsRecursive(
+        node: ASTNode,
+        targetMethodName: String,
+        result: MutableList<MethodCallInfo>,
+        ctx: TemplateNameContext
+    ) {
         // Check if this node represents a method reference
         if (isMethodReference(node)) {
-            val methodCall = parseMethodCall(node, targetMethodName)
+            val methodCall = parseMethodCall(node, targetMethodName, ctx)
             if (methodCall != null) {
                 result.add(methodCall)
             }
@@ -171,7 +313,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Recursively check child nodes - avoid toList() allocation
         var child = node.firstChildNode
         while (child != null) {
-            findMethodCallsRecursive(child, targetMethodName, result)
+            findMethodCallsRecursive(child, targetMethodName, result, ctx)
             child = child.treeNext
         }
     }
@@ -180,7 +322,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         return node.isMethodReference()
     }
     
-    private fun parseMethodCall(node: ASTNode, targetMethodName: String): MethodCallInfo? {
+    private fun parseMethodCall(node: ASTNode, targetMethodName: String, ctx: TemplateNameContext): MethodCallInfo? {
         // Look for VARIABLE, arrow, identifier, parameter list pattern
         var receiverName: String? = null
         var methodName: String? = null
@@ -203,7 +345,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     while (paramChild != null) {
                         // Skip whitespace and commas to find the first actual parameter
                         if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
-                            parameterValues = extractTemplateNames(paramChild)
+                            parameterValues = extractTemplateNames(paramChild, ctx)
                             break
                         }
                         paramChild = paramChild.treeNext
@@ -282,16 +424,21 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
     }
 
-    private fun findFieldAssignments(node: ASTNode, fieldName: String): List<FieldAssignmentInfo> {
+    private fun findFieldAssignments(node: ASTNode, fieldName: String, ctx: TemplateNameContext): List<FieldAssignmentInfo> {
         val result = mutableListOf<FieldAssignmentInfo>()
-        findFieldAssignmentsRecursive(node, fieldName, result)
+        findFieldAssignmentsRecursive(node, fieldName, result, ctx)
         return result
     }
 
-    private fun findFieldAssignmentsRecursive(node: ASTNode, targetFieldName: String, result: MutableList<FieldAssignmentInfo>) {
+    private fun findFieldAssignmentsRecursive(
+        node: ASTNode,
+        targetFieldName: String,
+        result: MutableList<FieldAssignmentInfo>,
+        ctx: TemplateNameContext
+    ) {
         // Check if this node represents an assignment expression
         if (node.isAssignmentExpression()) {
-            val fieldAssignment = parseFieldAssignment(node, targetFieldName)
+            val fieldAssignment = parseFieldAssignment(node, targetFieldName, ctx)
             if (fieldAssignment != null) {
                 result.add(fieldAssignment)
             }
@@ -300,12 +447,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Recursively check child nodes
         var child = node.firstChildNode
         while (child != null) {
-            findFieldAssignmentsRecursive(child, targetFieldName, result)
+            findFieldAssignmentsRecursive(child, targetFieldName, result, ctx)
             child = child.treeNext
         }
     }
 
-    private fun parseFieldAssignment(node: ASTNode, targetFieldName: String): FieldAssignmentInfo? {
+    private fun parseFieldAssignment(node: ASTNode, targetFieldName: String, ctx: TemplateNameContext): FieldAssignmentInfo? {
         // Look for: $this->view = 'template_name'   (or a ternary / match of template names)
         // AST structure: ASSIGNMENT_EXPRESSION -> FIELD_REFERENCE (left) -> "=" -> <expression> (right)
         var fieldReference: ASTNode? = null
@@ -318,7 +465,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     fieldReference = child
                 }
                 fieldReference != null && isExpressionNode(child) -> {
-                    assignedValues = extractTemplateNames(child)
+                    assignedValues = extractTemplateNames(child, ctx)
                 }
             }
             child = child.treeNext
@@ -355,15 +502,16 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         return null
     }
 
-    private fun findViewBuilderCalls(node: ASTNode): List<ViewBuilderCallInfo> {
+    private fun findViewBuilderCalls(node: ASTNode, ctx: TemplateNameContext): List<ViewBuilderCallInfo> {
         val result = mutableListOf<ViewBuilderCallInfo>()
-        findViewBuilderCallsRecursive(node, result, -1)
+        findViewBuilderCallsRecursive(node, result, ctx, -1)
         return result
     }
 
     private fun findViewBuilderCallsRecursive(
         node: ASTNode,
         result: MutableList<ViewBuilderCallInfo>,
+        ctx: TemplateNameContext,
         containingMethodOffset: Int = -1
     ) {
         // Track when we enter a CLASS_METHOD
@@ -375,7 +523,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         // Check if this node represents a method reference
         if (node.isMethodReference()) {
-            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset)
+            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset, ctx)
             if (viewBuilderCall != null) {
                 result.add(viewBuilderCall)
             }
@@ -384,14 +532,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         // Recursively check child nodes
         var child = node.firstChildNode
         while (child != null) {
-            findViewBuilderCallsRecursive(child, result, currentMethodOffset)
+            findViewBuilderCallsRecursive(child, result, ctx, currentMethodOffset)
             child = child.treeNext
         }
     }
 
     private fun parseViewBuilderCall(
         node: ASTNode,
-        containingMethodOffset: Int
+        containingMethodOffset: Int,
+        ctx: TemplateNameContext
     ): ViewBuilderCallInfo? {
         // Look for:
         //   1. $this->viewBuilder()->setTemplate('name')
@@ -438,7 +587,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                         paramChild = paramChild.treeNext
                     }
                     if (significantChildren.size == 1) {
-                        parameterValues = extractTemplateNames(significantChildren[0])
+                        parameterValues = extractTemplateNames(significantChildren[0], ctx)
                     }
                 }
             }
@@ -551,11 +700,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         // Use AST traversal instead of PSI for method calls
         val rootNode = psiFile.node ?: return result
-        val astRenderCalls = findMethodCallsByName(rootNode, "render")
+        val ctx = TemplateNameContext()
+        val astRenderCalls = findMethodCallsByName(rootNode, "render", ctx)
             .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
-        val astElementCalls = findMethodCallsByName(rootNode, "element")
+        val astElementCalls = findMethodCallsByName(rootNode, "element", ctx)
             .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
-        val astViewFieldAssignments = findFieldAssignments(rootNode, "view")
+        val astViewFieldAssignments = findFieldAssignments(rootNode, "view", ctx)
             .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
 
         // Early bailout: Quick text scan before AST traversal for viewBuilder calls
@@ -563,7 +713,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             // Skip viewBuilder parsing entirely
             emptyList()
         } else {
-            findViewBuilderCalls(rootNode)
+            findViewBuilderCalls(rootNode, ctx)
                 .filter { it.parameterValues.isNotEmpty() }
         }
 
