@@ -151,44 +151,13 @@ class CakePhpAutoDetector(val project: Project)
 
         val namespace = checkNamespaceInAppConfig(topDir)
 
-        val (cake3OrLaterPresent: Boolean, appDirectory: String) = try {
-            val composerJsonParsed = jsonParse(composerContents)
-                as? Map<*, *> ?: throw Exception("Failed parsing")
-            Pair(
-                checkCakePhpInComposerJson(composerJsonParsed),
-                extractAppDirFromComposerJson(composerJsonParsed, namespace)
-            )
-        } catch (e: Exception) {
-            Pair(false, DEFAULT_APP_DIRECTORY)
-        }
+        val composerInfo = parseComposerJson(composerContents, namespace)
 
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = cake3OrLaterPresent,
+            cake3OrLaterPresent = composerInfo.cakePhpRequired,
             namespace = namespace,
-            appDirectory = appDirectory,
+            appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )
-    }
-
-    private fun extractAppDirFromComposerJson(
-        json: Map<*, *>,
-        namespace: String
-    ): String {
-        val autoloadObj = json["autoload"] as? Map<*, *>
-            ?: return DEFAULT_APP_DIRECTORY
-        val psr4 = autoloadObj["psr-4"] as? Map<*, *>
-            ?: return DEFAULT_APP_DIRECTORY
-        val targetNamespace = "${namespace}\\".removeFromStart("\\")
-        val directory = psr4[targetNamespace] as? String
-            ?: return DEFAULT_APP_DIRECTORY
-        return directory.removeFromEnd("/")
-    }
-
-    private fun checkCakePhpInComposerJson(composerParsed: Map<*, *>): Boolean {
-        val required = composerParsed["require"] as? Map<*, *> ?: return false
-        if (required["cakephp/cakephp"] != null) {
-            return true
-        }
-        return false
     }
 
     private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {

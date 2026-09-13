@@ -102,3 +102,8 @@ is unchanged.
 
 - Branch `simplify-json-parsing` created from `main`.
 - Feature log written.
+- `JsonScanner.kt` added with 18 tests, all passing first run.
+- `ComposerJson.kt` added with 15 tests; `Settings.kt` rewired;
+  `JsonParser.kt` and `JsonParserTest.kt` removed.
+- Verified with `JsonScannerTest`, `ComposerJsonTest`, `SettingsTest`, and
+  the cake5 suite.
