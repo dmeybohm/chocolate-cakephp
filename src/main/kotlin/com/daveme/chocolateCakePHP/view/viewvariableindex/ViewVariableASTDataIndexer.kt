@@ -106,10 +106,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         if (names.isEmpty()) {
             return
         }
-        val vars = ViewVariableArgumentParser.parseDataArgument(
-            call.parameters[1],
-            allowVariableIndirection = true
-        )
+        val vars = ViewVariableArgumentParser.parseDataArgument(call.parameters[1])
         if (vars.isEmpty()) {
             return
         }
@@ -252,7 +249,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     internal fun parseSetCall(call: MethodCallParts): List<RawViewVar> {
         val params = call.parameters
         return when (params.size) {
-            1 -> ViewVariableArgumentParser.parseDataArgument(params[0], allowVariableIndirection = true)
+            1 -> ViewVariableArgumentParser.parseDataArgument(params[0])
             2 -> parseTwoArgumentSet(call.node, params[0], params[1])
             else -> emptyList()
         }

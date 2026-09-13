@@ -12,6 +12,7 @@ import com.intellij.lang.ASTNode
  *   $this->set($vars)                         VARIABLE_ARRAY  (resolved later via PSI)
  *   $this->element('x', ['name' => $value])   ARRAY
  *   $this->element('x', compact('name'))      COMPACT
+ *   $this->element('x', $vars)                VARIABLE_ARRAY  (resolved later via PSI)
  *
  * Only syntax facts and offsets are recorded, never types: the returned [RawViewVar]s are
  * resolved lazily with PSI in [RawViewVar.resolveType] once a consumer needs them.
@@ -20,15 +21,12 @@ object ViewVariableArgumentParser {
 
     /**
      * Parse one argument node that is expected to hold view variables.
-     *
-     * @param allowVariableIndirection whether a bare `$var` argument should be recorded as
-     *   VARIABLE_ARRAY for later PSI resolution. `set()` allows it; element data does not yet.
      */
-    fun parseDataArgument(node: ASTNode, allowVariableIndirection: Boolean): List<RawViewVar> {
+    fun parseDataArgument(node: ASTNode): List<RawViewVar> {
         return when {
             node.isArrayCreationExpression() -> parseArrayCreation(node)
             node.isCompactCall() -> parseCompactCall(node)
-            allowVariableIndirection && node.isVariable() -> parseVariableIndirection(node)
+            node.isVariable() -> parseVariableIndirection(node)
             else -> emptyList()
         }
     }

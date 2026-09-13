@@ -115,7 +115,8 @@ so passed data overrides a same-named view var, matching `array_merge`. Types ar
   `layout/default.php` (cake5).
 - Findings while testing: `$crumbs = ['Home']` types as `string[]`, not `array`; the cycle test's direction
   had to match what each element actually receives.
-- `$var` element data: `allowVariableIndirection = true` for the element argument. Since `set($vars)` only
+- `$var` element data: the parser records a bare `$var` for element data exactly as for `set()`; the
+  opt-out flag it briefly had was removed since every caller passed true. Since `set($vars)` only
   ever fed the undefined-variable suppressor (completion listed `$vars` itself, typed `mixed`, and the type
   provider found nothing), the lookup side gained `expandDynamicEntry`: an indirect entry is expanded with
   PSI from its assignment into concrete ARRAY / COMPACT entries whose offsets point into that assignment, so
