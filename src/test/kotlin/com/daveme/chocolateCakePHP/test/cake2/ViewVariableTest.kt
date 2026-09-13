@@ -419,4 +419,31 @@ class ViewVariableTest : Cake2BaseTestCase() {
         assertNotNull("Expected completion popup on passed table", result)
         assertTrue("Expected saveScreening, got: $result", result!!.contains("saveScreening"))
     }
+
+    fun `test variable holding element data is completed and typed`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        ${'$'}data = array('viaVar' => ${'$'}movieModel, 'viaCount' => 3);
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}viaVar", "${'$'}viaCount")))
+        assertEquals("int", typeTextOf("${'$'}viaCount"))
+
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}viaVar-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+        val methods = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", methods)
+        assertTrue("Expected saveScreening, got: $methods", methods!!.contains("saveScreening"))
+    }
 }

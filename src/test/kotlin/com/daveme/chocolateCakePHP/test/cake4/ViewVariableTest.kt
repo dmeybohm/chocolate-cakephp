@@ -509,4 +509,31 @@ class ViewVariableTest : Cake4BaseTestCase() {
         assertNotNull("Expected completion popup on passed table", result)
         assertTrue("Expected findOwnedBy, got: $result", result!!.contains("findOwnedBy"))
     }
+
+    fun `test variable holding element data is completed and typed`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}data = ['viaVar' => ${'$'}moviesTable, 'viaCount' => 3];
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake4/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}viaVar", "${'$'}viaCount")))
+        assertEquals("int", typeTextOf("${'$'}viaCount"))
+
+        myFixture.configureByFilePathAndText("cake4/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}viaVar-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+        val methods = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", methods)
+        assertTrue("Expected findOwnedBy, got: $methods", methods!!.contains("findOwnedBy"))
+    }
 }

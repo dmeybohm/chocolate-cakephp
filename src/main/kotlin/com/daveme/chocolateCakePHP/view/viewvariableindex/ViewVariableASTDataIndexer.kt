@@ -60,8 +60,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
      *                                                                              rendered afterwards)
      *
      * The element name goes through the same ternary / match / `$var` resolution as the view file
-     * index, so the data array is attached to every element the call can render. `$data` as the
-     * element argument is not resolved yet (see ViewVariableArgumentParser.parseDataArgument).
+     * index, so the data array is attached to every element the call can render. A `$data`
+     * argument is recorded as an indirection and read from its assignment at lookup time.
      */
     private fun indexViewFile(
         result: MutableMap<String, ViewVariablesWithRawVars>,
@@ -108,7 +108,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         }
         val vars = ViewVariableArgumentParser.parseDataArgument(
             call.parameters[1],
-            allowVariableIndirection = false
+            allowVariableIndirection = true
         )
         if (vars.isEmpty()) {
             return

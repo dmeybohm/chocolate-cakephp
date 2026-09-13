@@ -281,13 +281,16 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         assertTrue("No keys expected, got: ${index.keys}", index.isEmpty())
     }
 
-    fun `test variable as element data is not indexed yet`() {
+    fun `test variable as element data is indexed as an indirection`() {
         val index = indexOfViewFile("cake5/templates/Movie/index.php", """
             <?php
             ${'$'}data = ['a' => 1, 'b' => 2];
             echo ${'$'}this->element('breadcrumb', ${'$'}data);
         """.trimIndent())
-        assertTrue("No keys expected, got: ${index.keys}", index.isEmpty())
+        val vars = index[elementDataKey("element/breadcrumb")]!!
+        val entry = vars["data"]!!
+        assertEquals(VarKind.VARIABLE_ARRAY, entry.varKind)
+        assertEquals("data", entry.varHandle.symbolName)
     }
 
     fun `test ternary element name attaches data to both elements`() {

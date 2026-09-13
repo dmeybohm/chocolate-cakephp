@@ -18,7 +18,8 @@ actions (ViewVariableIndex). Two real CakePHP sources of variables are invisible
 - This is an index change, not a lookup-time PSI shortcut. The `$this->set()` argument parser is refactored
   into a generic, reusable parser shared by `set()` and `element()` data.
 - Element call sites are indexed wherever they occur: templates, layouts and other elements (nested).
-- Element data forms in this iteration: array literal and `compact(...)`. `$var` indirection is a follow-up.
+- Element data forms: array literal, `compact(...)`, and a `$var` holding either (added in session #2 after the
+  first three landed).
 - `$this->set()` inside view files is indexed too, under the view file's own key.
 - ViewFileIndex is untouched (stays at version 19). ViewVariableIndex bumps 17 -> 18.
 
@@ -70,7 +71,8 @@ so passed data overrides a same-named view var, matching `array_merge`. Types ar
 
 ## Known limitations / follow-ups
 
-- `$var` indirection for element data: flip `allowVariableIndirection` and add a test.
+- A `$var` holding element data is read from its last assignment only; keys added afterwards with
+  `$data['extra'] = ...` are not seen. Same limitation as `set($vars)` in controllers.
 - Plugin element calls (`'Plugin.foo'`) are keyed verbatim as `element/Plugin.foo` in ViewFileIndex and do
   not link to the plugin file's own key. Pre-existing.
 - Layouts get no controller vars unless something references them in ViewFileIndex; element data and
@@ -113,3 +115,10 @@ so passed data overrides a same-named view var, matching `array_merge`. Types ar
   `layout/default.php` (cake5).
 - Findings while testing: `$crumbs = ['Home']` types as `string[]`, not `array`; the cycle test's direction
   had to match what each element actually receives.
+- `$var` element data: `allowVariableIndirection = true` for the element argument. Since `set($vars)` only
+  ever fed the undefined-variable suppressor (completion listed `$vars` itself, typed `mixed`, and the type
+  provider found nothing), the lookup side gained `expandDynamicEntry`: an indirect entry is expanded with
+  PSI from its assignment into concrete ARRAY / COMPACT entries whose offsets point into that assignment, so
+  they resolve types like literal ones. Completion and the type lookup use the expansion; the suppressor
+  already did name-only expansion. This fixes controller `set($vars)` completion as a side effect (tests
+  `test controller set with an array variable completes the real variable names` and the compact twin).

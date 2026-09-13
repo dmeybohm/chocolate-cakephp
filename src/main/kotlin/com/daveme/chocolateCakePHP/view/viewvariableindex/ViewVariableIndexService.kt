@@ -437,6 +437,70 @@ sealed class ViewVariableSource(val key: ViewVariablesKey) {
 
 object ViewVariableIndexService {
 
+    /** Kinds whose entry names an indirection variable (`set($vars)`), not a view variable. */
+    private val DYNAMIC_KINDS = setOf(
+        VarKind.VARIABLE_ARRAY,
+        VarKind.VARIABLE_COMPACT,
+        VarKind.VARIABLE_PAIR,
+        VarKind.MIXED_TUPLE
+    )
+
+    /**
+     * The concrete entries an indirect one stands for, read with PSI from the assignment it
+     * points at:
+     *
+     *   $vars = ['movie' => $m, 'year' => 2010]; $this->set($vars);        -> ARRAY entries movie, year
+     *   $vars = compact('genre', 'rating');      $this->element('x', $vars) -> COMPACT entries genre, rating
+     *
+     * The returned entries carry offsets into the assignment, so they resolve types exactly like
+     * their literal counterparts. Shapes that cannot be read this way (MIXED_TUPLE, a variable
+     * holding a string) yield name-only entries that resolve to `mixed`.
+     */
+    private fun expandDynamicEntry(rawVar: RawViewVar, sourceFile: PsiFile?): List<RawViewVar> {
+        if (sourceFile == null || rawVar.varKind !in DYNAMIC_KINDS) {
+            return emptyList()
+        }
+        if (rawVar.varKind == VarKind.VARIABLE_ARRAY || rawVar.varKind == VarKind.VARIABLE_COMPACT) {
+            val assignment = lastAssignmentBefore(sourceFile, rawVar.varHandle.symbolName, rawVar.varHandle.offset)
+            when (val value = assignment?.value) {
+                is ArrayCreationExpression -> return value.hashElements.mapNotNull { hashElement ->
+                    val key = (hashElement.key as? StringLiteralExpression)?.contents ?: return@mapNotNull null
+                    val valueExpression = hashElement.value ?: return@mapNotNull null
+                    RawViewVar(key, VarKind.ARRAY, hashElement.textRange.startOffset, handleForPsiValue(valueExpression))
+                }
+                is FunctionReference -> if (value.name == "compact") {
+                    return (value.parameterList?.parameters ?: emptyArray())
+                        .filterIsInstance<StringLiteralExpression>()
+                        .map { param ->
+                            val offset = param.textRange.startOffset
+                            RawViewVar(param.contents, VarKind.COMPACT, offset, VarHandle(SourceKind.LOCAL, param.contents, offset))
+                        }
+                }
+                else -> {}
+            }
+        }
+        return extractVariableNamesFromDynamicPattern(rawVar, sourceFile).map { name ->
+            RawViewVar(name, rawVar.varKind, rawVar.offset, VarHandle(SourceKind.UNKNOWN, name, rawVar.varHandle.offset))
+        }
+    }
+
+    /** A VarHandle for a value expression seen through PSI; mirrors ViewVariableArgumentParser.valueHandle. */
+    private fun handleForPsiValue(value: PsiElement): VarHandle {
+        val offset = value.textRange.startOffset
+        val text = value.text.trim()
+        return when {
+            value is Variable -> VarHandle(SourceKind.LOCAL, value.name, offset)
+            value is StringLiteralExpression -> VarHandle(SourceKind.LITERAL, value.contents, offset)
+            text == "true" || text == "false" || text == "null" || text.toDoubleOrNull() != null ->
+                VarHandle(SourceKind.LITERAL, text, offset)
+            else -> VarHandle(SourceKind.EXPRESSION, text, offset)
+        }
+    }
+
+    /** [rawVar] itself, or for an indirect entry the concrete entries it stands for. */
+    private fun concreteEntries(rawVar: RawViewVar, sourceFile: PsiFile?): List<RawViewVar> =
+        if (rawVar.varKind in DYNAMIC_KINDS) expandDynamicEntry(rawVar, sourceFile) else listOf(rawVar)
+
     private fun controllerKeyFromElementAndPath(
         elementAndPath: PsiElementAndPath
     ): String? {
@@ -551,10 +615,14 @@ object ViewVariableIndexService {
         // expression lives, so it is the source for type resolution.
         fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
             { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                val rawVar: RawViewVar? = viewVariablesMap[variableName]
-                if (rawVar != null) {
+                val direct = viewVariablesMap[variableName]?.takeIf { it.varKind !in DYNAMIC_KINDS }
+                val dynamic = viewVariablesMap.values.filter { it.varKind in DYNAMIC_KINDS }
+                if (direct != null || dynamic.isNotEmpty()) {
                     val sourcePsiFile = psiManager.findFile(indexedFile)
-                    result.add(rawVar.resolveType(project, sourcePsiFile))
+                    direct?.let { result.add(it.resolveType(project, sourcePsiFile)) }
+                    dynamic.flatMap { expandDynamicEntry(it, sourcePsiFile) }
+                        .filter { it.variableName == variableName }
+                        .forEach { result.add(it.resolveType(project, sourcePsiFile)) }
                 }
                 true // continue processing
             },
@@ -607,9 +675,11 @@ object ViewVariableIndexService {
                 is ViewVariableSource.ElementCallData -> fromElementData
             }
             lookupRawVarsByKey(project, source.key).forEach { (sourcePsiFile, rawVarCollection) ->
-                rawVarCollection.forEach { (name, rawVar) ->
-                    val resolvedType = rawVar.resolveType(project, sourcePsiFile)
-                    target[name] = ViewVariableValue(resolvedType.toString(), rawVar.offset)
+                rawVarCollection.values.forEach { rawVar ->
+                    concreteEntries(rawVar, sourcePsiFile).forEach { entry ->
+                        val resolvedType = entry.resolveType(project, sourcePsiFile)
+                        target[entry.variableName] = ViewVariableValue(resolvedType.toString(), entry.offset)
+                    }
                 }
             }
             true

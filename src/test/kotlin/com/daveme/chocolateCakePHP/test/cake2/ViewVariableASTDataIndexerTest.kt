@@ -265,4 +265,14 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         assertEquals(setOf("fromTemplate", "other"), index[key]!!.keys)
         assertEquals(VarKind.PAIR, index[key]!!["fromTemplate"]!!.varKind)
     }
+
+    fun `test variable as element data is indexed as an indirection`() {
+        val index = indexOfViewFile("cake2/app/View/Movie/index.ctp", """
+            <?php
+            ${'$'}data = array('a' => 1, 'b' => 2);
+            echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        val entry = index[elementDataKey("Elements/Director/filmography")]!!["data"]!!
+        assertEquals(VarKind.VARIABLE_ARRAY, entry.varKind)
+    }
 }
