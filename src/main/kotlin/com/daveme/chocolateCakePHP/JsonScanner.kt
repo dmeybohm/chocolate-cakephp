@@ -31,8 +31,10 @@ data class JsonEntry(val path: List<String>, val key: String, val value: String?
  *  - a missing value (emitted with a null value; scanning continues)
  *  - an unquoted key (skipped)
  *  - a truncated document (everything before the end is kept)
- *  - an unterminated string (runs to end of input and is still emitted)
- *  - extra closing braces and trailing garbage after the root
+ *  - an unterminated string (stops at the end of its line and is still
+ *    emitted, so later lines are unaffected)
+ *  - an extra closing brace anywhere (the root is never closed, so
+ *    everything after the brace is still scanned as part of the root)
  *
  * Without this, the plugin's auto-detected CakePHP settings would flip to
  * defaults whenever composer.json is momentarily invalid, and CakePHP
@@ -85,8 +87,12 @@ private fun tokenize(json: String): List<Token> {
 
 /**
  * Read a string literal starting just after its opening quote. Returns the
- * unescaped text and the index just past the closing quote, or the end of
- * input if the string is unterminated.
+ * unescaped text and the index just past the closing quote.
+ *
+ * JSON forbids raw newlines inside strings, so a newline means the closing
+ * quote is missing. The string ends there (the newline is left for the
+ * tokenizer) so that a missing quote cannot swallow the rest of the document.
+ * An unterminated string on the last line runs to the end of input.
  */
 private fun readString(json: String, start: Int): Pair<String, Int> {
     val sb = StringBuilder()
@@ -96,6 +102,9 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
         val c = json[i]
         if (c == '"') {
             return sb.toString() to i + 1
+        }
+        if (c == '\n' || c == '\r') {
+            return sb.toString() to i
         }
         if (c == '\\' && i + 1 < n) {
             when (val esc = json[i + 1]) {
@@ -165,9 +174,10 @@ private fun scan(tokens: List<Token>): List<JsonEntry> {
             }
             Token.RBrace, Token.RBracket -> {
                 flush(frame, null)
-                stack.removeLast()
-                if (stack.isEmpty()) {
-                    break // Root closed; ignore anything after it.
+                // Never pop the root: an extra closing brace left behind
+                // mid-edit must not hide everything after it.
+                if (stack.size > 1) {
+                    stack.removeLast()
                 }
             }
             Token.Other -> if (frame.isObject) flush(frame, null)

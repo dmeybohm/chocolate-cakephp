@@ -23,12 +23,22 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
  */
 fun parseComposerJson(contents: String, namespace: String): ComposerInfo {
     val entries = scanJsonEntries(contents)
-    val targetNamespace = "${namespace}\\".removeFromStart("\\")
+    val targetNamespace = canonicalNamespace(namespace)
     return ComposerInfo(
         cakePhpRequired = entries.any { it.path == REQUIRE_PATH && it.key == "cakephp/cakephp" },
         appDirectory = entries
-            .firstOrNull { it.path == PSR4_PATH && it.key == targetNamespace }
+            .firstOrNull { it.path == PSR4_PATH && canonicalNamespace(it.key) == targetNamespace }
             ?.value
             ?.removeFromEnd("/"),
     )
 }
+
+/**
+ * Normalise a namespace for comparison: no leading backslash, exactly one
+ * trailing backslash. Applied to both the namespace from config/app.php and
+ * the psr-4 key from composer.json, so `\App`, `App`, `App\` and `\App\`
+ * all compare equal.
+ */
+private fun canonicalNamespace(namespace: String): String =
+    namespace.trim('\\') + "\\"
+

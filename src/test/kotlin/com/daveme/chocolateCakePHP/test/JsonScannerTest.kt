@@ -66,6 +66,57 @@ class JsonScannerTest : TestCase() {
         assertEquals(listOf(e("key", "unterminated}")), entries)
     }
 
+    fun `test unterminated string stops at end of line and later lines survive`() {
+        val json = """
+            {
+                "require": {
+                    "cakephp/cakephp": "^5.0,
+                    "cakephp/migrations": "^4.0"
+                },
+                "autoload": {"psr-4": {"App\\": "app/src/"}}
+            }
+        """.trimIndent()
+        val entries = scanJsonEntries(json)
+        assertEquals(
+            listOf(
+                e("require", null),
+                e("cakephp/cakephp", "^5.0,", "require"),
+                e("cakephp/migrations", "^4.0", "require"),
+                e("autoload", null),
+                e("psr-4", null, "autoload"),
+                e("App\\", "app/src/", "autoload", "psr-4"),
+            ),
+            entries
+        )
+    }
+
+    fun `test unterminated key stops at end of line and later lines survive`() {
+        val json = "{\n  \"a: \"1\",\n  \"b\": \"2\"\n}"
+        val entries = scanJsonEntries(json)
+        assertEquals(listOf(e("b", "2")), entries)
+    }
+
+    fun `test extra closing brace in the middle keeps later entries`() {
+        val json = """
+            {
+                "require": {"cakephp/cakephp": "^5.0"}
+                },
+                "autoload": {"psr-4": {"App\\": "app/src/"}}
+            }
+        """.trimIndent()
+        val entries = scanJsonEntries(json)
+        assertEquals(
+            listOf(
+                e("require", null),
+                e("cakephp/cakephp", "^5.0", "require"),
+                e("autoload", null),
+                e("psr-4", null, "autoload"),
+                e("App\\", "app/src/", "autoload", "psr-4"),
+            ),
+            entries
+        )
+    }
+
     fun `test missing value before next key`() {
         val entries = scanJsonEntries("""{"php": "cakephp/cakephp": "^5"}""")
         assertEquals(listOf(e("php", null), e("cakephp/cakephp", "^5")), entries)
@@ -91,9 +142,12 @@ class JsonScannerTest : TestCase() {
         assertEquals(listOf(e("a", "1"), e("c", "3")), entries)
     }
 
-    fun `test extra closing brace and trailing garbage are ignored`() {
+    fun `test extra closing brace never closes the root`() {
+        // The root is never popped, so content after a stray brace is
+        // scanned as if it were still inside the root.
         val entries = scanJsonEntries("""{"a": "1"}} garbage {"b": "2"}""")
-        assertEquals(listOf(e("a", "1")), entries)
+        assertEquals(listOf(e("a", "1"), e("b", "2")), entries)
+        assertEquals(listOf(e("a", "1")), scanJsonEntries("""{"a": "1"}}}"""))
     }
 
     fun `test empty and non-container input yields no entries`() {
