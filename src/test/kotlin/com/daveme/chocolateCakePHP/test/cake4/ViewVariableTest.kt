@@ -462,4 +462,51 @@ class ViewVariableTest : Cake4BaseTestCase() {
         assertTrue(result!!.contains("findOwnedBy"))
     }
 
+    // ---- data passed to elements and $this->set() inside view files -----------------------
+
+    private fun typeTextOf(lookupString: String): String? {
+        val element = myFixture.lookupElements!!.find { it.lookupString == lookupString }
+        assertNotNull("Should find $lookupString in completion", element)
+        val presentation = LookupElementPresentation()
+        element!!.renderElement(presentation)
+        return presentation.typeText
+    }
+
+    fun `test variables passed to element are completed`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}this->set('fromTemplate', 'x');
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake4/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Passed var missing: $result", result!!.contains("${'$'}table"))
+        assertTrue("Passed literal missing: $result", result.contains("${'$'}count"))
+        assertTrue("Controller var missing: $result", result.contains("${'$'}moviesTable"))
+        assertTrue("Template set() var missing: $result", result.contains("${'$'}fromTemplate"))
+        assertEquals("int", typeTextOf("${'$'}count"))
+        assertEquals("string", typeTextOf("${'$'}fromTemplate"))
+    }
+
+    fun `test type of variable passed to element chains through the template`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake4/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}table-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", result)
+        assertTrue("Expected findOwnedBy, got: $result", result!!.contains("findOwnedBy"))
+    }
 }
