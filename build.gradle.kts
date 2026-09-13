@@ -50,6 +50,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    // For ForkSandboxListener (LauncherSessionListener), which gives each Gradle
+    // test fork its own IDE sandbox so forks can run in parallel.
+    testImplementation("org.junit.platform:junit-platform-launcher:1.8.2")
 }
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
@@ -140,6 +143,16 @@ tasks {
 
     test {
         useJUnitPlatform()
+
+        // Run test classes across several JVMs. Each fork gets its own IDE
+        // sandbox (system/config/log dirs) via ForkSandboxListener, otherwise
+        // the forks contend on the shared index and cache storage and there is
+        // no speedup. Override with -PtestForks=N. Each fork needs ~1.5-2 GB,
+        // so the default is capped by a small constant rather than core count.
+        maxParallelForks = providers.gradleProperty("testForks")
+            .map(String::toInt)
+            .getOrElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4))
+
         // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
         testLogging {
             events("passed", "skipped", "failed")
