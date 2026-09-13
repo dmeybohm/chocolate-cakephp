@@ -104,7 +104,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     private fun extractTemplateNames(node: ASTNode, ctx: TemplateNameContext): List<String> {
         val result = mutableListOf<String>()
         collectTemplateNames(node, result, ctx, HashSet())
-        return result
+        // Several branches or assignments may yield the same name; index it once
+        return result.distinct()
     }
 
     private fun collectTemplateNames(

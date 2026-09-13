@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileDataIndexer
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewReferenceData
 import com.intellij.util.indexing.FileContentImpl
 
 /**
@@ -193,5 +194,45 @@ class ViewFileDataIndexerVariableTest : Cake5BaseTestCase() {
         val fileContent = FileContentImpl.createByFile(viewFile.virtualFile, project)
         val keys = ViewFileDataIndexer.map(fileContent).keys
         assertKeys(keys, "element/sidebar")
+    }
+
+    private fun indexOfController(methodBody: String): Map<String, List<ViewReferenceData>> {
+        val controllerCode = """
+            <?php
+            namespace App\Controller;
+
+            use Cake\Controller\Controller;
+
+            class MovieController extends Controller {
+                public function index() {
+            $methodBody
+                }
+            }
+        """.trimIndent()
+        val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MovieController.php", controllerCode)
+        val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
+        return ViewFileDataIndexer.map(fileContent)
+    }
+
+    fun `test the same name from several assignments is indexed once per use`() {
+        val index = indexOfController("""
+            ${'$'}template = 'artist';
+            if (${'$'}this->request->is('ajax')) {
+                ${'$'}template = 'artist';
+            }
+            ${'$'}this->render(${'$'}template);
+        """)
+        val entries = index["Movie/artist"]
+        assertNotNull("Expected key 'Movie/artist' in ${index.keys}", entries)
+        assertEquals("Expected a single index entry for the render() call, got $entries", 1, entries!!.size)
+    }
+
+    fun `test the same name from both branches of a ternary is indexed once`() {
+        val index = indexOfController("""
+            ${'$'}this->viewBuilder()->setTemplate(${'$'}this->request->is('ajax') ? 'artist' : 'artist');
+        """)
+        val entries = index["Movie/artist"]
+        assertNotNull("Expected key 'Movie/artist' in ${index.keys}", entries)
+        assertEquals("Expected a single index entry for the setTemplate() call, got $entries", 1, entries!!.size)
     }
 }

@@ -117,7 +117,8 @@ fun actionNamesFromTemplateNames(templateNames: List<String>): ActionNames? {
  * view file index always agree.
  */
 fun templateNamesFromExpression(expression: PsiElement?): List<String> {
-    return templateNamesFromExpression(expression, HashSet())
+    // Several branches or assignments may yield the same name; report it once
+    return templateNamesFromExpression(expression, HashSet()).distinct()
 }
 
 private fun templateNamesFromExpression(

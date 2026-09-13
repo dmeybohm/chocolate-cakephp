@@ -272,3 +272,32 @@ function results, and anything assigned inside a nested closure.
 unquoted shell heredoc silently stripped `$methodBody` / `$methodSignature`
 Kotlin templates, leaving an empty controller and an empty index. Quote the
 heredoc delimiter or generate test files from Python.
+
+### Session #3 (2026-09-13): review fix, duplicate template names
+
+Code review of PR #286 found that when several branches or assignments
+resolve to the same name, e.g.
+
+```php
+$template = 'artist';
+if ($this->request->is('ajax')) {
+    $template = 'artist';
+}
+$this->render($template);
+```
+
+the index stored two identical `ViewReferenceData` entries (same offset) for
+`Movie/artist`, and `ViewToControllerGotoRelatedProvider` then listed the
+same controller method twice in the view's related-items popup. The gutter
+side was unaffected because `ViewNavigationPopup` already de-duplicates by
+label.
+
+**Fix:** both public entry points now return `distinct()` names:
+`ViewFileDataIndexer.extractTemplateNames` (AST) and
+`templateNamesFromExpression` in `CakeController.kt` (PSI). Deduplicating at
+the boundary keeps the recursive collectors unchanged and keeps the two
+layers symmetric.
+
+**Tests:** two new cases in `cake5/ViewFileDataIndexerVariableTest` assert a
+single index entry when the same name comes from two assignments and from
+both branches of a ternary.
