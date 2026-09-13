@@ -672,7 +672,7 @@ object ViewVariableIndexService {
             lookupRawVarsByKey(project, source.key).forEach { (file, records) ->
                 val sourcePsiFile = PsiManager.getInstance(project).findFile(file)
                 sourceEntries(records, sourcePsiFile, source is ViewVariableSource.ElementCallData).forEach { entry ->
-                    val resolvedType = entry.resolveType(project, sourcePsiFile)
+                    val resolvedType = PhpType().also { it.add(entry.resolveType(project, sourcePsiFile)) }
                     val previous = target[entry.variableName]
                     if (source is ViewVariableSource.ElementCallData && previous != null) {
                         resolvedType.add(previous.phpType)

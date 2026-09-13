@@ -289,7 +289,9 @@ rewrite is included in these fixes.
   literal/container collisions in both orders, controller/view `set()` ordering, inherited compact
   forwarding, actual undefined-variable diagnostics, type unions, and serialization round trips.
 - All 40 new regression cases pass. Existing indexer/resolution tests were adapted to the new stored
-  records while preserving their syntax assertions. Full-suite validation is in progress.
+  records while preserving their syntax assertions. `./gradlew test --offline` passed all 762 tests
+  with no failures or skips. After a final change to merge element types into a fresh `PhpType`,
+  all 40 new regression cases passed again.
 - The callback boundary was verified by code inspection; no timing-dependent deadlock test or mock
   index seam was introduced. The inherited compact case exercises the recursive lookup path.
 - The physical element keys and directory-existence behavior remain unchanged; the separate logical
