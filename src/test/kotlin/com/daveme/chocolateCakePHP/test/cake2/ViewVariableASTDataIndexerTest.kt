@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
+import com.daveme.chocolateCakePHP.view.viewvariableindex.RawViewVar
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableASTDataIndexer
-import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariablesWithRawVars
 import com.daveme.chocolateCakePHP.view.viewvariableindex.elementDataKey
 import com.daveme.chocolateCakePHP.view.viewvariableindex.viewSetKey
 import com.daveme.chocolateCakePHP.view.viewvariableindex.VarKind
@@ -44,7 +44,9 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
         // Test that indexing works without exceptions
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify we get results
         assertFalse("Index result should not be empty", indexResult.isEmpty())
@@ -87,7 +89,9 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         val controllerFile = myFixture.file
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // If we have indexed variables, test that type resolution doesn't crash
         indexResult.values.forEach { viewVariablesWithRawVars ->
@@ -120,7 +124,9 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake2/app/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify we got SOME result (not empty means the file was processed as a controller)
         assertFalse("Index result should not be empty - file should be recognized as controller. Path was: ${controllerFile.virtualFile.path}",
@@ -165,7 +171,9 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake2/app/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         val controllerKey = "Movies:localTest"
         assertTrue("Index should contain key for Movies:localTest", indexResult.containsKey(controllerKey))
@@ -195,7 +203,9 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake2/app/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         val controllerKey = "Movies:literalTest"
         assertTrue("Index should contain key for Movies:literalTest", indexResult.containsKey(controllerKey))
@@ -217,12 +227,14 @@ class ViewVariableASTDataIndexerTest : Cake2BaseTestCase() {
 
     // ---- view files: element data arrays and $this->set() -------------------------------
 
-    private fun indexOfViewFile(path: String, code: String): Map<String, ViewVariablesWithRawVars> {
+    private fun indexOfViewFile(path: String, code: String): Map<String, Map<String, RawViewVar>> {
         // The element directory must exist for the element path prefix to resolve
         myFixture.copyFileToProject("cake2/app/View/Elements/Director/filmography.ctp")
         val viewFile = myFixture.addFileToProject(path, code)
         val fileContent = FileContentImpl.createByFile(viewFile.virtualFile, project)
-        return ViewVariableASTDataIndexer.map(fileContent)
+        return ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
     }
 
     fun `test element data array is indexed under the element data key`() {

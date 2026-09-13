@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.RecursionManager
 import com.intellij.psi.PsiElement
@@ -413,8 +414,11 @@ data class ViewVariableValue(
 
 class ViewVariables : HashMap<ViewVariableName, ViewVariableValue>()
 
-// New version using RawViewVar for direct mapping with embedded type resolution
-class ViewVariablesWithRawVars : HashMap<ViewVariableName, RawViewVar>()
+/** One syntactic call; offsets identify calls independently of their indirect container names. */
+data class ViewVariableCall(val offset: Int, val entries: List<RawViewVar>)
+
+/** Ordered, syntax-only records. Structural equality is required by the index externalizer. */
+data class ViewVariablesWithRawVars(val calls: MutableList<ViewVariableCall> = mutableListOf())
 
 val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
     ID.create("com.daveme.chocolateCakePHP.viewvariableindex.v4")
@@ -593,7 +597,7 @@ object ViewVariableIndexService {
         return RecursionManager.doPreventingRecursion(Pair(filenameKey, variableName), false) {
             val result = PhpType()
             forEachContributingSource(project, settings, filenameKey) { source ->
-                lookupVariableTypeByKey(project, source.key, variableName)?.let { result.add(it) }
+                lookupVariableTypeByKey(project, source, variableName)?.let { result.add(it) }
                 true
             }
             result
@@ -602,54 +606,45 @@ object ViewVariableIndexService {
 
     private fun lookupVariableTypeByKey(
         project: Project,
-        key: ViewVariablesKey,
+        source: ViewVariableSource,
         variableName: String
     ): PhpType? {
-        val fileIndex = FileBasedIndex.getInstance()
-        val searchScope = GlobalSearchScope.allScope(project)
-        val psiManager = PsiManager.getInstance(project)
         val result = PhpType()
-
-        // processValues hands back the indexed file: the controller, or for element data and
-        // view set() entries the template that made the call. That file is where the value
-        // expression lives, so it is the source for type resolution.
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
-            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                val direct = viewVariablesMap[variableName]?.takeIf { it.varKind !in DYNAMIC_KINDS }
-                val dynamic = viewVariablesMap.values.filter { it.varKind in DYNAMIC_KINDS }
-                if (direct != null || dynamic.isNotEmpty()) {
-                    val sourcePsiFile = psiManager.findFile(indexedFile)
-                    direct?.let { result.add(it.resolveType(project, sourcePsiFile)) }
-                    dynamic.flatMap { expandDynamicEntry(it, sourcePsiFile) }
-                        .filter { it.variableName == variableName }
-                        .forEach { result.add(it.resolveType(project, sourcePsiFile)) }
-                }
-                true // continue processing
-            },
-            searchScope
-        )
-
-        return if (result.types.isEmpty()) null else result
+        for ((file, records) in lookupRawVarsByKey(project, source.key)) {
+            val psiFile = PsiManager.getInstance(project).findFile(file)
+            sourceEntries(records, psiFile, source is ViewVariableSource.ElementCallData)
+                .filter { it.variableName == variableName }
+                .forEach { result.add(it.resolveType(project, psiFile)) }
+        }
+        return result.takeUnless { it.types.isEmpty() }
     }
 
+    /** Finish index access before loading PSI, expanding arguments, or resolving types. */
     private fun lookupRawVarsByKey(
         project: Project,
         key: ViewVariablesKey,
-    ): List<Pair<PsiFile?, ViewVariablesWithRawVars>> {
-        val fileIndex = FileBasedIndex.getInstance()
-        val searchScope = GlobalSearchScope.allScope(project)
-        val psiManager = PsiManager.getInstance(project)
-        val result = mutableListOf<Pair<PsiFile?, ViewVariablesWithRawVars>>()
+    ): List<Pair<VirtualFile, ViewVariablesWithRawVars>> {
+        val result = mutableListOf<Pair<VirtualFile, ViewVariablesWithRawVars>>()
+        FileBasedIndex.getInstance().processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
+            { file, records ->
+                result.add(file to records)
+                true
+            }, GlobalSearchScope.allScope(project))
+        return result.sortedBy { it.first.path }
+    }
 
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
-            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                result.add(Pair(psiManager.findFile(indexedFile), viewVariablesMap))
-                true // continue processing
-            },
-            searchScope
-        )
-
-        return result
+    /** set() calls overwrite in source order; separate element renderings are alternatives. */
+    private fun sourceEntries(
+        records: ViewVariablesWithRawVars,
+        psiFile: PsiFile?,
+        elementData: Boolean
+    ): List<RawViewVar> {
+        val calls = records.calls.map { call ->
+            call.entries.flatMap { concreteEntries(it, psiFile) }
+                .associateBy { it.variableName }.values.toList()
+        }
+        return if (elementData) calls.flatten()
+        else calls.flatten().associateBy { it.variableName }.values.toList()
     }
 
     /**
@@ -674,12 +669,18 @@ object ViewVariableIndexService {
                 is ViewVariableSource.ViewSet -> ViewVariables().also { fromViewSets.add(it) }
                 is ViewVariableSource.ElementCallData -> fromElementData
             }
-            lookupRawVarsByKey(project, source.key).forEach { (sourcePsiFile, rawVarCollection) ->
-                rawVarCollection.values.forEach { rawVar ->
-                    concreteEntries(rawVar, sourcePsiFile).forEach { entry ->
-                        val resolvedType = entry.resolveType(project, sourcePsiFile)
-                        target[entry.variableName] = ViewVariableValue(resolvedType.toString(), entry.offset)
+            lookupRawVarsByKey(project, source.key).forEach { (file, records) ->
+                val sourcePsiFile = PsiManager.getInstance(project).findFile(file)
+                sourceEntries(records, sourcePsiFile, source is ViewVariableSource.ElementCallData).forEach { entry ->
+                    val resolvedType = entry.resolveType(project, sourcePsiFile)
+                    val previous = target[entry.variableName]
+                    if (source is ViewVariableSource.ElementCallData && previous != null) {
+                        resolvedType.add(previous.phpType)
                     }
+                    target[entry.variableName] = ViewVariableValue(
+                        resolvedType.toString(),
+                        if (source is ViewVariableSource.ElementCallData) previous?.startOffset ?: entry.offset
+                        else entry.offset)
                 }
             }
             true
@@ -866,7 +867,7 @@ object ViewVariableIndexService {
     /**
      * Check if a variable exists under one index key without resolving its type.
      *
-     * Static patterns (PAIR, ARRAY, COMPACT, TUPLE) are a direct map lookup with no PSI
+     * Static patterns (PAIR, ARRAY, COMPACT, TUPLE) are checked in stored records with no PSI
      * loading; dynamic patterns (VARIABLE_ARRAY, VARIABLE_COMPACT, VARIABLE_PAIR, MIXED_TUPLE)
      * need the source file's PSI to find the assignment that names the variables.
      */
@@ -875,46 +876,20 @@ object ViewVariableIndexService {
         key: ViewVariablesKey,
         variableName: String
     ): Boolean {
-        val fileIndex = FileBasedIndex.getInstance()
-        val searchScope = GlobalSearchScope.allScope(project)
-        val psiManager = PsiManager.getInstance(project)
-        var found = false
-
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
-            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                // Phase 1: Check static patterns (direct key lookup - no PSI needed)
-                if (viewVariablesMap.containsKey(variableName)) {
-                    found = true
-                    return@processValues false  // Stop processing
+        for ((file, records) in lookupRawVarsByKey(project, key)) {
+            val entries = records.calls.flatMap { it.entries }
+            if (entries.any { it.varKind !in DYNAMIC_KINDS && it.variableName == variableName }) {
+                return true
+            }
+            val dynamic = entries.filter { it.varKind in DYNAMIC_KINDS }
+            if (dynamic.isNotEmpty()) {
+                val psiFile = PsiManager.getInstance(project).findFile(file)
+                if (dynamic.any { raw -> concreteEntries(raw, psiFile).any { it.variableName == variableName } }) {
+                    return true
                 }
-
-                // Phase 2-5: Check dynamic patterns (need PSI)
-                val dynamicEntries = viewVariablesMap.values.filter { rawVar ->
-                    rawVar.varKind in setOf(
-                        VarKind.VARIABLE_ARRAY,
-                        VarKind.VARIABLE_COMPACT,
-                        VarKind.VARIABLE_PAIR,
-                        VarKind.MIXED_TUPLE
-                    )
-                }
-
-                if (dynamicEntries.isNotEmpty()) {
-                    val sourcePsiFile = psiManager.findFile(indexedFile)
-                    for (entry in dynamicEntries) {
-                        val variableNames = extractVariableNamesFromDynamicPattern(entry, sourcePsiFile)
-                        if (variableName in variableNames) {
-                            found = true
-                            return@processValues false  // Stop processing
-                        }
-                    }
-                }
-
-                true  // Continue processing
-            },
-            searchScope
-        )
-
-        return found
+            }
+        }
+        return false
     }
 
 }

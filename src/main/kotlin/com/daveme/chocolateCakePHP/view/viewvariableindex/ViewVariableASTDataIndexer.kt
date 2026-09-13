@@ -86,7 +86,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val calls = rootNode.collectMethodCalls { it.isThisCall("element") || it.isThisCall("set") }
         for (call in calls) {
             if (call.isThisCall("set")) {
-                addAll(result, viewSetKey(ownKey), parseSetCall(call))
+                addAll(result, viewSetKey(ownKey), call.node.startOffset, parseSetCall(call))
             } else {
                 indexElementCall(result, call, elementPrefix, ctx)
             }
@@ -115,21 +115,21 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             if (renderPath.path.isEmpty()) {
                 continue
             }
-            addAll(result, elementDataKey(fullExplicitViewPath(elementPrefix, renderPath)), vars)
+            addAll(result, elementDataKey(fullExplicitViewPath(elementPrefix, renderPath)), call.node.startOffset, vars)
         }
     }
 
-    /** Merge into the map for [key]; a later call in the same file wins for a repeated name, as with set(). */
+    /** Preserve each call independently; concrete names are merged after expansion at lookup. */
     private fun addAll(
         result: MutableMap<String, ViewVariablesWithRawVars>,
         key: ViewVariablesKey,
+        callOffset: Int,
         vars: List<RawViewVar>
     ) {
         if (vars.isEmpty()) {
             return
         }
-        val map = result.getOrPut(key) { ViewVariablesWithRawVars() }
-        vars.forEach { map[it.variableName] = it }
+        result.getOrPut(key) { ViewVariablesWithRawVars() }.calls.add(ViewVariableCall(callOffset, vars))
     }
 
     private fun indexController(
@@ -152,8 +152,9 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             val variables = ViewVariablesWithRawVars()
             
             // Find all $this->set() calls within this method using AST
-            findSetCallsInMethod(method.astNode).forEach { rawVar ->
-                variables[rawVar.variableName] = rawVar
+            method.astNode.collectMethodCalls { it.isThisCall("set") }.forEach { call ->
+                val entries = parseSetCall(call)
+                if (entries.isNotEmpty()) variables.calls.add(ViewVariableCall(call.node.startOffset, entries))
             }
             
             val filenameAndMethodKey = controllerMethodKey(controllerPath, method.name)
@@ -227,10 +228,6 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             )
         }
     }
-
-    // Find $this->set() calls within a specific method node
-    private fun findSetCallsInMethod(methodNode: ASTNode): List<RawViewVar> =
-        methodNode.collectMethodCalls { it.isThisCall("set") }.flatMap { parseSetCall(it) }
 
     /**
      * All syntactic forms of `$this->set(...)`:

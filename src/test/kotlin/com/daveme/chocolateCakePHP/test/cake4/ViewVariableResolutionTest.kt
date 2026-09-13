@@ -29,7 +29,9 @@ class ViewVariableResolutionTest : Cake4BaseTestCase() {
 
         // Index it
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify it was indexed
         val controllerKey = "Test:testAction"
