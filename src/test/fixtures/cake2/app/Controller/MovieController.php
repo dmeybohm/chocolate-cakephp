@@ -85,4 +85,36 @@ class MovieController extends AppController
 		$this->set('subtitle', 'My Theme');
 	}
 
+	public function ternary_view_test()
+	{
+		// View chosen with a ternary expression: both branches should be linked
+		$this->view = $this->request->is('ajax') ? 'ternary_one' : 'ternary_two';
+		$movieModel = ClassRegistry::init('Movie');
+		$this->set('ternaryVar', 'Ternary');
+		$this->set(compact('movieModel'));
+	}
+
+	public function match_view_test()
+	{
+		// View chosen with a match expression: every arm should be linked
+		$this->view = match ($this->request->param('kind')) {
+			'one' => 'match_one',
+			default => 'match_two',
+		};
+		$movieModel = ClassRegistry::init('Movie');
+		$this->set('matchVar', 'Match');
+		$this->set(compact('movieModel'));
+	}
+
+	public function variable_view_test()
+	{
+		// View chosen through a ternary of two local variables
+		$one = 'variable_one';
+		$two = 'variable_two';
+		$this->view = $this->request->is('ajax') ? $one : $two;
+		$movieModel = ClassRegistry::init('Movie');
+		$this->set('variableVar', 'Variable');
+		$this->set(compact('movieModel'));
+	}
+
 }
