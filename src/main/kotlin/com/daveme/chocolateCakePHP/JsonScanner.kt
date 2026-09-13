@@ -115,9 +115,8 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
                 'r' -> { sb.append('\r'); i += 2 }
                 't' -> { sb.append('\t'); i += 2 }
                 'u' -> {
-                    val hex = json.substring(i + 2, minOf(i + 6, n))
-                    val code = if (hex.length == 4) hex.toIntOrNull(16) else null
-                    if (code != null) {
+                    val code = fourHexDigits(json, i + 2)
+                    if (code >= 0) {
                         sb.append(code.toChar()); i += 6
                     } else {
                         // Malformed escape: keep the backslash literally and move on.
@@ -131,6 +130,29 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
         }
     }
     return sb.toString() to n
+}
+
+/**
+ * The value of exactly four hex digits starting at [start], or -1 if any of
+ * the four characters is missing or is not a hex digit. Unlike
+ * `toIntOrNull(16)`, a sign is not accepted.
+ */
+private fun fourHexDigits(json: String, start: Int): Int {
+    if (start + 4 > json.length) return -1
+    var code = 0
+    for (k in 0 until 4) {
+        val d = hexDigit(json[start + k])
+        if (d < 0) return -1
+        code = code * 16 + d
+    }
+    return code
+}
+
+private fun hexDigit(c: Char): Int = when (c) {
+    in '0'..'9' -> c - '0'
+    in 'a'..'f' -> c - 'a' + 10
+    in 'A'..'F' -> c - 'A' + 10
+    else -> -1
 }
 
 private class Frame(val isObject: Boolean, val path: List<String>) {

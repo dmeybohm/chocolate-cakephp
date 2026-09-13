@@ -83,8 +83,12 @@ class AutoDetectionGatingTest : BaseTestCase() {
         assertFalse("CakePHP should not be detected without composer.json", settings.cake3Enabled)
 
         myFixture.completeBasic()
+        // A null list means a single completion was auto-inserted without a
+        // popup, which would hide a wrongly offered Movies table, so require
+        // the popup. PHP's own member completions keep it non-empty.
         val strings = myFixture.lookupElementStrings
-        assertFalse("Should not contain Movies table", strings?.contains("Movies") == true)
+        assertNotNull("Completions should not be null", strings)
+        assertFalse("Should not contain Movies table", strings!!.contains("Movies"))
     }
 
     fun `test fixture composer json without psr-4 falls back to default app directory`() {

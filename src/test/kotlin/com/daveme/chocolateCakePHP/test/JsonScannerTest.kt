@@ -51,6 +51,15 @@ class JsonScannerTest : TestCase() {
         assertEquals(listOf(e("k", "x\\u26Zy")), entries)
     }
 
+    fun `test signed unicode escape is not decoded`() {
+        assertEquals(listOf(e("k", "x\\u-041y")), scanJsonEntries("""{"k": "x\u-041y"}"""))
+        assertEquals(listOf(e("k", "x\\u+041y")), scanJsonEntries("""{"k": "x\u+041y"}"""))
+    }
+
+    fun `test short unicode escape at end of input is kept literally`() {
+        assertEquals(listOf(e("k", "x\\u04")), scanJsonEntries("""{"k": "x\u04"""))
+    }
+
     fun `test trailing and double commas`() {
         assertEquals(listOf(e("a", "1")), scanJsonEntries("""{"a": "1",}"""))
         assertEquals(listOf(e("a", "1"), e("b", "2")), scanJsonEntries("""{"a": "1",, "b": "2"}"""))

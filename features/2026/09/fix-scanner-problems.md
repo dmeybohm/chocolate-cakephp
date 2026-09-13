@@ -48,6 +48,43 @@ key written with a leading backslash never matches either.
 strip all leading and trailing backslashes, then append exactly one.
 `\App`, `App`, `App\`, and `\App\` all become `App\`, on both sides.
 
+## Problem 3: duplicate keys are first-wins instead of last-wins
+
+The old Map-based parser, and Composer's own `json_decode`, keep the last
+value for a repeated key. `firstOrNull` kept the first. The same applied
+one level up: a repeated `require` or `autoload` block was merged with the
+earlier one rather than replacing it.
+
+**Fix:** `membersOfLastObject(entries, path)` walks the path one level at a
+time, each time taking the last opener of that key inside the last object
+at the parent path, and returns only the direct members of that final
+object. `cakePhpRequired` and `appDirectory` are computed from those
+members, with `lastOrNull` for the psr-4 key. A `require` that is not an
+object (a string, say) yields no members and so is not detected, matching
+the old `as? Map ?: return false`.
+
+## Problem 5: negative gating test could pass vacuously
+
+`assertFalse(strings?.contains("Movies") == true)` passes when
+`lookupElementStrings` is null. From the 2023.2 test framework bytecode,
+null means a single completion was auto-inserted without a popup (zero
+completions gives an empty list, not null). So a wrongly offered lone
+`Movies` completion would have been missed.
+
+**Fix:** `assertNotNull` first, then `assertFalse(contains)`, mirroring the
+positive test. PHP's own member completions at `$this->` keep the popup
+non-empty.
+
+## Problem 6: signed hex accepted in `\u` escapes
+
+`toIntOrNull(16)` accepts a leading sign, so `\u-041` decoded to a wrapped
+garbage character instead of taking the "keep the backslash literally"
+branch.
+
+**Fix:** `fourHexDigits` checks each of the four characters against
+`0-9a-fA-F` explicitly and returns -1 otherwise, with no substring
+allocation.
+
 ## Tests
 
 - `JsonScannerTest`: unterminated string on one line does not hide later
@@ -76,6 +113,22 @@ All three fixes implemented in one commit after the plan.
 - Results: JsonScannerTest 21/21, ComposerJsonTest 21/21, SettingsTest
   21/21, AutoDetectionGatingTest 3/3, NestedAppDirectoryTest 2/2.
 
-Not addressed here (still open from the review): duplicate psr-4 keys are
-first-wins rather than last-wins, and `cakePhpRequired` ignores a literal
-`null` value.
+### Session #2
+
+Problems 3, 5 and 6 implemented in one commit.
+
+- `ComposerJson.kt`: `membersOfLastObject` replaces the flat path filters;
+  psr-4 lookup uses `lastOrNull`.
+- `JsonScanner.kt`: `fourHexDigits`/`hexDigit` replace the
+  `substring` + `toIntOrNull(16)` check.
+- `AutoDetectionGatingTest.kt`: negative test asserts the popup is
+  non-null before asserting Movies is absent.
+- Tests added: 2 in `JsonScannerTest` (signed escape, short escape at end
+  of input); 4 in `ComposerJsonTest` (duplicate psr-4 key, duplicate
+  autoload block, duplicate require block in both orders, non-object
+  require).
+- Results: JsonScannerTest 23/23, ComposerJsonTest 25/25,
+  AutoDetectionGatingTest 3/3, SettingsTest 21/21.
+
+Still open from the review: `cakePhpRequired` treats a literal `null`
+value as present (problem 4).
