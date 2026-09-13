@@ -79,6 +79,37 @@ so passed data overrides a same-named view var, matching `array_merge`. Types ar
 
 ## Implementation Progress
 
-### Session #1
+### Session #1 (2026-09-08)
 
 - Plan written and approved; branch `support-element-data-variables` created.
+- Step 1: shared AST call reader in `ASTNodes.kt` (`MethodCallParts`, `readMethodCall`, `collectMethodCalls`,
+  `parameterNodes`, `stringLiteralValue`, `isCompactCall`).
+- Step 2: `ViewVariableArgumentParser` extracted; `parseSetCalls` reduced to a `set()`-specific composition.
+  `SetCallInfo` deleted. The text-based `compact(` check became a real FUNCTION_CALL name check.
+
+### Session #2 (2026-09-13)
+
+- Rebased onto `main` after the ternary/match work and scanner fixes merged (no conflicts). Work continued in
+  `worktree/support-element-data-variables`.
+- Step 3: template-name resolution moved verbatim into `view/viewfileindex/TemplateNames.kt` (internal
+  top-level); `ViewFileDataIndexer` output unchanged, ViewFileIndex stays at version 19.
+- Step 4: `ViewVariableASTDataIndexer.map()` indexes non-controller files under a templates dir in one AST
+  walk: `$this->element(name, data)` under `elementDataKey(...)`, `$this->set(...)` under `viewSetKey(...)`.
+  The file's own key comes from `canonicalizeFilenameToKey`, so data-view dirs (`json/`) are stripped exactly
+  as on the lookup side. ViewVariableIndex 17 -> 18. Also gained the `Settings.enabled` early return that
+  `ViewFileDataIndexer` already had.
+- Step 5: `ViewVariablePsiScope.kt` (`enclosingScope`, `lastAssignmentBefore`, `scopeParameter`,
+  `scopeVariable`). `resolveLocalVariableType` gained two strategies after assignment/parameter: the variable
+  itself via `Variable.type.global()` (re-enters `ViewVariableTypeProvider` for a template, honours `@var`
+  docblocks), then the view file's own variable lookup for a `compact('name')` whose name the scope never
+  mentions. Nested closures are now excluded from the assignment search, which they were not before.
+- Steps 6-7: `forEachContributingSource` replaces the three BFS copies and emits `ElementCallData(original)`,
+  `ViewSet(original)`, then `ViewSet(ancestor)` / `ControllerAction(key)` from the walk. The type lookup is
+  wrapped in `RecursionManager.doPreventingRecursion((filenameKey, varName))`. Completion layers controller
+  < ancestor set() < own set() < passed data.
+- Tests: 9 indexer + 9 completion/inspection tests for cake5 (including nested elements, ternary names,
+  layouts, override, cyclic elements), 3 indexer + 2 completion tests each for cake4/3/2. New fixtures:
+  `element/nested_outer.php`, `element/nested_inner.php`, `element/cycle_a.php`, `element/cycle_b.php`,
+  `layout/default.php` (cake5).
+- Findings while testing: `$crumbs = ['Home']` types as `string[]`, not `array`; the cycle test's direction
+  had to match what each element actually receives.
