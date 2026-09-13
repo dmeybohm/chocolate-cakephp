@@ -107,3 +107,38 @@ is unchanged.
   `JsonParser.kt` and `JsonParserTest.kt` removed.
 - Verified with `JsonScannerTest`, `ComposerJsonTest`, `SettingsTest`, and
   the cake5 suite.
+
+### Session #2 (2026-09-13): integration tests for auto-detection
+
+Before this session the only integration coverage of `CakePhpAutoDetector`
+was two tests in `SettingsTest`, every version suite forced Cake 3 on with
+`cake3ForceEnabled`, and `CakePhpFilesModificationTracker` and
+`checkNamespaceInAppConfig` had no tests at all.
+
+Added to `SettingsTest` (heavy tests against the real VFS), all built on a
+`writeProjectFile` helper and a `primeDetector` call that runs one detection
+before the first write:
+
+- half-typed composer.json keeps detection (the regression test for the
+  scanner)
+- removing cakephp disables detection; psr-4 change updates app directory
+- deleting composer.json and renaming a file to composer.json are tracked
+- namespace read from config/app.php, follows changes, and drives the psr-4
+  lookup
+- `Settings.appDirectory` and `appNamespace` route through detection unless
+  `cake3ForceEnabled`
+
+Added `cake5/AutoDetectionGatingTest` (light test, not forced): table
+completion is enabled by a composer.json in the fixture project and disabled
+without one, plus the previously unreferenced `src/test/fixtures/composer.json`
+detects with the default app directory.
+
+Two platform facts verified by disassembling the 2023.2 SDK jars:
+
+- VFS events fire synchronously inside the write action, so the
+  `Thread.sleep(100)` in the old create test was unnecessary and is gone.
+  The tracker must exist before the write because it subscribes in `init`
+  and the bus does not replay; hence `primeDetector`.
+- In a light test `guessProjectDir()` is the fixture source root
+  `temp:///src`, which is where `addFileToProject` writes. The gating test
+  asserts this as a guard.
