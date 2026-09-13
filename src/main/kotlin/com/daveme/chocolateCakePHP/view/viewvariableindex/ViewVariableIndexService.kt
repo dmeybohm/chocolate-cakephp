@@ -7,6 +7,7 @@ import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.RecursionManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -419,6 +420,21 @@ val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
     ID.create("com.daveme.chocolateCakePHP.viewvariableindex.v4")
 
 
+/**
+ * One index key that can contribute variables to a view file. See [ViewVariablesKey] for the
+ * three key shapes.
+ */
+sealed class ViewVariableSource(val key: ViewVariablesKey) {
+    /** Data arrays passed to the element being looked up by `$this->element()` calls. */
+    class ElementCallData(key: ViewVariablesKey) : ViewVariableSource(key)
+
+    /** `$this->set()` calls inside the file being looked up or one of the views that render it. */
+    class ViewSet(key: ViewVariablesKey) : ViewVariableSource(key)
+
+    /** A controller action reached by walking render / element references backwards. */
+    class ControllerAction(key: ViewVariablesKey) : ViewVariableSource(key)
+}
+
 object ViewVariableIndexService {
 
     private fun controllerKeyFromElementAndPath(
@@ -436,16 +452,33 @@ object ViewVariableIndexService {
         return controllerMethodKey(controllerPath, element.name)
     }
 
-    fun lookupVariableTypeFromViewPathInSmartReadAction(
+    /**
+     * Visit every index key that can contribute variables to the view file [filenameKey], most
+     * specific first:
+     *
+     *   1. ElementCallData(filenameKey) — data passed directly to this element. Only for the
+     *      original key: CakePHP hands `$data` to the named element alone (it renders with
+     *      `array_merge($this->viewVars, $data)`), so it does not flow into nested elements.
+     *   2. ViewSet(filenameKey) — `$this->set()` inside the file itself.
+     *   3. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet(ancestor)
+     *      for every template or element that renders this one, because `viewVars` is shared
+     *      downwards, and ControllerAction(key) for every controller action reached.
+     *
+     * [process] returns false to stop early.
+     */
+    private fun forEachContributingSource(
         project: Project,
         settings: Settings,
         filenameKey: String,
-        variableName: String,
-    ): PhpType {
-        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
-        val toProcess = fileList.toMutableList()
-        val visited = mutableSetOf<String>() // paths
-        val result = PhpType()
+        process: (ViewVariableSource) -> Boolean
+    ) {
+        if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
+        if (!process(ViewVariableSource.ViewSet(viewSetKey(filenameKey)))) return
+
+        val toProcess = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+            .toMutableList()
+        val visited = mutableSetOf<String>() // file paths
+        val emittedViewKeys = mutableSetOf(filenameKey)
         var maxLookups = 15
 
         while (toProcess.isNotEmpty()) {
@@ -455,57 +488,73 @@ object ViewVariableIndexService {
             maxLookups -= 1
             val elementAndPath = toProcess.removeAt(0)
             visited.add(elementAndPath.path)
+
             if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
-                    ?: continue
-                val variableType = lookupVariableTypeFromControllerKey(project, controllerKey, variableName)
-                    ?: continue
-                result.add(variableType)
+                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
+                if (!process(ViewVariableSource.ControllerAction(controllerKey))) return
                 continue
             }
-            val containingFile = ReadAction.compute<com.intellij.psi.PsiFile?, Nothing> {
+
+            // A template or element that renders the current file: it contributes its own
+            // set() calls, and whatever renders it contributes in turn
+            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
                 elementAndPath.psiElement?.containingFile
             } ?: continue
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile)
-               ?: continue
-            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
+            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
+            val ancestorKey = ViewFileIndexService.canonicalizeFilenameToKey(
                 templatesDir,
                 settings,
                 elementAndPath.path
             )
-            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
-                project,
-                newFilenameKey
-            )
-            for (newPsiElementAndPath in newFileList) {
-                if (visited.contains(newPsiElementAndPath.path)) {
-                    continue
+            if (emittedViewKeys.add(ancestorKey)) {
+                if (!process(ViewVariableSource.ViewSet(viewSetKey(ancestorKey)))) return
+            }
+            for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, ancestorKey)) {
+                if (!visited.contains(next.path)) {
+                    toProcess.add(next)
                 }
-                toProcess.add(newPsiElementAndPath)
             }
         }
-
-        return result
     }
 
-    private fun lookupVariableTypeFromControllerKey(
+    fun lookupVariableTypeFromViewPathInSmartReadAction(
         project: Project,
-        controllerKey: String,
+        settings: Settings,
+        filenameKey: String,
+        variableName: String,
+    ): PhpType {
+        // Resolving a passed value may re-enter here for the calling template (see
+        // RawViewVar.resolveLocalVariableType). Two elements passing each other's variables
+        // would otherwise recurse without end; the inner frame yields no type instead.
+        return RecursionManager.doPreventingRecursion(Pair(filenameKey, variableName), false) {
+            val result = PhpType()
+            forEachContributingSource(project, settings, filenameKey) { source ->
+                lookupVariableTypeByKey(project, source.key, variableName)?.let { result.add(it) }
+                true
+            }
+            result
+        } ?: PhpType()
+    }
+
+    private fun lookupVariableTypeByKey(
+        project: Project,
+        key: ViewVariablesKey,
         variableName: String
     ): PhpType? {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
-        val psiManager = com.intellij.psi.PsiManager.getInstance(project)
+        val psiManager = PsiManager.getInstance(project)
         val result = PhpType()
 
-        // Use processValues to get access to the VirtualFile (controller file)
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
-            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
-                val rawVar: RawViewVar? = (viewVariablesMap as HashMap<ViewVariableName, RawViewVar>).get(variableName)
+        // processValues hands back the indexed file: the controller, or for element data and
+        // view set() entries the template that made the call. That file is where the value
+        // expression lives, so it is the source for type resolution.
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
+            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
+                val rawVar: RawViewVar? = viewVariablesMap[variableName]
                 if (rawVar != null) {
-                    val types: PhpType = rawVar.resolveType(project, controllerPsiFile)
-                    result.add(types)
+                    val sourcePsiFile = psiManager.findFile(indexedFile)
+                    result.add(rawVar.resolveType(project, sourcePsiFile))
                 }
                 true // continue processing
             },
@@ -515,19 +564,18 @@ object ViewVariableIndexService {
         return if (result.types.isEmpty()) null else result
     }
 
-    private fun lookupVariablesFromControllerKey(
+    private fun lookupRawVarsByKey(
         project: Project,
-        controllerKey: String,
+        key: ViewVariablesKey,
     ): List<Pair<PsiFile?, ViewVariablesWithRawVars>> {
         val fileIndex = FileBasedIndex.getInstance()
         val searchScope = GlobalSearchScope.allScope(project)
-        val psiManager = com.intellij.psi.PsiManager.getInstance(project)
+        val psiManager = PsiManager.getInstance(project)
         val result = mutableListOf<Pair<PsiFile?, ViewVariablesWithRawVars>>()
 
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
-            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
-                val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
-                result.add(Pair(controllerPsiFile, viewVariablesMap))
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
+            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
+                result.add(Pair(psiManager.findFile(indexedFile), viewVariablesMap))
                 true // continue processing
             },
             searchScope
@@ -536,67 +584,47 @@ object ViewVariableIndexService {
         return result
     }
 
+    /**
+     * Every variable available in the view file [filenameKey], with its resolved type.
+     *
+     * Layered the way CakePHP merges them: controller vars first, then `set()` calls in the
+     * views that render this file (farthest first), then `set()` in the file itself, then data
+     * passed in the element call, so a later layer overrides an earlier one of the same name.
+     */
     fun lookupVariablesFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
         filenameKey: String,
     ): ViewVariables {
-        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
-        val toProcess = fileList.toMutableList()
-        val visited = mutableSetOf<String>() // paths
-        val result = ViewVariables()
-        var maxLookups = 15
+        val fromControllers = ViewVariables()
+        val fromViewSets = mutableListOf<ViewVariables>() // in visiting order: this file first
+        val fromElementData = ViewVariables()
 
-        while (toProcess.isNotEmpty()) {
-            if (maxLookups == 0) {
-                break
+        forEachContributingSource(project, settings, filenameKey) { source ->
+            val target = when (source) {
+                is ViewVariableSource.ControllerAction -> fromControllers
+                is ViewVariableSource.ViewSet -> ViewVariables().also { fromViewSets.add(it) }
+                is ViewVariableSource.ElementCallData -> fromElementData
             }
-            maxLookups -= 1
-            val elementAndPath = toProcess.removeAt(0)
-            visited.add(elementAndPath.path)
-            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                val controllerKey = controllerKeyFromElementAndPath(elementAndPath)
-                    ?: continue
-                val variables = lookupVariablesFromControllerKey(project, controllerKey)
-                variables.forEach { (controllerPsiFile, rawVarCollection) ->
-                    // Convert RawViewVar to ViewVariableValue for backward compatibility
-                    rawVarCollection.forEach { (name, rawVar) ->
-                        val resolvedType = rawVar.resolveType(project, controllerPsiFile)
-                        result[name] = ViewVariableValue(resolvedType.toString(), rawVar.offset)
-                    }
+            lookupRawVarsByKey(project, source.key).forEach { (sourcePsiFile, rawVarCollection) ->
+                rawVarCollection.forEach { (name, rawVar) ->
+                    val resolvedType = rawVar.resolveType(project, sourcePsiFile)
+                    target[name] = ViewVariableValue(resolvedType.toString(), rawVar.offset)
                 }
-                continue
             }
-            val containingFile2 = ReadAction.compute<com.intellij.psi.PsiFile?, Nothing> {
-                elementAndPath.psiElement?.containingFile
-            } ?: continue
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile2)
-                ?: continue
-            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-                templatesDir,
-                settings,
-                elementAndPath.path
-            )
-            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
-                project,
-                newFilenameKey
-            )
-            for (newPsiElementAndPath in newFileList) {
-                if (visited.contains(newPsiElementAndPath.path)) {
-                    continue
-                }
-                toProcess.add(newPsiElementAndPath)
-            }
+            true
         }
+
+        val result = ViewVariables()
+        result.putAll(fromControllers)
+        fromViewSets.asReversed().forEach { result.putAll(it) }
+        result.putAll(fromElementData)
         return result
     }
 
     /**
      * Check if a variable exists in the view path without resolving its type.
      * This is faster than lookupVariableTypeFromViewPathInSmartReadAction as it avoids type resolution.
-     *
-     * Phase 1: Supports static patterns (PAIR, ARRAY, COMPACT, TUPLE) via direct map lookup.
-     * Future phases will add support for dynamic patterns (VARIABLE_ARRAY, etc.).
      */
     fun variableExistsInViewPath(
         project: Project,
@@ -604,46 +632,14 @@ object ViewVariableIndexService {
         filenameKey: String,
         variableName: String
     ): Boolean {
-        val fileList = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
-        val toProcess = fileList.toMutableList()
-        val visited = mutableSetOf<String>()
-        var maxLookups = 15
-
-        while (toProcess.isNotEmpty()) {
-            if (maxLookups == 0) break
-            maxLookups -= 1
-
-            val elementAndPath = toProcess.removeAt(0)
-            visited.add(elementAndPath.path)
-
-            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
-
-                if (variableExistsInController(project, controllerKey, variableName)) {
-                    return true
-                }
-                continue
+        var found = false
+        forEachContributingSource(project, settings, filenameKey) { source ->
+            if (variableExistsByKey(project, source.key, variableName)) {
+                found = true
             }
-
-            // Handle view file references (traverse to find controllers)
-            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
-                elementAndPath.psiElement?.containingFile
-            } ?: continue
-
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
-            val newFilenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-                templatesDir, settings, elementAndPath.path
-            )
-            val newFileList = ViewFileIndexService.referencingElementsInSmartReadAction(
-                project, newFilenameKey
-            )
-            for (newPsiElementAndPath in newFileList) {
-                if (visited.contains(newPsiElementAndPath.path)) continue
-                toProcess.add(newPsiElementAndPath)
-            }
+            !found
         }
-
-        return false
+        return found
     }
 
     /**
@@ -798,17 +794,15 @@ object ViewVariableIndexService {
     }
 
     /**
-     * Check if a variable exists in a specific controller without resolving its type.
+     * Check if a variable exists under one index key without resolving its type.
      *
-     * Phase 1: Checks static patterns via direct map key lookup (no PSI loading).
-     * Phase 2: Checks VARIABLE_ARRAY dynamic pattern (with PSI loading).
-     * Phase 3: Checks VARIABLE_COMPACT dynamic pattern (with PSI loading).
-     * Phase 4: Checks VARIABLE_PAIR dynamic pattern (with PSI loading).
-     * Phase 5: Checks MIXED_TUPLE dynamic pattern (with PSI loading).
+     * Static patterns (PAIR, ARRAY, COMPACT, TUPLE) are a direct map lookup with no PSI
+     * loading; dynamic patterns (VARIABLE_ARRAY, VARIABLE_COMPACT, VARIABLE_PAIR, MIXED_TUPLE)
+     * need the source file's PSI to find the assignment that names the variables.
      */
-    private fun variableExistsInController(
+    private fun variableExistsByKey(
         project: Project,
-        controllerKey: String,
+        key: ViewVariablesKey,
         variableName: String
     ): Boolean {
         val fileIndex = FileBasedIndex.getInstance()
@@ -816,8 +810,8 @@ object ViewVariableIndexService {
         val psiManager = PsiManager.getInstance(project)
         var found = false
 
-        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, controllerKey, null,
-            { controllerVirtualFile, viewVariablesMap: ViewVariablesWithRawVars ->
+        fileIndex.processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
+            { indexedFile, viewVariablesMap: ViewVariablesWithRawVars ->
                 // Phase 1: Check static patterns (direct key lookup - no PSI needed)
                 if (viewVariablesMap.containsKey(variableName)) {
                     found = true
@@ -835,9 +829,9 @@ object ViewVariableIndexService {
                 }
 
                 if (dynamicEntries.isNotEmpty()) {
-                    val controllerPsiFile = psiManager.findFile(controllerVirtualFile)
+                    val sourcePsiFile = psiManager.findFile(indexedFile)
                     for (entry in dynamicEntries) {
-                        val variableNames = extractVariableNamesFromDynamicPattern(entry, controllerPsiFile)
+                        val variableNames = extractVariableNamesFromDynamicPattern(entry, sourcePsiFile)
                         if (variableName in variableNames) {
                             found = true
                             return@processValues false  // Stop processing
