@@ -3,7 +3,17 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.RenderPath
+import com.daveme.chocolateCakePHP.view.viewfileindex.TemplateNameContext
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewPathPrefix
+import com.daveme.chocolateCakePHP.view.viewfileindex.elementPathPrefixFromSourceFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.extractTemplateNames
+import com.daveme.chocolateCakePHP.view.viewfileindex.fullExplicitViewPath
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.util.indexing.DataIndexer
@@ -22,6 +32,11 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     override fun map(inputData: FileContent): MutableMap<String, ViewVariablesWithRawVars> {
         val result = mutableMapOf<String, ViewVariablesWithRawVars>()
         val psiFile = inputData.psiFile
+        val project = psiFile.project
+        val settings = Settings.getInstance(project)
+        if (!settings.enabled) {
+            return result
+        }
 
         val virtualFile = psiFile.virtualFile
         if (virtualFile.nameWithoutExtension.endsWith("Test")) {
@@ -30,9 +45,94 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
 
         if (isCakeControllerFile(psiFile)) {
             indexController(result, psiFile, virtualFile)
+        } else {
+            indexViewFile(result, inputData, psiFile, virtualFile, project, settings)
         }
 
         return result
+    }
+
+    /**
+     * Index the two ways a view file (template, layout or element) contributes view variables:
+     *
+     *   $this->element('name', ['k' => $v])   -> elementDataKey("element/name")   (data passed into the element)
+     *   $this->set('k', $v)                   -> viewSetKey(<this file's key>)   (vars shared with everything
+     *                                                                              rendered afterwards)
+     *
+     * The element name goes through the same ternary / match / `$var` resolution as the view file
+     * index, so the data array is attached to every element the call can render. `$data` as the
+     * element argument is not resolved yet (see ViewVariableArgumentParser.parseDataArgument).
+     */
+    private fun indexViewFile(
+        result: MutableMap<String, ViewVariablesWithRawVars>,
+        inputData: FileContent,
+        psiFile: PsiFile,
+        virtualFile: VirtualFile,
+        project: Project,
+        settings: Settings
+    ) {
+        // VFS-only checks first: most PHP files are not under a templates directory
+        val templatesDir = templatesDirectoryOfViewFile(project, settings, virtualFile) ?: return
+        val text = inputData.contentAsText
+        if (!text.contains("element", ignoreCase = true) && !text.contains("set", ignoreCase = true)) {
+            return
+        }
+        val projectDir = project.guessProjectDir() ?: return
+        val ownKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, virtualFile.path)
+        val elementPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
+        val rootNode = psiFile.node ?: return
+        val ctx = TemplateNameContext()
+
+        val calls = rootNode.collectMethodCalls { it.isThisCall("element") || it.isThisCall("set") }
+        for (call in calls) {
+            if (call.isThisCall("set")) {
+                addAll(result, viewSetKey(ownKey), parseSetCall(call))
+            } else {
+                indexElementCall(result, call, elementPrefix, ctx)
+            }
+        }
+    }
+
+    private fun indexElementCall(
+        result: MutableMap<String, ViewVariablesWithRawVars>,
+        call: MethodCallParts,
+        elementPrefix: ViewPathPrefix?,
+        ctx: TemplateNameContext
+    ) {
+        if (elementPrefix == null || call.parameters.size < 2) {
+            return
+        }
+        val names = extractTemplateNames(call.parameters[0], ctx)
+        if (names.isEmpty()) {
+            return
+        }
+        val vars = ViewVariableArgumentParser.parseDataArgument(
+            call.parameters[1],
+            allowVariableIndirection = false
+        )
+        if (vars.isEmpty()) {
+            return
+        }
+        for (name in names) {
+            val renderPath = RenderPath(name)
+            if (renderPath.path.isEmpty()) {
+                continue
+            }
+            addAll(result, elementDataKey(fullExplicitViewPath(elementPrefix, renderPath)), vars)
+        }
+    }
+
+    /** Merge into the map for [key]; a later call in the same file wins for a repeated name, as with set(). */
+    private fun addAll(
+        result: MutableMap<String, ViewVariablesWithRawVars>,
+        key: ViewVariablesKey,
+        vars: List<RawViewVar>
+    ) {
+        if (vars.isEmpty()) {
+            return
+        }
+        val map = result.getOrPut(key) { ViewVariablesWithRawVars() }
+        vars.forEach { map[it.variableName] = it }
     }
 
     private fun indexController(

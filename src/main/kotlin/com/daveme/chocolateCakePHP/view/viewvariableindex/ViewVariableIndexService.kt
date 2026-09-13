@@ -24,9 +24,11 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
-// Maps MovieController:methodName
-//   or {templates,src/Template,App/View}/Movie/view_file_without_extension
-//   or {templates/element,src/Template/Element/Movie,app/View/Element}/element_file_without_extension
+// One of three key kinds, see controllerMethodKey(), elementDataKey() and viewSetKey():
+//   Movie:index                                  vars set by a controller action
+//   element-data:element/Director/filmography    data arrays passed to that element by $this->element() calls
+//   view-set:Movie/film_director                 $this->set() calls made inside that view file
+// The view path part is the ViewFileIndex canonical key (relative to the templates dir, no extension).
 typealias ViewVariablesKey = String
 
 // The name of the variable
@@ -896,3 +898,12 @@ fun controllerMethodKey(
         "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
     }
 }
+
+private const val ELEMENT_DATA_KEY_PREFIX = "element-data:"
+private const val VIEW_SET_KEY_PREFIX = "view-set:"
+
+/** Key under which the data arrays passed to an element (its ViewFileIndex key) are indexed. */
+fun elementDataKey(viewKey: String): ViewVariablesKey = ELEMENT_DATA_KEY_PREFIX + viewKey
+
+/** Key under which the `$this->set()` calls made inside a view file (its ViewFileIndex key) are indexed. */
+fun viewSetKey(viewKey: String): ViewVariablesKey = VIEW_SET_KEY_PREFIX + viewKey
