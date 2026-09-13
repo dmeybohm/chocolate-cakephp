@@ -108,7 +108,9 @@ resolves the cross product of paths.
 
 ### Out of scope
 
-- Variables, constants, method calls or string concatenation as template names.
+- Constants, method calls, properties, parameters or string concatenation as
+  template names. (Local variables were out of scope for Session #1 and are
+  supported since Session #2.)
 - `$this->viewBuilder()->template()` (the pre-3.4 setter).
 - `$this->autoRender = false`.
 
@@ -301,3 +303,17 @@ layers symmetric.
 **Tests:** two new cases in `cake5/ViewFileDataIndexerVariableTest` assert a
 single index entry when the same name comes from two assignments and from
 both branches of a ternary.
+
+### Session #4 (2026-09-13): review cleanups
+
+- Removed the dead `existingActionNames` parameter from
+  `resolveTemplateViewPaths` in `TemplateGotoDeclarationHandler`; its only
+  caller moved to `navigateToViews` in Session #1 and the default it built
+  was identical.
+- Corrected the "Out of scope" list above, which still said local variables
+  were unsupported.
+- Documented in the KDoc of `resolveVariable` (AST), `templateNamesFromVariable`
+  (PSI) and `isScopeNode` that arrow functions are treated as their own scope
+  like closures, so an enclosing method's assignment is not resolved inside
+  `fn() => ...` even though PHP captures it by value. Deliberately left as a
+  simplification; rendering inside an arrow function is rare.

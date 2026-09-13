@@ -183,7 +183,10 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
      * sequential reassignment is included too, which is preferred over missing a branch.
      *
      * Not resolved: `$this`, method parameters, properties, `.=` and other compound
-     * assignments, or anything assigned in a nested closure.
+     * assignments, or anything assigned in a nested closure. Arrow functions (`fn() => ...`)
+     * are treated as their own scope like closures, so a variable assigned in the enclosing
+     * method is not resolved inside one even though PHP captures it by value. This is a
+     * known simplification.
      *
      * The visited set holds assignment nodes already expanded on the current path and
      * stops cycles such as `$a = $b; $b = $a;` or `$a = $a ?: 'x'`.

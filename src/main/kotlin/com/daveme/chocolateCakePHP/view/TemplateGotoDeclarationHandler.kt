@@ -28,15 +28,12 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
      * @param settings Plugin settings
      * @param controllerPath The controller path for non-plugin lookups
      * @param allTemplatesPaths All available template paths
-     * @param existingActionNames Optional pre-built ActionNames to use for non-plugin case.
-     *                            If null, ActionNames will be created from the path.
      */
     private fun resolveTemplateViewPaths(
         path: String,
         settings: Settings,
         controllerPath: ControllerPath,
-        allTemplatesPaths: AllTemplatePaths,
-        existingActionNames: ActionNames? = null
+        allTemplatesPaths: AllTemplatePaths
     ): TemplatePathResolution {
         val result = parseAndLookupPlugin(path, settings)
         val allViewPaths = when (result) {
@@ -46,8 +43,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
                 allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, result.pluginConfig)
             }
             is PluginLookupResult.NoPlugin -> {
-                val actionNames = existingActionNames
-                    ?: ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
+                val actionNames = ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
                 allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
             }
         }

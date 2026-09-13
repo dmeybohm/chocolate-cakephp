@@ -85,5 +85,9 @@ fun ASTNode.isDefaultMatchArm() = this.elementType == PhpElementTypes.DEFAULT_MA
 fun ASTNode.isFunction() = equalsAlphaIgnoreCase(this.elementType.toString(), FUNCTION)
 fun ASTNode.isClosure() = this.elementType == PhpElementTypes.CLOSURE
 
-/** A node that introduces a new local variable scope: a method, a function, or a closure. */
+/**
+ * A node that introduces a new local variable scope: a method, a function, or a closure.
+ * Arrow functions (`fn() => ...`) count as a scope too, even though PHP captures the
+ * enclosing scope by value. This is a known simplification.
+ */
 fun ASTNode.isScopeNode() = this.isClassMethod() || this.isFunction() || this.isClosure()
