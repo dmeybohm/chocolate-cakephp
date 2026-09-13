@@ -13,6 +13,7 @@ class ElementGotoDeclarationTest : Cake5BaseTestCase() {
             "cake5/templates/Movie/artist.php",
             "cake5/templates/Movie/film_director.php",
             "cake5/templates/element/Director/filmography.php",
+            "cake5/templates/element/breadcrumb.php",
             "cake5/vendor/cakephp.php",
         )
     }
@@ -31,6 +32,47 @@ class ElementGotoDeclarationTest : Cake5BaseTestCase() {
         <?php
         ${'$'}obj = new SomeOtherObject();
         ${'$'}obj->element('<caret>Director/filmography');
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        val elements = gotoDeclarationHandlerTargets(handler)
+        assertNotNull(elements)
+        assertTrue(elements!!.isEmpty())
+    }
+
+    fun `test goto declaration on true branch of ternary in element`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->element(${'$'}compact ? '<caret>Director/filmography' : 'breadcrumb');
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "filmography.php")
+    }
+
+    fun `test goto declaration on false branch of ternary in element`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->element(${'$'}compact ? 'Director/filmography' : '<caret>breadcrumb');
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "breadcrumb.php")
+    }
+
+    fun `test goto declaration on match arm in element`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->element(match (${'$'}mode) {
+            'full' => '<caret>Director/filmography',
+            default => 'breadcrumb',
+        });
+        """.trimIndent())
+        val handler = ElementGotoDeclarationHandler()
+        assertGotoDeclarationHandlerGoesToFilename(handler, "filmography.php")
+    }
+
+    fun `test goto declaration on ternary condition literal in element does not navigate`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->element((${'$'}mode === 'Director/<caret>filmography') ? 'breadcrumb' : 'breadcrumb');
         """.trimIndent())
         val handler = ElementGotoDeclarationHandler()
         val elements = gotoDeclarationHandlerTargets(handler)

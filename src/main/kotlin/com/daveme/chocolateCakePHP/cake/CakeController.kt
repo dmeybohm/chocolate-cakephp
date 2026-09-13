@@ -12,6 +12,7 @@ import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import com.jetbrains.php.lang.psi.elements.PhpMatchArm
 import com.jetbrains.php.lang.psi.elements.PhpMatchExpression
 import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -119,6 +120,36 @@ fun actionNamesFromTemplateNames(templateNames: List<String>): ActionNames? {
 fun templateNamesFromExpression(expression: PsiElement?): List<String> {
     // Several branches or assignments may yield the same name; report it once
     return templateNamesFromExpression(expression, HashSet()).distinct()
+}
+
+/**
+ * Walk up from a clicked string literal through ternary branches, match arm bodies and
+ * parentheses to the outermost expression that forms the whole template argument.
+ *
+ * Returns null when the literal is in a position that is never a template name, such as
+ * the condition of a ternary or the condition of a match arm.
+ *
+ * Shared by TemplateGotoDeclarationHandler and ElementGotoDeclarationHandler so a click on
+ * a branch literal navigates the same way for render(), setTemplate() and element().
+ */
+fun templateArgumentFromLiteral(stringLiteral: StringLiteralExpression): PsiElement? {
+    var current: PsiElement = stringLiteral
+    while (true) {
+        val parent = current.parent ?: return null
+        current = when (parent) {
+            is TernaryExpression -> {
+                if (parent.condition == current) return null
+                parent
+            }
+            is ParenthesizedExpression -> parent
+            is PhpMatchArm -> {
+                if (parent.bodyExpression != current) return null
+                // The arm's parent is the match expression itself
+                parent.parent ?: return null
+            }
+            else -> return current
+        }
+    }
 }
 
 private fun templateNamesFromExpression(

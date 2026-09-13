@@ -95,8 +95,9 @@ using the PHP PSI classes `TernaryExpression`, `PhpMatchExpression`,
 
 ### Go-to-declaration
 
-`TemplateGotoDeclarationHandler` finds the clicked `StringLiteralExpression` and
-walks up through ternary branches, match arm bodies and parentheses to the
+`TemplateGotoDeclarationHandler` and `ElementGotoDeclarationHandler` find the
+clicked `StringLiteralExpression` and walk up through ternary branches, match
+arm bodies and parentheses (`templateArgumentFromLiteral` in `CakeController.kt`) to the
 outermost expression (`templateArgumentFromLiteral`). That outermost node is
 what must sit directly in the `ParameterList` or be the `AssignmentExpression`
 value. A literal in a ternary condition or a match arm condition never
@@ -317,3 +318,23 @@ both branches of a ternary.
   like closures, so an enclosing method's assignment is not resolved inside
   `fn() => ...` even though PHP captures it by value. Deliberately left as a
   simplification; rendering inside an arrow function is rare.
+
+### Session #5 (2026-09-13): element() go-to-declaration
+
+Review of PR #286 noticed that `element()` arguments were indexed through the
+ternary / match / variable rules since Session #1, but
+`ElementGotoDeclarationHandler` still required the clicked literal to be a
+direct child of the parameter list, so Ctrl+click on a branch of
+`$this->element($c ? 'a' : 'b')` did nothing.
+
+**Fix:** `templateArgumentFromLiteral` moved from a private method of
+`TemplateGotoDeclarationHandler` to a top-level function in
+`CakeController.kt`, next to `templateNamesFromExpression`. The element
+handler now uses it with the same shape as `handleRenderCall`: walk to the
+outermost argument, require it to be the first parameter of a `$this->element()`
+call, and navigate to the clicked branch only.
+
+**Tests** (cake5 and cake2 only, by decision): `ElementGotoDeclarationTest`
+gains true branch, false branch and condition-does-not-navigate cases; cake5
+also covers a match arm. New fixtures in setUp: `element/breadcrumb.php` (5)
+and `Elements/Flash/default.ctp` (2).

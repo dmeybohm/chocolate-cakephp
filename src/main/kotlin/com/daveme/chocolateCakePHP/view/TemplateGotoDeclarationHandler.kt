@@ -13,10 +13,7 @@ import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.ParenthesizedExpression
-import com.jetbrains.php.lang.psi.elements.PhpMatchArm
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import com.jetbrains.php.lang.psi.elements.TernaryExpression
 import com.jetbrains.php.lang.psi.elements.Variable
 
 class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
@@ -104,33 +101,6 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Navigate to the branch that was clicked, not every branch
         return navigateToViews(psiElement, settings, listOf(stringLiteral.contents))
-    }
-
-    /**
-     * Walk up from a clicked string literal through ternary branches, match arm bodies and
-     * parentheses to the outermost expression that forms the whole template argument.
-     *
-     * Returns null when the literal is in a position that is never a template name, such as
-     * the condition of a ternary or the condition of a match arm.
-     */
-    private fun templateArgumentFromLiteral(stringLiteral: StringLiteralExpression): PsiElement? {
-        var current: PsiElement = stringLiteral
-        while (true) {
-            val parent = current.parent ?: return null
-            current = when (parent) {
-                is TernaryExpression -> {
-                    if (parent.condition == current) return null
-                    parent
-                }
-                is ParenthesizedExpression -> parent
-                is PhpMatchArm -> {
-                    if (parent.bodyExpression != current) return null
-                    // The arm's parent is the match expression itself
-                    parent.parent ?: return null
-                }
-                else -> return current
-            }
-        }
     }
 
     private fun handleViewFieldAssignment(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
