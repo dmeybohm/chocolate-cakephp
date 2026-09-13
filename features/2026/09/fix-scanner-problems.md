@@ -56,3 +56,26 @@ strip all leading and trailing backslashes, then append exactly one.
 - `ComposerJsonTest`: unterminated string and stray brace above
   `autoload`/`require` keep both facts; namespace with trailing, leading
   and both backslashes matches; psr-4 key with leading backslash matches.
+
+## Implementation Progress
+
+### Session #1
+
+All three fixes implemented in one commit after the plan.
+
+- `JsonScanner.kt`: `readString` returns at `\n`/`\r` without consuming
+  it; `RBrace`/`RBracket` only pop when the stack has more than one frame,
+  and the `break` is gone. KDoc tolerance list updated.
+- `ComposerJson.kt`: new private `canonicalNamespace` (trim backslashes,
+  append one) applied to both the configured namespace and each psr-4 key.
+- Tests added: 3 in `JsonScannerTest` (unterminated value, unterminated
+  key, mid-document extra brace), trailing-garbage test renamed and its
+  expectation updated (keys after a stray brace now surface at root);
+  6 in `ComposerJsonTest` (four namespace/key backslash variants, and the
+  two structural mid-edit cases above `autoload`/`require`).
+- Results: JsonScannerTest 21/21, ComposerJsonTest 21/21, SettingsTest
+  21/21, AutoDetectionGatingTest 3/3, NestedAppDirectoryTest 2/2.
+
+Not addressed here (still open from the review): duplicate psr-4 keys are
+first-wins rather than last-wins, and `cakePhpRequired` ignores a literal
+`null` value.
