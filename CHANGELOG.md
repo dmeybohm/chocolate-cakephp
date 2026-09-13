@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Added
+- Complete and type-infer variables passed to elements through the `$this->element($name, $data)` data array (array literal or `compact()`) from templates, layouts and nested elements, and variables set with `$this->set()` inside view files
 - Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
 
 ## [1.1.0] - 2026-04-09
