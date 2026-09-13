@@ -31,8 +31,10 @@ data class JsonEntry(val path: List<String>, val key: String, val value: String?
  *  - a missing value (emitted with a null value; scanning continues)
  *  - an unquoted key (skipped)
  *  - a truncated document (everything before the end is kept)
- *  - an unterminated string (runs to end of input and is still emitted)
- *  - extra closing braces and trailing garbage after the root
+ *  - an unterminated string (stops at the end of its line and is still
+ *    emitted, so later lines are unaffected)
+ *  - an extra closing brace anywhere (the root is never closed, so
+ *    everything after the brace is still scanned as part of the root)
  *
  * Without this, the plugin's auto-detected CakePHP settings would flip to
  * defaults whenever composer.json is momentarily invalid, and CakePHP
@@ -85,8 +87,12 @@ private fun tokenize(json: String): List<Token> {
 
 /**
  * Read a string literal starting just after its opening quote. Returns the
- * unescaped text and the index just past the closing quote, or the end of
- * input if the string is unterminated.
+ * unescaped text and the index just past the closing quote.
+ *
+ * JSON forbids raw newlines inside strings, so a newline means the closing
+ * quote is missing. The string ends there (the newline is left for the
+ * tokenizer) so that a missing quote cannot swallow the rest of the document.
+ * An unterminated string on the last line runs to the end of input.
  */
 private fun readString(json: String, start: Int): Pair<String, Int> {
     val sb = StringBuilder()
@@ -97,6 +103,9 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
         if (c == '"') {
             return sb.toString() to i + 1
         }
+        if (c == '\n' || c == '\r') {
+            return sb.toString() to i
+        }
         if (c == '\\' && i + 1 < n) {
             when (val esc = json[i + 1]) {
                 '"', '\\', '/' -> { sb.append(esc); i += 2 }
@@ -106,9 +115,8 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
                 'r' -> { sb.append('\r'); i += 2 }
                 't' -> { sb.append('\t'); i += 2 }
                 'u' -> {
-                    val hex = json.substring(i + 2, minOf(i + 6, n))
-                    val code = if (hex.length == 4) hex.toIntOrNull(16) else null
-                    if (code != null) {
+                    val code = fourHexDigits(json, i + 2)
+                    if (code >= 0) {
                         sb.append(code.toChar()); i += 6
                     } else {
                         // Malformed escape: keep the backslash literally and move on.
@@ -122,6 +130,29 @@ private fun readString(json: String, start: Int): Pair<String, Int> {
         }
     }
     return sb.toString() to n
+}
+
+/**
+ * The value of exactly four hex digits starting at [start], or -1 if any of
+ * the four characters is missing or is not a hex digit. Unlike
+ * `toIntOrNull(16)`, a sign is not accepted.
+ */
+private fun fourHexDigits(json: String, start: Int): Int {
+    if (start + 4 > json.length) return -1
+    var code = 0
+    for (k in 0 until 4) {
+        val d = hexDigit(json[start + k])
+        if (d < 0) return -1
+        code = code * 16 + d
+    }
+    return code
+}
+
+private fun hexDigit(c: Char): Int = when (c) {
+    in '0'..'9' -> c - '0'
+    in 'a'..'f' -> c - 'a' + 10
+    in 'A'..'F' -> c - 'A' + 10
+    else -> -1
 }
 
 private class Frame(val isObject: Boolean, val path: List<String>) {
@@ -165,9 +196,10 @@ private fun scan(tokens: List<Token>): List<JsonEntry> {
             }
             Token.RBrace, Token.RBracket -> {
                 flush(frame, null)
-                stack.removeLast()
-                if (stack.isEmpty()) {
-                    break // Root closed; ignore anything after it.
+                // Never pop the root: an extra closing brace left behind
+                // mid-edit must not hide everything after it.
+                if (stack.size > 1) {
+                    stack.removeLast()
                 }
             }
             Token.Other -> if (frame.isObject) flush(frame, null)

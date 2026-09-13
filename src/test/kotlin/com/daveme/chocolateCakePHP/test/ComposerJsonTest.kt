@@ -42,6 +42,62 @@ class ComposerJsonTest : TestCase() {
         assertEquals("src", info.appDirectory)
     }
 
+    fun `test namespace with trailing backslash matches`() {
+        val info = parseComposerJson("""{"autoload": {"psr-4": {"App\\": "src/"}}}""", "App\\")
+        assertEquals("src", info.appDirectory)
+    }
+
+    fun `test namespace with leading and trailing backslash matches`() {
+        val info = parseComposerJson("""{"autoload": {"psr-4": {"App\\": "src/"}}}""", "\\App\\")
+        assertEquals("src", info.appDirectory)
+    }
+
+    fun `test psr-4 key with leading backslash matches`() {
+        val info = parseComposerJson("""{"autoload": {"psr-4": {"\\App\\": "src/"}}}""", "\\App")
+        assertEquals("src", info.appDirectory)
+    }
+
+    fun `test psr-4 key without trailing backslash matches`() {
+        val info = parseComposerJson("""{"autoload": {"psr-4": {"App": "src/"}}}""", "\\App")
+        assertEquals("src", info.appDirectory)
+    }
+
+    fun `test duplicate psr-4 key is last-wins`() {
+        val json = """{"autoload": {"psr-4": {"App\\": "src/", "App\\": "app/"}}}"""
+        assertEquals("app", parseComposerJson(json, "\\App").appDirectory)
+    }
+
+    fun `test duplicate autoload block is last-wins`() {
+        val json = """
+            {
+                "autoload": {"psr-4": {"App\\": "src/"}},
+                "autoload": {"psr-4": {"Other\\": "lib/"}}
+            }
+        """.trimIndent()
+        assertNull(parseComposerJson(json, "\\App").appDirectory)
+    }
+
+    fun `test duplicate require block is last-wins`() {
+        val json = """
+            {
+                "require": {"cakephp/cakephp": "^5.0"},
+                "require": {"php": ">=8.1"}
+            }
+        """.trimIndent()
+        assertFalse(parseComposerJson(json, "\\App").cakePhpRequired)
+        val reversed = """
+            {
+                "require": {"php": ">=8.1"},
+                "require": {"cakephp/cakephp": "^5.0"}
+            }
+        """.trimIndent()
+        assertTrue(parseComposerJson(reversed, "\\App").cakePhpRequired)
+    }
+
+    fun `test require that is not an object is not detected`() {
+        assertFalse(parseComposerJson("""{"require": "cakephp/cakephp"}""", "\\App").cakePhpRequired)
+    }
+
     fun `test custom nested namespace and directory`() {
         val json = """{"autoload": {"psr-4": {"Acme\\Shop\\": "apps/shop/src/"}}}"""
         assertEquals("apps/shop/src", parseComposerJson(json, "\\Acme\\Shop").appDirectory)
@@ -99,6 +155,33 @@ class ComposerJsonTest : TestCase() {
         val info = parseComposerJson(json, "\\App")
         assertTrue(info.cakePhpRequired)
         assertEquals("src", info.appDirectory)
+    }
+
+    fun `test unterminated string above autoload keeps both facts`() {
+        val json = """
+            {
+                "require": {
+                    "cakephp/cakephp": "^5.0,
+                    "cakephp/migrations": "^4.0"
+                },
+                "autoload": {"psr-4": {"App\\": "app/src/"}}
+            }
+        """.trimIndent()
+        val info = parseComposerJson(json, "\\App")
+        assertTrue(info.cakePhpRequired)
+        assertEquals("app/src", info.appDirectory)
+    }
+
+    fun `test extra closing brace above require keeps both facts`() {
+        val json = """
+            {
+                "autoload": {"psr-4": {"App\\": "app/src/"}}},
+                "require": {"cakephp/cakephp": "^5.0"}
+            }
+        """.trimIndent()
+        val info = parseComposerJson(json, "\\App")
+        assertTrue(info.cakePhpRequired)
+        assertEquals("app/src", info.appDirectory)
     }
 
     fun `test empty and invalid input yields empty info`() {
