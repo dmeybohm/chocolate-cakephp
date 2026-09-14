@@ -235,6 +235,24 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         assertEquals(setOf("int", "string"), typeOf("x"))
     }
 
+    fun `test separate rendering files union their possible types`() {
+        myFixture.addFileToProject("$root/Movie/first.$extension",
+            "<?php ${'$'}this->set('x', 1); ${'$'}this->element('review');")
+        myFixture.addFileToProject("$root/Movie/second.$extension",
+            "<?php ${'$'}this->set('x', 'a'); ${'$'}this->element('review');")
+
+        assertEquals(setOf("int", "string"), variables()["x"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int", "string"), typeOf("x"))
+    }
+
+    fun `test nearer set overrides outer set on one render path`() {
+        myFixture.addFileToProject("$root/Element/outer.$extension",
+            "<?php ${'$'}this->set('x', 1); ${'$'}this->element('review');")
+        caller("${'$'}this->set('x', 'outer'); ${'$'}this->element('outer');")
+
+        assertEquals(setOf("int"), variables()["x"]!!.phpType.concreteTypeNames())
+    }
+
     fun `test nested elements apply the cutoff at each render`() {
         myFixture.addFileToProject("$root/Element/outer.$extension", "<?php ${'$'}this->element('review');")
         caller("${'$'}this->set('a', 1); ${'$'}this->element('outer'); ${'$'}this->set('b', 2);")

@@ -194,3 +194,16 @@ later, those edges should skip the cutoff.
   template sharing the canonical key, and the undefined-variable inspection. The seven CakePHP 5
   cases failed before the change; all pass for CakePHP 2–5.
 - The full offline suite passes 810 tests with no failures, errors, or skips.
+
+### Session #2 (2026-09-14)
+
+- Review found that completion unioned repeated render calls from one file, but different files on
+  alternative reverse-render paths still overwrote one another during final layering.
+- The bounded reverse walk now retains complete paths. Completion applies controller and view
+  sources in runtime order within each path, preserving nearer-view overrides, then unions the
+  possible types produced by separate paths. Type lookup and existence checks flatten the same
+  paths because they need only unions or presence.
+- Added CakePHP 2–5 regressions for two separate templates rendering the same element with different
+  variable types, plus a guard that a nearer `set()` still overrides an outer `set()` on one path.
+- The new CakePHP 5 alternative-path test failed before the implementation and passed afterwards.
+- All 96 version-specific call tests and the full 818-test offline suite pass.

@@ -521,75 +521,87 @@ object ViewVariableIndexService {
     }
 
     /**
-     * Visit every index key that can contribute variables to the view file [filenameKey], most
-     * specific first:
+     * Return every bounded reverse-render path that can contribute variables to [filenameKey].
+     * Sources in each path are ordered from the nearest rendering view to its controller:
      *
-     *   1. ElementCallData(filenameKey) — data passed directly to this element. Only for the
-     *      original key: CakePHP hands `$data` to the named element alone (it renders with
-     *      `array_merge($this->viewVars, $data)`), so it does not flow into nested elements.
-     *   2. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet for every
-     *      `element()` or `render()` call in a view file that renders this one, because
-     *      `viewVars` is shared downwards, and ControllerAction(key) for every controller action
-     *      reached. Each call is a separate ViewSet: only the `set()` calls before it, in its own
-     *      file, reach what it renders.
+     *   - ViewSet for every `element()` or `render()` call in a view file that renders this one;
+     *   - ControllerAction for the controller reached at the outer end of a path.
+     *
+     * Each render call is a separate ViewSet: only the `set()` calls before it, in its own file,
+     * reach what it renders.
      *
      * The file's own `set()` calls are not a source: its local variables are extracted before
      * it runs, so they reach only what it renders.
-     *
-     * [process] returns false to stop early.
      */
+    private fun contributingSourcePaths(
+        project: Project,
+        settings: Settings,
+        filenameKey: String,
+    ): List<List<ViewVariableSource>> {
+        data class PendingPath(
+            val viewKey: String,
+            val sources: List<ViewVariableSource>, // nearest view first, controller last
+            val seenReferences: Set<Pair<String, Int>>
+        )
+
+        val toProcess = mutableListOf(PendingPath(filenameKey, emptyList(), emptySet()))
+        val result = mutableListOf<List<ViewVariableSource>>()
+        var maxLookups = 15
+
+        while (toProcess.isNotEmpty()) {
+            val path = toProcess.removeAt(0)
+            var extended = false
+            for (elementAndPath in ViewFileIndexService.referencingElementsInSmartReadAction(project, path.viewKey)) {
+                val referenceId = elementAndPath.path to elementAndPath.offset
+                if (referenceId in path.seenReferences || maxLookups == 0) continue
+                maxLookups -= 1
+
+                if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
+                    val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
+                    result.add(path.sources + ViewVariableSource.ControllerAction(controllerKey))
+                    extended = true
+                    continue
+                }
+
+                val containingFile = ReadAction.compute<PsiFile?, Nothing> {
+                    elementAndPath.psiElement?.containingFile
+                } ?: continue
+                val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
+                val ancestorKey = ViewFileIndexService.canonicalizeFilenameToKey(
+                    templatesDir,
+                    settings,
+                    elementAndPath.path
+                )
+                val ancestorFile = containingFile.virtualFile ?: continue
+                val nextSources = if (ancestorKey == filenameKey) {
+                    path.sources
+                } else {
+                    path.sources + ViewVariableSource.ViewSet(
+                        viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset
+                    )
+                }
+                toProcess.add(PendingPath(ancestorKey, nextSources, path.seenReferences + referenceId))
+                extended = true
+            }
+            if (!extended) {
+                result.add(path.sources)
+            }
+        }
+        return result
+    }
+
     private fun forEachContributingSource(
         project: Project,
         settings: Settings,
         filenameKey: String,
         process: (ViewVariableSource) -> Boolean
     ) {
+        // Flattening paths is sufficient for type unions and existence checks. Completion keeps
+        // the paths separate so it can preserve sequential overwrite precedence.
         if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
-
-        val toProcess = mutableListOf<PsiElementAndPath>()
-        val seenReferences = mutableSetOf<Pair<String, Int>>() // (file path, offset)
-        val expandedPaths = mutableSetOf<String>()
-        fun enqueueReferencesTo(viewKey: String) {
-            for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, viewKey)) {
-                if (seenReferences.add(next.path to next.offset)) {
-                    toProcess.add(next)
-                }
-            }
-        }
-        enqueueReferencesTo(filenameKey)
-        var maxLookups = 15
-
-        while (toProcess.isNotEmpty()) {
-            if (maxLookups == 0) {
-                break
-            }
-            maxLookups -= 1
-            val elementAndPath = toProcess.removeAt(0)
-
-            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
-                if (!process(ViewVariableSource.ControllerAction(controllerKey))) return
-                continue
-            }
-
-            // A template or element that renders the current file: it contributes its own
-            // set() calls, and whatever renders it contributes in turn
-            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
-                elementAndPath.psiElement?.containingFile
-            } ?: continue
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
-            val ancestorKey = ViewFileIndexService.canonicalizeFilenameToKey(
-                templatesDir,
-                settings,
-                elementAndPath.path
-            )
-            val ancestorFile = containingFile.virtualFile
-            if (ancestorKey != filenameKey && ancestorFile != null) {
-                val source = ViewVariableSource.ViewSet(viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset)
+        for (path in contributingSourcePaths(project, settings, filenameKey)) {
+            for (source in path) {
                 if (!process(source)) return
-            }
-            if (expandedPaths.add(elementAndPath.path)) {
-                enqueueReferencesTo(ancestorKey)
             }
         }
     }
@@ -685,39 +697,50 @@ object ViewVariableIndexService {
         settings: Settings,
         filenameKey: String,
     ): ViewVariables {
-        val fromControllers = ViewVariables()
-        // By rendering file, nearest ancestor first; each file's render calls are alternatives
-        val fromViewSets = LinkedHashMap<String, ViewVariables>()
-        val fromElementData = ViewVariables()
-
-        forEachContributingSource(project, settings, filenameKey) { source ->
-            val target = when (source) {
-                is ViewVariableSource.ControllerAction -> fromControllers
-                is ViewVariableSource.ViewSet -> fromViewSets.getOrPut(source.file.path) { ViewVariables() }
-                is ViewVariableSource.ElementCallData -> fromElementData
-            }
-            val unionAlternatives = source !is ViewVariableSource.ControllerAction
+        fun variablesFromSource(source: ViewVariableSource, unionCalls: Boolean): ViewVariables {
+            val target = ViewVariables()
             lookupRawVars(project, source).forEach { (file, records) ->
                 val sourcePsiFile = PsiManager.getInstance(project).findFile(file)
                 sourceEntries(records, sourcePsiFile, source is ViewVariableSource.ElementCallData).forEach { entry ->
                     val resolvedType = PhpType().also { it.add(entry.resolveType(project, sourcePsiFile)) }
                     val previous = target[entry.variableName]
-                    if (unionAlternatives && previous != null) {
+                    if (unionCalls && previous != null) {
                         resolvedType.add(previous.phpType)
                     }
                     target[entry.variableName] = ViewVariableValue(
                         resolvedType.toString(),
-                        if (unionAlternatives) previous?.startOffset ?: entry.offset
+                        if (unionCalls) previous?.startOffset ?: entry.offset
                         else entry.offset)
                 }
             }
-            true
+            return target
         }
 
+        // Resolve sequential precedence independently on each possible render route, then union
+        // the routes. A nearer view's set() overwrites an outer value on the same route, while
+        // unrelated rendering files remain alternatives.
         val result = ViewVariables()
-        result.putAll(fromControllers)
-        fromViewSets.values.reversed().forEach { result.putAll(it) }
-        result.putAll(fromElementData)
+        for (path in contributingSourcePaths(project, settings, filenameKey)) {
+            val pathVariables = ViewVariables()
+            for (source in path.asReversed()) {
+                pathVariables.putAll(variablesFromSource(source, false))
+            }
+            for ((name, value) in pathVariables) {
+                val previous = result[name]
+                val possibleTypes = PhpType().also { it.add(value.phpType) }
+                if (previous != null) possibleTypes.add(previous.phpType)
+                result[name] = ViewVariableValue(
+                    possibleTypes.toString(),
+                    previous?.startOffset ?: value.startOffset
+                )
+            }
+        }
+
+        // Element-call data is the final runtime layer and its separate calls are alternatives.
+        result.putAll(variablesFromSource(
+            ViewVariableSource.ElementCallData(elementDataKey(filenameKey)),
+            true
+        ))
         return result
     }
 
