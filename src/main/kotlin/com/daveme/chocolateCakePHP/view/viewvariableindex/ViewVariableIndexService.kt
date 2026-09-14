@@ -432,8 +432,8 @@ sealed class ViewVariableSource(val key: ViewVariablesKey) {
     /** Data arrays passed to the element being looked up by `$this->element()` calls. */
     class ElementCallData(key: ViewVariablesKey) : ViewVariableSource(key)
 
-    /** `$this->set()` calls inside a view that renders the file being looked up. */
-    class ViewSet(key: ViewVariablesKey) : ViewVariableSource(key)
+    /** `$this->set()` calls in [file] made before the render call at [visibleBefore]. */
+    class ViewSet(key: ViewVariablesKey, val file: VirtualFile, val visibleBefore: Int) : ViewVariableSource(key)
 
     /** A controller action reached by walking render / element references backwards. */
     class ControllerAction(key: ViewVariablesKey) : ViewVariableSource(key)
@@ -527,9 +527,11 @@ object ViewVariableIndexService {
      *   1. ElementCallData(filenameKey) — data passed directly to this element. Only for the
      *      original key: CakePHP hands `$data` to the named element alone (it renders with
      *      `array_merge($this->viewVars, $data)`), so it does not flow into nested elements.
-     *   2. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet(ancestor)
-     *      for every template or element that renders this one, because `viewVars` is shared
-     *      downwards, and ControllerAction(key) for every controller action reached.
+     *   2. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet for every
+     *      `element()` or `render()` call in a view file that renders this one, because
+     *      `viewVars` is shared downwards, and ControllerAction(key) for every controller action
+     *      reached. Each call is a separate ViewSet: only the `set()` calls before it, in its own
+     *      file, reach what it renders.
      *
      * The file's own `set()` calls are not a source: its local variables are extracted before
      * it runs, so they reach only what it renders.
@@ -544,10 +546,17 @@ object ViewVariableIndexService {
     ) {
         if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
 
-        val toProcess = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
-            .toMutableList()
-        val visited = mutableSetOf<String>() // file paths
-        val emittedViewKeys = mutableSetOf(filenameKey)
+        val toProcess = mutableListOf<PsiElementAndPath>()
+        val seenReferences = mutableSetOf<Pair<String, Int>>() // (file path, offset)
+        val expandedPaths = mutableSetOf<String>()
+        fun enqueueReferencesTo(viewKey: String) {
+            for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, viewKey)) {
+                if (seenReferences.add(next.path to next.offset)) {
+                    toProcess.add(next)
+                }
+            }
+        }
+        enqueueReferencesTo(filenameKey)
         var maxLookups = 15
 
         while (toProcess.isNotEmpty()) {
@@ -556,7 +565,6 @@ object ViewVariableIndexService {
             }
             maxLookups -= 1
             val elementAndPath = toProcess.removeAt(0)
-            visited.add(elementAndPath.path)
 
             if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
                 val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
@@ -575,13 +583,13 @@ object ViewVariableIndexService {
                 settings,
                 elementAndPath.path
             )
-            if (emittedViewKeys.add(ancestorKey)) {
-                if (!process(ViewVariableSource.ViewSet(viewSetKey(ancestorKey)))) return
+            val ancestorFile = containingFile.virtualFile
+            if (ancestorKey != filenameKey && ancestorFile != null) {
+                val source = ViewVariableSource.ViewSet(viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset)
+                if (!process(source)) return
             }
-            for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, ancestorKey)) {
-                if (!visited.contains(next.path)) {
-                    toProcess.add(next)
-                }
+            if (expandedPaths.add(elementAndPath.path)) {
+                enqueueReferencesTo(ancestorKey)
             }
         }
     }
@@ -611,7 +619,7 @@ object ViewVariableIndexService {
         variableName: String
     ): PhpType? {
         val result = PhpType()
-        for ((file, records) in lookupRawVarsByKey(project, source.key)) {
+        for ((file, records) in lookupRawVars(project, source)) {
             val psiFile = PsiManager.getInstance(project).findFile(file)
             sourceEntries(records, psiFile, source is ViewVariableSource.ElementCallData)
                 .filter { it.variableName == variableName }
@@ -621,25 +629,33 @@ object ViewVariableIndexService {
     }
 
     /**
-     * Finish index access before loading PSI, expanding arguments, or resolving types.
+     * The records [source] contributes. Finish index access before loading PSI, expanding
+     * arguments, or resolving types.
      *
      * Element-data keys carry no plugin prefix, so they are limited to project scope
-     * like the reverse walk that finds the rendering templates.
+     * like the reverse walk that finds the rendering templates. A view-set source reads only
+     * its own file, since other files can share its canonical key.
      */
-    private fun lookupRawVarsByKey(
+    private fun lookupRawVars(
         project: Project,
-        key: ViewVariablesKey,
+        source: ViewVariableSource,
     ): List<Pair<VirtualFile, ViewVariablesWithRawVars>> {
         val result = mutableListOf<Pair<VirtualFile, ViewVariablesWithRawVars>>()
-        val scope = if (key.startsWith(ELEMENT_DATA_KEY_PREFIX))
+        val scope = if (source is ViewVariableSource.ElementCallData)
             GlobalSearchScope.projectScope(project)
         else
             GlobalSearchScope.allScope(project)
-        FileBasedIndex.getInstance().processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
+        val inFile = (source as? ViewVariableSource.ViewSet)?.file
+        FileBasedIndex.getInstance().processValues(VIEW_VARIABLE_INDEX_KEY, source.key, inFile,
             { file, records ->
                 result.add(file to records)
                 true
             }, scope)
+        if (source is ViewVariableSource.ViewSet) {
+            return result.map { (file, records) ->
+                file to ViewVariablesWithRawVars(records.calls.filterTo(mutableListOf()) { it.offset < source.visibleBefore })
+            }
+        }
         return result.sortedBy { it.first.path }
     }
 
@@ -670,26 +686,28 @@ object ViewVariableIndexService {
         filenameKey: String,
     ): ViewVariables {
         val fromControllers = ViewVariables()
-        val fromViewSets = mutableListOf<ViewVariables>() // in visiting order: nearest ancestor first
+        // By rendering file, nearest ancestor first; each file's render calls are alternatives
+        val fromViewSets = LinkedHashMap<String, ViewVariables>()
         val fromElementData = ViewVariables()
 
         forEachContributingSource(project, settings, filenameKey) { source ->
             val target = when (source) {
                 is ViewVariableSource.ControllerAction -> fromControllers
-                is ViewVariableSource.ViewSet -> ViewVariables().also { fromViewSets.add(it) }
+                is ViewVariableSource.ViewSet -> fromViewSets.getOrPut(source.file.path) { ViewVariables() }
                 is ViewVariableSource.ElementCallData -> fromElementData
             }
-            lookupRawVarsByKey(project, source.key).forEach { (file, records) ->
+            val unionAlternatives = source !is ViewVariableSource.ControllerAction
+            lookupRawVars(project, source).forEach { (file, records) ->
                 val sourcePsiFile = PsiManager.getInstance(project).findFile(file)
                 sourceEntries(records, sourcePsiFile, source is ViewVariableSource.ElementCallData).forEach { entry ->
                     val resolvedType = PhpType().also { it.add(entry.resolveType(project, sourcePsiFile)) }
                     val previous = target[entry.variableName]
-                    if (source is ViewVariableSource.ElementCallData && previous != null) {
+                    if (unionAlternatives && previous != null) {
                         resolvedType.add(previous.phpType)
                     }
                     target[entry.variableName] = ViewVariableValue(
                         resolvedType.toString(),
-                        if (source is ViewVariableSource.ElementCallData) previous?.startOffset ?: entry.offset
+                        if (unionAlternatives) previous?.startOffset ?: entry.offset
                         else entry.offset)
                 }
             }
@@ -698,7 +716,7 @@ object ViewVariableIndexService {
 
         val result = ViewVariables()
         result.putAll(fromControllers)
-        fromViewSets.asReversed().forEach { result.putAll(it) }
+        fromViewSets.values.reversed().forEach { result.putAll(it) }
         result.putAll(fromElementData)
         return result
     }
@@ -715,7 +733,7 @@ object ViewVariableIndexService {
     ): Boolean {
         var found = false
         forEachContributingSource(project, settings, filenameKey) { source ->
-            if (variableExistsByKey(project, source.key, variableName)) {
+            if (variableExistsInSource(project, source, variableName)) {
                 found = true
             }
             !found
@@ -875,18 +893,18 @@ object ViewVariableIndexService {
     }
 
     /**
-     * Check if a variable exists under one index key without resolving its type.
+     * Check if a variable exists in one source without resolving its type.
      *
      * Static patterns (PAIR, ARRAY, COMPACT, TUPLE) are checked in stored records with no PSI
      * loading; dynamic patterns (VARIABLE_ARRAY, VARIABLE_COMPACT, VARIABLE_PAIR, MIXED_TUPLE)
      * need the source file's PSI to find the assignment that names the variables.
      */
-    private fun variableExistsByKey(
+    private fun variableExistsInSource(
         project: Project,
-        key: ViewVariablesKey,
+        source: ViewVariableSource,
         variableName: String
     ): Boolean {
-        for ((file, records) in lookupRawVarsByKey(project, key)) {
+        for ((file, records) in lookupRawVars(project, source)) {
             val entries = records.calls.flatMap { it.entries }
             if (entries.any { it.varKind !in DYNAMIC_KINDS && it.variableName == variableName }) {
                 return true

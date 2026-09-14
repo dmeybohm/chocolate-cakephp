@@ -194,6 +194,73 @@ class ViewVariableCallsTest : Cake5BaseTestCase() {
         myFixture.checkHighlighting(true, false, false)
     }
 
+    private fun typeOf(name: String, key: String = elementKey) = ViewVariableIndexService
+        .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, key, name).concreteTypeNames()
+
+    fun `test set after element call is not visible`() {
+        caller("${'$'}this->set('early', 1); ${'$'}this->element('review'); ${'$'}this->set('late', 2);")
+        assertEquals(setOf("early"), variables().keys)
+        assertTrue(exists("early"))
+        assertFalse(exists("late"))
+        assertEquals(emptySet<String>(), typeOf("late"))
+    }
+
+    fun `test set after render call is not visible`() {
+        myFixture.addFileToProject("$root/Movie/other.$extension", "<?php echo 1;")
+        caller("${'$'}this->set('early', 1); ${'$'}this->render('other'); ${'$'}this->set('late', 2);")
+        assertEquals(setOf("early"), variables("Movie/other").keys)
+        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, "Movie/other", "late"))
+        assertEquals(emptySet<String>(), typeOf("late", "Movie/other"))
+    }
+
+    fun `test repeated element calls union what each call sees`() {
+        caller("""
+            ${'$'}this->element('review');
+            ${'$'}this->set('x', 1);
+            ${'$'}this->element('review');
+            ${'$'}this->set('x', 'a');
+        """)
+        assertEquals(setOf("int"), variables()["x"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int"), typeOf("x"))
+    }
+
+    fun `test value overwritten between element calls unions both types`() {
+        caller("""
+            ${'$'}this->set('x', 1);
+            ${'$'}this->element('review');
+            ${'$'}this->set('x', 'a');
+            ${'$'}this->element('review');
+        """)
+        assertEquals(setOf("int", "string"), variables()["x"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int", "string"), typeOf("x"))
+    }
+
+    fun `test nested elements apply the cutoff at each render`() {
+        myFixture.addFileToProject("$root/element/outer.$extension", "<?php ${'$'}this->element('review');")
+        caller("${'$'}this->set('a', 1); ${'$'}this->element('outer'); ${'$'}this->set('b', 2);")
+        assertEquals(setOf("a"), variables().keys)
+        assertFalse(exists("b"))
+    }
+
+    fun `test set from another file with the same view key is not visible`() {
+        caller("${'$'}this->set('app', 1); ${'$'}this->element('review');")
+        myFixture.addFileToProject("$root/Movie/json/review.$extension", "<?php ${'$'}this->set('leak', 1);")
+        assertEquals(setOf("app"), variables().keys)
+        assertFalse(exists("leak"))
+        assertEquals(emptySet<String>(), typeOf("leak"))
+    }
+
+    fun `test inspection warns for variable set after element call`() {
+        caller("${'$'}this->set('title', 1); ${'$'}this->element('review'); ${'$'}this->set('late', 2);")
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+        myFixture.configureByFilePathAndText("$root/$elementKey.$extension", """
+            <?php
+            echo ${'$'}title;
+            echo <error descr="Undefined variable '${'$'}late'">${'$'}late</error>;
+        """.trimIndent())
+        myFixture.checkHighlighting(true, false, false)
+    }
+
     fun `test ordered calls survive serialization`() {
         val raw = RawViewVar("data", VarKind.VARIABLE_ARRAY, 20, VarHandle(SourceKind.LOCAL, "data", 20))
         val records = ViewVariablesWithRawVars(mutableListOf(
