@@ -620,17 +620,26 @@ object ViewVariableIndexService {
         return result.takeUnless { it.types.isEmpty() }
     }
 
-    /** Finish index access before loading PSI, expanding arguments, or resolving types. */
+    /**
+     * Finish index access before loading PSI, expanding arguments, or resolving types.
+     *
+     * Element-data keys carry no plugin prefix, so they are limited to project scope
+     * like the reverse walk that finds the rendering templates.
+     */
     private fun lookupRawVarsByKey(
         project: Project,
         key: ViewVariablesKey,
     ): List<Pair<VirtualFile, ViewVariablesWithRawVars>> {
         val result = mutableListOf<Pair<VirtualFile, ViewVariablesWithRawVars>>()
+        val scope = if (key.startsWith(ELEMENT_DATA_KEY_PREFIX))
+            GlobalSearchScope.projectScope(project)
+        else
+            GlobalSearchScope.allScope(project)
         FileBasedIndex.getInstance().processValues(VIEW_VARIABLE_INDEX_KEY, key, null,
             { file, records ->
                 result.add(file to records)
                 true
-            }, GlobalSearchScope.allScope(project))
+            }, scope)
         return result.sortedBy { it.first.path }
     }
 
