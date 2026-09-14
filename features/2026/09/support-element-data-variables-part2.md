@@ -165,6 +165,32 @@ the full offline suite.
 - General plugin-qualified element resolution beyond what is necessary to keep view-set sources
   isolated.
 
+## Simplification
+
+The design above keeps each reference's kind so a layout edge could skip the cutoff. That is not
+needed: ViewFileIndex records only `render()`, `element()`, `$this->view =`, `setTemplate()` and
+implicit controller renders. Layout selection is never indexed, so the reverse walk has no layout
+edge, and every edge out of a view file is an immediate `element()`/`render()` call. Each edge
+therefore needs only its physical file and its offset. Both indexers store a call's
+`node.startOffset`, so the two offsets can be compared directly. If layout references are indexed
+later, those edges should skip the cutoff.
+
 ## Implementation progress
 
-Not started.
+### Session #1 (2026-09-14)
+
+- `PsiElementAndPath` carries the reference offset it was already read from. No index format or
+  version changes.
+- `ViewVariableSource.ViewSet` carries the rendering file and the render call's offset. `view-set:`
+  records are read only from that file, via the `inFile` argument of `processValues()`, and only
+  calls before the offset are kept. The callback still only collects records.
+- The reverse walk emits one `ViewSet` per render call, dedups references by (path, offset) instead
+  of by canonical key, and expands each ancestor file's references once. It still skips the file's
+  own key and keeps the lookup bound.
+- Completion keeps one layer per rendering file; a file's repeated render calls union their types.
+  Type lookup and existence checks use the same filtered sources.
+- New tests in each version's `ViewVariableCallsTest` cover `set()` after `element()`/`render()`,
+  repeated calls with and without an overwrite between them, nested cutoffs, a `json` data-view
+  template sharing the canonical key, and the undefined-variable inspection. The seven CakePHP 5
+  cases failed before the change; all pass for CakePHP 2–5.
+- The full offline suite passes 810 tests with no failures, errors, or skips.
