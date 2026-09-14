@@ -628,4 +628,296 @@ class ViewVariableTest: Cake5BaseTestCase() {
             assertTrue("Expected findOwnedBy in $view, got: $result", result!!.contains("findOwnedBy"))
         }
     }
+
+    // ---- data passed to elements and $this->set() inside view files -----------------------
+
+    private fun typeTextOf(lookupString: String): String? {
+        val element = myFixture.lookupElements!!.find { it.lookupString == lookupString }
+        assertNotNull("Should find $lookupString in completion", element)
+        val presentation = LookupElementPresentation()
+        element!!.renderElement(presentation)
+        return presentation.typeText
+    }
+
+    fun `test variables passed to element are completed`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}this->set('fromTemplate', 'x');
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Passed var missing: $result", result!!.contains("${'$'}table"))
+        assertTrue("Passed literal missing: $result", result.contains("${'$'}count"))
+        assertTrue("Controller var missing: $result", result.contains("${'$'}moviesTable"))
+        assertTrue("Template set() var missing: $result", result.contains("${'$'}fromTemplate"))
+        assertEquals("int", typeTextOf("${'$'}count"))
+        assertEquals("string", typeTextOf("${'$'}fromTemplate"))
+    }
+
+    fun `test compact element data is completed`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}crumbs = ['Home'];
+        echo ${'$'}this->element('breadcrumb', compact('crumbs', 'metadata'));
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/breadcrumb.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("compact local missing: $result", result!!.contains("${'$'}crumbs"))
+        assertTrue("compact view var missing: $result", result.contains("${'$'}metadata"))
+        val crumbsType = typeTextOf("${'$'}crumbs")
+        assertTrue("Expected an array type for crumbs, got: $crumbsType",
+                   crumbsType == "string[]" || crumbsType == "array")
+    }
+
+    fun `test type of variable passed to element chains through the template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}table-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", result)
+        assertTrue("Expected findOwnedBy, got: $result", result!!.contains("findOwnedBy"))
+    }
+
+    fun `test nested element sees data passed to it and set() from the outer element`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element('nested_outer', ['onlyOuter' => 1, 'alsoOuter' => 2]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/nested_outer.php", """
+        <?php
+        ${'$'}this->set('shared', 'from outer');
+        echo ${'$'}this->element('nested_inner', ['innerLabel' => 'x', 'innerCount' => 2]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/nested_inner.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Inner passed var missing: $result", result!!.contains("${'$'}innerLabel"))
+        assertTrue("Inner passed var missing: $result", result.contains("${'$'}innerCount"))
+        assertTrue("Outer set() var missing: $result", result.contains("${'$'}shared"))
+        assertTrue("Controller var missing: $result", result.contains("${'$'}moviesTable"))
+        // Data passed to the outer element is not view data; CakePHP does not pass it on
+        assertFalse("Outer element data must not leak inward: $result", result.contains("${'$'}onlyOuter"))
+    }
+
+    fun `test ternary element name attaches data to both elements`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element(${'$'}compact ? 'breadcrumb' : 'layout_header', ['ta' => 1, 'tb' => 2]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/layout_header.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Data missing on ternary branch: $result", result!!.contains("${'$'}ta"))
+        assertTrue("Data missing on ternary branch: $result", result.contains("${'$'}tb"))
+    }
+
+    fun `test element call in a layout passes data`() {
+        myFixture.configureByFilePathAndText("cake5/templates/layout/default.php", """
+        <?php
+        echo ${'$'}this->element('layout_header', ['siteName' => 'Chocolate', 'year' => 2026]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/layout_header.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Layout data missing: $result", result!!.contains("${'$'}siteName"))
+        assertTrue("Layout data missing: $result", result.contains("${'$'}year"))
+        assertEquals("int", typeTextOf("${'$'}year"))
+    }
+
+    fun `test passed data overrides controller variable of the same name`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element('Director/filmography', ['metadata' => 42, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        assertNotNull(myFixture.lookupElementStrings)
+        assertEquals("int", typeTextOf("${'$'}metadata"))
+    }
+
+    fun `test passed element data suppresses undefined variable warnings`() {
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}this->set('fromTemplate', 'x');
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}table;
+        echo ${'$'}count;
+        echo ${'$'}fromTemplate;
+        echo ${'$'}moviesTable;
+        """.trimIndent())
+
+        // No <warning> markup: none of these variables may be reported as undefined
+        myFixture.checkHighlighting(true, false, false)
+    }
+
+    fun `test elements passing each other variables terminate`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        echo ${'$'}this->element('cycle_a');
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/cycle_a.php", """
+        <?php
+        echo ${'$'}this->element('cycle_b', ['x' => ${'$'}y, 'fromA' => 1]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/cycle_b.php", """
+        <?php
+        echo ${'$'}this->element('cycle_a', ['y' => ${'$'}x, 'fromB' => 2]);
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        // cycle_a passes x and fromA into cycle_b. The point is termination: the type of x is
+        // the type of y in cycle_a, which is the type of x in cycle_b, and so on.
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Passed var missing: $result", result!!.contains("${'$'}x"))
+        assertTrue("Passed var missing: $result", result.contains("${'$'}fromA"))
+        typeTextOf("${'$'}x")
+    }
+
+    // ---- $var holding the data: set($vars) and element('x', $vars) ------------------------
+
+    fun `test controller set with an array variable completes the real variable names`() {
+        val file = myFixture.addFileToProject("cake5/templates/Movie/variable_array_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.configureFromExistingVirtualFile(file.virtualFile)
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}movie", "${'$'}director", "${'$'}year")))
+        assertFalse("The indirection variable is not a view variable: $result", result.contains("${'$'}vars"))
+        assertEquals("int", typeTextOf("${'$'}year"))
+        assertEquals("string", typeTextOf("${'$'}movie"))
+    }
+
+    fun `test controller set with a compact variable completes the real variable names`() {
+        val file = myFixture.addFileToProject("cake5/templates/Movie/variable_compact_test.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.configureFromExistingVirtualFile(file.virtualFile)
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}genre", "${'$'}rating")))
+        assertEquals("string", typeTextOf("${'$'}genre"))
+        assertEquals("float", typeTextOf("${'$'}rating"))
+    }
+
+    fun `test variable holding element data is completed`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}data = ['viaVar' => ${'$'}moviesTable, 'viaCount' => 3];
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}viaVar", "${'$'}viaCount")))
+        assertFalse("The indirection variable is not a view variable: $result", result.contains("${'$'}data"))
+        assertEquals("int", typeTextOf("${'$'}viaCount"))
+    }
+
+    fun `test type of variable holding element data chains through the template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}data = ['viaVar' => ${'$'}moviesTable, 'viaCount' => 3];
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}viaVar-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", result)
+        assertTrue("Expected findOwnedBy, got: $result", result!!.contains("findOwnedBy"))
+    }
+
+    fun `test variable holding compact element data is completed`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}crumbs = ['Home'];
+        ${'$'}vars = compact('crumbs', 'metadata');
+        echo ${'$'}this->element('breadcrumb', ${'$'}vars);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/breadcrumb.php", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}crumbs", "${'$'}metadata")))
+    }
+
+    fun `test variable holding element data suppresses undefined variable warnings`() {
+        myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
+        <?php
+        ${'$'}data = ['viaVar' => ${'$'}moviesTable, 'viaCount' => 3];
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake5/templates/element/Director/filmography.php", """
+        <?php
+        echo ${'$'}viaVar;
+        echo ${'$'}viaCount;
+        """.trimIndent())
+        myFixture.checkHighlighting(true, false, false)
+    }
 }

@@ -531,4 +531,78 @@ class ViewVariableTest : Cake3BaseTestCase() {
         assertTrue(result!!.contains("findOwnedBy"))
     }
 
+    // ---- data passed to elements and $this->set() inside view files -----------------------
+
+    private fun typeTextOf(lookupString: String): String? {
+        val element = myFixture.lookupElements!!.find { it.lookupString == lookupString }
+        assertNotNull("Should find $lookupString in completion", element)
+        val presentation = LookupElementPresentation()
+        element!!.renderElement(presentation)
+        return presentation.typeText
+    }
+
+    fun `test variables passed to element are completed`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/film_director.ctp", """
+        <?php
+        ${'$'}this->set('fromTemplate', 'x');
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Passed var missing: $result", result!!.contains("${'$'}table"))
+        assertTrue("Passed literal missing: $result", result.contains("${'$'}count"))
+        assertTrue("Controller var missing: $result", result.contains("${'$'}moviesTable"))
+        assertTrue("Template set() var missing: $result", result.contains("${'$'}fromTemplate"))
+        assertEquals("int", typeTextOf("${'$'}count"))
+        assertEquals("string", typeTextOf("${'$'}fromTemplate"))
+    }
+
+    fun `test type of variable passed to element chains through the template`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/film_director.ctp", """
+        <?php
+        echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}table-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", result)
+        assertTrue("Expected findOwnedBy, got: $result", result!!.contains("findOwnedBy"))
+    }
+
+    fun `test variable holding element data is completed and typed`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/film_director.ctp", """
+        <?php
+        ${'$'}data = ['viaVar' => ${'$'}moviesTable, 'viaCount' => 3];
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}viaVar", "${'$'}viaCount")))
+        assertEquals("int", typeTextOf("${'$'}viaCount"))
+
+        myFixture.configureByFilePathAndText("cake3/src/Template/Element/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}viaVar-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+        val methods = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", methods)
+        assertTrue("Expected findOwnedBy, got: $methods", methods!!.contains("findOwnedBy"))
+    }
 }

@@ -1,6 +1,12 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
+import com.daveme.chocolateCakePHP.view.viewvariableindex.RawViewVar
+import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableASTDataIndexer
+import com.daveme.chocolateCakePHP.view.viewvariableindex.elementDataKey
+import com.daveme.chocolateCakePHP.view.viewvariableindex.viewSetKey
 import com.daveme.chocolateCakePHP.view.viewvariableindex.VarKind
 import com.daveme.chocolateCakePHP.view.viewvariableindex.SourceKind
 import com.intellij.util.indexing.FileContentImpl
@@ -43,7 +49,9 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
         // Test that indexing works without exceptions
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify we get results
         assertFalse("Index result should not be empty", indexResult.isEmpty())
@@ -88,7 +96,9 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val controllerFile = myFixture.file
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // If we have indexed variables, test that type resolution doesn't crash
         indexResult.values.forEach { viewVariablesWithRawVars ->
@@ -123,7 +133,9 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify we got SOME result (not empty means the file was processed as a controller)
         assertFalse("Index result should not be empty - file should be recognized as controller. Path was: ${controllerFile.virtualFile.path}",
@@ -170,7 +182,9 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         val controllerKey = "Movies:localTest"
         assertTrue("Index should contain key for Movies:localTest", indexResult.containsKey(controllerKey))
@@ -202,7 +216,9 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val controllerFile = myFixture.addFileToProject("cake5/src5/Controller/MoviesController.php", controllerCode)
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
 
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         val controllerKey = "Movies:literalTest"
         assertTrue("Index should contain key for Movies:literalTest", indexResult.containsKey(controllerKey))
@@ -220,5 +236,133 @@ class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
         val countVar = viewVariables["count"]!!
         assertEquals("count should be PAIR kind", VarKind.PAIR, countVar.varKind)
         assertEquals("count source kind should be LITERAL", SourceKind.LITERAL, countVar.varHandle.sourceKind)
+    }
+
+    // ---- view files: element data arrays and $this->set() -------------------------------
+
+    private fun indexOfViewFile(path: String, code: String): Map<String, Map<String, RawViewVar>> {
+        // The element directory must exist for the element path prefix to resolve
+        myFixture.copyFileToProject("cake5/templates/element/breadcrumb.php")
+        val viewFile = myFixture.addFileToProject(path, code)
+        val fileContent = FileContentImpl.createByFile(viewFile.virtualFile, project)
+        return ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
+    }
+
+    fun `test element data array is indexed under the element data key`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            echo ${'$'}this->element('Director/filmography', ['table' => ${'$'}moviesTable, 'count' => 3]);
+        """.trimIndent())
+
+        val key = elementDataKey("element/Director/filmography")
+        assertEquals("Only the element data key should be produced", setOf(key), index.keys)
+        val vars = index[key]!!
+        assertEquals(setOf("table", "count"), vars.keys)
+
+        val table = vars["table"]!!
+        assertEquals(VarKind.ARRAY, table.varKind)
+        assertEquals(SourceKind.LOCAL, table.varHandle.sourceKind)
+        assertEquals("moviesTable", table.varHandle.symbolName)
+
+        val count = vars["count"]!!
+        assertEquals(VarKind.ARRAY, count.varKind)
+        assertEquals(SourceKind.LITERAL, count.varHandle.sourceKind)
+    }
+
+    fun `test element data compact call is indexed`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            ${'$'}crumbs = ['Home'];
+            echo ${'$'}this->element('breadcrumb', compact('crumbs', 'pageTitle'));
+        """.trimIndent())
+
+        val vars = index[elementDataKey("element/breadcrumb")]!!
+        assertEquals(setOf("crumbs", "pageTitle"), vars.keys)
+        assertEquals(VarKind.COMPACT, vars["crumbs"]!!.varKind)
+        assertEquals(SourceKind.LOCAL, vars["crumbs"]!!.varHandle.sourceKind)
+        assertEquals("pageTitle", vars["pageTitle"]!!.varHandle.symbolName)
+    }
+
+    fun `test element call without data is not indexed`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            echo ${'$'}this->element('breadcrumb');
+        """.trimIndent())
+        assertTrue("No keys expected, got: ${index.keys}", index.isEmpty())
+    }
+
+    fun `test variable as element data is indexed as an indirection`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            ${'$'}data = ['a' => 1, 'b' => 2];
+            echo ${'$'}this->element('breadcrumb', ${'$'}data);
+        """.trimIndent())
+        val vars = index[elementDataKey("element/breadcrumb")]!!
+        val entry = vars["data"]!!
+        assertEquals(VarKind.VARIABLE_ARRAY, entry.varKind)
+        assertEquals("data", entry.varHandle.symbolName)
+    }
+
+    fun `test ternary element name attaches data to both elements`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            echo ${'$'}this->element(${'$'}compact ? 'short' : 'long', ['x' => 1, 'y' => 2]);
+        """.trimIndent())
+        assertEquals(setOf(elementDataKey("element/short"), elementDataKey("element/long")), index.keys)
+        assertEquals(setOf("x", "y"), index[elementDataKey("element/short")]!!.keys)
+        assertEquals(setOf("x", "y"), index[elementDataKey("element/long")]!!.keys)
+    }
+
+    fun `test two calls to the same element in one file merge their data`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            echo ${'$'}this->element('breadcrumb', ['a' => 1]);
+            echo ${'$'}this->element('breadcrumb', ['b' => 2]);
+        """.trimIndent())
+        assertEquals(setOf("a", "b"), index[elementDataKey("element/breadcrumb")]!!.keys)
+    }
+
+    fun `test view file set call is indexed under the view set key`() {
+        val index = indexOfViewFile("cake5/templates/Movie/index.php", """
+            <?php
+            ${'$'}this->set('fromTemplate', 'x');
+            ${'$'}this->set(['other' => ${'$'}foo]);
+            ${'$'}this->set(compact('third'));
+        """.trimIndent())
+
+        val key = viewSetKey("Movie/index")
+        assertEquals(setOf(key), index.keys)
+        val vars = index[key]!!
+        assertEquals(setOf("fromTemplate", "other", "third"), vars.keys)
+        assertEquals(VarKind.PAIR, vars["fromTemplate"]!!.varKind)
+        assertEquals(VarKind.ARRAY, vars["other"]!!.varKind)
+        assertEquals(VarKind.COMPACT, vars["third"]!!.varKind)
+    }
+
+    fun `test view set key matches the canonical key of the file`() {
+        val settings = Settings.getInstance(project)
+        // A data view subdirectory is stripped by canonicalization, so the indexer must use it too
+        val index = indexOfViewFile("cake5/templates/Movie/json/index.php", """
+            <?php
+            ${'$'}this->set('a', 1);
+            ${'$'}this->set('b', 2);
+        """.trimIndent())
+        val viewFile = myFixture.findFileInTempDir("cake5/templates/Movie/json/index.php")!!
+        val templatesDir = templatesDirectoryOfViewFile(project, settings, viewFile)!!
+        val canonical = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, viewFile.path)
+
+        assertEquals(setOf(viewSetKey(canonical)), index.keys)
+        assertEquals(viewSetKey("Movie/index"), index.keys.single())
+    }
+
+    fun `test element and set calls in one element file are both indexed`() {
+        val index = indexOfViewFile("cake5/templates/element/outer.php", """
+            <?php
+            ${'$'}this->set('shared', 'x');
+            echo ${'$'}this->element('inner', ['passed' => 1, 'other' => 2]);
+        """.trimIndent())
+        assertEquals(setOf(viewSetKey("element/outer"), elementDataKey("element/inner")), index.keys)
     }
 }
