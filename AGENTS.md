@@ -13,7 +13,7 @@ branch is currently checked out, ask which feature branch to switch
 to prior to beginning work.
 
 We should commit after each significant step. You should add a
-`Co-Authored-By` annotation for Claude to each commit.
+`Co-Authored-By` annotation to each commit.
 
 Be wary of rebasing to undo a mistake. You can amend the previous
 commit, but if you have to go back further in the history, prefer
