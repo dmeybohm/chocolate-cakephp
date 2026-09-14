@@ -310,3 +310,23 @@ A second review of PR #290 found three more issues, fixed with regression tests 
 - **The `compact()` fallback could pick up a closure's variable.** `scopeVariable` skips variables
   whose enclosing scope differs, matching `lastAssignmentBefore`, so a closure parameter no longer
   shadows the template's inherited view variable.
+
+## Third review follow-up plan (2026-09-14)
+
+Two findings are local lookup fixes:
+
+1. Restrict `scopeVariable`'s fallback scan to variables at or before the indexed use offset. This
+   prevents an assignment later in a template from supplying the type for an earlier
+   `compact('name')`; when no earlier occurrence exists, resolution should continue to the inherited
+   view-variable lookup.
+2. Compare indirect `compact()` function names case-insensitively everywhere PSI expansion and
+   name-only fallback recognize them, matching PHP semantics and the direct AST parser.
+3. Add CakePHP 5 regression tests first, then mirror the focused cases across CakePHP 2–4 and run
+   the version-specific `ViewVariableCallsTest` suites.
+
+The remaining source-order finding is not a local offset-filter change. Element and view `render()`
+references execute at their call offsets, but layout-selection references describe a layout rendered
+after the entire template. Multiple calls from the same ancestor are also alternative renderings whose
+visible variable names and types must be unioned, not sequentially overwritten. Addressing this safely
+requires preserving reference kind and call-site context through the reverse traversal; it is deferred
+from this small follow-up rather than applying a filter that would regress layout propagation.
