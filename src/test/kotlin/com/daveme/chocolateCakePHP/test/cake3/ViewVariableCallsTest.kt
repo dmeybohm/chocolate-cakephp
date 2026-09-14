@@ -162,6 +162,27 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
             .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
     }
 
+    fun `test compact ignores same-named assignment after the call`() {
+        controller("${'$'}this->set('movie', 42);")
+        caller("""
+            ${'$'}this->element('review', compact('movie'));
+            ${'$'}movie = new \\DateTime();
+        """)
+        assertEquals(setOf("int"), ViewVariableIndexService
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
+    }
+
+    fun `test indirect compact name is case insensitive`() {
+        caller("""
+            ${'$'}title = 'Example';
+            ${'$'}data = COMPACT('title');
+            ${'$'}this->element('review', ${'$'}data);
+        """)
+        assertEquals(setOf("title"), variables().keys)
+        assertTrue(exists("title"))
+        assertEquals(setOf("string"), variables()["title"]!!.phpType.concreteTypeNames())
+    }
+
     fun `test inspection warns only for unpassed container`() {
         caller("${'$'}data = ['title' => 'Example']; ${'$'}this->element('review', ${'$'}data);")
         myFixture.enableInspections(com.jetbrains.php.lang.inspections.PhpUndefinedVariableInspection::class.java)

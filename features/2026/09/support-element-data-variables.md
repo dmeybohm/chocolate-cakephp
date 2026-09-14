@@ -330,3 +330,15 @@ after the entire template. Multiple calls from the same ancestor are also altern
 visible variable names and types must be unioned, not sequentially overwritten. Addressing this safely
 requires preserving reference kind and call-site context through the reverse traversal; it is deferred
 from this small follow-up rather than applying a filter that would regress layout propagation.
+
+### Implementation Progress — Session #5 (third review follow-up, 2026-09-14)
+
+- Restricted `scopeVariable` fallback candidates to occurrences at or before the indexed use. An
+  inherited variable passed through `compact()` is no longer mistyped from an assignment later in
+  the template.
+- Made all PSI-side recognition of indirect `compact()` calls case-insensitive, matching PHP and the
+  direct AST parser.
+- Added both regressions to the CakePHP 2–5 `ViewVariableCallsTest` suites. The CakePHP 5 tests failed
+  on both cases before implementation and passed afterwards; all 60 version-specific call tests pass.
+- The full offline suite passes all 782 tests with no failures or skips.
+- Source-order-aware view `set()` propagation remains deferred for the reasons documented above.

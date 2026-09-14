@@ -472,7 +472,7 @@ object ViewVariableIndexService {
                     val valueExpression = hashElement.value ?: return@mapNotNull null
                     RawViewVar(key, VarKind.ARRAY, hashElement.textRange.startOffset, handleForPsiValue(valueExpression))
                 }
-                is FunctionReference -> if (value.name == "compact") {
+                is FunctionReference -> if (value.name.equals("compact", ignoreCase = true)) {
                     return (value.parameterList?.parameters ?: emptyArray())
                         .filterIsInstance<StringLiteralExpression>()
                         .map { param ->
@@ -757,7 +757,7 @@ object ViewVariableIndexService {
         val value = relevantAssignment.value ?: return emptySet()
 
         // Check if this is actually a compact() call (indexer doesn't distinguish yet)
-        if (value is FunctionReference && value.name == "compact") {
+        if (value is FunctionReference && value.name.equals("compact", ignoreCase = true)) {
             return extractVariableCompactNames(rawVar, sourceFile)
         }
 
@@ -794,7 +794,7 @@ object ViewVariableIndexService {
             ?: return emptySet()
 
         val value = relevantAssignment.value
-        if (value !is FunctionReference || value.name != "compact") return emptySet()
+        if (value !is FunctionReference || !value.name.equals("compact", ignoreCase = true)) return emptySet()
 
         // Extract string parameters from compact()
         val keys = mutableSetOf<String>()
