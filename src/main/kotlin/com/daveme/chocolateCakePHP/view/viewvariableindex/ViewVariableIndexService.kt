@@ -432,7 +432,7 @@ sealed class ViewVariableSource(val key: ViewVariablesKey) {
     /** Data arrays passed to the element being looked up by `$this->element()` calls. */
     class ElementCallData(key: ViewVariablesKey) : ViewVariableSource(key)
 
-    /** `$this->set()` calls inside the file being looked up or one of the views that render it. */
+    /** `$this->set()` calls inside a view that renders the file being looked up. */
     class ViewSet(key: ViewVariablesKey) : ViewVariableSource(key)
 
     /** A controller action reached by walking render / element references backwards. */
@@ -527,10 +527,12 @@ object ViewVariableIndexService {
      *   1. ElementCallData(filenameKey) — data passed directly to this element. Only for the
      *      original key: CakePHP hands `$data` to the named element alone (it renders with
      *      `array_merge($this->viewVars, $data)`), so it does not flow into nested elements.
-     *   2. ViewSet(filenameKey) — `$this->set()` inside the file itself.
-     *   3. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet(ancestor)
+     *   2. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet(ancestor)
      *      for every template or element that renders this one, because `viewVars` is shared
      *      downwards, and ControllerAction(key) for every controller action reached.
+     *
+     * The file's own `set()` calls are not a source: its local variables are extracted before
+     * it runs, so they reach only what it renders.
      *
      * [process] returns false to stop early.
      */
@@ -541,7 +543,6 @@ object ViewVariableIndexService {
         process: (ViewVariableSource) -> Boolean
     ) {
         if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
-        if (!process(ViewVariableSource.ViewSet(viewSetKey(filenameKey)))) return
 
         val toProcess = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
             .toMutableList()
@@ -651,8 +652,8 @@ object ViewVariableIndexService {
      * Every variable available in the view file [filenameKey], with its resolved type.
      *
      * Layered the way CakePHP merges them: controller vars first, then `set()` calls in the
-     * views that render this file (farthest first), then `set()` in the file itself, then data
-     * passed in the element call, so a later layer overrides an earlier one of the same name.
+     * views that render this file (farthest first), then data passed in the element call, so a
+     * later layer overrides an earlier one of the same name.
      */
     fun lookupVariablesFromViewPathInSmartReadAction(
         project: Project,
@@ -660,7 +661,7 @@ object ViewVariableIndexService {
         filenameKey: String,
     ): ViewVariables {
         val fromControllers = ViewVariables()
-        val fromViewSets = mutableListOf<ViewVariables>() // in visiting order: this file first
+        val fromViewSets = mutableListOf<ViewVariables>() // in visiting order: nearest ancestor first
         val fromElementData = ViewVariables()
 
         forEachContributingSource(project, settings, filenameKey) { source ->

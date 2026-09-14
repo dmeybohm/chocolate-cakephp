@@ -97,13 +97,31 @@ class ViewVariableCallsTest : Cake4BaseTestCase() {
             ${'$'}this->set(${'$'}data);
             ${'$'}this->set('data', 3);
             ${'$'}this->set('first', 'last');
+            ${'$'}this->element('review');
         """)
-        val vars = variables("Movie/review")
+        val vars = variables()
         assertEquals(setOf("title", "first", "second", "data"), vars.keys)
         assertEquals(setOf("string"), vars["title"]!!.phpType.concreteTypeNames())
         assertEquals(setOf("string"), vars["first"]!!.phpType.concreteTypeNames())
         assertEquals(setOf("string"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, "Movie/review", "title").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "title").concreteTypeNames())
+    }
+
+    fun `test set reaches rendered elements but not the setting file`() {
+        caller("${'$'}this->set('title', 1); ${'$'}this->element('review');")
+        assertFalse(variables("Movie/review").containsKey("title"))
+        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, "Movie/review", "title"))
+        assertTrue(variables().containsKey("title"))
+    }
+
+    fun `test comments between arguments are ignored`() {
+        caller("""
+            ${'$'}this->set('fromSet', /* c */ 1);
+            ${'$'}this->element('review', /* vars */ ['title' => 'x']);
+        """)
+        assertTrue(exists("title"))
+        assertEquals(setOf("int"), ViewVariableIndexService
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "fromSet").concreteTypeNames())
     }
 
     private fun controller(body: String) {
@@ -130,6 +148,16 @@ class ViewVariableCallsTest : Cake4BaseTestCase() {
     fun `test compact forwards inherited variable without local reference`() {
         controller("${'$'}this->set('movie', 42);")
         caller("${'$'}this->element('review', compact('movie'));")
+        assertEquals(setOf("int"), ViewVariableIndexService
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
+    }
+
+    fun `test compact ignores same-named variable inside a closure`() {
+        controller("${'$'}this->set('movie', 42);")
+        caller("""
+            ${'$'}format = function (\DateTime ${'$'}movie) { return ${'$'}movie; };
+            ${'$'}this->element('review', compact('movie'));
+        """)
         assertEquals(setOf("int"), ViewVariableIndexService
             .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
     }

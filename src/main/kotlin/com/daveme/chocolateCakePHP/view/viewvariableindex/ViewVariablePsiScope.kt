@@ -49,7 +49,8 @@ internal fun scopeParameter(sourceFile: PsiFile, symbolName: String, offset: Int
  * A `$symbolName` variable usable for type inference: the variable at [offset] itself when it
  * is that variable (a `$value` passed in an array or a `set()` pair), else the first such
  * variable in the enclosing scope (for `compact('name')`, where the offset is on a string).
- * Null when the scope never mentions the variable.
+ * Variables inside nested functions or closures are not considered. Null when the scope never
+ * mentions the variable.
  */
 internal fun scopeVariable(sourceFile: PsiFile, symbolName: String, offset: Int): Variable? {
     val at = sourceFile.findElementAt(offset) ?: return null
@@ -57,6 +58,7 @@ internal fun scopeVariable(sourceFile: PsiFile, symbolName: String, offset: Int)
     if (here != null && here.name == symbolName) {
         return here
     }
-    return PsiTreeUtil.findChildrenOfType(enclosingScope(at), Variable::class.java)
-        .firstOrNull { it.name == symbolName }
+    val scope = enclosingScope(at)
+    return PsiTreeUtil.findChildrenOfType(scope, Variable::class.java)
+        .firstOrNull { it.name == symbolName && enclosingScope(it) == scope }
 }

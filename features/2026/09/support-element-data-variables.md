@@ -42,12 +42,13 @@ For a file `X` being completed, the sources are visited in this order:
 
 1. `element-data:X` — data passed directly to `X`. Queried for the **original key only**: CakePHP passes
    `$data` just to the named element; it does not flow into elements that element renders.
-2. `view-set:X`, then `view-set:<ancestor>` for every view file the BFS re-keys on the way to controllers.
-   `viewVars` is shared downwards, so a template's `set()` reaches nested elements. Slight superset: a
-   `set()` late in a file counts for the whole file and for sibling elements.
+2. `view-set:<ancestor>` for every view file the BFS re-keys on the way to controllers. `viewVars` is
+   shared downwards, so a template's `set()` reaches nested elements. `view-set:X` itself is not queried:
+   `X`'s locals are extracted before it runs, so its own `set()` reaches only what it renders (session #4).
+   Slight superset: a `set()` late in a file counts for every element it renders.
 3. Controller action keys reached by the existing BFS (unchanged).
 
-Completion layering: controller vars, then view-set vars (ancestor first, original last), then element data,
+Completion layering: controller vars, then view-set vars (farthest ancestor first), then element data,
 so passed data overrides a same-named view var, matching `array_merge`. Types are unioned.
 
 ## Design
@@ -296,3 +297,16 @@ rewrite is included in these fixes.
   index seam was introduced. The inherited compact case exercises the recursive lookup path.
 - The physical element keys and directory-existence behavior remain unchanged; the separate logical
   element-name proposal is still pending.
+
+### Implementation Progress — Session #4 (second review, 2026-09-14)
+
+A second review of PR #290 found three more issues, fixed with regression tests for CakePHP 2–5:
+
+- **A file's own `set()` counted for itself.** `forEachContributingSource` no longer emits
+  `ViewSet(filenameKey)`; a template's `set()` reaches its elements and layout, not its own locals.
+  `test set merges expanded entries in call order` now reads the merged vars from a rendered element.
+- **Comments were counted as arguments.** `parameterNodes()` skips `PsiComment` children, so
+  `element('x', /* c */ [...])` and `set('x', /* c */ $v)` index normally.
+- **The `compact()` fallback could pick up a closure's variable.** `scopeVariable` skips variables
+  whose enclosing scope differs, matching `lastAssignmentBefore`, so a closure parameter no longer
+  shadows the template's inherited view variable.

@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.lang.ASTNode
+import com.intellij.psi.PsiComment
 import com.intellij.psi.TokenType
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
 import com.jetbrains.php.lang.parser.PhpElementTypes
@@ -113,12 +114,15 @@ data class MethodCallParts(
         receiverName == "this" && methodName?.equals(name, ignoreCase = true) == true
 }
 
-/** Significant children of a PARAMETER_LIST node (no whitespace, no commas). */
+/** Significant children of a PARAMETER_LIST node (no whitespace, comments or commas). */
 fun ASTNode.parameterNodes(): List<ASTNode> {
     val result = mutableListOf<ASTNode>()
     var child = firstChildNode
     while (child != null) {
-        if (child.elementType != TokenType.WHITE_SPACE && child.elementType != PhpTokenTypes.opCOMMA) {
+        if (child.elementType != TokenType.WHITE_SPACE &&
+            child.elementType != PhpTokenTypes.opCOMMA &&
+            child.psi !is PsiComment
+        ) {
             result.add(child)
         }
         child = child.treeNext
