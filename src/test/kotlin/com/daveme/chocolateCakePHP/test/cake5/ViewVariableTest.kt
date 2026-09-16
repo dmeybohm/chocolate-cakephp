@@ -759,7 +759,7 @@ class ViewVariableTest: Cake5BaseTestCase() {
         assertEquals("int", typeTextOf("${'$'}year"))
     }
 
-    fun `test passed data overrides controller variable of the same name`() {
+    fun `test passed data and controller variable of the same name union their types`() {
         myFixture.configureByFilePathAndText("cake5/templates/Movie/film_director.php", """
         <?php
         echo ${'$'}this->element('Director/filmography', ['metadata' => 42, 'count' => 3]);
@@ -771,7 +771,7 @@ class ViewVariableTest: Cake5BaseTestCase() {
         myFixture.completeBasic()
 
         assertNotNull(myFixture.lookupElementStrings)
-        assertEquals("int", typeTextOf("${'$'}metadata"))
+        assertEquals("int|string[]", typeTextOf("${'$'}metadata"))
     }
 
     fun `test passed element data suppresses undefined variable warnings`() {

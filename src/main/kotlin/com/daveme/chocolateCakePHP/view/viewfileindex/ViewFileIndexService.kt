@@ -36,7 +36,8 @@ data class ViewReferenceData(
 
 data class PsiElementAndPath(
     val path: String,
-    val elementPointer: SmartPsiElementPointer<PsiElement>
+    val elementPointer: SmartPsiElementPointer<PsiElement>,
+    val offset: Int
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
@@ -170,7 +171,7 @@ object ViewFileIndexService {
                         ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
                         ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element))
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset)
                 }
                 true
             },

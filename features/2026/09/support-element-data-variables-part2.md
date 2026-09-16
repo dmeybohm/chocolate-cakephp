@@ -165,6 +165,80 @@ the full offline suite.
 - General plugin-qualified element resolution beyond what is necessary to keep view-set sources
   isolated.
 
+## Simplification
+
+The design above keeps each reference's kind so a layout edge could skip the cutoff. That is not
+needed: ViewFileIndex records only `render()`, `element()`, `$this->view =`, `setTemplate()` and
+implicit controller renders. Layout selection is never indexed, so the reverse walk has no layout
+edge, and every edge out of a view file is an immediate `element()`/`render()` call. Each edge
+therefore needs only its physical file and its offset. Both indexers store a call's
+`node.startOffset`, so the two offsets can be compared directly. If layout references are indexed
+later, those edges should skip the cutoff.
+
 ## Implementation progress
 
-Not started.
+### Session #1 (2026-09-14)
+
+- `PsiElementAndPath` carries the reference offset it was already read from. No index format or
+  version changes.
+- `ViewVariableSource.ViewSet` carries the rendering file and the render call's offset. `view-set:`
+  records are read only from that file, via the `inFile` argument of `processValues()`, and only
+  calls before the offset are kept. The callback still only collects records.
+- The reverse walk emits one `ViewSet` per render call, dedups references by (path, offset) instead
+  of by canonical key, and expands each ancestor file's references once. It still skips the file's
+  own key and keeps the lookup bound.
+- Completion keeps one layer per rendering file; a file's repeated render calls union their types.
+  Type lookup and existence checks use the same filtered sources.
+- New tests in each version's `ViewVariableCallsTest` cover `set()` after `element()`/`render()`,
+  repeated calls with and without an overwrite between them, nested cutoffs, a `json` data-view
+  template sharing the canonical key, and the undefined-variable inspection. The seven CakePHP 5
+  cases failed before the change; all pass for CakePHP 2–5.
+- The full offline suite passes 810 tests with no failures, errors, or skips.
+
+### Session #2 (2026-09-14)
+
+- Review found that completion unioned repeated render calls from one file, but different files on
+  alternative reverse-render paths still overwrote one another during final layering.
+- The bounded reverse walk now retains complete paths. Completion applies controller and view
+  sources in runtime order within each path, preserving nearer-view overrides, then unions the
+  possible types produced by separate paths. Type lookup and existence checks flatten the same
+  paths because they need only unions or presence.
+- Added CakePHP 2–5 regressions for two separate templates rendering the same element with different
+  variable types, plus a guard that a nearer `set()` still overrides an outer `set()` on one path.
+- The new CakePHP 5 alternative-path test failed before the implementation and passed afterwards.
+- All 96 version-specific call tests and the full 818-test offline suite pass.
+
+### Session #3 (2026-09-16)
+
+- Review found that keeping full paths spent the 15-lookup budget once per path. With an element
+  rendered four times by `outer`, which a template renders four times, the budget ran out before
+  the controller, and its variables disappeared from completion and existence checks.
+- References into a view are now resolved once per walk and shared by every path through it. The
+  budget is spent once per distinct (file, offset) reference, as before paths were kept, and a
+  separate cap of 50 paths bounds how far paths can multiply.
+- Paths share their source objects, so completion caches each source's resolved variables, and
+  the flattened type/existence lookups visit each source once.
+- Added a CakePHP 2–5 regression for that 4 × 4 fan-out, checking completion, existence, and type
+  lookup of the controller variable.
+- Still open: type lookup unions every source, so a nearer `set()` does not hide an outer one
+  there as it does in completion.
+
+### Session #4 (2026-09-16)
+
+- Decided that completion unions a variable's types across all sources, matching type lookup,
+  instead of letting a nearer source win. This supersedes "retain element-call data precedence
+  over inherited view variables" in the design above.
+  - Nearest-wins is only right when the nearer `set()` or passed data always applies. Elements
+    often set variables conditionally or are rendered in branches, and control flow is out of
+    scope, so nearest-wins could drop a real type and cause false inspection results through
+    `ViewVariableTypeProvider`.
+  - A union costs at most extra types, and same-typed overrides are unaffected.
+  - Within one source, `set()` calls still overwrite in call order.
+- With no precedence to preserve, full render paths are no longer needed. The reverse walk is back
+  to a single deduplicated pass: one ViewSet per render call, each reference visited once, and each
+  ancestor file expanded once within the 15-lookup budget. The path cap and per-source caches from
+  sessions #2–#3 are gone.
+- Flipped the nearer-set test to expect `int|string` in completion and type lookup, and added a
+  test that passed element data unions with an inherited variable (CakePHP 2–5). Changed the
+  CakePHP 5 `ViewVariableTest` passed-data case to expect `int|string[]`. The fan-out regression test
+  still passes.

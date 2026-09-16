@@ -45,11 +45,12 @@ For a file `X` being completed, the sources are visited in this order:
 2. `view-set:<ancestor>` for every view file the BFS re-keys on the way to controllers. `viewVars` is
    shared downwards, so a template's `set()` reaches nested elements. `view-set:X` itself is not queried:
    `X`'s locals are extracted before it runs, so its own `set()` reaches only what it renders (session #4).
-   Slight superset: a `set()` late in a file counts for every element it renders.
+   Only the ancestor file's own `set()` calls before its render call count (see part 2).
 3. Controller action keys reached by the existing BFS (unchanged).
 
-Completion layering: controller vars, then view-set vars (farthest ancestor first), then element data,
-so passed data overrides a same-named view var, matching `array_merge`. Types are unioned.
+Completion and type lookup union a variable's types across all sources, since a `set()` elsewhere or
+passed data may not apply on every render (see part 2, session #4). Within one source, `set()` calls
+overwrite in call order.
 
 ## Design
 
