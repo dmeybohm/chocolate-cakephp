@@ -532,55 +532,76 @@ object ViewVariableIndexService {
      *
      * The file's own `set()` calls are not a source: its local variables are extracted before
      * it runs, so they reach only what it renders.
+     *
+     * Paths that share an ancestor share its resolved references and source objects, so the
+     * lookup budget is spent once per distinct reference, and the number of paths is capped
+     * separately.
      */
     private fun contributingSourcePaths(
         project: Project,
         settings: Settings,
         filenameKey: String,
     ): List<List<ViewVariableSource>> {
+        /** A reference into a view: [viewKey] is null for a controller, [source] null if it adds nothing. */
+        class Reference(val id: Pair<String, Int>, val viewKey: String?, val source: ViewVariableSource?)
+
         data class PendingPath(
             val viewKey: String,
             val sources: List<ViewVariableSource>, // nearest view first, controller last
             val seenReferences: Set<Pair<String, Int>>
         )
 
-        val toProcess = mutableListOf(PendingPath(filenameKey, emptyList(), emptySet()))
-        val result = mutableListOf<List<ViewVariableSource>>()
+        val referencesByViewKey = mutableMapOf<String, List<Reference>>()
+        val spentReferences = mutableSetOf<Pair<String, Int>>()
         var maxLookups = 15
+        val maxPaths = 50
 
-        while (toProcess.isNotEmpty()) {
-            val path = toProcess.removeAt(0)
-            var extended = false
-            for (elementAndPath in ViewFileIndexService.referencingElementsInSmartReadAction(project, path.viewKey)) {
-                val referenceId = elementAndPath.path to elementAndPath.offset
-                if (referenceId in path.seenReferences || maxLookups == 0) continue
-                maxLookups -= 1
+        fun referencesTo(viewKey: String): List<Reference> = referencesByViewKey.getOrPut(viewKey) {
+            ViewFileIndexService.referencingElementsInSmartReadAction(project, viewKey).mapNotNull { elementAndPath ->
+                val id = elementAndPath.path to elementAndPath.offset
+                if (id !in spentReferences) {
+                    if (maxLookups == 0) return@mapNotNull null
+                    maxLookups -= 1
+                    spentReferences.add(id)
+                }
 
                 if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                    val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
-                    result.add(path.sources + ViewVariableSource.ControllerAction(controllerKey))
-                    extended = true
-                    continue
+                    val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: return@mapNotNull null
+                    return@mapNotNull Reference(id, null, ViewVariableSource.ControllerAction(controllerKey))
                 }
 
                 val containingFile = ReadAction.compute<PsiFile?, Nothing> {
                     elementAndPath.psiElement?.containingFile
-                } ?: continue
-                val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
+                } ?: return@mapNotNull null
+                val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile)
+                    ?: return@mapNotNull null
                 val ancestorKey = ViewFileIndexService.canonicalizeFilenameToKey(
                     templatesDir,
                     settings,
                     elementAndPath.path
                 )
-                val ancestorFile = containingFile.virtualFile ?: continue
-                val nextSources = if (ancestorKey == filenameKey) {
-                    path.sources
+                val ancestorFile = containingFile.virtualFile ?: return@mapNotNull null
+                val source = if (ancestorKey == filenameKey) null
+                    else ViewVariableSource.ViewSet(viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset)
+                Reference(id, ancestorKey, source)
+            }
+        }
+
+        val toProcess = mutableListOf(PendingPath(filenameKey, emptyList(), emptySet()))
+        val result = mutableListOf<List<ViewVariableSource>>()
+
+        while (toProcess.isNotEmpty()) {
+            val path = toProcess.removeAt(0)
+            var extended = false
+            for (reference in referencesTo(path.viewKey)) {
+                if (reference.id in path.seenReferences) continue
+                if (result.size + toProcess.size >= maxPaths) break
+                val sources = if (reference.source == null) path.sources else path.sources + reference.source
+                if (reference.viewKey == null) {
+                    result.add(sources)
                 } else {
-                    path.sources + ViewVariableSource.ViewSet(
-                        viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset
-                    )
+                    toProcess.add(PendingPath(reference.viewKey, sources, path.seenReferences + reference.id))
                 }
-                toProcess.add(PendingPath(ancestorKey, nextSources, path.seenReferences + referenceId))
                 extended = true
             }
             if (!extended) {
@@ -597,11 +618,13 @@ object ViewVariableIndexService {
         process: (ViewVariableSource) -> Boolean
     ) {
         // Flattening paths is sufficient for type unions and existence checks. Completion keeps
-        // the paths separate so it can preserve sequential overwrite precedence.
+        // the paths separate so it can preserve sequential overwrite precedence. Paths share
+        // source objects, so each source is visited once.
         if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
+        val visited = mutableSetOf<ViewVariableSource>()
         for (path in contributingSourcePaths(project, settings, filenameKey)) {
             for (source in path) {
-                if (!process(source)) return
+                if (visited.add(source) && !process(source)) return
             }
         }
     }
@@ -720,10 +743,11 @@ object ViewVariableIndexService {
         // the routes. A nearer view's set() overwrites an outer value on the same route, while
         // unrelated rendering files remain alternatives.
         val result = ViewVariables()
+        val variablesBySource = HashMap<ViewVariableSource, ViewVariables>() // paths share sources
         for (path in contributingSourcePaths(project, settings, filenameKey)) {
             val pathVariables = ViewVariables()
             for (source in path.asReversed()) {
-                pathVariables.putAll(variablesFromSource(source, false))
+                pathVariables.putAll(variablesBySource.getOrPut(source) { variablesFromSource(source, false) })
             }
             for ((name, value) in pathVariables) {
                 val previous = result[name]

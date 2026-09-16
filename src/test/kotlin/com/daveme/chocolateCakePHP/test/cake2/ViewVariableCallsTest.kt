@@ -245,6 +245,15 @@ class ViewVariableCallsTest : Cake2BaseTestCase() {
         assertEquals(setOf("int", "string"), typeOf("x"))
     }
 
+    fun `test repeated render calls do not exhaust the lookup budget`() {
+        controller("${'$'}this->set('fromController', 1);")
+        myFixture.addFileToProject("$root/Element/outer.$extension", "<?php " + "${'$'}this->element('review');".repeat(4))
+        caller("${'$'}this->element('outer');".repeat(4))
+        assertTrue(exists("fromController"))
+        assertTrue(variables().containsKey("fromController"))
+        assertEquals(setOf("int"), typeOf("fromController"))
+    }
+
     fun `test nearer set overrides outer set on one render path`() {
         myFixture.addFileToProject("$root/Element/outer.$extension",
             "<?php ${'$'}this->set('x', 1); ${'$'}this->element('review');")

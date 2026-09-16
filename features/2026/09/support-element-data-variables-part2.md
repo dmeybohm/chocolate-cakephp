@@ -207,3 +207,18 @@ later, those edges should skip the cutoff.
   variable types, plus a guard that a nearer `set()` still overrides an outer `set()` on one path.
 - The new CakePHP 5 alternative-path test failed before the implementation and passed afterwards.
 - All 96 version-specific call tests and the full 818-test offline suite pass.
+
+### Session #3 (2026-09-16)
+
+- Review found that keeping full paths spent the 15-lookup budget once per path. With an element
+  rendered four times by `outer`, which a template renders four times, the budget ran out before
+  the controller, and its variables disappeared from completion and existence checks.
+- References into a view are now resolved once per walk and shared by every path through it. The
+  budget is spent once per distinct (file, offset) reference, as before paths were kept, and a
+  separate cap of 50 paths bounds how far paths can multiply.
+- Paths share their source objects, so completion caches each source's resolved variables, and
+  the flattened type/existence lookups visit each source once.
+- Added a CakePHP 2–5 regression for that 4 × 4 fan-out, checking completion, existence, and type
+  lookup of the controller variable.
+- Still open: type lookup unions every source, so a nearer `set()` does not hide an outer one
+  there as it does in completion.
