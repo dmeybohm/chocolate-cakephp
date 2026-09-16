@@ -254,12 +254,19 @@ class ViewVariableCallsTest : Cake5BaseTestCase() {
         assertEquals(setOf("int"), typeOf("fromController"))
     }
 
-    fun `test nearer set overrides outer set on one render path`() {
+    fun `test nearer and outer set on one render path union their types`() {
         myFixture.addFileToProject("$root/element/outer.$extension",
             "<?php ${'$'}this->set('x', 1); ${'$'}this->element('review');")
         caller("${'$'}this->set('x', 'outer'); ${'$'}this->element('outer');")
 
-        assertEquals(setOf("int"), variables()["x"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int", "string"), variables()["x"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int", "string"), typeOf("x"))
+    }
+
+    fun `test element data and inherited variable union their types`() {
+        caller("${'$'}this->set('title', 1); ${'$'}this->element('review', ['title' => 'text']);")
+        assertEquals(setOf("int", "string"), variables()["title"]!!.phpType.concreteTypeNames())
+        assertEquals(setOf("int", "string"), typeOf("title"))
     }
 
     fun `test nested elements apply the cutoff at each render`() {

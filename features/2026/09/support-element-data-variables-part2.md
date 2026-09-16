@@ -222,3 +222,23 @@ later, those edges should skip the cutoff.
   lookup of the controller variable.
 - Still open: type lookup unions every source, so a nearer `set()` does not hide an outer one
   there as it does in completion.
+
+### Session #4 (2026-09-16)
+
+- Decided that completion unions a variable's types across all sources, matching type lookup,
+  instead of letting a nearer source win. This supersedes "retain element-call data precedence
+  over inherited view variables" in the design above.
+  - Nearest-wins is only right when the nearer `set()` or passed data always applies. Elements
+    often set variables conditionally or are rendered in branches, and control flow is out of
+    scope, so nearest-wins could drop a real type and cause false inspection results through
+    `ViewVariableTypeProvider`.
+  - A union costs at most extra types, and same-typed overrides are unaffected.
+  - Within one source, `set()` calls still overwrite in call order.
+- With no precedence to preserve, full render paths are no longer needed. The reverse walk is back
+  to a single deduplicated pass: one ViewSet per render call, each reference visited once, and each
+  ancestor file expanded once within the 15-lookup budget. The path cap and per-source caches from
+  sessions #2–#3 are gone.
+- Flipped the nearer-set test to expect `int|string` in completion and type lookup, and added a
+  test that passed element data unions with an inherited variable (CakePHP 2–5). Changed the
+  CakePHP 5 `ViewVariableTest` passed-data case to expect `int|string[]`. The fan-out regression test
+  still passes.
