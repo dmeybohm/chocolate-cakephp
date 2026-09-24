@@ -57,7 +57,7 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
 
             val type = classReference.type
             val phpIndex = PhpIndex.getInstance(psiElement.project)
-            val viewHelperSubclasses = phpIndex.getViewHelperSubclasses(settings)
+            val viewHelperSubclasses = phpIndex.getViewHelperSubclasses(psiElement.project, settings)
             val filtered = viewHelperSubclasses.filter { !type.types.contains(it.fqn) }
 
             val isCurrentFileAViewHelper = filtered.size < viewHelperSubclasses.size
