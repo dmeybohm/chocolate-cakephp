@@ -20,9 +20,12 @@ skip list of rendering methods. This has three visible consequences:
 3. Completion lists components the class never loads.
 
 This feature indexes the configuration calls and uses them to resolve dynamic members. The
-guiding rule, decided up front: **for a given class, an explicit `loadComponent()` overrides the
-by-convention resolution.** Convention remains only as the fallback for aliases that no indexed
-class in the inheritance chain loads.
+guiding rule, decided up front: **a `loadComponent()` in `initialize()` overrides the
+by-convention resolution for that alias. A load anywhere else is unioned, not overriding.**
+`initialize()` runs unconditionally on every request, so what it loads is what the class has.
+Loads in `beforeFilter()`, in actions, or inside conditionals may be dynamic re-loads or may not
+run at all, so they widen the result instead of replacing it. Convention remains the fallback for
+aliases that no indexed class in the inheritance chain loads.
 
 Scope for this iteration is CakePHP 3, 4 and 5 (the `cake3Enabled` code path), components first.
 The design keeps CakePHP 2, helpers, and tables/behaviors in view so they slot into the same
@@ -34,23 +37,27 @@ index and resolver later without a redesign.
 
 1. Collect the inheritance chain of `C` from `PhpIndex`: `C`, its superclass, and so on, stopping
    at `\Cake\Controller\Controller` or when a class is unknown. Guard against cycles.
-2. For each class in the chain, read its indexed loads. Merge by alias. The most-derived class
-   wins when the same alias is loaded at two levels, matching `ComponentRegistry` behaviour where
-   the later load replaces the earlier instance.
-3. If alias `Foo` has an indexed load, the type is the resolution of that load (see below) and
-   nothing else. The convention union is not added.
-4. If no class in the chain loads `Foo`, fall back to today's convention union. This keeps the
+2. For each class in the chain, read its indexed loads and partition them by alias into
+   *initialize loads* (enclosing method is `initialize`) and *other loads* (any other method).
+3. If alias `Foo` has an initialize load somewhere in the chain, the base type is the resolution
+   of the most-derived initialize load (see below), matching `ComponentRegistry` behaviour where
+   a later load replaces the earlier instance. The convention union is not added. Any other loads
+   of `Foo` in the chain are unioned onto that base type, so a dynamic re-load in an action
+   widens the type rather than being ignored.
+4. If `Foo` has only other loads, the type is the union of their resolutions and today's
+   convention union. For a plain `loadComponent('Foo')` this collapses to the convention result;
+   the union only changes the outcome for aliased or plugin-prefixed loads outside `initialize()`.
+5. If no class in the chain loads `Foo`, fall back to today's convention union. This keeps the
    plugin working when the load happens in a vendor base class that is not indexed, in a
    component's own `$components` list, or through `$this->components()->load()`.
 
-Loads are indexed from anywhere in the class body, not only `initialize()`. Loads in
-`beforeFilter()`, in actions, and inside conditionals all count. They are all unioned into the
-class's loaded set. Restricting to `initialize()` would make the override rule wrong for classes
-that load conditionally, and the AST scan cost is the same either way.
+Loads are indexed from anywhere in the class body. The enclosing method name is stored with each
+load so the resolver can apply the partition above, and so CakePHP 2's `beforeFilter()` loads
+and future diagnostics have the same information available.
 
 ### Resolving a single load
 
-A load is recorded as `(alias, loadedName, className?)`:
+A load is recorded as `(alias, loadedName, className?, methodName)`:
 
 - `loadComponent('Flash')`: alias `Flash`, loadedName `Flash`, no className.
 - `loadComponent('TestPlugin.Inside')`: alias `Inside`, loadedName `TestPlugin.Inside`.
@@ -78,10 +85,10 @@ configuration, and existence checks are applied at lookup time. This matches the
 
 ### Completion inside a controller
 
-When the chain has at least one indexed load, the component completion list is the set of loaded
-aliases, each presented with its resolved class as the type text. The convention-based list of
-all component subclasses is not shown in that case. When the chain has no indexed loads, behaviour
-is unchanged.
+Loaded aliases from both initialize loads and other loads are always offered, each presented
+with its resolved class as the type text. The convention-based list of all component subclasses
+is shown only when the chain has no initialize loads at all. When the chain has no indexed loads
+of any kind, behaviour is unchanged.
 
 Aliases can differ from class names, so the loaded-alias path builds `LookupElementBuilder`s
 directly instead of going through `completeFromClasses(removeFromEnd = "Component")`.
@@ -115,6 +122,7 @@ two existing indexes.
       alias: String,
       loadedName: String,      // may be plugin-dotted
       className: String?,      // from 'className' option; FQN or plain
+      methodName: String?,     // enclosing method; "initialize" drives the override rule
       offset: Int,             // for navigation and future diagnostics
   )
   ```
@@ -123,8 +131,8 @@ two existing indexes.
 - **Indexer:** AST-based, reusing the `ASTNodes.kt` helpers (`collectMethodCalls`, `isThisCall`,
   `stringLiteralValue`, array-literal walking). The class FQN comes from the file's `PhpClass`
   elements, the same way `ViewVariableASTDataIndexer` already uses `psiFile.node`. Walk each
-  class's body and record every `$this->loadComponent(...)` call. Only `$this->` receivers are
-  recorded; `$controller->loadComponent()` from outside the class is rare and ambiguous.
+  class's body and record every `$this->loadComponent(...)` call together with the name of the
+  enclosing method. Only `$this->` receivers are recorded; `$controller->loadComponent()` from outside the class is rare and ambiguous.
 - **Externalizer:** a `DataExternalizer` following `ViewVariableRawVarsExternalizer`.
 - **Version:** starts at 1 and is bumped whenever the value format changes.
 
@@ -142,8 +150,9 @@ A project service wrapping the index with the resolution rules above:
 - `loadedMembers(classFqns: List<String>, kind: MemberKind): Map<String, ResolvedLoad>`: walks
   the chain for each FQN, merges by alias, and resolves each load to a `PhpType` plus the
   `PhpClass` list for navigation.
-- `memberType(classFqns, kind, alias, settings): PhpType?`: returns the resolved type for one
-  alias, or `null` when nothing in the chain loads it so the caller can fall back to convention.
+- `memberType(classFqns, kind, alias, settings): MemberTypeResult?`: returns the resolved type
+  for one alias together with whether an initialize load was found. `null` means nothing in the
+  chain loads the alias. The caller adds the convention union unless an initialize load was found.
 
 All three consumers (type provider, completion contributor, goto handler) call this service.
 Nothing else reads the index directly.
@@ -161,22 +170,22 @@ to return a deferred signature so `complete()` can consult the index:
 
 The leading `c` marker distinguishes it from the existing nested-model signature, which carries
 two field names and no FQN. `complete()` dispatches on the marker. For `c`, it asks
-`ConfiguredMemberService.memberType()` and falls back to `componentOrModelTypeFromFieldName()`
-when that returns `null`. The nested-model path is unchanged.
+`ConfiguredMemberService.memberType()`, then adds `componentOrModelTypeFromFieldName()` unless
+the result reports an initialize load. The nested-model path is unchanged.
 
 `$this` inside a controller already carries the controller's FQN, so the receiver FQN is
 available in `getType()` without index access. Receivers typed by docblock behave the same way.
 
 ### `ControllerComponentCompletionContributor`
 
-After computing `controllerClassNames`, call `loadedMembers()`. If non-empty, add one lookup
-element per alias with the resolved class as type text and skip the convention list. Otherwise
-keep the current behaviour.
+After computing `controllerClassNames`, call `loadedMembers()`. Add one lookup element per
+loaded alias with the resolved class as type text. Skip the convention list only when at least
+one of those loads is an initialize load. Otherwise keep the current behaviour in addition.
 
 ### `ControllerFieldGotoDeclarationHandler`
 
-Resolve through the service first; fall back to `componentAndModelClassesFromFieldName()` only
-when the alias is not loaded in the chain. Model fields are unaffected because `memberType()` for
+Resolve through the service first; add `componentAndModelClassesFromFieldName()` unless the
+alias has an initialize load in the chain. Model fields are unaffected because `memberType()` for
 `COMPONENT` returns `null` for them and the fallback still includes table candidates.
 
 ### `ControllerComponentsGotoDeclarationHandler`
@@ -240,11 +249,16 @@ Add under `cake5/src5/Controller/`:
   - `'Legacy'` with `['className' => 'MovieMetadata']` (alias to plain string),
   - `'TestPlugin.InsidePlugin'` (plugin-prefixed),
   - `'Flash'` (expected to resolve to the core stub).
+
+  It also has a `beforeFilter()` that loads `'TestPlugin.Conditional'`, and an action that
+  re-loads `'Meta'` with `['className' => 'Conditional']`, to exercise the union rules.
 - `ChildConfiguredController.php` extending `ConfiguredController` with no `initialize()`, to
   test inheritance.
 - `cake5/plugins/TestPlugin/src/Controller/Component/InsidePluginComponent.php` and an
   `App\Controller\Component\InsidePluginComponent.php` with a distinct method name each, so a
   plugin-prefixed load can be shown to pick the plugin class only.
+- The same pairing for `ConditionalComponent`, so a plugin-prefixed load outside `initialize()`
+  can be shown to union both classes.
 - `cake5/vendor/cakephp.php`: add `loadComponent()` to the `Controller` stub so the call resolves
   in PhpStorm, and a `FlashComponent` stub under `Cake\Controller\Component`.
 
@@ -259,9 +273,15 @@ Add under `cake5/src5/Controller/`:
   the app component's method.
 - `$this->Meta` in `ChildConfiguredController` resolves through the parent's `initialize()`.
 - `$this->Flash` in `ChildConfiguredController` resolves through `AppController`.
+- `$this->Conditional` in `ConfiguredController` completes methods from both the plugin and the
+  app `ConditionalComponent`, because the load is in `beforeFilter()`.
+- `$this->Meta` in `ConfiguredController` completes methods from `MovieMetadataComponent` and
+  from `ConditionalComponent`, because the action re-load unions onto the initialize load.
 - Component completion on `$this->` in `ConfiguredController` lists `Meta`, `Legacy`,
-  `MovieMetadata`, `InsidePlugin`, `RequestHandler`, `Flash` and does not list unrelated
-  component subclasses.
+  `MovieMetadata`, `InsidePlugin`, `Conditional`, `RequestHandler`, `Flash` and does not list
+  unrelated component subclasses.
+- Component completion on `$this->` in a controller whose only load is in `beforeFilter()` lists
+  that alias and still lists the convention candidates.
 - Component completion on `$this->` in `MovieController` (no loads anywhere in its chain, since
   it extends `Controller` directly) still lists all component subclasses.
 - Goto declaration on `$this->Meta` returns one target.
@@ -269,8 +289,8 @@ Add under `cake5/src5/Controller/`:
 
 `ConfiguredMemberIndexerTest.kt` at the top level, following `ViewVariableASTParsingTest`, unit
 tests the AST parsing: plain, aliased with string, aliased with `::class`, plugin-dotted,
-non-literal argument ignored, loads outside `initialize()` recorded, two classes in one file keyed
-separately.
+non-literal argument ignored, loads outside `initialize()` recorded with their enclosing method
+name, two classes in one file keyed separately.
 
 Then port the fixture additions and the integration tests to `cake4` and `cake3`.
 
@@ -289,11 +309,15 @@ Commit after each step.
 
 ## Open decisions
 
-- **Completion when the chain has loads.** This plan hides the convention list entirely in that
-  case, consistent with the override rule. The alternative is to list loaded aliases first and
-  the convention candidates after them with lower priority. Hiding is simpler and matches what
-  the framework actually exposes; revisit if vendor base classes loading components turns out to
-  be common in practice.
+- **Completion when the chain has initialize loads.** This plan hides the convention list in
+  that case, consistent with the override rule. The alternative is to list loaded aliases first
+  and the convention candidates after them with lower priority. Hiding matches what the framework
+  actually exposes; revisit if vendor base classes loading components turns out to be common.
+- **Apps that load everything in `beforeFilter()`.** Common in CakePHP 3 code migrated from
+  CakePHP 2. They get the union, not the override, so plugin-prefixed loads there stay ambiguous.
+  Still an improvement over today. If it matters, a setting or a per-method allowlist
+  (`initialize`, `beforeFilter`) could widen the override set later without an index change,
+  since the method name is already stored.
 - **`$components` property array on CakePHP 3.** Cheap to include now and it exercises the
   CakePHP 2 path early. Deferred by default to keep the first branch focused; pull it in if step 1
   finishes quickly.
