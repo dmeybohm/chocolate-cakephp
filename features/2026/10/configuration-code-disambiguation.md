@@ -298,8 +298,12 @@ resolved class as type text, and skip the kind's convention list only when at le
 loads is an initialize load.
 
 Association completion in controllers (`$this->Movies->Articles`) is the `nestedLookup()` path of
-`ControllerModelOrTableCompletionContributor`; it gets the same treatment with kind
-`ASSOCIATION` against the inner receiver's table chain. There is no completion contributor for
+`ControllerModelOrTableCompletionContributor`. Today it decides whether to complete by matching
+the inner field's *name* against table class FQNs, so an alias such as `$this->Films` that a
+`loadModel` load maps to `MoviesTable` would produce no completion. Change it to resolve the inner
+field reference's type through `lookupCompleteType()` first, check that the result is a table
+class, and then query `loadedMembers()` with kind `ASSOCIATION` against that table's chain. The
+name check goes away. There is no completion contributor for
 `$this->Authors` inside a table class today, and this iteration does not add one; associations
 inside tables get type resolution and navigation only.
 
@@ -422,6 +426,8 @@ Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `
 
 - `$this->Films` resolves to `MoviesTable`; `$this->Catalog` resolves to the plugin table only.
 - Table completion on `$this->` lists `Films` and `Catalog` and hides the convention list.
+- Nested completion on `$this->Films->` offers the associations configured on `MoviesTable`,
+  proving the inner alias is resolved by type rather than by name.
 
 `ConfiguredMemberIndexerTest.kt` at the top level, following `ViewVariableASTParsingTest`, unit
 tests the AST parsing: each source method maps to its kind, plain, aliased with string, aliased
