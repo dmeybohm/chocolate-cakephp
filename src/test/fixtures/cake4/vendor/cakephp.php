@@ -20,8 +20,24 @@ namespace Cake\Controller {
     class Component {}
 }
 
+namespace Cake\Controller\Component {
+    class FlashComponent extends \Cake\Controller\Component {
+        public function success($message) {}
+    }
+}
+
 namespace Cake\View {
-    class View {}
+    class View {
+        public function initialize() {}
+
+        public function loadHelper($name, array $config = []) {
+            return new Helper();
+        }
+
+        public function addHelper($helper, array $options = []) {
+            return $this;
+        }
+    }
     class Helper {}
 }
 
@@ -32,6 +48,15 @@ namespace Cake\Validation {
 namespace Cake\ORM {
     class RulesChecker {}
     class Table {
+        public function initialize(array $config) {}
+
+        public function belongsTo($associated, array $options = []) {}
+        public function hasOne($associated, array $options = []) {}
+        public function hasMany($associated, array $options = []) {}
+        public function belongsToMany($associated, array $options = []) {}
+        public function addAssociations(array $params) {
+            return $this;
+        }
         /**
          * @return Query
          */

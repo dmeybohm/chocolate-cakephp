@@ -7,6 +7,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.DataIndexer
 import com.intellij.util.indexing.FileContent
 import com.jetbrains.php.lang.lexer.PhpTokenTypes
+import com.jetbrains.php.lang.parser.PhpElementTypes
 import com.jetbrains.php.lang.psi.elements.ClassConstantReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
@@ -51,7 +52,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileC
         while (child != null) {
             when {
                 // Nested classes get their own key:
-                child.psi is PhpClass -> {}
+                child.elementType == PhpElementTypes.CLASS -> {}
                 child.isClassMethod() -> collectMethodCallLoads(child, declaredMethodName(child), out)
                 else -> {
                     val call = child.readMethodCall()
