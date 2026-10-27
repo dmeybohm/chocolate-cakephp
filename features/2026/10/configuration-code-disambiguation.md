@@ -491,3 +491,53 @@ change if one turns out to be blocked.
 - **`$components` property array on CakePHP 3 controllers.** Deferred. The `$helpers` reader in
   step 5 is the same code; enabling `$components` is a one-line addition to the field-name list
   when CakePHP 2 support begins.
+
+## Implementation Progress
+
+### Session #1
+
+All seven implementation steps are done, with fixtures and tests for CakePHP 5, 4 and 3.
+
+- `configuredmemberindex/`: `MemberLoad` types, `ConfiguredMemberDataIndexer`,
+  `ConfiguredMemberExternalizer`, `ConfiguredMemberIndex` (version 1) and
+  `ConfiguredMemberService`. The indexer reads all sources in one pass, including
+  `addAssociations()` and `$helpers`, so steps 5 and 6 did not need indexer changes.
+- The service is an `object` taking a `Project`, matching `ViewFileIndexService` and
+  `ViewVariableIndexService`, rather than a registered project service.
+
+#### Deviations from the plan
+
+- **Template helper completion keeps the convention list.** `View::__get()` lazy-loads any
+  helper by name through `HelperRegistry::__isset()`, so in templates every convention
+  helper works at runtime whether or not `initialize()` loads it. Loaded aliases are offered
+  first with their resolved type, and the convention helpers follow (minus loaded aliases).
+  Helper classes do not lazy-load, so inside a helper the convention list is hidden as
+  planned once `$helpers` or `initialize()` loads a helper. Helper *types* follow the
+  per-alias override everywhere.
+- **Associations reuse the existing signatures differently than described.** The `v1`
+  signature types the *inner* field of `$this->Movies->Articles` by its own name, and in
+  completion the field before the caret always takes the `v1` path (it is followed by the
+  dummy identifier). `v1` now carries the receiver's types and resolves them in
+  `complete()`. `v2` also covers field-reference receivers, and a new `v3` handles
+  `$this->Authors` inside a table class. The receiver's type at `getType()` time lacks the
+  deferred controller-field signature, so `ControllerFieldTypeProvider.configuredFieldSignature()`
+  supplies it.
+- **Framework base classes are ignored as receivers.** `fetchTable()` types include
+  `\Cake\ORM\Table`, which has no loads and would otherwise force the convention union back in.
+- **Plugin-dotted names with an unknown plugin** fall back to the convention candidates for
+  the part after the dot, not the whole string, since a dot cannot be part of a class name.
+- **Nested completion keeps the name check as a fallback** when the inner field does not
+  resolve to an existing table class, because CakePHP 2 models are not table classes.
+- **`TableLocatorTypeProvider`** now passes the deferred controller-field signature through
+  for `get()` and `find()` and resolves it in `complete()`. Without this,
+  `$this->Movies->get()` needed `MoviesTable` to exist and `$this->Movies->find()` lost its
+  table.
+
+#### Notes
+
+- The plan's CakePHP 4 fixture uses `loadModel('Films', ['className' => 'Movies'])`.
+  Real `loadModel()` takes `($modelClass, $modelType)`, so it has no aliasing option; the
+  plugin supports it anyway and the fixture is kept as planned.
+- The plan's test "`$this->Meta` is exactly `MovieMetadataComponent`" conflicts with the
+  same fixture's action re-load of `Meta`, so the test asserts the union instead, and the
+  single-target goto test uses `$this->Legacy`.
