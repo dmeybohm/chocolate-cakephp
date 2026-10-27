@@ -8,7 +8,7 @@ class ConfiguredTableController extends AppController
     {
         parent::initialize();
 
-        $this->loadModel('Films', ['className' => 'Movies']);
+        $this->loadModel('Movies');
         $this->loadModel('TestPlugin.Catalog');
     }
 }

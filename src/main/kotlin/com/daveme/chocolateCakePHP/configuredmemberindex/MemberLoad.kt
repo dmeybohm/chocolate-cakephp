@@ -47,6 +47,12 @@ internal val methodCallSources: Map<String, MemberKind> = mapOf(
     "belongstomany" to MemberKind.ASSOCIATION,
 )
 
+// Source methods whose second argument is not an options array, so cannot alias:
+// loadModel($modelClass, $modelType).
+internal val sourcesWithoutOptions: Set<String> = setOf(
+    "loadmodel",
+)
+
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
 internal val associationTypeKeys: Set<String> = setOf(

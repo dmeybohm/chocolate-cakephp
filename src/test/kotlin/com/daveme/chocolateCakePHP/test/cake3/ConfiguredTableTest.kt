@@ -41,8 +41,8 @@ class ConfiguredTableTest : Cake3BaseTestCase() {
             .toSet()
     }
 
-    fun `test aliased loadModel resolves to the table class`() {
-        configureUsage("\$this->Fil<caret>ms;")
+    fun `test loadModel overrides the convention candidates`() {
+        configureUsage("\$this->Mov<caret>ies;")
         assertEquals(setOf("\\App\\Model\\Table\\MoviesTable"), fieldTypeAtCaret())
     }
 
@@ -56,14 +56,13 @@ class ConfiguredTableTest : Cake3BaseTestCase() {
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotNull(result)
-        assertTrue(result!!.contains("Films"))
+        assertTrue(result!!.contains("Movies"))
         assertTrue(result.contains("Catalog"))
-        assertFalse(result.contains("Movies"))
         assertFalse(result.contains("Articles"))
     }
 
-    fun `test nested completion resolves the inner alias by type`() {
-        configureUsage("\$this->Films-><caret>")
+    fun `test nested completion on a plugin table resolves the inner field by type`() {
+        configureUsage("\$this->Catalog-><caret>")
         myFixture.completeBasic()
         val result = myFixture.lookupElementStrings
         assertNotNull(result)

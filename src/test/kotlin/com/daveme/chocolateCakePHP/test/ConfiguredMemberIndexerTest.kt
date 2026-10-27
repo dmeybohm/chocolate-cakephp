@@ -121,6 +121,24 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
         assertEquals(listOf(true, true, false, false), loads.map { it.isInitializeLoad })
     }
 
+    fun `test loadModel second argument is the model type, not options`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Controller;
+            class ConfiguredController {
+                public function initialize(): void {
+                    ${'$'}this->loadModel('Films', ['className' => 'Movies']);
+                    ${'$'}this->loadModel('Movies', 'Table');
+                }
+            }
+        """, "\\App\\Controller\\ConfiguredController")
+
+        assertEquals(
+            listOf("Films" to null, "Movies" to null),
+            loads.map { it.alias to it.className }
+        )
+    }
+
     fun `test helpers property array`() {
         val loads = loadsOf("""
             <?php

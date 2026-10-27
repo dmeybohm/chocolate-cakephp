@@ -81,8 +81,8 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileC
         }
         val kind = methodCallSources[calledName] ?: return
         val loadedName = literalString(firstParam) ?: return
-        out += memberLoad(kind, LoadSource.METHOD_CALL, loadedName, call.parameters.getOrNull(1),
-            methodName, firstParam.startOffset)
+        val options = if (calledName in sourcesWithoutOptions) null else call.parameters.getOrNull(1)
+        out += memberLoad(kind, LoadSource.METHOD_CALL, loadedName, options, methodName, firstParam.startOffset)
     }
 
     private fun readAddAssociations(arrayNode: ASTNode, methodName: String?, out: MutableList<MemberLoad>) {

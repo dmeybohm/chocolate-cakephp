@@ -145,6 +145,9 @@ A load is recorded as `(kind, source, alias, loadedName, className?, methodName,
 - `loadComponent('Meta', ['className' => MovieMetadataComponent::class])`: className is the
   resolved FQN from `ClassConstantReference.getStaticClassRefOrNull()`, which uses the file's
   `use` imports and needs no index access.
+- `loadModel('TestPlugin.Catalog')`: alias `Catalog`, loadedName `TestPlugin.Catalog`. The
+  second argument of `loadModel()` is `$modelType`, not options, so it is never read and a
+  `loadModel()` load has no className.
 - `loadComponent($name)` or any non-literal first argument: not recorded.
 
 A string literal `className` is stored as its raw contents. `getStringifiedClassOrNull()` must
@@ -314,8 +317,8 @@ loads is an initialize load.
 
 Association completion in controllers (`$this->Movies->Articles`) is the `nestedLookup()` path of
 `ControllerModelOrTableCompletionContributor`. Today it decides whether to complete by matching
-the inner field's *name* against table class FQNs, so an alias such as `$this->Films` that a
-`loadModel` load maps to `MoviesTable` would produce no completion. Change it to resolve the inner
+the inner field's *name* against table class FQNs, so an aliased component or association whose
+name differs from its table class would produce no completion. Change it to resolve the inner
 field reference's type through `lookupCompleteType()` first, check that the result is a table
 class, and then query `loadedMembers()` with kind `ASSOCIATION` against that table's chain. The
 name check goes away. There is no completion contributor for
@@ -441,13 +444,13 @@ Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `
   the `addAssociations()` array.
 - `$this->fetchTable('Reviews')->Authors` in a controller resolves to `UsersTable`.
 
-`cake4/ConfiguredTableTest.kt`, with a `ConfiguredController` fixture whose `initialize()` calls
-`loadModel('Films', ['className' => 'Movies'])` and `loadModel('TestPlugin.Catalog')`:
+`cake4/ConfiguredTableTest.kt`, with a `ConfiguredTableController` fixture whose `initialize()`
+calls `loadModel('Movies')` and `loadModel('TestPlugin.Catalog')`:
 
-- `$this->Films` resolves to `MoviesTable`; `$this->Catalog` resolves to the plugin table only.
-- Table completion on `$this->` lists `Films` and `Catalog` and hides the convention list.
-- Nested completion on `$this->Films->` offers the associations configured on `MoviesTable`,
-  proving the inner alias is resolved by type rather than by name.
+- `$this->Movies` resolves to `MoviesTable` only, without the convention candidates;
+  `$this->Catalog` resolves to the plugin table only.
+- Table completion on `$this->` lists `Movies` and `Catalog` and hides the convention list.
+- Nested completion on `$this->Catalog->` resolves the inner field by type.
 
 `ConfiguredMemberIndexerTest.kt` at the top level, following `ViewVariableASTParsingTest`, unit
 tests the AST parsing: each source method maps to its kind, plain, aliased with string, aliased
@@ -535,9 +538,10 @@ All seven implementation steps are done, with fixtures and tests for CakePHP 5, 
 
 #### Notes
 
-- The plan's CakePHP 4 fixture uses `loadModel('Films', ['className' => 'Movies'])`.
-  Real `loadModel()` takes `($modelClass, $modelType)`, so it has no aliasing option; the
-  plugin supports it anyway and the fixture is kept as planned.
+- `loadModel()` takes `($modelClass, $modelType)`, so it cannot alias. The indexer and the
+  load-string goto handler do not read a `className` option from it (index version 2), and
+  the CakePHP 4 and 3 fixtures use `loadModel('Movies')` and `loadModel('TestPlugin.Catalog')`
+  in place of the originally planned aliased `loadModel('Films', ['className' => 'Movies'])`.
 - The plan's test "`$this->Meta` is exactly `MovieMetadataComponent`" conflicts with the
   same fixture's action re-load of `Meta`, so the test asserts the union instead, and the
   single-target goto test uses `$this->Legacy`.

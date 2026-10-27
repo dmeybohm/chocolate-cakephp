@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.LoadSource
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberLoad
 import com.daveme.chocolateCakePHP.configuredmemberindex.methodCallSources
+import com.daveme.chocolateCakePHP.configuredmemberindex.sourcesWithoutOptions
 import com.daveme.chocolateCakePHP.findParentWithClass
 import com.daveme.chocolateCakePHP.getStaticClassRefOrNull
 import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
@@ -89,10 +90,16 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         if (methodReference.classReference?.textMatches("\$this") != true) {
             return null
         }
-        val kind = methodCallSources[methodReference.name?.lowercase()] ?: return null
+        val calledName = methodReference.name?.lowercase()
+        val kind = methodCallSources[calledName] ?: return null
+        val takesOptions = calledName !in sourcesWithoutOptions
+        if (!takesOptions && arguments.parameters.firstOrNull() != literal) {
+            return null
+        }
         val loadedName = (arguments.parameters.firstOrNull() as? StringLiteralExpression)?.contents
             ?: return null
         val className = (arguments.parameters.getOrNull(1) as? ArrayCreationExpression)
+            ?.takeIf { takesOptions }
             ?.hashElements
             ?.firstOrNull { (it.key as? StringLiteralExpression)?.contents == "className" }
             ?.value
