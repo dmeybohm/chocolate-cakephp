@@ -183,8 +183,10 @@ directly instead of going through `completeFromClasses(removeFromEnd = ...)`.
 
 ### Navigation
 
-- `$this->Foo` on any receiver goes through the same resolver, so an aliased or plugin-prefixed
-  load navigates to exactly one class.
+- `$this->Foo` on controllers, views, helpers and tables goes through the same resolver, so an
+  aliased or plugin-prefixed load navigates to exactly one class. `ControllerFieldGotoDeclarationHandler`
+  already accepts any field reference, not only those on controllers, so it is the existing
+  navigation path for association properties as well.
 - The string literal in the first argument of a source method, and the `className` option value,
   navigate to the resolved class. `ControllerComponentsGotoDeclarationHandler` currently only
   handles the `$components` and `$helpers` property arrays; extend it to the method-call sources.
@@ -281,6 +283,12 @@ already resolves the receiver through `lookupCompleteType()` and can call the se
 result. Direct `$this->Authors` inside a table class is a new case for this provider and follows
 the same pattern.
 
+The service resolves the target table only. The provider keeps adding the four
+`\Cake\ORM\Association` classes around that result exactly as the `v1` path does today, so
+association methods such as `setForeignKey()` keep completing. Narrowing to the one association
+class implied by the call (`belongsTo` to `BelongsTo`) would need the call's method name in the
+record and is left as a possible refinement.
+
 ### Completion contributors
 
 `ControllerComponentCompletionContributor`, `ControllerModelOrTableCompletionContributor`,
@@ -289,11 +297,18 @@ the same pattern.
 resolved class as type text, and skip the kind's convention list only when at least one of those
 loads is an initialize load.
 
+Association completion in controllers (`$this->Movies->Articles`) is the `nestedLookup()` path of
+`ControllerModelOrTableCompletionContributor`; it gets the same treatment with kind
+`ASSOCIATION` against the inner receiver's table chain. There is no completion contributor for
+`$this->Authors` inside a table class today, and this iteration does not add one; associations
+inside tables get type resolution and navigation only.
+
 ### Goto handlers
 
 `ControllerFieldGotoDeclarationHandler` and `ViewHelperGotoDeclarationHandler`: resolve through
 the service first; add the convention classes unless the alias has an initialize load in the
-chain. `ControllerComponentsGotoDeclarationHandler`: add a branch for a string literal that is
+chain. The field handler chooses kinds by the receiver type: `{COMPONENT, TABLE}` for
+controllers, `ASSOCIATION` for tables. `ControllerComponentsGotoDeclarationHandler`: add a branch for a string literal that is
 the first argument of a source method or the value of its `className` option.
 
 ## Future: CakePHP 2
@@ -341,11 +356,14 @@ Controllers, under `cake5/src5/Controller/`:
 
 Views and helpers, under `cake5/src5/View/`:
 
-- `ConfiguredView.php` extending `AppView`, whose `initialize()` calls `parent::initialize()`,
-  then `loadHelper('Fmt', ['className' => 'MovieFormatter'])` and
-  `addHelper('TestPlugin.Shared')`. A test points `viewType()` at it by configuring the app
-  namespace or by typing `$this` explicitly in the template fixture; pick whichever the existing
-  view tests make easiest.
+- `ConfiguredView.php` extending `\Cake\View\View`, whose `initialize()` calls
+  `loadHelper('Html')`, `loadHelper('Fmt', ['className' => 'MovieFormatter'])` and
+  `addHelper('TestPlugin.Shared')`.
+- `cake5/configured_view/AppView.php` declaring `App\View\AppView extends ConfiguredView`.
+  `viewType()` always names `App\View\AppView`, and a docblock cannot retype `$this` in a
+  template, so the helper test class loads this file in `setUpTestFiles()` instead of the shared
+  `cake5/src5/View/AppView.php`. The file's path does not matter for class resolution; only the
+  template fixtures need to stay under `cake5/templates/`.
 - `Helper/ConfiguredHelper.php` with `protected array $helpers = ['MovieFormatter', 'Alias' =>
   ['className' => 'ArtistFormatter']]`.
 - `SharedHelper.php` in both the app and `TestPlugin`, with a distinct method name each.
