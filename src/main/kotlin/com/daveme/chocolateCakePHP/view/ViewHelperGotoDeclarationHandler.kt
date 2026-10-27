@@ -1,6 +1,11 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.isCakeViewFile
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
+import com.daveme.chocolateCakePHP.lookupCompleteType
+import com.daveme.chocolateCakePHP.viewType
 import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -41,7 +46,21 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
         if (classReference.textMatches("\$this")) {
             val project = psiElement.project
             val phpIndex = PhpIndex.getInstance(project)
-            return phpIndex.viewHelperClassesFromFieldName(settings, fieldName).toTypedArray()
+            val helperTypes = classReference.type.lookupCompleteType(project, phpIndex, null).types
+                .filter { it.startsWith("\\") && it.contains("Helper") }
+            val receiverTypes = when {
+                helperTypes.isNotEmpty() -> helperTypes
+                isCakeViewFile(project, settings, psiElement.containingFile) -> viewType(settings).types.toList()
+                else -> emptyList()
+            }
+            val configured = ConfiguredMemberService.memberType(
+                project, receiverTypes, setOf(MemberKind.HELPER), fieldName
+            )
+            val result = configured?.classes.orEmpty().toMutableList()
+            if (configured == null || !configured.hasInitializeLoad) {
+                result += phpIndex.viewHelperClassesFromFieldName(settings, fieldName)
+            }
+            return result.distinct().toTypedArray()
         }
         return PsiElement.EMPTY_ARRAY
     }

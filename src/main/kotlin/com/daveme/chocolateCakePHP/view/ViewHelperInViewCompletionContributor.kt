@@ -2,6 +2,8 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.codeInsight.completion.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
@@ -52,8 +54,18 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             if (!isCakeViewFile(psiElement.project, settings, containingFile)) {
                 return
             }
+            val loaded = ConfiguredMemberService.loadedMembers(
+                psiElement.project,
+                viewType(settings).types,
+                setOf(MemberKind.HELPER)
+            )
+            completionResultSet.completeFromLoadedMembers(loaded.members)
+
+            // The view lazy loads any helper by name, so the convention list stays:
             val phpIndex = PhpIndex.getInstance(psiElement.project)
-            val viewHelperClasses = phpIndex.getViewHelperSubclasses(settings)
+            val viewHelperClasses = phpIndex.getViewHelperSubclasses(settings).filter {
+                it.name.removeFromEnd("Helper", ignoreCase = true) !in loaded.members
+            }
             completionResultSet.completeFromClasses(viewHelperClasses, "Helper")
         }
     }
