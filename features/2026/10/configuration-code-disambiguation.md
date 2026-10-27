@@ -39,11 +39,12 @@ index and resolver later without a redesign.
    at `\Cake\Controller\Controller` or when a class is unknown. Guard against cycles.
 2. For each class in the chain, read its indexed loads and partition them by alias into
    *initialize loads* (enclosing method is `initialize`) and *other loads* (any other method).
-3. If alias `Foo` has an initialize load somewhere in the chain, the base type is the resolution
-   of the most-derived initialize load (see below), matching `ComponentRegistry` behaviour where
-   a later load replaces the earlier instance. The convention union is not added. Any other loads
-   of `Foo` in the chain are unioned onto that base type, so a dynamic re-load in an action
-   widens the type rather than being ignored.
+3. If alias `Foo` has an initialize load somewhere in the chain, find the most-derived class
+   whose `initialize()` loads `Foo`. The base type is the union of all of that class's initialize
+   loads of `Foo` (see below). Initialize loads of `Foo` in ancestors of that class are excluded,
+   matching `ComponentRegistry` behaviour where a later load replaces the earlier instance. The
+   convention union is not added. Any other loads of `Foo` anywhere in the chain are unioned onto
+   that base type, so a dynamic re-load in an action widens the type rather than being ignored.
 4. If `Foo` has only other loads, the type is the union of their resolutions and today's
    convention union. For a plain `loadComponent('Foo')` this collapses to the convention result;
    the union only changes the outcome for aliased or plugin-prefixed loads outside `initialize()`.
@@ -60,7 +61,9 @@ candidates; every other property on the class, including table properties like
 `$this->Movies`, resolves exactly as today. Dropping the table candidate for a loaded alias is
 correct, not a loss: the framework sets the loaded component on the controller under that alias,
 so a same-named table is shadowed at runtime too. `ControllerModelOrTableCompletionContributor`
-is not touched by this feature.
+is not touched by this feature, so it may still offer a table name that a loaded component
+shadows. That is a known completion limitation of this iteration; the resolved type of such a
+property is still the component.
 
 Within one method, the same alias loaded more than once (for example in both branches of an
 `if`) produces one record per call and the resolutions are unioned. Source order inside a method
