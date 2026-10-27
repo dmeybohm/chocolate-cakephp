@@ -55,6 +55,21 @@ Loads are indexed from anywhere in the class body. The enclosing method name is 
 load so the resolver can apply the partition above, and so CakePHP 2's `beforeFilter()` loads
 and future diagnostics have the same information available.
 
+The override is per alias. Only the alias that `initialize()` loads loses its convention
+candidates; every other property on the class, including table properties like
+`$this->Movies`, resolves exactly as today. Dropping the table candidate for a loaded alias is
+correct, not a loss: the framework sets the loaded component on the controller under that alias,
+so a same-named table is shadowed at runtime too. `ControllerModelOrTableCompletionContributor`
+is not touched by this feature.
+
+Within one method, the same alias loaded more than once (for example in both branches of an
+`if`) produces one record per call and the resolutions are unioned. Source order inside a method
+is ignored. Across the chain, the assumption is that every `initialize()` calls
+`parent::initialize()`, which the framework requires for `AppController` loads to work at all.
+A child that omits the parent call still inherits the parent's indexed loads here; tracking the
+parent call is possible later since the indexer sees the method body, but it is not worth the
+complexity for a case that is a bug in the application.
+
 ### Resolving a single load
 
 A load is recorded as `(alias, loadedName, className?, methodName)`:
@@ -64,7 +79,12 @@ A load is recorded as `(alias, loadedName, className?, methodName)`:
 - `loadComponent('Meta', ['className' => 'MovieMetadata'])`: alias `Meta`, className
   `MovieMetadata`.
 - `loadComponent('Meta', ['className' => MovieMetadataComponent::class])`: className is the
-  resolved FQN. `::class` resolves through the existing `getStringifiedClassOrNull()`.
+  resolved FQN from `ClassConstantReference.getStaticClassRefOrNull()`, which uses the file's
+  `use` imports and needs no index access.
+
+A string literal `className` is stored as its raw contents. `getStringifiedClassOrNull()` must
+not be used for it, because that helper prepends a backslash to any string and would turn the
+plain name `'MovieMetadata'` into an FQN.
 - `loadComponent($name)` or any non-literal first argument: not recorded.
 
 At lookup time, with settings and `PhpIndex` available:
@@ -89,6 +109,12 @@ Loaded aliases from both initialize loads and other loads are always offered, ea
 with its resolved class as the type text. The convention-based list of all component subclasses
 is shown only when the chain has no initialize loads at all. When the chain has no indexed loads
 of any kind, behaviour is unchanged.
+
+This is a deliberate trade-off against the per-alias fallback rule. A component loaded only in an
+unindexed vendor base class still resolves when typed by hand, but is not offered in completion
+once the chain has an initialize load. Showing the full convention list at lower priority would
+restore discoverability for that rare case at the cost of the noise this feature exists to
+remove. Table completion is a separate contributor and is unaffected.
 
 Aliases can differ from class names, so the loaded-alias path builds `LookupElementBuilder`s
 directly instead of going through `completeFromClasses(removeFromEnd = "Component")`.
@@ -268,7 +294,10 @@ Add under `cake5/src5/Controller/`:
 
 - Type of `$this->Meta` in `ConfiguredController` is exactly the app `MovieMetadataComponent`
   (completion of its methods works, `LookupElementPresentation.typeText` shows the FQN).
-- Type of `$this->Legacy` matches the same class via the plain `className` string.
+- Type of `$this->Legacy` matches the same class via the plain `className` string, proving the
+  literal is not treated as an FQN.
+- `$this->Movies` in `ConfiguredController` still resolves to `MoviesTable`, proving the override
+  is per alias and table properties keep convention.
 - `$this->InsidePlugin` in `ConfiguredController` completes the plugin component's method and not
   the app component's method.
 - `$this->Meta` in `ChildConfiguredController` resolves through the parent's `initialize()`.
@@ -290,7 +319,8 @@ Add under `cake5/src5/Controller/`:
 `ConfiguredMemberIndexerTest.kt` at the top level, following `ViewVariableASTParsingTest`, unit
 tests the AST parsing: plain, aliased with string, aliased with `::class`, plugin-dotted,
 non-literal argument ignored, loads outside `initialize()` recorded with their enclosing method
-name, two classes in one file keyed separately.
+name, the same alias loaded twice in one method yielding two records, two classes in one file
+keyed separately.
 
 Then port the fixture additions and the integration tests to `cake4` and `cake3`.
 
@@ -309,10 +339,9 @@ Commit after each step.
 
 ## Open decisions
 
-- **Completion when the chain has initialize loads.** This plan hides the convention list in
-  that case, consistent with the override rule. The alternative is to list loaded aliases first
-  and the convention candidates after them with lower priority. Hiding matches what the framework
-  actually exposes; revisit if vendor base classes loading components turns out to be common.
+- **Completion when the chain has initialize loads.** Decided: hide the convention list, as
+  described under Completion. Revisit only if components loaded in unindexed vendor base classes
+  turn out to be common.
 - **Apps that load everything in `beforeFilter()`.** Common in CakePHP 3 code migrated from
   CakePHP 2. They get the union, not the override, so plugin-prefixed loads there stay ambiguous.
   Still an improvement over today. If it matters, a setting or a per-method allowlist
