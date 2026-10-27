@@ -5,6 +5,16 @@ namespace Cake\Controller {
 
     class Controller {
         use LocatorAwareTrait;
+
+        public function initialize(): void {}
+
+        public function loadComponent(string $name, array $config = []): Component {
+            return new Component();
+        }
+
+        public function loadModel(?string $modelClass = null, $modelType = null): \Cake\ORM\Table {
+            return new \Cake\ORM\Table();
+        }
     }
 
     class Component {}
