@@ -7,12 +7,34 @@ namespace Cake\Controller {
     class Controller {
         use LocatorAwareTrait;
         use ViewVarsTrait;
+
+        public function initialize(): void {}
+
+        public function loadComponent(string $name, array $config = []): Component {
+            return new Component();
+        }
     }
     class Component {}
 }
 
+namespace Cake\Controller\Component {
+    class FlashComponent extends \Cake\Controller\Component {
+        public function success(string $message): void {}
+    }
+}
+
 namespace Cake\View {
-    class View {}
+    class View {
+        public function initialize(): void {}
+
+        public function loadHelper(string $name, array $config = []): Helper {
+            return new Helper();
+        }
+
+        public function addHelper(string $helper, array $options = []) {
+            return $this;
+        }
+    }
     class Helper {}
     class ViewBuilder {}
     trait ViewVarsTrait {
@@ -78,6 +100,15 @@ namespace Cake\ORM {
 
     class RulesChecker {}
     class Table {
+        public function initialize(array $config): void {}
+
+        public function belongsTo(string $associated, array $options = []) {}
+        public function hasOne(string $associated, array $options = []) {}
+        public function hasMany(string $associated, array $options = []) {}
+        public function belongsToMany(string $associated, array $options = []) {}
+        public function addAssociations(array $params) {
+            return $this;
+        }
         public function findThreaded(): SelectQuery {
             return new SelectQuery();
         }
