@@ -41,8 +41,9 @@ keeps CakePHP 2 in view so it slots into the same index and resolver later witho
 
 ## Configuration sources
 
-Every source has the same shape: a `$this->method('Alias', [options])` call in a class body, where
-the alias becomes a dynamic property on instances of that class.
+Every source but one has the same shape: a `$this->method('Alias', [options])` call in a class
+body, where the alias becomes a dynamic property on instances of that class. The exception is
+`addAssociations()`, which takes a nested array of such loads and is described below.
 
 | Kind        | Class type | Method(s)                                            | Versions  | Property namespace                  |
 |-------------|------------|------------------------------------------------------|-----------|-------------------------------------|
@@ -57,8 +58,11 @@ The method name determines the kind. The indexer does not check the class type; 
 `Table::addAssociations()` is also an ASSOCIATION source. It takes one nested array keyed by
 association type, for example `['belongsTo' => ['Authors' => ['className' => 'Users'], 'Movies'],
 'hasMany' => ['Comments']]`. Each leaf is recorded as its own `METHOD_CALL` load: a string value is
-a plain load, a string key with an array value is a load with options. The enclosing-method rule
-applies as for any other call. The array walking is shared with the `$helpers` reader.
+a plain load, a string key with an array value is a load with options. Only the four recognized
+top-level keys (`belongsTo`, `hasOne`, `hasMany`, `belongsToMany`) are read; the framework
+dispatches each key as a method name, so any other key is invalid and is ignored. The
+enclosing-method rule applies as for any other call. The array walking is shared with the
+`$helpers` reader.
 
 `addBehavior()` is not a source. Behaviours mix in methods, not properties, and belong to the
 separate behaviour support idea. Cake 5's `$defaultTable` and the Cake 3/4 `$modelClass` default
@@ -450,7 +454,8 @@ tests the AST parsing: each source method maps to its kind, plain, aliased with 
 with `::class`, plugin-dotted, non-literal argument ignored, loads outside `initialize()`
 recorded with their enclosing method name, the same alias loaded twice in one method yielding two
 records, `$helpers` array entries with and without options, `addAssociations()` leaves with and
-without options under each association type key, two classes in one file keyed separately.
+without options under each of the four association type keys, an unrecognized top-level key in
+`addAssociations()` ignored, two classes in one file keyed separately.
 
 Then port the fixture additions and the integration tests to `cake4` and `cake3`.
 
