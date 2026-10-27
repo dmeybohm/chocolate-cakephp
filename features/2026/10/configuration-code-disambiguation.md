@@ -49,7 +49,7 @@ the alias becomes a dynamic property on instances of that class.
 | COMPONENT   | Controller | `loadComponent`                                      | 3, 4, 5   | `Controller\Component\{N}Component` |
 | TABLE       | Controller | `loadModel`                                          | 3, 4      | `Model\Table\{N}Table`              |
 | HELPER      | View       | `loadHelper`, `addHelper`                            | 3, 4, 5 / 4.1+, 5 | `View\Helper\{N}Helper`     |
-| ASSOCIATION | Table      | `belongsTo`, `hasOne`, `hasMany`, `belongsToMany`    | 3, 4, 5   | `Model\Table\{N}Table`              |
+| ASSOCIATION | Table      | `belongsTo`, `hasOne`, `hasMany`, `belongsToMany`, `addAssociations` | 3, 4, 5 | `Model\Table\{N}Table`  |
 
 The method name determines the kind. The indexer does not check the class type; a
 `loadComponent()` call in a non-controller is recorded and simply never looked up.
@@ -196,6 +196,10 @@ directly instead of going through `completeFromClasses(removeFromEnd = ...)`.
 - The string literal in the first argument of a source method, and the `className` option value,
   navigate to the resolved class. `ControllerComponentsGotoDeclarationHandler` currently only
   handles the `$components` and `$helpers` property arrays; extend it to the method-call sources.
+- Leaves inside an `addAssociations()` array, whether alias keys, plain string values, or nested
+  `className` values, do not get navigation in this iteration. They are indexed and resolve as
+  properties, but the goto handler would need to classify a literal by its position in a nested
+  array, and that is better done once with the dotted-path work in the query-method follow-up.
 - Completion of names inside the first argument of a source method is a natural addition and is
   cheap once the convention candidate list is reachable. Include it if time permits.
 
@@ -389,8 +393,8 @@ Tables, under `cake5/src5/Model/Table/`:
   `TestPlugin`.
 
 Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `loadHelper()` and
-`addHelper()` to `View`, the association methods to `Table`, and `FlashComponent` under
-`Cake\Controller\Component`.
+`addHelper()` to `View`, the four association methods and `addAssociations()` to `Table`, and
+`FlashComponent` under `Cake\Controller\Component`.
 
 ### Tests
 
