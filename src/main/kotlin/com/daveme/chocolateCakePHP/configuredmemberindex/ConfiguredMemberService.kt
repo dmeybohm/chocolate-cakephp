@@ -57,7 +57,7 @@ object ConfiguredMemberService {
         kinds: Set<MemberKind>,
         alias: String
     ): MemberTypeResult? {
-        val resolutions = classFqns.map { resolveChain(project, it, kinds, alias) }
+        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, alias) }
         return combine(project, resolutions, alias)
     }
 
@@ -66,13 +66,26 @@ object ConfiguredMemberService {
         classFqns: Collection<String>,
         kinds: Set<MemberKind>
     ): LoadedMembers {
-        val resolutions = classFqns.map { resolveChain(project, it, kinds, null) }
+        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, null) }
         val aliases = resolutions.flatMap { it.members.keys }.toSet()
         val members = aliases.mapNotNull { alias ->
             combine(project, resolutions, alias)?.let { alias to it }
         }.toMap()
         return LoadedMembers(members, resolutions.flatMap { it.initializeKinds }.toSet())
     }
+
+    /**
+     * The classes a single load resolves to.
+     */
+    fun loadClasses(project: Project, load: MemberLoad): List<PhpClass> {
+        val phpIndex = PhpIndex.getInstance(project)
+        return resolveLoad(phpIndex, Settings.getInstance(project), load)
+            .flatMap { phpIndex.getClassesByFQN(it) }
+    }
+
+    // The framework base classes say nothing about which members a receiver has.
+    private fun specificReceivers(classFqns: Collection<String>): List<String> =
+        classFqns.filter { it.lowercase() !in frameworkBaseClasses }
 
     // A receiver whose chain does not load the alias falls back to convention, so the result
     // only counts as an initialize load when every receiver had one.
