@@ -54,6 +54,12 @@ the alias becomes a dynamic property on instances of that class.
 The method name determines the kind. The indexer does not check the class type; a
 `loadComponent()` call in a non-controller is recorded and simply never looked up.
 
+`Table::addAssociations()` is also an ASSOCIATION source. It takes one nested array keyed by
+association type, for example `['belongsTo' => ['Authors' => ['className' => 'Users'], 'Movies'],
+'hasMany' => ['Comments']]`. Each leaf is recorded as its own `METHOD_CALL` load: a string value is
+a plain load, a string key with an array value is a load with options. The enclosing-method rule
+applies as for any other call. The array walking is shared with the `$helpers` reader.
+
 `addBehavior()` is not a source. Behaviours mix in methods, not properties, and belong to the
 separate behaviour support idea. Cake 5's `$defaultTable` and the Cake 3/4 `$modelClass` default
 table are convention, not configuration, and are unchanged. `fetchTable()` returns a value rather
@@ -222,9 +228,10 @@ two existing indexes.
   `stringLiteralValue`, array-literal walking). The class FQN comes from the file's `PhpClass`
   elements, the same way `ViewVariableASTDataIndexer` already uses `psiFile.node`. Walk each
   class's body and record every `$this->` call whose method name is in the source table above,
-  together with the name of the enclosing method. For the `PROPERTY_ARRAY` source, read the
-  `$helpers` field initializer: a string value is a plain load, a string key with an array value
-  is a load with options. Only `$this->` receivers are recorded for method calls.
+  together with the name of the enclosing method. For `addAssociations()`, walk the nested array
+  argument and record one load per leaf. For the `PROPERTY_ARRAY` source, read the `$helpers`
+  field initializer. Both use one array reader: a string value is a plain load, a string key with
+  an array value is a load with options. Only `$this->` receivers are recorded for method calls.
 - **Externalizer:** a `DataExternalizer` following `ViewVariableRawVarsExternalizer`.
 - **Version:** starts at 1 and is bumped whenever the value format changes.
 
@@ -375,8 +382,11 @@ Views and helpers, under `cake5/src5/View/`:
 Tables, under `cake5/src5/Model/Table/`:
 
 - `ReviewsTable.php` whose `initialize()` calls `belongsTo('Movies')`,
-  `belongsTo('Authors', ['className' => 'Users'])`, and `hasMany('TestPlugin.Ratings')`.
-- `UsersTable.php` and `RatingsTable.php` in the app, `RatingsTable.php` in `TestPlugin`.
+  `belongsTo('Authors', ['className' => 'Users'])`, `hasMany('TestPlugin.Ratings')`, and
+  `addAssociations(['belongsTo' => ['Editors' => ['className' => 'Users']], 'hasMany' =>
+  ['Comments']])`.
+- `UsersTable.php`, `CommentsTable.php` and `RatingsTable.php` in the app, `RatingsTable.php` in
+  `TestPlugin`.
 
 Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `loadHelper()` and
 `addHelper()` to `View`, the association methods to `Table`, and `FlashComponent` under
@@ -419,6 +429,8 @@ Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `
 
 - `$this->Authors` inside `ReviewsTable` resolves to `UsersTable`.
 - `$this->Ratings` inside `ReviewsTable` resolves to the plugin `RatingsTable` only.
+- `$this->Editors` resolves to `UsersTable` and `$this->Comments` to `CommentsTable`, both from
+  the `addAssociations()` array.
 - `$this->fetchTable('Reviews')->Authors` in a controller resolves to `UsersTable`.
 
 `cake4/ConfiguredTableTest.kt`, with a `ConfiguredController` fixture whose `initialize()` calls
@@ -433,8 +445,8 @@ Vendor stub `cake5/vendor/cakephp.php`: add `loadComponent()` to `Controller`, `
 tests the AST parsing: each source method maps to its kind, plain, aliased with string, aliased
 with `::class`, plugin-dotted, non-literal argument ignored, loads outside `initialize()`
 recorded with their enclosing method name, the same alias loaded twice in one method yielding two
-records, `$helpers` array entries with and without options, two classes in one file keyed
-separately.
+records, `$helpers` array entries with and without options, `addAssociations()` leaves with and
+without options under each association type key, two classes in one file keyed separately.
 
 Then port the fixture additions and the integration tests to `cake4` and `cake3`.
 
@@ -450,7 +462,8 @@ Then port the fixture additions and the integration tests to `cake4` and `cake3`
    CakePHP 4 `loadModel` tests.
 5. Helpers: `PROPERTY_ARRAY` reader for `$helpers`, both helper type providers, both helper
    completion contributors, `ViewHelperGotoDeclarationHandler`. View and helper fixtures and tests.
-6. Associations: `AssociatedTableTypeProvider` changes. Table fixtures and tests.
+6. Associations: `addAssociations()` array reading in the indexer, `AssociatedTableTypeProvider`
+   changes. Table fixtures and tests.
 7. Port fixtures and tests to CakePHP 4 and 3. Run the full suite.
 
 Commit after each step. Steps 3 to 6 are independent once step 2 lands, so their order can
