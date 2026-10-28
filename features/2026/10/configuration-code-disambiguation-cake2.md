@@ -336,6 +336,10 @@ prefer it unless it duplicates too much of the receiver-signature handling.
 - `ControllerFieldTypeProvider`: the configured-field path already covers CakePHP 2 controllers,
   since `$this` is a global FQN such as `\MovieController`, and `componentOrModelTypeFromFieldName()`
   already includes the CakePHP 2 names. Check that the TABLE kind resolves `$uses` entries.
+  Its `complete()` adds the `componentOrModelTypeFromFieldName()` union unless an initialize
+  load was found; for CakePHP 2 it must instead add the component or model part of that union
+  only when the effective `$components` or `$uses` is unknown, so the service has to report
+  per kind whether the property is known.
 - The nested path (`getCakeTwoClass()`) consults the receiver model's associations first.
 - `ViewHelperInViewTypeProvider`, `ViewHelperInViewCompletionContributor` and
   `ViewHelperGotoDeclarationHandler`: use the rendering controllers, not `viewType(settings)`, as
