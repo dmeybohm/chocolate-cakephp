@@ -235,4 +235,36 @@ class ConfiguredComponentTest : Cake3BaseTestCase() {
         assertEquals(listOf("\\TestPlugin\\Controller\\Component\\ConditionalComponent"),
             classNameTargets!!.map { (it as PhpClass).fqn })
     }
+
+    private fun configureUnionReceiver(body: String) {
+        myFixture.configureByText("UnionController.php", """
+        <?php
+        namespace App\Controller;
+
+        class UnionController extends \Cake\Controller\Controller
+        {
+            /**
+             * @param ConfiguredController|MovieController ${'$'}c
+             */
+            public function index(${'$'}c) {
+                $body
+            }
+        }
+        """.trimIndent())
+    }
+
+    fun `test union receiver resolves each controller against its own loads`() {
+        configureUnionReceiver("\$c->Leg<caret>acy;")
+        val types = fieldTypeAtCaret()
+        assertTrue(types.contains("\\App\\Controller\\Component\\MovieMetadataComponent"))
+        // MovieController does not load Legacy, so it keeps the convention candidates:
+        assertTrue(types.contains("\\App\\Controller\\Component\\LegacyComponent"))
+    }
+
+    fun `test union receiver keeps convention completion when one controller has no loads`() {
+        configureUnionReceiver("\$c-><caret>")
+        val result = completionsOnThis()
+        assertTrue(result.contains("Legacy"))
+        assertTrue(result.contains("Unloaded"))
+    }
 }

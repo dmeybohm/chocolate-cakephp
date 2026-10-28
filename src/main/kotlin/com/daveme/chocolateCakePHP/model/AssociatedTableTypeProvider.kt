@@ -253,8 +253,7 @@ class AssociatedTableTypeProvider : PhpTypeProvider4 {
             .toMutableList()
         // The receiver's own type does not include the deferred controller field signature here:
         (receiver as? FieldReference)
-            ?.let { ControllerFieldTypeProvider.configuredFieldSignature(it) }
-            ?.let { types += it }
+            ?.let { types += ControllerFieldTypeProvider.configuredFieldSignatures(it) }
         return types.distinct().joinToString("|")
     }
 

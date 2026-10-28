@@ -50,16 +50,20 @@ class ViewHelperInViewHelperTypeProvider : PhpTypeProvider4 {
         if (!fieldReferenceName.startsWithUppercaseCharacter()) {
             return null
         }
+        // Each helper the receiver may be is resolved against its own configured helpers:
+        val result = PhpType()
         for (type in knownType.types) {
-            if (type.contains("Helper") || type.startsWith(VIEW_HELPER_IN_VIEW_SIGNATURE)) {
-                if (!type.startsWith("\\")) {
-                    return viewHelperTypeFromFieldName(settings, fieldReferenceName)
-                }
+            if (!type.contains("Helper") && !type.startsWith(VIEW_HELPER_IN_VIEW_SIGNATURE)) {
+                continue
+            }
+            if (type.startsWith("\\")) {
                 // Defer lookup to complete() to consult the helpers the helper loads.
-                return PhpType().add("#" + getKey() + type + getKey() + fieldReferenceName)
+                result.add("#" + getKey() + type + getKey() + fieldReferenceName)
+            } else {
+                result.add(viewHelperTypeFromFieldName(settings, fieldReferenceName))
             }
         }
-        return null
+        return if (result.isEmpty) null else result
     }
 
     override fun getBySignature(s: String, set: Set<String>, i: Int, project: Project): Collection<PhpNamedElement> {

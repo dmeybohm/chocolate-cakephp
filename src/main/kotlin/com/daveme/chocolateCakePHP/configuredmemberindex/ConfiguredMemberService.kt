@@ -26,7 +26,7 @@ data class MemberTypeResult(
 
 /**
  * The configured members of a set of receiver classes, by alias, together with the kinds
- * that some class in a receiver's chain loads in `initialize()` or a property array.
+ * that every receiver's chain loads in `initialize()` or a property array.
  */
 data class LoadedMembers(
     val members: Map<String, MemberTypeResult>,
@@ -71,7 +71,11 @@ object ConfiguredMemberService {
         val members = aliases.mapNotNull { alias ->
             combine(project, resolutions, alias)?.let { alias to it }
         }.toMap()
-        return LoadedMembers(members, resolutions.flatMap { it.initializeKinds }.toSet())
+        // A receiver without initialize loads of a kind still has that kind's members by convention:
+        val initializeKinds = resolutions.map { it.initializeKinds }
+            .reduceOrNull { kinds, other -> kinds intersect other }
+            .orEmpty()
+        return LoadedMembers(members, initializeKinds)
     }
 
     /**

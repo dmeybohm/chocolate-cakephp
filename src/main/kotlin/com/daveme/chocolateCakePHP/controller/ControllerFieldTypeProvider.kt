@@ -33,20 +33,17 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             "#$TYPE_PROVIDER_CHAR$CONFIGURED_FIELD_MARKER$controllerClass$TYPE_PROVIDER_CHAR$fieldName"
 
         /**
-         * The signature [getType] gives `$this->Field` when `$this` is a controller, if any.
+         * The deferred signatures [getType] gives `$receiver->Field`, one for each controller
+         * class the receiver may be.
          */
-        fun configuredFieldSignature(fieldReference: FieldReference): String? {
-            val fieldName = fieldReference.name ?: return null
+        fun configuredFieldSignatures(fieldReference: FieldReference): List<String> {
+            val fieldName = fieldReference.name ?: return emptyList()
             if (!fieldName.startsWithUppercaseCharacter() || fieldReference.firstChild is FieldReference) {
-                return null
+                return emptyList()
             }
-            val controllerClass = fieldReference.classReference?.type?.filterUnknown()?.types
-                ?.firstOrNull { it.isAnyControllerClass() }
-                ?: return null
-            if (!controllerClass.startsWith("\\")) {
-                return null
-            }
-            return configuredFieldSignature(controllerClass, fieldName)
+            return fieldReference.classReference?.type?.filterUnknown()?.types.orEmpty()
+                .filter { it.isAnyControllerClass() && it.startsWith("\\") }
+                .map { configuredFieldSignature(it, fieldName) }
         }
     }
 
@@ -74,17 +71,21 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             return nestedPropertyType(psiElement)
         }
 
+        // Each controller the receiver may be is resolved against its own configured members:
+        val result = PhpType()
         val referenceType = classReference.type.filterUnknown()
         for (type in referenceType.types) {
-            if (type.isAnyControllerClass()) {
-                if (!type.startsWith("\\")) {
-                    return componentOrModelTypeFromFieldName(settings, fieldReferenceName)
-                }
+            if (!type.isAnyControllerClass()) {
+                continue
+            }
+            if (type.startsWith("\\")) {
                 // Defer lookup to complete() to consult the configured members of the controller.
-                return PhpType().add(configuredFieldSignature(type, fieldReferenceName))
+                result.add(configuredFieldSignature(type, fieldReferenceName))
+            } else {
+                result.add(componentOrModelTypeFromFieldName(settings, fieldReferenceName))
             }
         }
-        return null
+        return if (result.isEmpty) null else result
     }
 
     //

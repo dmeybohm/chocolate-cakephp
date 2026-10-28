@@ -121,4 +121,25 @@ class ConfiguredHelperTest : Cake5BaseTestCase() {
         assertNotNull(targets)
         assertEquals(listOf("\\App\\View\\Helper\\ArtistFormatterHelper"), targets!!.map { (it as PhpClass).fqn })
     }
+
+    fun `test union receiver resolves each helper against its own helpers array`() {
+        myFixture.configureByText("UnionHelper.php", """
+        <?php
+        namespace App\View\Helper;
+
+        class UnionHelper extends \Cake\View\Helper
+        {
+            /**
+             * @param ConfiguredHelper|MovieFormatterHelper ${'$'}h
+             */
+            public function probe(${'$'}h) {
+                ${'$'}h->Ali<caret>as;
+            }
+        }
+        """.trimIndent())
+        val types = helperTypesAtCaret()
+        assertTrue(types.contains("\\App\\View\\Helper\\ArtistFormatterHelper"))
+        // MovieFormatterHelper does not load Alias, so it keeps the convention candidates:
+        assertTrue(types.contains("\\App\\View\\Helper\\AliasHelper"))
+    }
 }
