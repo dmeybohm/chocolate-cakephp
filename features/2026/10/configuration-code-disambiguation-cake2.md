@@ -98,11 +98,27 @@ an `AppController` entry's `'className' => 'MyAuth'`.
   appended (`array_merge` with the entries not already present). `true` on those parents is
   ignored.
 - `$uses = false` leaves no models and an empty `$modelClass`.
-- Then `$modelClass` becomes the first entry of `$uses`.
+- Then, if `$uses` is non-empty, `$modelClass` becomes its first entry. If it is empty,
+  `$modelClass` keeps the constructor's default, the singular of the controller name.
 
 `Controller::__isset()` lazy-loads only the models in `$uses` (matched by the name after the
 dot) and `$modelClass`. So a controller with `$uses = array('Artist')` has no `$this->Movie`,
 even if it is `MoviesController`. `loadModel()` adds to `$uses` at runtime.
+
+`$uses = array()` is not the same as `false`, and what it gives depends on `AppController`:
+
+- `AppController` declares a non-empty `$uses`: the controller's `$uses` becomes
+  `AppController`'s list, and `$modelClass` its first entry, so the controller's own default
+  model is not loadable unless `AppController` lists it.
+- `AppController` does not declare `$uses` (it inherits `true`, which `_mergeUses()` ignores):
+  `$uses` stays empty, `$modelClass` keeps the default, and `$this->Movie` on
+  `MoviesController` still lazy-loads. Nothing else does.
+
+An empty child `$components = array()` behaves differently again: `_mergeVars()` merges a
+non-empty parent value into an empty child array, so it keeps `AppController`'s components
+(or the `Controller` defaults `Session` and `Flash`, when `AppController` does not declare
+`$components`). It only drops what an intermediate class between `AppController` and the
+child declared.
 
 **Models do not merge associations.** `Model::__construct()` merges only `$actsAs` and
 `$findMethods` with the parent and `AppModel`. The association properties follow plain PHP
@@ -164,9 +180,24 @@ controllers) that renders it, not `AppView`.
   `View::$_passedVars`), so `AppView`'s `$helpers` never applies when a controller renders the
   view. The view class is not a receiver.
 
-This lookup runs inside `complete()` of `ViewHelperInViewTypeProvider`, which is called often.
-It should be cached per template key with the same modification tracker the view variable
-cache uses.
+**Getting the template to `complete()`.** Today `ViewHelperInViewTypeProvider.getType()` returns
+`#<key><fieldName>`, so `complete()` does not know which template the field is in, and cannot
+find its rendering controllers. `getType()` has the containing file, and can compute the
+template key without index access: `templatesDirectoryOfViewFile()` (VFS only, already used by
+the view variable indexer) gives the templates directory, and
+`ViewFileIndexService.canonicalizeFilenameToKey()` turns the path into the key that
+`referencingElementsInSmartReadAction()` takes. So for CakePHP 2 templates:
+
+- `getType()` encodes the template key in the deferred signature, for example
+  `#<key>2<templateKey><key><fieldName>`, with a marker distinguishing it from the existing
+  CakePHP 3 to 5 form. Keys are template paths and contain no provider key character.
+- `complete()` decodes the key, looks up the rendering controllers for it, and resolves the
+  field against them. Elements and layouts have keys that no controller references, which
+  gives the `AppController` fallback.
+- CakePHP 3 to 5 templates keep the current signature and the `viewType(settings)` receiver.
+
+`complete()` is called often, so cache the rendering controllers per template key with the
+same modification tracker the view variable cache uses.
 
 Completion in templates keeps the convention helper list, as for CakePHP 3 to 5: verified,
 `View::__get()` asks `HelperCollection::__isset()`, which loads any helper by name and, if that
@@ -209,6 +240,35 @@ CakePHP 2 models lazy-load their associated models in `Model::__isset()`, so:
   convention), then looks up `Director` among that model's associations. Today this is
   `getCakeTwoClass()` by name in the nested path of `ControllerFieldTypeProvider`.
 
+**The nested signature has to carry the receiver's resolved type.** Today
+`ControllerFieldTypeProvider.nestedPropertyType()` encodes only the first and last field names,
+`#<key><firstField><key><lastField>`, and `getCakeTwoClass()` checks both by name. That loses
+the receiver: in `$this->Movie->Director->Studio`, `Director` may be an association alias
+(`'Director' => array('className' => 'Person')`), so `Studio` must be looked up among
+`Person`'s associations, not among those of a model named `Director`. And the first link must
+honour the controller's `$uses` (with `$uses = array('Artist')`, `$this->Movie` does not exist).
+
+So each link carries its own receiver's type, as the CakePHP 3 `v1` association signature
+does after the union fix:
+
+- `getType()` for `$receiver->Field`, where the receiver is itself a field reference, encodes
+  the receiver's types and the field name. The receiver's types come from its own `getType()`
+  result plus `ControllerFieldTypeProvider.configuredFieldSignatures()` for a controller field
+  (the receiver's type at `getType()` time does not include that deferred signature).
+- `complete()` resolves the receiver types with `completeType()`, keeps the ones that are
+  CakePHP 2 models (`isCakeTwoModelClass()`), and resolves the field against each model's
+  associations through the service, falling back to `getCakeTwoClass()`-style convention per
+  receiver that does not configure it. Each receiver in a union is resolved separately.
+- Chains of any length then resolve link by link: the receiver of `Studio` is the signature of
+  `$this->Movie->Director`, which resolves through its own receiver. Unlike the CakePHP 3 `v1`
+  path, which drops its own provider's signatures from the receiver to avoid recursion, this
+  path has to keep them, or every link after the first falls back to convention. That is safe
+  because each embedded signature is built from a strictly shorter expression, so resolution
+  terminates; add a depth limit as a guard anyway.
+- `ControllerModelOrTableCompletionContributor.nestedLookup()` identifies receivers by
+  `isAnyTableClass()` and falls back to a name check. Extend it to accept CakePHP 2 model
+  receivers, so nested completion lists the receiver model's configured associations.
+
 `AssociatedTableTypeProvider` is gated on `cake3Enabled` and identifies tables by the `Table`
 suffix, so it cannot detect CakePHP 2 models as is. Either extend it with a CakePHP 2 branch
 that recognises models through `isCakeTwoModelClass()` at `complete()` time, or put the
@@ -223,6 +283,12 @@ prefer it unless it duplicates too much of the receiver-signature handling.
 
 - `propertyArraySources` gains `components` (COMPONENT), `uses` (TABLE) and the four CakePHP 2
   association properties (ASSOCIATION). The kind is per property, as for `helpers` today.
+- `ConfiguredMemberDataIndexer.textNeedles` gains `components` and `uses`. The prefilter skips a
+  file before parsing unless one of the needles occurs, and a controller whose only sources are
+  `$components` or `$uses` contains none of the current needles unless `load` happens to occur.
+  `hasAndBelongsToMany` is already covered, since the check ignores case and the name contains
+  `belongsTo`. `uses` matches nearly every CakePHP 2 file because of `App::uses()`, which is
+  acceptable for a prefilter.
 - The association properties accept a comma-separated string value.
 - Record the property name for `PROPERTY_ARRAY` loads, and record a declaration of a property
   even when it loads nothing (`array()`, `true`, `false`, `null`), since the effective-value
@@ -287,6 +353,7 @@ New fixtures:
 - A model with each association property, including a comma-separated string `$belongsTo` and
   an aliased `$hasMany`, and a subclass that redeclares one association property, to test
   replacement.
+- Empty redeclarations against populated parents, for the redeclaration tests below.
 - A `TestPlugin` under `app/Plugin/TestPlugin` with a component, a helper and a model, and a
   matching `PluginConfig` in the test setup.
 - A template under the controller's view directory, and an element, for helper receivers.
@@ -305,19 +372,39 @@ Tests:
   to `AppController`; a helper's own `$helpers` still resolves.
 - Associations: an aliased association resolves inside the model and through
   `$this->Movie->Alias` in a controller; a redeclared association property replaces the parent's.
+- Nested chains: `$this->Movie->Director->Studio` where `Director` is an aliased association
+  resolves `Studio` against the aliased class's associations; `$this->Movie->Director` on a
+  controller whose `$uses` excludes `Movie` falls back to convention.
 - Navigation: `$this->Meta` goes to `MovieMetadataComponent`; strings in `$components` and
   `$uses` navigate through the service.
+- Empty redeclarations. These check both that the indexer records a declaration that loads
+  nothing and that the resolver applies the merge rules exactly; each has a distinct expected
+  result, for type resolution and completion:
+  1. **`$components = array()` in a child of an intermediate controller** that declares
+     `$components`, with `AppController` declaring its own: the intermediate's components are
+     gone, `AppController`'s remain. With an `AppController` that does not declare
+     `$components`, the child has `Session` and `Flash`.
+  2. **An empty association array in a child model**, `$belongsTo = array()` under a parent
+     with a populated `$belongsTo`: the child has none of the parent's `belongsTo`
+     associations (its other association properties still inherit).
+  3. **`$uses = false`** with a populated `AppController` `$uses`: no models at all, not even
+     the default model; model completion offers nothing by convention.
+  4. **`$uses = array()`**: with a populated `AppController` `$uses`, the controller has
+     `AppController`'s models and not its own default model; with an `AppController` that does
+     not declare `$uses`, it has only its default model.
 
 ## Implementation steps
 
 1. Done: checked the CakePHP 2.10 merging and lazy-loading behaviour; see "Verified against
    CakePHP 2.10".
-2. Index: the new property sources, the comma-separated association string, the property name
-   and empty declarations. Indexer tests.
+2. Index: the new property sources and text needles, the comma-separated association string,
+   the property name and empty declarations. Indexer tests.
 3. Resolver: CakePHP 2 convention candidates and the property-level rules.
 4. Components and models on controllers. Component and model tests.
-5. Associations, in models and through nested controller fields. Association tests.
-6. Template helpers through the rendering controllers, with caching. Helper tests.
+5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, and
+   nested completion for CakePHP 2 models. Association tests.
+6. Template helpers: the template key in the deferred signature, the rendering controllers,
+   caching. Helper tests.
 7. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
 8. Run the full suite.
 
