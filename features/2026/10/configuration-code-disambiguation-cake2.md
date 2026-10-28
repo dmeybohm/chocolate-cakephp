@@ -153,14 +153,36 @@ So the chain walk should not stop at `\Controller`: its `$components` default ma
 still stop above the framework classes, and `\View` contributes nothing (see below).
 
 Override and convention: property arrays are unconditional, so an alias the effective value
-loads resolves to its loads only, as before. A component alias no property loads keeps
-convention for type resolution. For completion, the component and model convention lists are
-hidden whenever the controller's effective `$components` / `$uses` is known, because
-`Controller::__isset()` does not lazy-load anything else.
+loads resolves to its loads only, as before.
+
+Unlike CakePHP 3 to 5, a CakePHP 2 controller has no members beyond what its properties and
+`loadModel()` calls load, so convention is not a fallback for aliases they do not load:
+
+- **Models.** `Controller::__isset()` lazy-loads only the models in the effective `$uses`
+  (after the merge rules) and `$modelClass`. When the effective `$uses` is known, a model that
+  is in neither, and that no `loadModel()` call in the chain loads, does not exist: it gets no
+  model type, convention must not restore it, and nested association completion on it offers
+  nothing.
+- **Components.** `ComponentCollection::init()` sets `$Controller->{$alias}` only for entries
+  in the effective `$components`, and `Controller::__get()` does not lazy-load components.
+  The runtime alternative, `$this->Components->load('Foo')`, does not set the property either;
+  code writes `$this->Foo = $this->Components->load('Foo')`, and PhpStorm types that
+  assignment itself. So when the effective `$components` is known, an alias it does not load
+  gets no component type from convention.
+- Completion follows the same rule: the component and model convention lists are hidden
+  whenever the effective `$components` or `$uses` is known.
+
+**Known** means some indexed class in the chain declares the property. Normally that is always
+true, since `\Controller` declares `$components = array('Session', 'Flash')` and
+`$uses = true`. When the CakePHP 2 framework source is not part of the project, `\Controller` is
+not indexed, and if no application class declares the property either, its effective value is
+unknown. Then convention stays the fallback for that property, for type resolution and
+completion, as today.
 
 `$this->loadModel('Name')` in an action adds a TABLE load outside the property, unioned as
-before. A `loadModel()` call in `beforeFilter()` (common in CakePHP 2) is unioned, not an
-override, matching the previous feature's rule.
+before, and is a model the controller has even when `$uses` does not list it. A `loadModel()`
+call in `beforeFilter()` (common in CakePHP 2) is unioned, not an override, matching the
+previous feature's rule.
 
 ### Helpers in templates
 
@@ -364,17 +386,24 @@ Tests:
   of `$uses = true`, `false` and `array()`; `array()` and `[]` syntax.
 - Components: an aliased entry resolves to its `className` only; a plain entry resolves by name;
   an alias merged from `AppController` resolves in the child; completion lists only the loaded
-  components.
+  components; an alias the effective `$components` does not load gets no component type, even
+  when a component class of that name exists.
 - Models: `$uses` entries resolve; completion with `$uses` hides other models; a controller
   without `$uses` gets its default model; `$uses = array('Artist')` on `MoviesController` has
-  no `Movie`; `$uses = false` has no models; `AppController`'s `$uses` is appended.
+  no `Movie` (no model type, even though the `Movie` model exists); `$uses = false` has no
+  models; `AppController`'s `$uses` is appended; a `loadModel('Movie')` in an action makes
+  `$this->Movie` resolve despite `$uses = array('Artist')`.
+- Unknown properties: with no `\Controller` stub in the fixture and no `$components` or `$uses`
+  declared by any application class, component and model aliases fall back to convention for
+  type resolution and completion.
 - Helpers: an aliased helper on the controller resolves in its template; an element falls back
   to `AppController`; a helper's own `$helpers` still resolves.
 - Associations: an aliased association resolves inside the model and through
   `$this->Movie->Alias` in a controller; a redeclared association property replaces the parent's.
 - Nested chains: `$this->Movie->Director->Studio` where `Director` is an aliased association
-  resolves `Studio` against the aliased class's associations; `$this->Movie->Director` on a
-  controller whose `$uses` excludes `Movie` falls back to convention.
+  resolves `Studio` against the aliased class's associations. On a controller with
+  `$uses = array('Artist')`, `$this->Movie` has no model type and `$this->Movie->` offers no
+  nested association completion.
 - Navigation: `$this->Meta` goes to `MovieMetadataComponent`; strings in `$components` and
   `$uses` navigate through the service.
 - Empty redeclarations. These check both that the indexer records a declaration that loads
