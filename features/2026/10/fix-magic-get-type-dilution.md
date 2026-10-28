@@ -168,7 +168,7 @@ explicit user choice for documenting loaded members in the code.
 3. **Version search: not needed for now.** Approach 1 is ruled out, and approach 0 uses APIs
    present in 232. Only check which build introduced `replacesTypeFromAst()` if approach 0 fails
    and 0b becomes the fallback.
-4. **Experiment with approach 0** on the current platform (232). Add a provider keyed `P` whose
+4. **Done (session 3), it passes. Experiment with approach 0** on the current platform (232). Add a provider keyed `P` whose
    `complete()` answers authoritative members on all three load paths. Run the 28 real-mode tests
    with their skips removed, then the full suite in both modes, plus a cold-index real-mode run.
    Record the receiver encodings seen, the cost, and any recursion.
@@ -239,4 +239,62 @@ Plan step 2: is this plugin involved in the `IsUnique.php` indexing failure? **N
 Conclusion: the failure is a PHP plugin issue with self-referential field inference, triggered
 by real framework code. The `RecursionManager` workaround in `BaseTestCase` stays, limited to real
 mode, as it is now.
+
+### Session #3
+
+Plan step 4: approach 0 works.
+
+Native signatures, from a real-mode probe on Cake 5, are below. Each also appears wrapped as
+`#π(#P…)` by another provider, and that resolves its inner `#P` signature through the same
+`doCompleteType` path.
+
+| Path | PhpStorm's own field signatures |
+|---|---|
+| Controller `$this->Legacy` | `#P#C\App\Controller\ConfiguredController.Legacy`, `#P#S\…ConfiguredController.Legacy` |
+| Helper `$helpers` `$this->Alias` | `#P#C\…\ConfiguredHelper.Alias`, `#P#S\…ConfiguredHelper.Alias` |
+| Template `$this->Fmt` | `#P#C\App\View\AppView.Fmt` |
+
+So a receiver arrives as `#C` (`PhpTypeSignatureKey.CLASS`) or `#S` (`POLYMORPHIC_CLASS`).
+
+`ConfiguredMemberFieldTypeProvider` (in `configuredmemberindex`, registered as a
+`typeProvider4`):
+
+- **Key and hooks.** It is keyed on `PhpTypeSignatureKey.FIELD` (`P`). `getType()` always returns
+  `null`, `interceptsNativeSignature()` keeps its default of `false`, and `getBySignature()` is
+  empty.
+- **Cheap filters before any index access.** `complete()` only considers `#P#C\Fqn.Field` and
+  `#P#S\Fqn.Field` with an uppercase field. Receivers are classified the way the existing
+  providers do it: `…Controller` gives `COMPONENT` and `TABLE`, and `…View` or `…Helper` gives
+  `HELPER`. Everything else gets `null`.
+- **Then the lookup.** It skips dumb mode and a disabled plugin. It asks `ConfiguredMemberService`
+  for the member and answers only when `hasInitializeLoad` is true (an `initialize()` load or a
+  `$helpers` array), and only when the class doesn't declare the field itself. The answer is the
+  configured type, so `doCompleteType` returns before native resolution and the `__get` fallback.
+  In every other case it returns `null`.
+
+Results:
+
+- **Targeted runs.** With the 28 `assumeStubVendor(magicGetDilution)` skips and their reason
+  fields removed (each test file is now identical to its pre-skip version, apart from the
+  `configureByFiles` helper rename), real mode passes every `Configured*` class: cake5 40, cake4
+  44, cake3 44, all with no skips.
+- **Full suite.** Stub mode: 961 tests, 0 failed, 0 skipped (8 m 06 s). Real mode on a wiped
+  index: 961 tests, 0 failed, 0 skipped (10 m 43 s, including indexing all four framework
+  versions from scratch). No new recursion or indexing errors appeared. The `IsUnique.php`
+  workaround still applies.
+- **No `@property` needed.** None of the fixtures have `@property` tags. A class that declares
+  the field is left to native resolution.
+
+Still not covered, for the decision in step 5:
+
+- **Convention-only members,** with no `initialize()` load or `$helpers` array, are still
+  diluted. The provider deliberately doesn't answer for them, because convention gives a union
+  of candidates rather than an authoritative class.
+- **Receivers that aren't `#C`/`#S`,** such as `$controller->Legacy` through a variable or a
+  method call's result, keep native resolution and so are still diluted.
+- **Cake 2** has no configured-member index (`$components`/`$uses` arrays aren't indexed), so
+  nothing changes there yet. See Open questions.
+- **No completion test yet.** No test asserts the user-visible symptom directly, for example
+  that completion on `$this->Legacy->` in real mode no longer offers `Table` methods. The 28
+  exact-type assertions cover it indirectly.
 
