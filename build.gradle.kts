@@ -1,6 +1,8 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import java.net.URI
+import java.security.MessageDigest
 
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
@@ -138,8 +140,20 @@ tasks {
         kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
     }
 
+    val fetchCakePhpVendor by registering(FetchCakePhpVendor::class) {
+        cakeVersion = "5.4.3"
+        sha256 = "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"
+        downloadDir = gradle.gradleUserHomeDir.resolve("caches/chocolate-cakephp")
+        outputDir = layout.buildDirectory.dir("cakephp-vendor/5")
+    }
+
     test {
         useJUnitPlatform()
+        dependsOn(fetchCakePhpVendor)
+        systemProperty(
+            "chocolateCakePHP.vendor.cake5",
+            fetchCakePhpVendor.get().outputDir.get().asFile.absolutePath
+        )
         // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
         testLogging {
             events("passed", "skipped", "failed")
@@ -180,5 +194,55 @@ tasks {
     // Note: signPlugin and publishPlugin are now configured via intellijPlatform.signing and intellijPlatform.publishing blocks
     publishPlugin {
         dependsOn("patchChangelog")
+    }
+}
+
+/**
+ * A pinned release of the CakePHP framework source, unpacked for use as a test library.
+ */
+abstract class FetchCakePhpVendor @Inject constructor(
+    private val archives: ArchiveOperations,
+    private val files: FileSystemOperations,
+) : DefaultTask() {
+    @get:Input abstract val cakeVersion: Property<String>
+    @get:Input abstract val sha256: Property<String>
+    @get:Internal abstract val downloadDir: Property<File>
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun fetch() {
+        val version = cakeVersion.get()
+        val zip = downloadDir.get().resolve("cakephp-$version.zip")
+        if (!zip.isFile || sha256Of(zip) != sha256.get()) {
+            zip.parentFile.mkdirs()
+            val url = URI("https://codeload.github.com/cakephp/cakephp/zip/refs/tags/$version").toURL()
+            url.openStream().use { input -> zip.outputStream().use { input.copyTo(it) } }
+            val actual = sha256Of(zip)
+            if (actual != sha256.get()) {
+                zip.delete()
+                throw GradleException("Checksum mismatch for CakePHP $version: $actual")
+            }
+        }
+        files.sync {
+            from(archives.zipTree(zip)) {
+                include("cakephp-$version/src/**")
+                eachFile { relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray()) }
+                includeEmptyDirs = false
+            }
+            into(outputDir)
+        }
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(65536)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 }
