@@ -55,6 +55,12 @@ removed:
   `ConfiguredTableTest` (2) each.
 - **cake5:** `ConfiguredComponentTest` (4) and `ConfiguredHelperTest` (4).
 
+These tests already detect primitive dilution. Their type helpers keep entries that start with
+`\`, and PhpStorm writes primitive types that way (`\null`, `\mixed`, `\bool`, `\void`,
+`\array`). The real-mode failures showed every one of these in the assertion messages, so the
+`assertEquals` on the full set fails on any extra type. The filter drops only unresolved `#…`
+signatures.
+
 If an approach can't make the type exact, those tests change to assert what it does guarantee,
 for example completion contents, and that trade-off is recorded here. Stub mode stays fully
 green, and `assumeStubVendor` stays available for other uses.
@@ -68,9 +74,21 @@ In the order to evaluate them:
 New since 232: `com.jetbrains.php.typeInferenceExclusion`, with
 `isExcludedFromTypeInference(PsiElement)`. `PhpTypeInfo.getTypeCached` and `getTypeFromAST`
 return `PhpType.EMPTY` for excluded elements. The only built-in user excludes compiled Twig
-templates. The idea is to exclude a `FieldReference` that the plugin resolves through an
-`initialize()` load, which might drop PhpStorm's own `#P` signature and with it the `__get`
-fallback, while keeping our provider's type.
+templates. The idea is to exclude a `FieldReference` whose configured type is authoritative,
+which might drop PhpStorm's own `#P` signature and with it the `__get` fallback, while keeping
+our provider's type.
+
+"Authoritative" means `MemberTypeResult.hasInitializeLoad`, the flag the type providers already
+use to stop adding convention candidates. `MemberLoad.isInitializeLoad` counts both an
+`initialize()` call and a property array such as `$helpers`, so the exclusion must key on that
+flag, not on `initialize()` alone. The acceptance tests cover three paths, and the experiment
+needs all three:
+
+| Load path | Provider |
+|---|---|
+| `loadComponent()`/`loadModel()` in a controller's `initialize()` | `ControllerFieldTypeProvider` |
+| `loadHelper()` in a view's `initialize()` | `ViewHelperInViewTypeProvider` |
+| A helper's `$helpers` property array | `ViewHelperInViewHelperTypeProvider` |
 
 Unknowns, to settle by experiment:
 
@@ -105,8 +123,9 @@ explicit user choice.
 1. **Find when the extension point arrived.** Fetch PHP plugin builds for 241 through 252 and
    record which ones contain `typeInferenceExclusion`.
 2. **Experiment with approach 1.** On a throwaway platform bump, register an exclusion for
-   configured `FieldReference`s and run the 28 real-mode tests. Record whether provider types
-   survive, and check performance and recursion behavior.
+   `FieldReference`s whose configured type has `hasInitializeLoad`, covering all three load
+   paths, and run the 28 real-mode tests. Record whether provider types survive, and check
+   performance and recursion behavior.
 3. **Decide with the user.** Choose between approach 1 (with the new minimum build), approach 2,
    or both, based on steps 1 and 2.
 4. **Implement for Cake 5 first,** then Cake 4 and 3, removing the matching skips as each
