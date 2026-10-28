@@ -67,39 +67,61 @@ green, and `assumeStubVendor` stays available for other uses.
 
 ## Approaches
 
-In the order to evaluate them:
+In the order to evaluate them, updated after the step 1 bytecode check:
 
-### 1. `PhpTypeInferenceExclusion` (needs a newer IDE)
+### 0. A provider keyed on the native field signature (works on 232)
 
-New since 232: `com.jetbrains.php.typeInferenceExclusion`, with
-`isExcludedFromTypeInference(PsiElement)`. `PhpTypeInfo.getTypeCached` and `getTypeFromAST`
-return `PhpType.EMPTY` for excluded elements. The only built-in user excludes compiled Twig
-templates. The idea is to exclude a `FieldReference` whose configured type is authoritative,
-which might drop PhpStorm's own `#P` signature and with it the `__get` fallback, while keeping
-our provider's type.
+`PhpIndexImpl.doCompleteType`, which resolves every signature, first offers it to each
+`PhpTypeProvider4` whose `getKey()` equals the signature's key character (`s.charAt(1)`). PhpStorm's
+own field signature uses `PhpTypeSignatureKey.FIELD`, which is `P` (`#P#C\Class.Name`). After a
+matching provider's `complete()` returns a non-empty type:
 
-"Authoritative" means `MemberTypeResult.hasInitializeLoad`, the flag the type providers already
-use to stop adding convention candidates. `MemberLoad.isInitializeLoad` counts both an
-`initialize()` call and a property array such as `$helpers`, so the exclusion must key on that
-flag, not on `initialize()` alone. The acceptance tests cover three paths, and the experiment
-needs all three:
+- **`interceptsNativeSignature()` is `false`:** `doCompleteType` returns without running native
+  resolution, unless another provider shares the key and the result is ambiguous. Native
+  resolution (`getBySignature`, then `getMembers`) is where the `__get` fallback happens, so it is
+  skipped.
+- **`interceptsNativeSignature()` is `true`:** the result is added, and native resolution still
+  runs.
+- **`complete()` returns `null`:** native resolution runs as usual.
 
-| Load path | Provider |
-|---|---|
-| `loadComponent()`/`loadModel()` in a controller's `initialize()` | `ControllerFieldTypeProvider` |
-| `loadHelper()` in a view's `initialize()` | `ViewHelperInViewTypeProvider` |
-| A helper's `$helpers` property array | `ViewHelperInViewHelperTypeProvider` |
+So a provider keyed `P` with `interceptsNativeSignature() == false`, whose `complete()` returns the
+configured type for an authoritative member (`hasInitializeLoad`) and `null` for everything else,
+replaces the native field lookup for exactly those fields. Every other field keeps PhpStorm's
+normal behavior. Native keys are a sanctioned pattern: the bundled Prophecy providers key on
+`PhpTypeSignatureKey.METHOD` (with `interceptsNativeSignature() == true`). The same
+`doCompleteType` structure is present in 263.7307.44, so the mechanism holds across the supported
+range.
 
 Unknowns, to settle by experiment:
 
-- Do `PhpTypeProvider4` results survive the exclusion, or does it blank the whole element?
-- Is calling `ConfiguredMemberService` from inside type inference safe from recursion and
-  index-access problems?
-- Which build introduced the extension point? This sets the new minimum (currently
-  `pluginSinceBuild = 232`). Check 241, 242, 243, 251 and 252 plugin jars.
+- **Receiver encoding.** The receiver part of `#P` can be another signature (`#C\…`, a variable,
+  a method call, a union). Find out what `$this->Field` in controllers, views, templates and
+  helpers looks like, and whether `complete()` should resolve a non-class receiver through
+  `PhpIndex` or leave it alone.
+- **Cost.** `complete()` runs for every `#P` signature in the project. It needs a cheap string
+  filter (an uppercase field name, a receiver that could be a controller, view or helper) before
+  any index access.
+- **Other plugins.** A third-party provider keyed `P` would hit the ambiguity branch. Check the
+  behavior if two providers both answer.
+- **Recursion.** `complete()` runs under `doCompleteType`'s recursion guard. Index lookups are
+  normal in `complete()` (our providers already do them), but confirm with the real-mode suite
+  and the cold-index run.
 
-Raising the minimum IDE version is a product decision. Settle it before the plugin depends on
-this.
+### 0b. `PhpTypeProvider4.replacesTypeFromAst()` (263 only)
+
+In 263 (absent in 232), `PhpTypeInfo`'s provider loop collects the types of providers whose
+`replacesTypeFromAst()` is `true` separately. If any are non-empty, it returns only those and
+drops the AST type, PhpStorm's own `#P` signature included. It is decided per provider, not per
+element, and at `getType()` time, before indexes are available, so it can't tell which fields are
+authoritative. It would also need a raised minimum IDE version. Approach 0 is preferred, and this
+is kept as a fallback.
+
+### 1. `PhpTypeInferenceExclusion`: ruled out
+
+`typeInferenceExclusion` (added after 232) makes `PhpTypeInfo.getTypeFromAST` return
+`PhpType.EMPTY` for an excluded element *before* the provider loop runs. That loop lives in
+`lambda$getTypeFromAST$0`, which is where `PhpTypeProvider4.getType` gets called. Excluding a
+configured `$this->Field` would therefore blank our provider's type along with PhpStorm's.
 
 ### 2. `@property` inspection and quick-fix (works on 232)
 
@@ -115,8 +137,8 @@ A completion contributor that runs the remaining contributors and drops items th
 `__get` types contribute, when the plugin resolved the field. No user action, but type text,
 goto and inspections stay diluted, and it depends on contributor ordering.
 
-Approaches can combine. For example, 1 where the IDE supports it, and 2 for older IDEs or as an
-explicit user choice.
+Approaches can combine. For example, approach 0 for the type, with approach 2 offered as an
+explicit user choice for documenting loaded members in the code.
 
 ## Plan
 
@@ -142,15 +164,15 @@ explicit user choice.
      goes away, find the provider responsible and fix it.
    - If our plugin is involved, the fix should let `BaseTestCase` drop the `RecursionManager`
      workaround. If not, record the evidence here, and keep the workaround scoped to real mode.
-3. **Find when the extension point arrived,** only if step 1 keeps approach 1 alive. Check the
-   newest PHP plugin build of each branch from 233 to 262 for `typeInferenceExclusion`, to learn
-   the minimum IDE build approach 1 would require.
-4. **Experiment with approach 1.** On a throwaway platform bump, register an exclusion for
-   `FieldReference`s whose configured type has `hasInitializeLoad`, covering all three load
-   paths, and run the 28 real-mode tests. Record whether provider types survive, and check
-   performance and recursion behavior.
-5. **Decide with the user.** Choose between approach 1 (with the new minimum build), approach 2,
-   or both. If step 1 rules out approach 1, the decision is between approach 2 and approach 3.
+3. **Version search: not needed for now.** Approach 1 is ruled out, and approach 0 uses APIs
+   present in 232. Only check which build introduced `replacesTypeFromAst()` if approach 0 fails
+   and 0b becomes the fallback.
+4. **Experiment with approach 0** on the current platform (232). Add a provider keyed `P` whose
+   `complete()` answers authoritative members on all three load paths. Run the 28 real-mode tests
+   with their skips removed, then the full suite in both modes, plus a cold-index real-mode run.
+   Record the receiver encodings seen, the cost, and any recursion.
+5. **Decide with the user.** Choose approach 0 if the experiment passes. Otherwise choose between
+   0b (with a raised minimum build), approach 2 and approach 3.
 6. **Implement for Cake 5 first,** then Cake 4 and 3, removing the matching skips as each
    version passes.
 7. **Full suite in both modes, then update CI** if the platform version changes.
@@ -166,3 +188,24 @@ explicit user choice.
   are also diluted. Should the fix cover them, or only members with an `initialize()` load?
 
 ## Implementation Progress
+
+### Session #1
+
+Plan step 1, the bytecode check of PHP plugin 263.7307.44 against 232.8660.205:
+
+- **`typeInferenceExclusion` can't help.** `PhpTypeInfo.getTypeFromAST(element, visitor, bool)`
+  checks `PhpTypeInferenceExclusions.isExcludedFromTypeInference` and returns `PhpType.EMPTY`
+  before calling `lambda$getTypeFromAST$0`. That lambda computes the AST type and then loops over
+  `PhpTypeProvider4.getType` results, so our providers never run for an excluded element.
+- **`replacesTypeFromAst()` (263 only).** In that loop, providers returning `true` go into a
+  separate type set. If that set is non-empty it is returned on its own, and the AST type and
+  additive provider types are dropped.
+- **Native-key interception (232 and 263).** In `PhpIndexImpl.doCompleteType`, a provider whose
+  key matches the signature's key character gets `complete()` first. A non-empty result from a
+  provider with `interceptsNativeSignature() == false` returns before native `getBySignature`
+  resolution, unless another provider shares the key and the result is ambiguous.
+  `PhpTypeSignatureKey.FIELD` is `P`, and `CLASS` is `C`. The bundled Prophecy providers key on
+  `METHOD` (`M`) with intercepting on, which shows native keys are supported.
+
+This led to approach 0, which needs no platform bump. The version search is deferred.
+
