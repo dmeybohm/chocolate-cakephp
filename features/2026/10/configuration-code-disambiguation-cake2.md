@@ -47,17 +47,35 @@ Some shapes are new:
   each mean something different (see Models on controllers), so the index has to record a
   `$uses` declaration even when it lists no models.
 - A `hasAndBelongsToMany` entry's `with` option names a join model that `Model::__isset()` also
-  lazy-loads as a property (`'with' => 'MoviesTag'` gives `$this->MoviesTag`). It is a possible
-  extra ASSOCIATION source; leave it out of the first pass unless it falls out of the reader.
+  lazy-loads as a property, so it is an ASSOCIATION source in this iteration, recorded from the
+  `$hasAndBelongsToMany` property alongside the association itself:
+  - `'with' => 'MoviesTag'` is a plain load of alias `MoviesTag`; a dotted
+    `'with' => 'TestPlugin.MoviesTag'` is alias `MoviesTag` with that loaded name.
+  - `'with' => array('MoviesTag' => array(...))` is a load of alias `MoviesTag`, the array key
+    (`__isset()` matches `key($relation['with'])`).
+  - Without `with`, CakePHP generates a join model name from the join table and, if no such
+    class exists, instantiates a plain `AppModel` for it. That implicit join model is not
+    recorded; it falls under the by-name association fallback below.
 - A string key with a string value, `'Auth' => 'x'`, is a load of `Auth` with junk settings at
   runtime (`(array)'x'`). The reader skips it today; that is fine.
 
 `$this->loadModel('Name')` is already indexed as a TABLE `METHOD_CALL`. Its second argument
 is an ID in CakePHP 2, and `sourcesWithoutOptions` already ignores it.
 
+`$this->bindModel(array('hasMany' => array('Review')))` inside a model class is an ASSOCIATION
+`METHOD_CALL` source for that model. Its argument has the same nested shape as CakePHP 3's
+`addAssociations()`, keyed by association type, so it goes through the same reader, with the
+CakePHP 2 key set (`belongsTo`, `hasOne`, `hasMany`, `hasAndBelongsToMany`) in place of
+CakePHP 3's (`belongsToMany` instead of `hasAndBelongsToMany`). `bindModel()` runs
+conditionally and can be reset, so its loads are always unioned, never overriding, whatever
+the enclosing method. Calls on any other receiver, such as `$this->Movie->bindModel(...)` from a
+controller, are not indexed: the index stores syntax per containing class and cannot tell at
+index time which model the receiver is. They are covered by the by-name type fallback for
+associations (see Associations). `unbindModel()` is ignored.
+
 Not sources in this iteration: runtime loads through `$this->Components->load()`,
-`$this->Helpers->load()`, `bindModel()` and `ClassRegistry::init()` (the last is already typed by
-the existing `ClassRegistry` handling). `$actsAs` behaviours mix in methods, not properties, and
+`$this->Helpers->load()`, `bindModel()` on receivers other than `$this`, and
+`ClassRegistry::init()` (the last is already typed by the existing `ClassRegistry` handling). `$actsAs` behaviours mix in methods, not properties, and
 belong to the separate behaviour support idea.
 
 ## Semantics
@@ -145,7 +163,9 @@ not of an alias:
    `className`; the resolver should apply that, since it is the case where an alias silently
    points at another class.
 3. **Controllers, `$uses`:** the steps above, with `$modelClass` from the controller name.
-4. **Models, associations:** each association property's effective value, unmerged.
+4. **Models, associations:** each association property's effective value, unmerged, plus the
+   model's own `bindModel()` loads, unioned. Unlike rules 2 and 3, a known association
+   configuration limits only completion, not type resolution; see Associations.
 5. **Helpers, `$helpers`:** the helper's effective value. Not merged with `AppHelper` (`Helper`
    does not call `_mergeVars()`).
 
@@ -291,6 +311,35 @@ does after the union fix:
   `isAnyTableClass()` and falls back to a name check. Extend it to accept CakePHP 2 model
   receivers, so nested completion lists the receiver model's configured associations.
 
+**Associations are the one CakePHP 2 kind that keeps a by-name type fallback when their
+configuration is known.** At runtime an association the model's properties do not list does
+not exist (`Model::__get()` only returns what `__isset()` loads), so strictly an existing but
+unlisted model should not resolve. But the usual way to add an association at runtime is
+`bindModel()` called on the model from outside, typically from a controller:
+
+```php
+$this->Movie->bindModel(array('hasMany' => array('Review')));
+$this->Movie->Review->find('all');
+```
+
+That call cannot be indexed against `Movie` (see Configuration sources), so a strict rule would
+drop the type, completion and navigation of working code that resolves by name today. For
+`$uses` and `$components` the runtime paths are visible (`loadModel()` is indexed, and
+`$this->Foo = $this->Components->load('Foo')` is an assignment PhpStorm types itself), which is
+why those can be strict and associations cannot. So:
+
+- **Type resolution:** an association alias the model's effective configuration loads resolves
+  to its loads only. Any other uppercase field on a model keeps the by-name fallback
+  (`getCakeTwoClass()`-style: the name is a CakePHP 2 model), whether or not the configuration
+  is known. This matches CakePHP 3 associations after #292, where an unconfigured alias
+  resolves by convention.
+- **Completion:** when the model's effective association properties are known, nested
+  completion and completion inside the model offer only the configured associations, the
+  `with` join models and the model's own `bindModel()` loads. Externally bound associations are
+  not offered; they still resolve when typed. When the configuration is unknown (no indexed
+  class in the chain declares the association properties, for example `\Model` is not in the
+  project), completion keeps the convention list of all models.
+
 `AssociatedTableTypeProvider` is gated on `cake3Enabled` and identifies tables by the `Table`
 suffix, so it cannot detect CakePHP 2 models as is. Either extend it with a CakePHP 2 branch
 that recognises models through `isCakeTwoModelClass()` at `complete()` time, or put the
@@ -312,6 +361,10 @@ prefer it unless it duplicates too much of the receiver-signature handling.
   `belongsTo`. `uses` matches nearly every CakePHP 2 file because of `App::uses()`, which is
   acceptable for a prefilter.
 - The association properties accept a comma-separated string value.
+- `$hasAndBelongsToMany` entries with a `with` option also record the join model load.
+- `$this->bindModel(...)` is a new `METHOD_CALL` source, read with the `addAssociations()` array
+  reader and the CakePHP 2 association key set. Its loads need a marker that keeps them unioned
+  regardless of the enclosing method; the source method name can serve, if the record keeps it.
 - Record the property name for `PROPERTY_ARRAY` loads, and record a declaration of a property
   even when it loads nothing (`array()`, `true`, `false`, `null`), since the effective-value
   rule needs to know where a property is declared. This is a value format change: bump the
@@ -387,7 +440,9 @@ New fixtures:
 Tests:
 
 - Indexer: each property maps to its kind; the comma-separated association string; declarations
-  of `$uses = true`, `false` and `array()`; `array()` and `[]` syntax.
+  of `$uses = true`, `false` and `array()`; `array()` and `[]` syntax; `with` in its string,
+  dotted and array forms; `$this->bindModel()` leaves under each CakePHP 2 key, an unknown key
+  ignored, and `bindModel()` on a receiver other than `$this` not recorded.
 - Components: an aliased entry resolves to its `className` only; a plain entry resolves by name;
   an alias merged from `AppController` resolves in the child; completion lists only the loaded
   components; an alias the effective `$components` does not load gets no component type, even
@@ -404,6 +459,22 @@ Tests:
   to `AppController`; a helper's own `$helpers` still resolves.
 - Associations: an aliased association resolves inside the model and through
   `$this->Movie->Alias` in a controller; a redeclared association property replaces the parent's.
+- Unlisted association, completion: a `Movie` model whose association properties do not list
+  `Studio`, with an existing `Studio` model class. Completion on `$this->Movie->` in a
+  controller, and on `$this->` inside `Movie`, does not offer `Studio`, but does offer the
+  configured associations.
+- External `bindModel()`, type: a controller action calls
+  `$this->Movie->bindModel(array('hasMany' => array('Review')))` and then uses
+  `$this->Movie->Review`. `$this->Movie->Review` resolves to the `Review` model (methods
+  complete, goto works) through the by-name fallback, even though `Movie`'s association
+  configuration is known and does not list `Review`; `Review` is not offered in completion on
+  `$this->Movie->`.
+- In-model `bindModel()`: a `bindModel()` call inside `Movie` adds its alias, resolved through its
+  `className` if given, and offers it in completion, without hiding the property-configured
+  associations.
+- `with` join models: `$this->MoviesTag` inside `Movie`, and `$this->Movie->MoviesTag`, resolve to
+  the join model for the string form and the array form of `with`, and are offered in
+  completion.
 - Nested chains: `$this->Movie->Director->Studio` where `Director` is an aliased association
   resolves `Studio` against the aliased class's associations. On a controller with
   `$uses = array('Artist')`, `$this->Movie` has no model type and `$this->Movie->` offers no
@@ -431,11 +502,13 @@ Tests:
 1. Done: checked the CakePHP 2.10 merging and lazy-loading behaviour; see "Verified against
    CakePHP 2.10".
 2. Index: the new property sources and text needles, the comma-separated association string,
-   the property name and empty declarations. Indexer tests.
+   `with` join models, in-model `bindModel()`, the property name and empty declarations.
+   Indexer tests.
 3. Resolver: CakePHP 2 convention candidates and the property-level rules.
 4. Components and models on controllers. Component and model tests.
-5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, and
-   nested completion for CakePHP 2 models. Association tests.
+5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
+   completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
+   tests.
 6. Template helpers: the template key in the deferred signature, the rendering controllers,
    caching. Helper tests.
 7. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
@@ -447,10 +520,13 @@ Commit after each step.
 
 - Is plugin-path filtering for same-named classes worth doing, given that types cannot
   carry it? (Step 7.)
-- Should the `hasAndBelongsToMany` `with` join model be a source in the first pass?
 - Is it worth resolving a helper's `$helpers` aliases through the rendering controllers, given
   the controller's alias wins at runtime?
 
 Resolved by step 1: the merge rules (property-level, `AppController` only, recursive option
 merge; associations unmerged) and helper lazy-loading in views (yes, so template completion
 keeps the convention list).
+
+Resolved in review: `with` join models are a source in the first pass; associations keep the
+by-name type fallback because external `bindModel()` calls cannot be indexed, while completion
+is limited to configured associations, `with` join models and in-model `bindModel()` loads.
