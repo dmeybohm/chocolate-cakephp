@@ -70,3 +70,33 @@ Next steps, if this goes ahead: add a small real-vendor suite per Cake version m
 that depend on the framework API, decide whether to cache the sandbox index in CI, and
 consider adding `cakephp/chronos` and the PSR packages, which are absent from the extracted
 `src/` and leave some framework types unresolved.
+
+### Session #2
+
+Direction change: rather than a hand-picked real-vendor suite, every test runs both ways. CI
+will run a stub job and a real-vendor job in parallel, through a matrix in `build.yml`, once
+the real job can pass.
+
+- **The switch.** `-PcakeVendor=real` (the default is `stub`) sets the
+  `chocolateCakePHP.vendor` system property and fetches the framework. A test opts in by
+  declaring `cakeMajorVersion` in its version base class. `BaseTestCase` then returns
+  `RealCakeVendorProjectDescriptor.forVersion(...)`, applies the VFS and `RecursionManager`
+  setup from session 1, and its `configureByFiles` helper leaves out `*/vendor/cakephp.php`
+  (skipping the call entirely if nothing is left). So far only `Cake5BaseTestCase` opts in, and
+  the cake5 tests that load the stub call the helper.
+- **`getProjectDescriptor()` must be nullable.** `BasePlatformTestCase` returns `null` to mean
+  the default descriptor.
+
+Cake 5 results with a warm index: stub mode 297/297 pass in 222 s, and real mode 289/297 pass in
+201 s. One earlier real-mode run took two hours because a single test spanned the laptop
+suspending: the lid was closed, and `lid-delay-suspend` suspends as root, which bypasses
+`systemd-inhibit` block locks on systemd 255. In isolation that test takes 25 s. Treat any
+outlier test time as suspect until the journal is checked.
+
+The 8 real-mode failures, in `ConfiguredComponentTest` and `ConfiguredHelperTest`, are a real
+plugin defect that the stubs hid. The real `Controller::__get` is declared `@return
+Component|Table|null`, and `View::__get` and `Helper::__get` `@return Helper|null`. PhpStorm
+unions these into every undeclared property, so a configured `$this->Legacy` resolves to
+`MovieMetadataComponent|Component|Table|null|mixed`. With the real framework, completion on
+`$this->Legacy->` offered 123 items, every `Table` method among them. With the stub it
+offered only `generateMetadata`.
