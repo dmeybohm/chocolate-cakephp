@@ -34,6 +34,12 @@ class RealCakeVendorProjectDescriptor(private val cakeMajorVersion: Int) : Light
     override fun hashCode(): Int = cakeMajorVersion
 
     companion object {
-        val CAKE5 = RealCakeVendorProjectDescriptor(5)
+        val isEnabled: Boolean
+            get() = System.getProperty("chocolateCakePHP.vendor") == "real"
+
+        private val descriptors = mutableMapOf<Int, RealCakeVendorProjectDescriptor>()
+
+        fun forVersion(cakeMajorVersion: Int): RealCakeVendorProjectDescriptor =
+            descriptors.getOrPut(cakeMajorVersion) { RealCakeVendorProjectDescriptor(cakeMajorVersion) }
     }
 }

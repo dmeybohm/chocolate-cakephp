@@ -140,7 +140,9 @@ tasks {
         kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
     }
 
-    val fetchCakePhpVendor by registering(FetchCakePhpVendor::class) {
+    // Run tests against the real CakePHP source with -PcakeVendor=real, or the hand-written stubs by default
+    val cakeVendor = properties("cakeVendor").getOrElse("stub")
+    val fetchCake5Vendor by registering(FetchCakePhpVendor::class) {
         cakeVersion = "5.4.3"
         sha256 = "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"
         downloadDir = gradle.gradleUserHomeDir.resolve("caches/chocolate-cakephp")
@@ -149,11 +151,14 @@ tasks {
 
     test {
         useJUnitPlatform()
-        dependsOn(fetchCakePhpVendor)
-        systemProperty(
-            "chocolateCakePHP.vendor.cake5",
-            fetchCakePhpVendor.get().outputDir.get().asFile.absolutePath
-        )
+        systemProperty("chocolateCakePHP.vendor", cakeVendor)
+        if (cakeVendor == "real") {
+            dependsOn(fetchCake5Vendor)
+            systemProperty(
+                "chocolateCakePHP.vendor.cake5",
+                fetchCake5Vendor.get().outputDir.get().asFile.absolutePath
+            )
+        }
         // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
         testLogging {
             events("passed", "skipped", "failed")
