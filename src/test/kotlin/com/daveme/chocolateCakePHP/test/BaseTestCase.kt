@@ -16,7 +16,10 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import kotlin.collections.any
 import kotlin.reflect.KClass
+import org.junit.Assume
+import org.junit.runner.RunWith
 
+@RunWith(AssumptionAwareJUnit38Runner::class)
 abstract class BaseTestCase : BasePlatformTestCase() {
 
     data class RelatedItemInfo(val filename: String, val containingDir: String)
@@ -48,6 +51,13 @@ abstract class BaseTestCase : BasePlatformTestCase() {
             RecursionManager.disableAssertOnRecursionPrevention(testRootDisposable)
         }
         super.setUp()
+    }
+
+    /**
+     * Skips the test when the real framework is attached instead of the stubs.
+     */
+    protected fun assumeStubVendor(reason: String) {
+        Assume.assumeTrue(reason, realVendorDescriptor == null)
     }
 
     /**

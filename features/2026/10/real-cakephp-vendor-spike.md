@@ -110,3 +110,32 @@ for contributing class members, so the plugin cannot suppress the fallback direc
 that `@property \App\Controller\Component\MovieMetadataComponent $Legacy` on the controller
 narrows `$this->Legacy` to exactly that class. This is the approach the community
 `cakephp-ide-helper` tool takes.
+
+### Session #3
+
+The fix for the `__get` dilution gets its own branch and feature log. On this branch, the 8
+affected tests are skipped in real mode.
+
+- **Skipping.** `BaseTestCase.assumeStubVendor(reason)` calls `Assume.assumeTrue`. JUnit 4's
+  `JUnit38ClassRunner`, which the Vintage engine uses for these JUnit 3 style classes, reports
+  any exception as a failure, `AssumptionViolatedException` included. So `BaseTestCase` is
+  annotated `@RunWith(AssumptionAwareJUnit38Runner::class)` (the annotation is inherited). That
+  runner wraps the stock adapting listener and reports assumption violations as assumption
+  failures, which Gradle records as skipped. Cake 5 real mode: 8 skipped, 0 failed.
+
+Newest PHP plugin API check (263.7307.44, PhpStorm 2026.3), for the fix branch:
+
+- `PhpIndexImpl.getMembers` is unchanged. A field signature still falls back to the class's
+  `__get` whenever `PhpClassImpl.findFieldsByName` finds nothing, and there is still no
+  extension point for contributing class members. Type providers still only add types.
+- The one new extension point that touches type resolution is `typeInferenceExclusion`
+  (`PhpTypeInferenceExclusion.isExcludedFromTypeInference(PsiElement)`, absent in 232).
+  `PhpTypeInfo.getTypeCached` and `getTypeFromAST` return `PhpType.EMPTY` for excluded
+  elements. Its only built-in use excludes whole compiled Twig templates. Excluding a configured
+  `$this->Field` reference might drop PhpStorm's own `#P` field signature, and with it the
+  `__get` fallback. Whether plugin type providers survive the short-circuit can't be read from
+  the bytecode, and it needs the test platform raised from 2023.2. It is also a blunt switch,
+  and it would be consulted mid-inference, where index lookups risk recursion.
+- Remaining options for the fix branch: that experiment on 2026.3 (which may raise the minimum
+  IDE version), a `@property` quick-fix of the kind `cakephp-ide-helper` generates, or filtering
+  completion results only.
