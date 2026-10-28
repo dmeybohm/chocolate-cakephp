@@ -105,6 +105,32 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
         assertEquals(setOf("\\App\\Controller\\Component\\MovieMetadataComponent"), fieldTypeAtCaret())
     }
 
+    fun `test field declared in a parent class keeps its declared type`() {
+        myFixture.configureByText("FieldInheritingController.php", """
+        <?php
+        namespace App\Controller;
+
+        class FieldDeclaringController extends AppController
+        {
+            /** @var \App\Model\Table\MoviesTable */
+            public ${'$'}Legacy;
+        }
+
+        class FieldInheritingController extends FieldDeclaringController
+        {
+            public function initialize(): void {
+                ${'$'}this->loadComponent('Legacy', ['className' => 'MovieMetadata']);
+            }
+
+            public function index() {
+                ${'$'}this->Leg<caret>acy;
+            }
+        }
+        """.trimIndent())
+        // ControllerFieldTypeProvider still unions in the configured component:
+        assertTrue(fieldTypeAtCaret().contains("\\App\\Model\\Table\\MoviesTable"))
+    }
+
     fun `test flash resolves through the child controller`() {
         configureControllerWithBody("cake5/src5/Controller/ChildConfiguredController.php", "\$this->Fl<caret>ash;")
         assertEquals(setOf("\\Cake\\Controller\\Component\\FlashComponent"), fieldTypeAtCaret())

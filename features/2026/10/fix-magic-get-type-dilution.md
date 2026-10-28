@@ -308,3 +308,19 @@ Added `test completion on a loaded component leaves out table methods` to the Ca
 `Table` method. That closes the "No completion test yet" gap from Session #3.
 
 Also added a Vim swap file pattern (`.*.sw[a-p]`) to `.gitignore` after one was nearly committed.
+
+### Session #5
+
+A review comment on #295 asked whether `findFieldByName(fieldName, false)` misses fields declared
+in a parent class. It doesn't: in the 232 bytecode, `findFieldByName` walks the class hierarchy,
+and the boolean selects constants (`findOwnFieldByName` is the own-class-only variant).
+
+Added `test field declared in a parent class keeps its declared type` to pin this down. A parent
+declares `/** @var MoviesTable */ public $Legacy;` and the child loads a `Legacy` component.
+The test asserts the field keeps `MoviesTable`. It passes in both modes. With the check switched
+to `findOwnFieldByName`, it fails in real mode, because the provider replaces the field's type
+with the component's.
+
+The field also unions in `MovieMetadataComponent`, with or without the new provider. That
+comes from `ControllerFieldTypeProvider` and predates this branch, so the test only asserts that
+the declared type survives.
