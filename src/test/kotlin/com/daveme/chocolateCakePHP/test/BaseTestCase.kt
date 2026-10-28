@@ -64,15 +64,13 @@ abstract class BaseTestCase : BasePlatformTestCase() {
      * Copies the fixture files into the project, leaving out the stub framework when the real
      * framework is attached instead.
      */
-    protected fun configureByFiles(vararg filePaths: String) {
+    protected fun configureByFiles(vararg filePaths: String): Array<PsiFile> {
         val paths = if (realVendorDescriptor != null) {
             filePaths.filterNot { it.endsWith("/vendor/cakephp.php") }.toTypedArray()
         } else {
             filePaths
         }
-        if (paths.isNotEmpty()) {
-            myFixture.configureByFiles(*paths)
-        }
+        return if (paths.isNotEmpty()) myFixture.configureByFiles(*paths) else emptyArray()
     }
 
     fun calculateLineMarkers(element: PsiElement, klass: KClass<out LineMarkerProvider>): List<LineMarkerInfo<*>> {

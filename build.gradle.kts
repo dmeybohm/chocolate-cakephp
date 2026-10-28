@@ -145,6 +145,7 @@ tasks {
     val cakeReleases = mapOf(
         5 to ("5.4.3" to "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"),
         4 to ("4.6.5" to "1d63f746514db6cabab084737a6d29f3853129e19a356ca525e21b9043240436"),
+        3 to ("3.10.5" to "c3b54ac5e2ea9005f4cfc1711b3e8cf365d75db9c27084eff58986c4a9718d2d"),
     )
     val fetchCakeVendors = cakeReleases.map { (major, release) ->
         register<FetchCakePhpVendor>("fetchCake${major}Vendor") {

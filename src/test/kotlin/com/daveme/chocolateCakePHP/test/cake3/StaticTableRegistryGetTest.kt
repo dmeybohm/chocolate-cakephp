@@ -6,7 +6,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 class StaticTableRegistryGetTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/MovieController.php",
             "cake3/src/Model/Table/ArticlesTable.php",

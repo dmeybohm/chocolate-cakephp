@@ -162,3 +162,20 @@ All 10 Cake 4 failures are the same `__get` dilution, with Cake 4's own declared
 the component and helper tests, it hits two `ConfiguredTableTest` cases for `loadModel`. On Cake 4
 the leak into component completion is `RepositoryInterface`'s `find`/`get`/`save`/`delete`.
 These are skipped in real mode like the Cake 5 ones, so real mode cake4 is 204 with 10 skipped.
+
+### Session #5
+
+Cake 3 joined real mode with CakePHP 3.10.5 (617 PHP files under `src/`, the same layout as 4
+and 5). `Cake3BaseTestCase` and `cake3/NestedAppDirectoryTest` declare `cakeMajorVersion = 3`.
+
+`cake3/ControllerLineMarkerTest` uses the files that `configureByFiles` returns
+(`files.last()`), so the `BaseTestCase` helper now returns `Array<PsiFile>` like the fixture
+method, and an empty array when nothing is left. No test indexes the result by position, so
+dropping the stub doesn't shift anything a test depends on.
+
+Results: stub mode cake3 244/244 pass. Real mode cake3 244 with 10 failures, and the first index
+of the Cake 3 source raised no indexing errors. The 10 are the same test names as on Cake 4,
+again the `__get` dilution, with Cake 3's types: `Controller::__get` declares `bool|object`.
+`View::__get` declares only `mixed`, so PhpStorm also infers `ViewBlock|array` from its body.
+`Helper::__get` declares `Helper|null`, plus an inferred `array`. Skipped in real mode, which
+leaves real mode cake3 at 244 with 10 skipped.

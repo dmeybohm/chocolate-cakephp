@@ -15,7 +15,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line markers contain one entry for each type of view`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/json/movie.ctp",
@@ -58,7 +58,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker navigates to explicit render() calls`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/json/movie.ctp",
@@ -104,7 +104,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker navigates to explicit render() calls when nested`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/json/movie.ctp",
@@ -151,7 +151,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker adds markers to render calls`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/json/movie.ctp",
@@ -196,7 +196,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that a line marker is added to the method name when a corresponding view file doesn't exist`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/artist.ctp", // create Template dir
@@ -231,7 +231,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that a line marker is added next to render call when a corresponding view file doesn't exist`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/artist.ctp", // create Template dir
@@ -267,7 +267,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker is added to viewBuilder setTemplate calls`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/artist.ctp",
@@ -312,7 +312,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker is added to chained viewBuilder calls`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/Nested/custom.ctp",
@@ -357,7 +357,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker handles chained calls with extra whitespace`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/Nested/custom.ctp",
@@ -400,7 +400,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker handles chained calls with comment between`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Admin/edit.ctp",
@@ -443,7 +443,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker handles chained calls with newline`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Reports/Monthly/summary.ctp",
@@ -488,7 +488,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker respects preceding setTemplatePath in same method`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/Nested/custom.ctp",
@@ -535,7 +535,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker is not added to setTemplatePath calls`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/Nested/custom.ctp",
@@ -569,7 +569,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker is added to view field assignments`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/artist.ctp",
@@ -619,7 +619,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that line marker is added to view field assignments with nested path`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/Nested/custom.ctp",
@@ -669,7 +669,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     // Ternary / match expression tests (issue #280)
 
     private fun configureMovieController(body: String, vararg templates: String) {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             *templates,
@@ -914,7 +914,7 @@ class ControllerLineMarkerTest : Cake3BaseTestCase() {
     }
 
     fun `test that no line marker is added when the variable is a method parameter`() {
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/vendor/cakephp.php",
             "cake3/src/Template/Movie/artist.ctp",

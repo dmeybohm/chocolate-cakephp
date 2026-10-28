@@ -6,8 +6,10 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 
 class ConfiguredTableTest : Cake3BaseTestCase() {
 
+    private val magicGetDilution = "Real CakePHP __get types dilute configured member types"
+
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/ConfiguredTableController.php",
             "cake3/src/Model/Table/MoviesTable.php",
@@ -42,11 +44,13 @@ class ConfiguredTableTest : Cake3BaseTestCase() {
     }
 
     fun `test loadModel overrides the convention candidates`() {
+        assumeStubVendor(magicGetDilution)
         configureUsage("\$this->Mov<caret>ies;")
         assertEquals(setOf("\\App\\Model\\Table\\MoviesTable"), fieldTypeAtCaret())
     }
 
     fun `test plugin prefixed loadModel resolves to the plugin table only`() {
+        assumeStubVendor(magicGetDilution)
         configureUsage("\$this->Cata<caret>log;")
         assertEquals(setOf("\\TestPlugin\\Model\\Table\\CatalogTable"), fieldTypeAtCaret())
     }
