@@ -6,6 +6,8 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class NestedAppDirectoryTest : BaseTestCase() {
 
+    override val cakeMajorVersion = 5
+
     override fun setUp() {
         super.setUp()
 

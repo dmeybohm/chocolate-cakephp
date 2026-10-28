@@ -139,3 +139,26 @@ Newest PHP plugin API check (263.7307.44, PhpStorm 2026.3), for the fix branch:
 - Remaining options for the fix branch: that experiment on 2026.3 (which may raise the minimum
   IDE version), a `@property` quick-fix of the kind `cakephp-ide-helper` generates, or filtering
   completion results only.
+
+### Session #4
+
+Cake 4 joined real mode with CakePHP 4.6.5 (711 PHP files under `src/`). `build.gradle.kts` now
+registers one `fetchCake<N>Vendor` task per entry in a `cakeReleases` map. `Cake4BaseTestCase`
+declares `cakeMajorVersion = 4`, and the cake4 tests that load the stub use the `configureByFiles`
+helper.
+
+Three version tests extend `BaseTestCase` directly, so they never picked up the version from a
+base class: `cake5/NestedAppDirectoryTest`, `cake5/AutoDetectionGatingTest` and
+`cake4/NestedAppDirectoryTest`. Until now they ran against the stubs even in real mode. Each now
+declares its version itself.
+
+Results: stub mode cake4 204/204 pass. Real mode, cake4 and cake5 in one run: cake5 297 with 8
+skipped, cake4 204 with 10 failures. Switching between the two library descriptors in one JVM
+caused no problems, and the first index of the Cake 4 source raised no indexing errors.
+
+All 10 Cake 4 failures are the same `__get` dilution, with Cake 4's own declared types:
+`Controller::__get` returns `RepositoryInterface|null` (for the old `loadModel()` magic),
+`View::__get` returns `Helper|null`, and `Helper::__get` returns `Helper|null|void`. On top of
+the component and helper tests, it hits two `ConfiguredTableTest` cases for `loadModel`. On Cake 4
+the leak into component completion is `RepositoryInterface`'s `find`/`get`/`save`/`delete`.
+These are skipped in real mode like the Cake 5 ones, so real mode cake4 is 204 with 10 skipped.

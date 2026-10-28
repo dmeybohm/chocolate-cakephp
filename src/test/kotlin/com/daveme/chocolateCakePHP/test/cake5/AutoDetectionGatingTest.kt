@@ -11,6 +11,8 @@ import com.intellij.openapi.project.guessProjectDir
  */
 class AutoDetectionGatingTest : BaseTestCase() {
 
+    override val cakeMajorVersion = 5
+
     override fun setUp() {
         super.setUp()
 

@@ -142,22 +142,30 @@ tasks {
 
     // Run tests against the real CakePHP source with -PcakeVendor=real, or the hand-written stubs by default
     val cakeVendor = properties("cakeVendor").getOrElse("stub")
-    val fetchCake5Vendor by registering(FetchCakePhpVendor::class) {
-        cakeVersion = "5.4.3"
-        sha256 = "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"
-        downloadDir = gradle.gradleUserHomeDir.resolve("caches/chocolate-cakephp")
-        outputDir = layout.buildDirectory.dir("cakephp-vendor/5")
+    val cakeReleases = mapOf(
+        5 to ("5.4.3" to "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"),
+        4 to ("4.6.5" to "1d63f746514db6cabab084737a6d29f3853129e19a356ca525e21b9043240436"),
+    )
+    val fetchCakeVendors = cakeReleases.map { (major, release) ->
+        register<FetchCakePhpVendor>("fetchCake${major}Vendor") {
+            cakeVersion = release.first
+            sha256 = release.second
+            downloadDir = gradle.gradleUserHomeDir.resolve("caches/chocolate-cakephp")
+            outputDir = layout.buildDirectory.dir("cakephp-vendor/$major")
+        }
     }
 
     test {
         useJUnitPlatform()
         systemProperty("chocolateCakePHP.vendor", cakeVendor)
         if (cakeVendor == "real") {
-            dependsOn(fetchCake5Vendor)
-            systemProperty(
-                "chocolateCakePHP.vendor.cake5",
-                fetchCake5Vendor.get().outputDir.get().asFile.absolutePath
-            )
+            cakeReleases.keys.zip(fetchCakeVendors).forEach { (major, fetch) ->
+                dependsOn(fetch)
+                systemProperty(
+                    "chocolateCakePHP.vendor.cake$major",
+                    fetch.get().outputDir.get().asFile.absolutePath
+                )
+            }
         }
         // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
         testLogging {
