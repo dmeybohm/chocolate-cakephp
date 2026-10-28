@@ -124,6 +124,14 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
         assertTrue(result.contains("appConditionalMethod"))
     }
 
+    fun `test completion on a loaded component leaves out table methods`() {
+        configureConfiguredController("\$this->Legacy-><caret>")
+        val result = completionsOnThis()
+        assertTrue(result.contains("generateMetadata"))
+        // Controller::__get in the framework is typed as Component|Table:
+        assertFalse("Unexpected table method in $result", result.contains("newEntity"))
+    }
+
     fun `test component completion lists only the loaded aliases`() {
         configureConfiguredController("\$this-><caret>")
         val result = completionsOnThis()

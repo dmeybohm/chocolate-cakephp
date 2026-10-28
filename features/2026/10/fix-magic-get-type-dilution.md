@@ -298,3 +298,13 @@ Still not covered, for the decision in step 5:
   that completion on `$this->Legacy->` in real mode no longer offers `Table` methods. The 28
   exact-type assertions cover it indirectly.
 
+
+### Session #4
+
+Added `test completion on a loaded component leaves out table methods` to the Cake 5
+`ConfiguredComponentTest`. It checks that completion on `$this->Legacy->` offers
+`generateMetadata` and not `newEntity`. It passes in both modes. With the provider's
+`plugin.xml` registration commented out, it fails in real mode, with completion offering every
+`Table` method. That closes the "No completion test yet" gap from Session #3.
+
+Also added a Vim swap file pattern (`.*.sw[a-p]`) to `.gitignore` after one was nearly committed.
