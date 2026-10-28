@@ -2,7 +2,11 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.completeFromClasses
+import com.daveme.chocolateCakePHP.completeFromLoadedMembers
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.getViewHelperSubclasses
+import com.daveme.chocolateCakePHP.removeFromEnd
 import com.intellij.codeInsight.completion.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
@@ -65,7 +69,20 @@ class ViewHelperInViewHelperCompletionContributor : CompletionContributor() {
                 return
             }
 
-            completionResultSet.completeFromClasses(filtered, "Helper")
+            val loaded = ConfiguredMemberService.loadedMembers(
+                psiElement.project,
+                type.types.filter { it.startsWith("\\") && it.contains("Helper") },
+                setOf(MemberKind.HELPER)
+            )
+            completionResultSet.completeFromLoadedMembers(loaded.members)
+            if (MemberKind.HELPER in loaded.initializeKinds) {
+                return
+            }
+
+            completionResultSet.completeFromClasses(
+                filtered.filter { it.name.removeFromEnd("Helper", ignoreCase = true) !in loaded.members },
+                "Helper"
+            )
         }
     }
 

@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberTypeResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
@@ -68,6 +69,21 @@ fun CompletionResultSet.completeFromClasses(
         val lookupElement = LookupElementBuilder.create(targetName)
                 .withIcon(PhpIcons.FIELD)
                 .withTypeText(klass.type.toString().substring(1))
+        this.addElement(lookupElement)
+    }
+}
+
+fun CompletionResultSet.completeFromLoadedMembers(
+    members: Map<String, MemberTypeResult>,
+    containingClasses: List<PhpClass> = arrayListOf(),
+) {
+    for ((alias, member) in members) {
+        if (hasFieldAlready(containingClasses, alias)) {
+            continue
+        }
+        val lookupElement = LookupElementBuilder.create(alias)
+                .withIcon(PhpIcons.FIELD)
+                .withTypeText(member.classFqns.joinToString("|") { it.removePrefix("\\") })
         this.addElement(lookupElement)
     }
 }

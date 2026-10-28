@@ -73,6 +73,10 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     // $this->Movies->get():
                     return PhpType().add(type.tableToEntityClass())
                 }
+                else if (ControllerFieldTypeProvider.isConfiguredFieldSignature(type)) {
+                    // $this->Movies->get():
+                    return PhpType().add("#${key}.${name}.${type}")
+                }
                 else if (type.startsWith("#${ControllerFieldTypeProvider.TYPE_PROVIDER_CHAR}")) {
                     // $this->Movies->Articles->get():
                     val wrappedType = type.split(ControllerFieldTypeProvider.TYPE_PROVIDER_CHAR).last()
@@ -104,6 +108,14 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             }
             if (name.equals("find", ignoreCase = true)) {
                 val classRefType = classReference.type.filterUnknown()
+
+                // $this->Movies->find():
+                val configuredField = classRefType.types.firstOrNull {
+                    ControllerFieldTypeProvider.isConfiguredFieldSignature(it)
+                }
+                if (configuredField != null) {
+                    return PhpType().add("#${key}.${name}.${configuredField}")
+                }
 
                 // TODO: handle incomplete types here by deferring lookup to
                 //       complete method
@@ -168,6 +180,21 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         }
 
         val (_, invokingMethodName, wrappedType) = expression.split('.')
+
+        if (ControllerFieldTypeProvider.isConfiguredFieldSignature(wrappedType)) {
+            // Resolve the controller field to its table classes first:
+            val result = PhpType()
+            PhpIndex.getInstance(project).completeType(project, PhpType().add(wrappedType), null).types
+                .filter { it.startsWith("\\") && it.isAnyTableClass() }
+                .forEach { tableClass ->
+                    if (invokingMethodName.equals("get", ignoreCase = true)) {
+                        result.add(tableClass.tableToEntityClass())
+                    } else {
+                        result.add(complete("#${key}.${invokingMethodName}.${tableClass}", project))
+                    }
+                }
+            return result
+        }
 
         //
         // Check for $this->fetchTable('Movies')->find('xxx'), and

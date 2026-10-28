@@ -153,7 +153,36 @@ and warning suppression.
 
 ## Priority 2 (Medium Impact)
 
-### 7. Configuration Key Completion
+### 7. Configured Associations in Query Methods
+
+**What it does:** Use the per-table association records produced by configuration code
+disambiguation (feature 6) to drive the query-side features that still guess by name:
+`contain()`, `matching()`, `notMatching()`, `innerJoinWith()`, `leftJoinWith()`, and nested
+dot paths such as `'Authors.Profiles'`. Also walk `$this->Movies->Reviews->Authors` chains one
+configured alias at a time.
+
+**Why it matters:** `ContainCompletionContributor` currently lists every Table subclass in the
+app and plugin namespaces regardless of the receiver table, cannot offer aliased associations
+such as `Films`, and cannot follow nested paths. Once associations are indexed per table FQN,
+these methods can list exactly the receiver's association aliases and navigate each hop
+precisely.
+
+**CakePHP APIs involved:**
+- `Cake\ORM\Query::contain()` / `matching()` / `notMatching()` / `innerJoinWith()` / `leftJoinWith()`
+- `Cake\ORM\Table::belongsTo()` / `hasOne()` / `hasMany()` / `belongsToMany()` / `addAssociations()`
+- Association alias dot paths in contain strings and arrays
+
+**Implementation notes:** Lookup-side only; no index change. Resolve the receiver table of the
+query (the existing `TableLocatorTypeProvider` and `AssociatedTableTypeProvider` paths already do
+this), then ask the configured-member service for its ASSOCIATION loads and offer the aliases.
+For a dotted path, resolve each segment to its target table and continue from that table's
+records. Fall back to the current all-tables list when the receiver table has no indexed
+associations. Associations added by behaviours to `$this->_table` depend on indexing
+`addBehavior()` and belong with behaviour support (feature 2), not here.
+
+---
+
+### 8. Configuration Key Completion
 
 **What it does:** Complete configuration keys in `Configure::read('App.key')` and
 `Configure::write()` calls, based on keys defined in config files.
@@ -174,7 +203,7 @@ completions. Nested arrays should produce dot-separated suggestions (e.g., `App.
 
 ---
 
-### 8. Middleware Completion + Navigation
+### 9. Middleware Completion + Navigation
 
 **What it does:** Complete middleware class names in `$middlewareQueue->add()` and provide
 navigation from middleware strings to their class definitions.
@@ -194,7 +223,7 @@ methods. Navigation via Ctrl+Click on middleware class strings.
 
 ---
 
-### 9. Event Listener Navigation
+### 10. Event Listener Navigation
 
 **What it does:** Navigate between event dispatching (`$this->dispatchEvent('Model.afterSave')`)
 and event listener registrations (`$this->getEventManager()->on('Model.afterSave', ...)`
@@ -216,7 +245,7 @@ navigates to listeners. A "Find Usages" provider for event names would also be v
 
 ---
 
-### 10. Request Data Field Completion
+### 11. Request Data Field Completion
 
 **What it does:** Complete field names in `$this->request->getData('field_name')` based
 on form definitions in the corresponding view templates.
@@ -237,7 +266,7 @@ database columns.
 
 ---
 
-### 11. Dynamic Property/Method Warning Suppression
+### 12. Dynamic Property/Method Warning Suppression
 
 **What it does:** Suppress false "undefined property" and "undefined method" warnings on
 CakePHP classes that use magic properties and methods — including Controllers, Cells,
@@ -262,7 +291,7 @@ undefined properties.
 
 ---
 
-### 12. Undefined Method/Field Error Inspection
+### 13. Undefined Method/Field Error Inspection
 
 **What it does:** Provide a custom inspection that flags genuinely undefined methods and
 fields on Controllers, Views, Components, and Helpers — complementing the warning
@@ -286,7 +315,7 @@ warning. This requires the indexing infrastructure from component and behavior s
 
 ---
 
-### 13. Quickfix to Add Missing Methods
+### 14. Quickfix to Add Missing Methods
 
 **What it does:** When a controller action, view helper method, or component method is
 called but doesn't exist, offer a quickfix to generate a stub method in the appropriate
@@ -309,7 +338,7 @@ create the corresponding template file.
 
 ---
 
-### 14. Plugin Auto-Discovery
+### 15. Plugin Auto-Discovery
 
 **What it does:** Automatically discover CakePHP plugins by reading the
 `vendor/cakephp-plugins.php` file instead of requiring manual plugin configuration in
@@ -335,7 +364,7 @@ as an override.
 
 ## Priority 3 (Lower Impact / Higher Effort)
 
-### 15. Bake/CLI Integration
+### 16. Bake/CLI Integration
 
 **What it does:** Provide a UI within PhpStorm for running CakePHP's `bake` code
 generation commands, with form fields for options and preview of generated files.
@@ -354,7 +383,7 @@ Significant UI work required. Consider whether this adds enough value over the t
 
 ---
 
-### 16. Migration Support
+### 17. Migration Support
 
 **What it does:** Provide completion and navigation in Phinx/CakePHP migration files,
 including table and column name completion in migration API calls.
@@ -375,7 +404,7 @@ parsing migration history in order, which adds complexity.
 
 ---
 
-### 17. Plugin Route Prefix Awareness
+### 18. Plugin Route Prefix Awareness
 
 **What it does:** Understand plugin routing prefixes and provide correct completions and
 navigation for plugin controllers and actions within their routing scope.
@@ -398,7 +427,7 @@ plugin loading mechanism and namespace mapping.
 
 ---
 
-### 18. Enhanced `.phpstorm.meta.php`
+### 19. Enhanced `.phpstorm.meta.php`
 
 **What it does:** Expand the existing `.phpstorm.meta.php` file (currently only covers
 CakePHP 2) to cover CakePHP 3-5 APIs using `expectedArguments()` and `registerArgumentsSet()`

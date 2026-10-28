@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.codeInsight.completion.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
@@ -102,7 +104,19 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             if (controllerClassNames.size > 0) {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
-                val modelSubclasses = phpIndex.getModelSubclasses(settings)
+                val loaded = ConfiguredMemberService.loadedMembers(
+                    fieldReference.project,
+                    controllerClassNames,
+                    setOf(MemberKind.TABLE)
+                )
+                completionResultSet.completeFromLoadedMembers(loaded.members, containingClasses)
+                if (MemberKind.TABLE in loaded.initializeKinds) {
+                    return
+                }
+
+                val modelSubclasses = phpIndex.getModelSubclasses(settings).filter {
+                    it.name.removeFromEnd("Table", ignoreCase = true) !in loaded.members
+                }
                 completionResultSet.completeFromClasses(
                         modelSubclasses,
                         removeFromEnd = "Table",
@@ -116,17 +130,33 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             completionResultSet: CompletionResultSet,
             fieldReferenceChild: FieldReference,
         ) {
-            val phpIndex = PhpIndex.getInstance(fieldReferenceChild.project)
-            val fieldName = fieldReferenceChild.name
-
-            // Check if "child" (preceding $this->FieldReference) is in the list of model subclasses
+            val project = fieldReferenceChild.project
+            val phpIndex = PhpIndex.getInstance(project)
             val modelClasses = phpIndex.getModelSubclasses(settings)
-            val fieldStr = "\\" + fieldName
-            if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
-                return
+
+            // Resolve the preceding $this->FieldReference by type, so an alias of a table works:
+            val tableTypes = fieldReferenceChild.type.lookupCompleteType(project, phpIndex, null).types
+                .filter { it.startsWith("\\") && it.isAnyTableClass() && phpIndex.getClassesByFQN(it).isNotEmpty() }
+            val loaded = if (tableTypes.isNotEmpty())
+                ConfiguredMemberService.loadedMembers(project, tableTypes, setOf(MemberKind.ASSOCIATION))
+            else
+                null
+
+            if (loaded == null) {
+                // CakePHP 2 models are not table classes, so check by name:
+                val fieldStr = "\\" + fieldReferenceChild.name
+                if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
+                    return
+                }
+            } else {
+                completionResultSet.completeFromLoadedMembers(loaded.members)
+                if (MemberKind.ASSOCIATION in loaded.initializeKinds) {
+                    return
+                }
             }
+            val loadedAliases = loaded?.members?.keys.orEmpty()
             completionResultSet.completeFromClasses(
-                    modelClasses,
+                    modelClasses.filter { it.name.removeFromEnd("Table", ignoreCase = true) !in loadedAliases },
                     removeFromEnd = "Table"
             )
         }
