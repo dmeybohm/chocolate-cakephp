@@ -120,17 +120,40 @@ explicit user choice.
 
 ## Plan
 
-1. **Find when the extension point arrived.** Fetch PHP plugin builds for 241 through 252 and
-   record which ones contain `typeInferenceExclusion`.
-2. **Experiment with approach 1.** On a throwaway platform bump, register an exclusion for
+1. **Bytecode check of approach 1.** Before any platform work, read the 263.7307.44 bytecode to
+   find out whether an exclusion can help at all. Two questions decide it:
+   - Are `PhpTypeProvider4` results added inside the `getTypeCached`/`getTypeFromAST`
+     short-circuit, so an exclusion would blank our type too, or somewhere it survives?
+   - Is PhpStorm's own `#P` field signature, which leads to the `__get` fallback in
+     `PhpIndexImpl.getMembers`, produced on the path the exclusion empties?
+
+   Approach 1 continues only if our types survive and the `#P` signature does not.
+2. **Check whether our plugin is involved in the `IsUnique.php` indexing failure.** The real
+   vendor tests disable `RecursionManager`'s missed-cache and recursion-prevention assertions
+   because stub building for CakePHP 5's `ORM/Rule/IsUnique.php` hit a recursion guard on
+   `php.type.info->FieldImpl: _options`. That was attributed to the PHP plugin, but stub
+   building runs type inference, which may call our type providers. Recent changes added or
+   reworked several of them (`ControllerFieldTypeProvider`, `ViewHelperIn*TypeProvider`,
+   `AssociatedTableTypeProvider`, `TableLocatorTypeProvider`, `ViewVariableTypeProvider`).
+   - Capture the complete stack of the failure, with the assertions left on, and look for
+     `com.daveme` frames.
+   - Reproduce on a cold index with the assertions on, with this plugin's type providers
+     unregistered, and at a commit from before the recent type-provider changes. If the failure
+     goes away, find the provider responsible and fix it.
+   - If our plugin is involved, the fix should let `BaseTestCase` drop the `RecursionManager`
+     workaround. If not, record the evidence here, and keep the workaround scoped to real mode.
+3. **Find when the extension point arrived,** only if step 1 keeps approach 1 alive. Check the
+   newest PHP plugin build of each branch from 233 to 262 for `typeInferenceExclusion`, to learn
+   the minimum IDE build approach 1 would require.
+4. **Experiment with approach 1.** On a throwaway platform bump, register an exclusion for
    `FieldReference`s whose configured type has `hasInitializeLoad`, covering all three load
    paths, and run the 28 real-mode tests. Record whether provider types survive, and check
    performance and recursion behavior.
-3. **Decide with the user.** Choose between approach 1 (with the new minimum build), approach 2,
-   or both, based on steps 1 and 2.
-4. **Implement for Cake 5 first,** then Cake 4 and 3, removing the matching skips as each
+5. **Decide with the user.** Choose between approach 1 (with the new minimum build), approach 2,
+   or both. If step 1 rules out approach 1, the decision is between approach 2 and approach 3.
+6. **Implement for Cake 5 first,** then Cake 4 and 3, removing the matching skips as each
    version passes.
-5. **Full suite in both modes, then update CI** if the platform version changes.
+7. **Full suite in both modes, then update CI** if the platform version changes.
 
 ## Open questions
 
