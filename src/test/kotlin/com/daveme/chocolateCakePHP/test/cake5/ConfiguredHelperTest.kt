@@ -11,7 +11,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class ConfiguredHelperTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/View/ConfiguredView.php",
             "cake5/configured_view/AppView.php",
             "cake5/src5/View/Helper/ConfiguredHelper.php",

@@ -13,7 +13,7 @@ class ViewVariableCallsTest : Cake5BaseTestCase() {
     private val settings get() = Settings.getInstance(project)
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles("cake5/vendor/cakephp.php")
+        configureByFiles("cake5/vendor/cakephp.php")
         myFixture.addFileToProject("$root/$elementKey.$extension", "<?php echo \$title;")
     }
 

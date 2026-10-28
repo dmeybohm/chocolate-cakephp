@@ -12,7 +12,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     fun `test view file navigates to controller method`() {
         // Use existing fixtures - artist() method exists in MovieController
         // and artist.php view exists in templates/Movie/
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/artist.php",
@@ -40,7 +40,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
 
     fun `test view file with viewBuilder navigation`() {
         // viewBuilderTest() method renders to 'artist' template
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/artist.php",
@@ -63,7 +63,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
 
     fun `test view file with multiple controller references`() {
         // filmDirector view has matching filmDirector() method
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/film_director.php",
@@ -84,7 +84,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     }
 
     fun `test related items are grouped under Controllers`() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/artist.php",
@@ -107,7 +107,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     }
 
     fun `test non-view file returns empty`() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/src5/Controller/MovieController.php",
@@ -127,7 +127,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     // Ternary / match expression tests (issue #280)
 
     fun `test view referenced through ternary setTemplate navigates to controller method`() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/ternary_two.php",
@@ -147,7 +147,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     }
 
     fun `test view referenced through match setTemplate navigates to controller method`() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/match_one.php",
@@ -167,7 +167,7 @@ class ViewToControllerGotoRelatedTest : Cake5BaseTestCase() {
     }
 
     fun `test view referenced through a local variable navigates to controller method`() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/variable_two.php",

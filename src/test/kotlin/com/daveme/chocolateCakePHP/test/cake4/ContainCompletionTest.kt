@@ -4,7 +4,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ContainCompletionTest : Cake4BaseTestCase() {
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake4/src4/Controller/ArticleController.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
             "cake4/src4/Model/Table/AuthorsTable.php",

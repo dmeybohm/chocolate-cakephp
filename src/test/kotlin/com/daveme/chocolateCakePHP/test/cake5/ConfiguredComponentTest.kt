@@ -13,7 +13,7 @@ import java.io.File
 class ConfiguredComponentTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/ConfiguredController.php",
             "cake5/src5/Controller/ChildConfiguredController.php",
@@ -105,6 +105,32 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
         assertEquals(setOf("\\App\\Controller\\Component\\MovieMetadataComponent"), fieldTypeAtCaret())
     }
 
+    fun `test field declared in a parent class keeps its declared type`() {
+        myFixture.configureByText("FieldInheritingController.php", """
+        <?php
+        namespace App\Controller;
+
+        class FieldDeclaringController extends AppController
+        {
+            /** @var \App\Model\Table\MoviesTable */
+            public ${'$'}Legacy;
+        }
+
+        class FieldInheritingController extends FieldDeclaringController
+        {
+            public function initialize(): void {
+                ${'$'}this->loadComponent('Legacy', ['className' => 'MovieMetadata']);
+            }
+
+            public function index() {
+                ${'$'}this->Leg<caret>acy;
+            }
+        }
+        """.trimIndent())
+        // ControllerFieldTypeProvider still unions in the configured component:
+        assertTrue(fieldTypeAtCaret().contains("\\App\\Model\\Table\\MoviesTable"))
+    }
+
     fun `test flash resolves through the child controller`() {
         configureControllerWithBody("cake5/src5/Controller/ChildConfiguredController.php", "\$this->Fl<caret>ash;")
         assertEquals(setOf("\\Cake\\Controller\\Component\\FlashComponent"), fieldTypeAtCaret())
@@ -122,6 +148,14 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
         val result = completionsOnThis()
         assertTrue(result.contains("generateMetadata"))
         assertTrue(result.contains("appConditionalMethod"))
+    }
+
+    fun `test completion on a loaded component leaves out table methods`() {
+        configureConfiguredController("\$this->Legacy-><caret>")
+        val result = completionsOnThis()
+        assertTrue(result.contains("generateMetadata"))
+        // Controller::__get in the framework is typed as Component|Table:
+        assertFalse("Unexpected table method in $result", result.contains("newEntity"))
     }
 
     fun `test component completion lists only the loaded aliases`() {

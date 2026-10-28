@@ -6,7 +6,7 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewVariableResolutionTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake4/vendor/cakephp.php"
         )
     }

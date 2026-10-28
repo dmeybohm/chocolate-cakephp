@@ -11,7 +11,7 @@ import java.io.File
 class ConfiguredAssociationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Model/Table/ReviewsTable.php",
             "cake5/src5/Model/Table/UsersTable.php",

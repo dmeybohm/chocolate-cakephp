@@ -18,7 +18,7 @@ import com.jetbrains.php.lang.psi.elements.Method
 class ThemedViewToControllerTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake2/vendor/cakephp.php",
             "cake2/app/Controller/MovieController.php",
             "cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp",
@@ -84,7 +84,7 @@ class ThemedViewToControllerTest : Cake2BaseTestCase() {
         ))
         settings.loadState(newState)
 
-        val files = myFixture.configureByFiles(
+        val files = configureByFiles(
             "cake2/vendor/cakephp.php",
             "cake2/app/View/Themed/MyTheme/Movie/themed_index.ctp",
             "cake2/app/Controller/MovieController.php",

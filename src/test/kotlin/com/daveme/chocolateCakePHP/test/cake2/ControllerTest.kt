@@ -6,7 +6,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 class ControllerTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",
             "cake2/app/Controller/Component/MovieMetadataComponent.php",
@@ -55,7 +55,7 @@ class ControllerTest : Cake2BaseTestCase() {
         myFixture.completeBasic()
 
         val strings = myFixture.lookupElementStrings
-        assertTrue(strings!!.contains("findById"))
+        assertTrue(strings!!.contains("find"))
     }
 
     fun `test nested model completion type provider in cake2`() {

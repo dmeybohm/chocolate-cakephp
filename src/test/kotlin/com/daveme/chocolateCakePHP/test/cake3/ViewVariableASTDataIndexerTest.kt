@@ -11,7 +11,7 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewVariableASTDataIndexerTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake3/vendor/cakephp.php"
         )
     }
