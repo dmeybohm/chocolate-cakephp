@@ -150,7 +150,8 @@ explicit user choice for documenting loaded members in the code.
      `PhpIndexImpl.getMembers`, produced on the path the exclusion empties?
 
    Approach 1 continues only if our types survive and the `#P` signature does not.
-2. **Check whether our plugin is involved in the `IsUnique.php` indexing failure.** The real
+2. **Check whether our plugin is involved in the `IsUnique.php` indexing failure.** Done: it
+   isn't (session 2). The real
    vendor tests disable `RecursionManager`'s missed-cache and recursion-prevention assertions
    because stub building for CakePHP 5's `ORM/Rule/IsUnique.php` hit a recursion guard on
    `php.type.info->FieldImpl: _options`. That was attributed to the PHP plugin, but stub
@@ -208,4 +209,34 @@ Plan step 1, the bytecode check of PHP plugin 263.7307.44 against 232.8660.205:
   `METHOD` (`M`) with intercepting on, which shows native keys are supported.
 
 This led to approach 0, which needs no platform bump. The version search is deferred.
+
+### Session #2
+
+Plan step 2: is this plugin involved in the `IsUnique.php` indexing failure? **No.**
+
+- **Stack with the assertions on.** In a cold real-mode run of
+  `cake5.ViewVariableResolutionTest`, with the two `RecursionManager.disable*` calls commented
+  out, the failure reproduced: `Failed to build stub tree for IsUnique.php`, `Preventions:
+  [php.type.info->FieldImpl: _options]`. None of the 144 trace lines is a `com.daveme` frame. The
+  chain is entirely the PHP plugin's AST analysis. `DefaultStubBuilder.createStub` asks for the
+  field's type, `PhpTypeAnalyserVisitor.visitPhpField` infers it from the assignment, then
+  `visitPhpBinaryExpression` (`$options + $this->_options`), then `visitPhpFieldReference`, then
+  `FieldImpl.getType` on the same field, where the guard stops it. Type providers run in the same
+  lambda but after the visitor, so they aren't part of the cycle.
+- **With every plugin type provider masked.** `ExtensionTestUtil.maskExtensions` on
+  `PhpTypeProvider4.EP_NAME`, keeping everything except `com.daveme` classes (6 of 50 removed),
+  was applied after the application loaded and before the project opened, on a wiped index. The
+  same file failed with the same prevention key in two cold runs. This covers every provider
+  regardless of version, so the comparison at `v1.1.0` (from before the 2026-10-27 provider
+  changes) is unnecessary. Only type providers take part in stub-building type inference, and the
+  plugin's file-based indexes run separately.
+- **A masking pitfall.** The first masked run failed earlier, with `Failed to add indexing
+  statistics` (a `ConcurrentModificationException` in `ProjectDumbIndexingHistoryImpl`). Changing
+  the extension point seems to start a second indexing pass that races the first one's
+  statistics. Two reruns didn't hit it. Expect this flakiness in any test that masks
+  `PhpTypeProvider4` during project setup.
+
+Conclusion: the failure is a PHP plugin issue with self-referential field inference, triggered
+by real framework code. The `RecursionManager` workaround in `BaseTestCase` stays, limited to real
+mode, as it is now.
 
