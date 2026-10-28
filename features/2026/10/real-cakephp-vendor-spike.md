@@ -179,3 +179,36 @@ again the `__get` dilution, with Cake 3's types: `Controller::__get` declares `b
 `View::__get` declares only `mixed`, so PhpStorm also infers `ViewBlock|array` from its body.
 `Helper::__get` declares `Helper|null`, plus an inferred `array`. Skipped in real mode, which
 leaves real mode cake3 at 244 with 10 skipped.
+
+### Session #6
+
+Cake 2 joined real mode with CakePHP 2.10.24. Its framework lives in `lib/Cake` rather than
+`src/`, so the build's release list is now a `CakeRelease(version, sha256, sourceDir,
+excludedDirs)` entry per version, and `FetchCakePhpVendor` takes `sourceDir` and `excludedDirs`
+as inputs. For Cake 2 that's `lib/Cake` with `lib/Cake/Test` left out (the framework's own test
+suite and `test_app`, about as many PHP files as the framework), which leaves 254 files. The
+`Console/Templates/skel` app skeleton stays in. Every real Cake 2 install ships it, with its own
+global `AppController`, `AppModel` and `AppHelper`, and it caused no failures.
+`Cake2BaseTestCase` and `cake2/NestedAppDirectoryTest` declare `cakeMajorVersion = 2`.
+
+Results: stub mode cake2 104/104 pass. Real mode cake2 had one failure, and it was in the stub,
+not the plugin. `ControllerTest > test completing cake2 model methods inside a controller`
+asserted `findById` in completion on `$this->Movie->`. The stub's `Model` declares a concrete
+`findById()`, but the real Cake 2 `Model` has no such declaration, not even `@method`:
+`findBy<Field>` only exists through `__call`. A probe showed the plugin resolves `$this->Movie`
+correctly in real mode (142 completions, including `find`, `save`, `saveAll` and `validates`).
+The stub's `Model` now also declares the real `find($type = 'first', $query = array())`
+(`@return array|int|null`), and the test asserts `find`, which holds in both modes. `findById`
+stays in the stub.
+
+Full suite with all four versions (warm index): stub mode 961 tests, 0 failed, 0 skipped, 7 m 34 s.
+Real mode 961 tests, 0 failed, 28 skipped (cake3 10, cake4 10, cake5 8, all the `__get`
+dilution), 7 m 27 s. On a warm index real mode costs nothing extra. In CI the index starts cold,
+which adds roughly 45 to 50 s for each of Cake 3, 4 and 5 and less for the smaller Cake 2 tree.
+
+CI: `build.yml` runs the `build` job as a `cakeVendor: [stub, real]` matrix with
+`fail-fast: false`, passing `-PcakeVendor` to `./gradlew check`. Failed-test reports upload as
+`tests-result-<mode>` so the two jobs don't collide, coverage uploads from the stub job only, and
+the real job caches the downloaded release zips (`~/.gradle/caches/chocolate-cakephp`, keyed on
+`build.gradle.kts`). The sandbox index isn't cached, because a failed index entry persists and
+would hide an indexing regression (see session 1).

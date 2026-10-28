@@ -143,14 +143,20 @@ tasks {
     // Run tests against the real CakePHP source with -PcakeVendor=real, or the hand-written stubs by default
     val cakeVendor = properties("cakeVendor").getOrElse("stub")
     val cakeReleases = mapOf(
-        5 to ("5.4.3" to "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"),
-        4 to ("4.6.5" to "1d63f746514db6cabab084737a6d29f3853129e19a356ca525e21b9043240436"),
-        3 to ("3.10.5" to "c3b54ac5e2ea9005f4cfc1711b3e8cf365d75db9c27084eff58986c4a9718d2d"),
+        5 to CakeRelease("5.4.3", "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"),
+        4 to CakeRelease("4.6.5", "1d63f746514db6cabab084737a6d29f3853129e19a356ca525e21b9043240436"),
+        3 to CakeRelease("3.10.5", "c3b54ac5e2ea9005f4cfc1711b3e8cf365d75db9c27084eff58986c4a9718d2d"),
+        2 to CakeRelease(
+            "2.10.24", "4551b765812ecabe0d82d60dc196c50061bbb5c3ff9be55cb274ca8e7826fc9f",
+            sourceDir = "lib/Cake", excludedDirs = listOf("lib/Cake/Test"),
+        ),
     )
     val fetchCakeVendors = cakeReleases.map { (major, release) ->
         register<FetchCakePhpVendor>("fetchCake${major}Vendor") {
-            cakeVersion = release.first
-            sha256 = release.second
+            cakeVersion = release.version
+            sha256 = release.sha256
+            sourceDir = release.sourceDir
+            excludedDirs = release.excludedDirs
             downloadDir = gradle.gradleUserHomeDir.resolve("caches/chocolate-cakephp")
             outputDir = layout.buildDirectory.dir("cakephp-vendor/$major")
         }
@@ -212,6 +218,16 @@ tasks {
 }
 
 /**
+ * A CakePHP release tag and which part of its source tree is the framework.
+ */
+data class CakeRelease(
+    val version: String,
+    val sha256: String,
+    val sourceDir: String = "src",
+    val excludedDirs: List<String> = emptyList(),
+)
+
+/**
  * A pinned release of the CakePHP framework source, unpacked for use as a test library.
  */
 abstract class FetchCakePhpVendor @Inject constructor(
@@ -220,6 +236,8 @@ abstract class FetchCakePhpVendor @Inject constructor(
 ) : DefaultTask() {
     @get:Input abstract val cakeVersion: Property<String>
     @get:Input abstract val sha256: Property<String>
+    @get:Input abstract val sourceDir: Property<String>
+    @get:Input abstract val excludedDirs: ListProperty<String>
     @get:Internal abstract val downloadDir: Property<File>
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
@@ -239,7 +257,8 @@ abstract class FetchCakePhpVendor @Inject constructor(
         }
         files.sync {
             from(archives.zipTree(zip)) {
-                include("cakephp-$version/src/**")
+                include("cakephp-$version/${sourceDir.get()}/**")
+                excludedDirs.get().forEach { exclude("cakephp-$version/$it/**") }
                 eachFile { relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray()) }
                 includeEmptyDirs = false
             }

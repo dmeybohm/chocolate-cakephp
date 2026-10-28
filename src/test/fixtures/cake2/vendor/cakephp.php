@@ -19,6 +19,15 @@ class Controller {
 class Model {
 
     /**
+     * @param string $type
+     * @param array $query
+     * @return array|int|null
+     */
+    public function find($type = 'first', $query = array()) {
+
+    }
+
+    /**
      * @param string $id
      * @return array
      */
