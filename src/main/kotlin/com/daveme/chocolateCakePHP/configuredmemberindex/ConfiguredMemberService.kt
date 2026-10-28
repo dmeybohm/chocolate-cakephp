@@ -125,7 +125,7 @@ object ConfiguredMemberService {
         // Most-derived class first:
         val loadsByClass = classChain(phpIndex, classFqn).map { fqn ->
             fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
-                .flatten()
+                .flatMap { it.loads }
                 .filter { it.kind in kinds && (alias == null || it.alias == alias) }
         }
         val allLoads = loadsByClass.flatten()
@@ -197,10 +197,22 @@ object ConfiguredMemberService {
         namespaces += settings.appNamespace
         settings.pluginConfigs.mapTo(namespaces) { it.namespace }
 
-        val candidates = namespaces.map { classFqn(it, kind, name) }.distinct()
-        val existing = candidates.filter { phpIndex.getClassesByFQN(it).isNotEmpty() }
-        return existing.ifEmpty { candidates }
+        val candidates = namespaces.map { classFqn(it, kind, name) }.toMutableList()
+        if (settings.cake2Enabled) {
+            candidates += cakeTwoClassFqn(kind, name)
+        }
+        val distinct = candidates.distinct()
+        val existing = distinct.filter { phpIndex.getClassesByFQN(it).isNotEmpty() }
+        return existing.ifEmpty { distinct }
     }
+
+    // CakePHP 2 classes are global, whichever plugin they come from.
+    private fun cakeTwoClassFqn(kind: MemberKind, name: String): String =
+        when (kind) {
+            MemberKind.COMPONENT -> "\\${name}Component"
+            MemberKind.HELPER -> "\\${name}Helper"
+            MemberKind.TABLE, MemberKind.ASSOCIATION -> "\\$name"
+        }
 
     private fun classFqn(namespace: String, kind: MemberKind, name: String): String {
         val path = when (kind) {

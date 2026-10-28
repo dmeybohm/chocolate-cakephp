@@ -600,7 +600,7 @@ Tests:
 
 1. Done: checked the CakePHP 2.10 merging and lazy-loading behaviour; see "Verified against
    CakePHP 2.10".
-2. Index: the new property sources and text needles, the comma-separated association string,
+2. Done: index: the new property sources and text needles, the comma-separated association string,
    `with` join models, in-model `bindModel()`, the property name, empty declarations and the
    complete flag. Indexer tests.
 3. Resolver: CakePHP 2 convention candidates and the property-level rules.
@@ -636,3 +636,34 @@ keeps the convention list).
 Resolved in review: `with` join models are a source in the first pass; associations keep the
 by-name type fallback because external `bindModel()` calls cannot be indexed, while completion
 is limited to configured associations, `with` join models and in-model `bindModel()` loads.
+
+## Implementation Progress
+
+### Session #1
+
+Step 2, the index:
+
+- `ConfiguredMemberIndex` values are now a `ClassConfiguration`: the member loads plus a
+  `PropertyDeclaration` for every configuring property a class declares, with the form of its
+  value (`ARRAY`, `STRING`, `TRUE`, `FALSE`, `NULL`, `OTHER`) and whether every entry was read.
+  A property declared without a value is `NULL`. Index version 3.
+- `MemberLoad` gains `property` (the configuring property, or for `bindModel()` the association
+  property it adds to) and `hasUnreadClassName`.
+- New property sources `components`, `uses` and the four CakePHP 2 association properties. An
+  association property set to a string is read as a comma-separated list.
+- `with` on a `hasAndBelongsToMany` entry adds a load of the join model, in its string, dotted
+  and array forms. A `with` value that cannot be read makes the declaration incomplete.
+- `$this->bindModel()` is a `BIND_MODEL` source, read like `addAssociations()` with the CakePHP 2
+  key set. Its loads are never initialize loads.
+- A string-keyed entry whose value is not an array (`'Auth' => 'x'`) counts as unread, so it
+  makes the declaration incomplete. It is junk at runtime anyway.
+
+Indexing `$uses` broke `cake2/ControllerTest` model completion: the load resolved only to Cake 3+
+names, and as an initialize load it dropped the convention type. So the first part of step 3,
+CakePHP 2 global names in `conventionCandidates()` when CakePHP 2 is enabled, went in with this
+step. A plugin-dotted load whose plugin has a `PluginConfig` still resolves to the namespaced
+class only; telling CakePHP 2 chains apart is the rest of step 3.
+
+Full suite before that fix: 968 tests, 1 failure (the one above). After it, cake2 and the
+indexer tests pass (118); Cake 3 to 5 are unaffected, since the change applies only with CakePHP
+2 enabled.
