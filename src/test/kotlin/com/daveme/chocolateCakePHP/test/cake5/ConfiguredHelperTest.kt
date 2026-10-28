@@ -10,8 +10,6 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 
 class ConfiguredHelperTest : Cake5BaseTestCase() {
 
-    private val magicGetDilution = "Real CakePHP __get types dilute configured member types"
-
     override fun setUpTestFiles() {
         configureByFiles(
             "cake5/src5/View/ConfiguredView.php",
@@ -63,13 +61,11 @@ class ConfiguredHelperTest : Cake5BaseTestCase() {
     }
 
     fun `test aliased helper in a template resolves through the view`() {
-        assumeStubVendor(magicGetDilution)
         configureTemplate("\$this->Fm<caret>t;")
         assertEquals(setOf("\\App\\View\\Helper\\MovieFormatterHelper"), helperTypesAtCaret())
     }
 
     fun `test plugin prefixed helper in a template resolves to the plugin helper only`() {
-        assumeStubVendor(magicGetDilution)
         configureTemplate("\$this->Sha<caret>red;")
         assertEquals(setOf("\\TestPlugin\\View\\Helper\\SharedHelper"), helperTypesAtCaret())
     }
@@ -80,13 +76,11 @@ class ConfiguredHelperTest : Cake5BaseTestCase() {
     }
 
     fun `test aliased helper in a helper resolves through the helpers array`() {
-        assumeStubVendor(magicGetDilution)
         configureConfiguredHelper("\$this->Ali<caret>as;")
         assertEquals(setOf("\\App\\View\\Helper\\ArtistFormatterHelper"), helperTypesAtCaret())
     }
 
     fun `test plain helper in a helper resolves by name`() {
-        assumeStubVendor(magicGetDilution)
         configureConfiguredHelper("\$this->MovieForm<caret>atter;")
         assertEquals(setOf("\\App\\View\\Helper\\MovieFormatterHelper"), helperTypesAtCaret())
     }

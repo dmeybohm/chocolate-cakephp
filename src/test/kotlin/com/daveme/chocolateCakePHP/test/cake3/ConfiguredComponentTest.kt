@@ -12,8 +12,6 @@ import java.io.File
 
 class ConfiguredComponentTest : Cake3BaseTestCase() {
 
-    private val magicGetDilution = "Real CakePHP __get types dilute configured member types"
-
     override fun setUpTestFiles() {
         configureByFiles(
             "cake3/src/Controller/AppController.php",
@@ -60,7 +58,6 @@ class ConfiguredComponentTest : Cake3BaseTestCase() {
     }
 
     fun `test aliased load with class constant resolves to the class and not by convention`() {
-        assumeStubVendor(magicGetDilution)
         configureConfiguredController("\$this->Me<caret>ta;")
         assertEquals(
             setOf(
@@ -74,13 +71,11 @@ class ConfiguredComponentTest : Cake3BaseTestCase() {
     }
 
     fun `test aliased load with plain class name string is not treated as an FQN`() {
-        assumeStubVendor(magicGetDilution)
         configureConfiguredController("\$this->Leg<caret>acy;")
         assertEquals(setOf("\\App\\Controller\\Component\\MovieMetadataComponent"), fieldTypeAtCaret())
     }
 
     fun `test plugin prefixed load resolves to the plugin component only`() {
-        assumeStubVendor(magicGetDilution)
         configureConfiguredController("\$this->Inside<caret>Plugin;")
         assertEquals(setOf("\\TestPlugin\\Controller\\Component\\InsidePluginComponent"), fieldTypeAtCaret())
     }
@@ -96,7 +91,6 @@ class ConfiguredComponentTest : Cake3BaseTestCase() {
     }
 
     fun `test loads resolve through parent classes`() {
-        assumeStubVendor(magicGetDilution)
         myFixture.configureByText("UsageController.php", """
         <?php
         namespace App\Controller;
