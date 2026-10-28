@@ -29,18 +29,28 @@ inference, completion and navigation, as they do for CakePHP 3 to 5.
 | TABLE       | Controller | `public $uses = array(...)`, `$this->loadModel('Name')`      | no options; `$uses = false` loads nothing |
 | HELPER      | Controller | `public $helpers = array(...)`                               | the controller's helpers become the view's helpers |
 | HELPER      | Helper     | `public $helpers = array(...)`                               | already read by the existing `$helpers` reader |
-| ASSOCIATION | Model      | `public $belongsTo`, `$hasOne`, `$hasMany`, `$hasAndBelongsToMany` | value may be an array or a single string |
+| ASSOCIATION | Model      | `public $belongsTo`, `$hasOne`, `$hasMany`, `$hasAndBelongsToMany` | value may be an array or a comma-separated string |
 
 The entry shapes are the ones the existing array reader handles: a string value is a plain load
 (`'Session'`, `'DebugKit.Toolbar'`) and a string key with an array value is a load with options
 (`'Auth' => array('authorize' => 'Controller')`, `'Html' => array('className' => 'BootstrapHtml')`).
 Both `array(...)` and `[...]` parse to the same AST node.
 
-Two shapes are new:
+Some shapes are new:
 
-- An association property set to a single string, `public $belongsTo = 'User';`, is one plain load.
-- `$uses = false` or `$uses = array()` records nothing for `$uses`, and the resolver needs to tell
-  that apart from a class that does not declare `$uses` at all (see Semantics).
+- An association property set to a string is a comma-separated list of plain loads:
+  `public $belongsTo = 'User, Category';` is two loads (`Model::_createLinks()` explodes on `,`
+  and trims each name).
+- A dotted association key without `className`, `'TestPlugin.Rating'`, is alias `Rating` with
+  className `TestPlugin.Rating`, which is what the reader already records.
+- `$uses = true` (the `Controller` default), `$uses = false`, `$uses = null` and `$uses = array()`
+  each mean something different (see Models on controllers), so the index has to record a
+  `$uses` declaration even when it lists no models.
+- A `hasAndBelongsToMany` entry's `with` option names a join model that `Model::__isset()` also
+  lazy-loads as a property (`'with' => 'MoviesTag'` gives `$this->MoviesTag`). It is a possible
+  extra ASSOCIATION source; leave it out of the first pass unless it falls out of the reader.
+- A string key with a string value, `'Auth' => 'x'`, is a load of `Auth` with junk settings at
+  runtime (`(array)'x'`). The reader skips it today; that is fine.
 
 `$this->loadModel('Name')` is already indexed as a TABLE `METHOD_CALL`. Its second argument
 is an ID in CakePHP 2, and `sourcesWithoutOptions` already ignores it.
@@ -52,39 +62,89 @@ belong to the separate behaviour support idea.
 
 ## Semantics
 
-### Inheritance
+### Verified against CakePHP 2.10
 
-CakePHP 2 merges some property arrays down the inheritance chain, and others replace their
-parent's. **These rules are from memory and must be checked against the CakePHP 2.10 source
-(`Controller::_mergeControllerVars()`, `Object::_mergeVars()`, `Model::__construct()`) before
-implementing:**
+Step 1 checked the behaviour below against the CakePHP 2.10.24 source
+(`lib/Cake/Controller/Controller.php`, `Core/CakeObject.php`, `Controller/ComponentCollection.php`,
+`Utility/ObjectCollection.php`, `View/View.php`, `View/HelperCollection.php`, `View/Helper.php`,
+`Controller/Component.php`, `Model/Model.php`).
 
-- A controller's `$components` and `$helpers` are merged with `AppController`'s (and the plugin's
-  `AppController`), with the child's entry winning for an alias that both declare.
-- `$uses` is merged with `AppController`'s `$uses` unless either side is `false`.
-- Model association properties are not merged: a model that declares `$belongsTo` replaces its
-  parent's `$belongsTo` entirely.
+**Defaults on the framework classes.** `Controller` declares `$uses = true`,
+`$components = array('Session', 'Flash')`, `$helpers = array()` and `$modelClass = null` (set
+to the singular of the controller name in the constructor). `View` and `Helper` declare
+`$helpers = array()`. `Model` declares the four association properties as `array()`.
 
-The resolver's current rule already handles the merging case: for each alias, the most-derived
-class with an override load wins, and aliases loaded only by ancestors still apply. What it does
-not express is replacement, where a class that redeclares a property hides *all* of its
-parent's entries for that property, not only the ones with the same alias. Supporting replacement
-needs the index to know which property a `PROPERTY_ARRAY` load came from. Record it in
-`MemberLoad` (a new nullable `propertyName`, or the property name stored in the `methodName`
-slot), bump the index version, and in the resolver drop an ancestor's property-array loads from
-a property that a more-derived class also declares, unless the merge rules say that property
-merges.
+**Components and helpers on controllers merge with `AppController` only.**
+`Controller::_mergeControllerVars()` merges `$components` and `$helpers` with the class
+properties of `{Plugin}AppController` (for plugin controllers) and then of `AppController`,
+using `Hash::merge($parent, $child)` after `Hash::normalize()`. It does not walk the chain:
+an intermediate class between `AppController` and the controller contributes only through
+ordinary PHP property inheritance, so a controller that redeclares `$components` loses its
+intermediate parent's entries but keeps `AppController`'s. `AppController`'s own value is
+itself plain PHP inheritance, so when `AppController` does not declare `$components`, the
+`Controller` defaults `Session` and `Flash` are what gets merged.
 
-### Override and convention
+`Hash::merge` is recursive, so for an alias declared in both, the options are merged with the
+child's winning key by key. A child entry `'Auth' => array('authorize' => 'Controller')` keeps
+an `AppController` entry's `'className' => 'MyAuth'`.
 
-Property arrays are unconditional, so they keep the override rule from the previous feature:
-an alias loaded by a property array resolves to its loads only, and convention is the fallback
-for aliases nothing in the chain loads.
+**Models on controllers.** After merging, `_mergeControllerVars()` and `constructClasses()` do:
 
-Default model: a controller without `$uses` lazy-loads its `$modelClass`, the singular of its
-name (`MoviesController` loads `Movie`). That stays convention. With an explicit `$uses`, the
-models it lists are what the controller has, and the TABLE convention list is hidden in
-completion, as for `loadModel` loads in `initialize()` on CakePHP 3 and 4.
+- `$uses = null` becomes `false`.
+- `$uses = true` becomes `array($modelClass)`.
+- If `$uses` is still the same array as `AppController`'s (the controller does not redeclare
+  it), `$modelClass` is prepended.
+- Unless `$uses` is `false`, the `{Plugin}AppController` and `AppController` `$uses` arrays are
+  appended (`array_merge` with the entries not already present). `true` on those parents is
+  ignored.
+- `$uses = false` leaves no models and an empty `$modelClass`.
+- Then `$modelClass` becomes the first entry of `$uses`.
+
+`Controller::__isset()` lazy-loads only the models in `$uses` (matched by the name after the
+dot) and `$modelClass`. So a controller with `$uses = array('Artist')` has no `$this->Movie`,
+even if it is `MoviesController`. `loadModel()` adds to `$uses` at runtime.
+
+**Models do not merge associations.** `Model::__construct()` merges only `$actsAs` and
+`$findMethods` with the parent and `AppModel`. The association properties follow plain PHP
+inheritance: the nearest declaration in the chain is the whole value.
+
+**Aliases.** `ComponentCollection::load()` and `HelperCollection::load()` both take a
+`className` setting as the class and keep the array key as the alias;
+`ObjectCollection::normalizeObjectArray()` keys every entry by the name after the dot. This is
+what the reader already records.
+
+### What this means for the resolver
+
+The CakePHP 3 to 5 rule, "the most-derived load of an alias wins, ancestors' other aliases
+still apply", is not right for CakePHP 2. CakePHP 2 resolves at the level of a whole property,
+not of an alias:
+
+1. **Effective value of a property in a class:** the nearest declaration of that property
+   in the class chain, framework classes included (PHP inheritance). This needs the index to
+   record which property a `PROPERTY_ARRAY` load came from, and to record a declaration even
+   when the array is empty or the value is `true`/`false`.
+2. **Controllers, `$components` and `$helpers`:** the controller's effective value, merged with
+   `{Plugin}AppController`'s and `AppController`'s effective values, the child's entry winning
+   for an alias. Option merging means a child entry without `className` inherits the parent's
+   `className`; the resolver should apply that, since it is the case where an alias silently
+   points at another class.
+3. **Controllers, `$uses`:** the steps above, with `$modelClass` from the controller name.
+4. **Models, associations:** each association property's effective value, unmerged.
+5. **Helpers, `$helpers`:** the helper's effective value. Not merged with `AppHelper` (`Helper`
+   does not call `_mergeVars()`).
+
+So the chain walk should not stop at `\Controller`: its `$components` default matters. It can
+still stop above the framework classes, and `\View` contributes nothing (see below).
+
+Override and convention: property arrays are unconditional, so an alias the effective value
+loads resolves to its loads only, as before. A component alias no property loads keeps
+convention for type resolution. For completion, the component and model convention lists are
+hidden whenever the controller's effective `$components` / `$uses` is known, because
+`Controller::__isset()` does not lazy-load anything else.
+
+`$this->loadModel('Name')` in an action adds a TABLE load outside the property, unioned as
+before. A `loadModel()` call in `beforeFilter()` (common in CakePHP 2) is unioned, not an
+override, matching the previous feature's rule.
 
 ### Helpers in templates
 
@@ -100,17 +160,26 @@ controllers) that renders it, not `AppView`.
 - The receiver list is a union, so the per-receiver rules from the union fix apply: an alias
   only loses its convention candidates when every rendering controller has an override load
   of it.
-- `AppView`'s own `$helpers` (rare) still applies, so the receiver list is the controllers plus
-  `viewType(settings)`.
+- `View::__construct()` copies `$helpers` from the controller over the view's own (it is in
+  `View::$_passedVars`), so `AppView`'s `$helpers` never applies when a controller renders the
+  view. The view class is not a receiver.
 
 This lookup runs inside `complete()` of `ViewHelperInViewTypeProvider`, which is called often.
 It should be cached per template key with the same modification tracker the view variable
 cache uses.
 
-Completion in templates keeps the convention helper list, as for CakePHP 3 to 5, if CakePHP 2's
-`HelperCollection::__isset()` lazy-loads helpers by name the way CakePHP 3's registry does.
-**Check this in the 2.10 source**; if CakePHP 2 does not lazy-load, templates follow the hide
-rule instead.
+Completion in templates keeps the convention helper list, as for CakePHP 3 to 5: verified,
+`View::__get()` asks `HelperCollection::__isset()`, which loads any helper by name and, if that
+fails, tries the view's plugin (`{plugin}.{Name}`).
+
+Inside a helper, `Helper::__get()` loads an entry of its `$helpers` through
+`View::loadHelper()`, and `HelperCollection::load()` returns the instance already loaded under
+that alias. The controller's helpers are loaded first, in the view constructor, so when a
+controller aliases `Html` to `BootstrapHtml`, `$this->Html` inside any helper is the
+`BootstrapHtml` instance, whatever the helper's own `$helpers` entry says. The helper's own
+`className` only applies to aliases the controller does not load. Treat this as a known
+limitation unless it is cheap to union the helper's resolution with the rendering
+controllers': a helper has no single rendering controller, so this would mean every controller.
 
 The same template-to-controller mapping is what the previous plan deferred for CakePHP 3 to 5
 controller-side helper configuration (`viewBuilder()->addHelper()`, Cake 3's
@@ -154,8 +223,10 @@ prefer it unless it duplicates too much of the receiver-signature handling.
 
 - `propertyArraySources` gains `components` (COMPONENT), `uses` (TABLE) and the four CakePHP 2
   association properties (ASSOCIATION). The kind is per property, as for `helpers` today.
-- The association properties accept a single string value as one plain load.
-- Record the property name for `PROPERTY_ARRAY` loads if the replacement rule needs it. Bump the
+- The association properties accept a comma-separated string value.
+- Record the property name for `PROPERTY_ARRAY` loads, and record a declaration of a property
+  even when it loads nothing (`array()`, `true`, `false`, `null`), since the effective-value
+  rule needs to know where a property is declared. This is a value format change: bump the
   index version.
 - `$components` also exists on CakePHP 3 controllers. Indexing it is harmless there: CakePHP 3
   loads `$components` entries too, so reading them is correct, and the previous plan noted
@@ -165,9 +236,12 @@ prefer it unless it duplicates too much of the receiver-signature handling.
 
 - `conventionCandidates()` adds the global names when `cake2Enabled`: `\{N}Component`,
   `\{N}Helper`, and `\{N}` for TABLE and ASSOCIATION. A dotted name uses the part after the dot.
-- `frameworkBaseClasses` gains `\Controller`, `\View`, `\Helper` and `\Model`. `AppController`,
-  `AppHelper` and `AppModel` are application classes and stay in the chain.
-- The replacement rule above, if confirmed.
+- A CakePHP 2 resolution path implementing the property-level rules above. The chain walk reads
+  `\Controller` for its `$components` default instead of stopping before it; `\View`, `\Helper`
+  and `\Model` declare only empty arrays and can be stop classes.
+- A child entry's missing `className` inherits the merged parent entry's.
+- Telling CakePHP 2 classes from CakePHP 3+ ones: a chain that reaches `\Controller` (not
+  `\Cake\Controller\Controller`) is CakePHP 2.
 
 ### Type providers, completion and navigation
 
@@ -176,8 +250,8 @@ prefer it unless it duplicates too much of the receiver-signature handling.
   already includes the CakePHP 2 names. Check that the TABLE kind resolves `$uses` entries.
 - The nested path (`getCakeTwoClass()`) consults the receiver model's associations first.
 - `ViewHelperInViewTypeProvider`, `ViewHelperInViewCompletionContributor` and
-  `ViewHelperGotoDeclarationHandler`: use the rendering controllers as receivers for CakePHP 2
-  templates.
+  `ViewHelperGotoDeclarationHandler`: use the rendering controllers, not `viewType(settings)`, as
+  receivers for CakePHP 2 templates.
 - The completion contributors and goto handlers need no change beyond the resolver, since they
   already go through `ConfiguredMemberService`.
 - `ControllerComponentsGotoDeclarationHandler` already handles strings in `$components` and
@@ -204,22 +278,29 @@ New fixtures:
   entry and an entry with options but no `className`; `$uses` with a plain and a plugin-dotted
   model; `$helpers` with an aliased helper.
 - `AppController.php` variant (or a second base controller) declaring `$components` and
-  `$helpers`, to test merging into the child.
-- A model with each association property, including a single-string `$belongsTo` and an aliased
-  `$hasMany`, and a subclass that redeclares one association property, to test replacement.
+  `$helpers`, to test merging into the child, including a child entry without `className` that
+  inherits the parent's.
+- An intermediate controller between `AppController` and a child, both declaring `$components`,
+  to test that the intermediate's entries are lost.
+- The vendor stub's `Controller` declaring `$components = array('Session', 'Flash')` and
+  `$uses = true`, to test the defaults.
+- A model with each association property, including a comma-separated string `$belongsTo` and
+  an aliased `$hasMany`, and a subclass that redeclares one association property, to test
+  replacement.
 - A `TestPlugin` under `app/Plugin/TestPlugin` with a component, a helper and a model, and a
   matching `PluginConfig` in the test setup.
 - A template under the controller's view directory, and an element, for helper receivers.
 
 Tests:
 
-- Indexer: each property maps to its kind; the single-string association value; `$uses = false`;
-  `array()` and `[]` syntax.
+- Indexer: each property maps to its kind; the comma-separated association string; declarations
+  of `$uses = true`, `false` and `array()`; `array()` and `[]` syntax.
 - Components: an aliased entry resolves to its `className` only; a plain entry resolves by name;
   an alias merged from `AppController` resolves in the child; completion lists only the loaded
   components.
 - Models: `$uses` entries resolve; completion with `$uses` hides other models; a controller
-  without `$uses` keeps convention.
+  without `$uses` gets its default model; `$uses = array('Artist')` on `MoviesController` has
+  no `Movie`; `$uses = false` has no models; `AppController`'s `$uses` is appended.
 - Helpers: an aliased helper on the controller resolves in its template; an element falls back
   to `AppController`; a helper's own `$helpers` still resolves.
 - Associations: an aliased association resolves inside the model and through
@@ -229,11 +310,11 @@ Tests:
 
 ## Implementation steps
 
-1. Check the CakePHP 2.10 merging and lazy-loading behaviour listed above, and record what the
-   source does in this document.
-2. Index: the new property sources, the single-string association value, the property name if
-   needed. Indexer tests.
-3. Resolver: CakePHP 2 convention candidates, the framework base classes, the replacement rule.
+1. Done: checked the CakePHP 2.10 merging and lazy-loading behaviour; see "Verified against
+   CakePHP 2.10".
+2. Index: the new property sources, the comma-separated association string, the property name
+   and empty declarations. Indexer tests.
+3. Resolver: CakePHP 2 convention candidates and the property-level rules.
 4. Components and models on controllers. Component and model tests.
 5. Associations, in models and through nested controller fields. Association tests.
 6. Template helpers through the rendering controllers, with caching. Helper tests.
@@ -244,7 +325,12 @@ Commit after each step.
 
 ## Open questions
 
-- Do CakePHP 2's merge rules match the summary above? (Step 1.)
-- Does CakePHP 2 lazy-load helpers by name in views? This decides template completion. (Step 1.)
 - Is plugin-path filtering for same-named classes worth doing, given that types cannot
   carry it? (Step 7.)
+- Should the `hasAndBelongsToMany` `with` join model be a source in the first pass?
+- Is it worth resolving a helper's `$helpers` aliases through the rendering controllers, given
+  the controller's alias wins at runtime?
+
+Resolved by step 1: the merge rules (property-level, `AppController` only, recursive option
+merge; associations unmerged) and helper lazy-loading in views (yes, so template completion
+keeps the convention list).
