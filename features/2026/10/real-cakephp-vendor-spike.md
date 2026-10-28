@@ -100,3 +100,13 @@ unions these into every undeclared property, so a configured `$this->Legacy` res
 `MovieMetadataComponent|Component|Table|null|mixed`. With the real framework, completion on
 `$this->Legacy->` offered 123 items, every `Table` method among them. With the stub it
 offered only `generateMetadata`.
+
+Root cause, from the PHP plugin 232.8660.205 bytecode: for a field signature
+(`#P#C\Class.Name`), `PhpIndexImpl.getMembers` calls `PhpClassImpl.findFieldsByName`. Only when
+no field is found does it fall back to the class's `__get` method, and that method's return type
+joins the union. Type providers can only add types, and the PHP plugin has no extension point
+for contributing class members, so the plugin cannot suppress the fallback directly. A
+`@property` tag on the class makes `findFieldsByName` succeed. A probe in real mode confirmed
+that `@property \App\Controller\Component\MovieMetadataComponent $Legacy` on the controller
+narrows `$this->Legacy` to exactly that class. This is the approach the community
+`cakephp-ide-helper` tool takes.
