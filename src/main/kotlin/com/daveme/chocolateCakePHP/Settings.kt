@@ -90,7 +90,9 @@ data class SettingsState(
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
+    // force enables CakePHP 2, whatever is detected:
     var cake2Enabled: Boolean = false,
+    var cake2AutoDetect: Boolean = true,
     var cake3Enabled: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
 
@@ -110,6 +112,7 @@ data class SettingsState(
 fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 
 data class CakeAutoDetectedValues(
+    val cake2Present: Boolean = false,
     val cake3OrLaterPresent: Boolean = false,
     val namespace: String = DEFAULT_NAMESPACE,
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
@@ -153,8 +156,13 @@ class CakePhpAutoDetector(val project: Project)
 
         val composerInfo = parseComposerJson(composerContents, namespace)
 
+        val majorVersions = composerInfo.cakePhpMajorVersions
+
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = composerInfo.cakePhpMajorVersions != null,
+            cake2Present = majorVersions?.contains(2) == true,
+            // A constraint with no version, such as a branch, is taken as CakePHP 3+:
+            cake3OrLaterPresent = majorVersions != null &&
+                    (majorVersions.isEmpty() || majorVersions.any { it >= 3 }),
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )
@@ -219,18 +227,17 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
-    val cake2Enabled get() = state.cake2Enabled
+    val cake2Enabled get() = cake2ForceEnabled ||
+            (state.cake2AutoDetect && getAutoDetectedValues().cake2Present)
+    val cake2AutoDetect get() = state.cake2AutoDetect
+    val cake2ForceEnabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3AutoDetect get() = state.cake3Enabled
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 
-    private fun getAutoDetectedValues(): CakeAutoDetectedValues {
-        if (!state.cake3Enabled || state.cake3ForceEnabled) {
-            return CakeAutoDetectedValues()
-        }
-        return project.getService(CakePhpAutoDetector::class.java).autoDetectedValues
-    }
+    private fun getAutoDetectedValues(): CakeAutoDetectedValues =
+        project.getService(CakePhpAutoDetector::class.java).autoDetectedValues
 
     private fun synthesizePluginEntries(
         pluginNamespaces: List<String>,

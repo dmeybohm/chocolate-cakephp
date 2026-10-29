@@ -130,3 +130,9 @@ The `.form` file is edited by hand; the layout follows the CakePHP 3+ row.
   `cakephp/cakephp` key inside `require` is last-wins, like the other duplicate keys. Until
   step 2, the detector sets `cake3OrLaterPresent` from `cakePhpMajorVersions != null`, so its
   behaviour is unchanged.
+- Step 2 done: the detector sets `cake2Present`, and `cake3OrLaterPresent` now needs a major
+  version of 3 or more (or a constraint with no version). New `cake2AutoDetect` state, which
+  defaults to true. `Settings.cake2Enabled` is force or detected. `getAutoDetectedValues()` no
+  longer depends on the CakePHP 3+ flags. `ConfigForm` now loads its CakePHP 2 checkbox from
+  `cake2ForceEnabled`, so saving the form doesn't turn a detected CakePHP 2 into a forced one.
+- The full suite is left to CI. Step 3 (the form's auto-detect checkbox) is not done yet.
