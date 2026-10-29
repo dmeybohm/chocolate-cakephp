@@ -2,12 +2,16 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberTypeResult
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
+import com.jetbrains.php.PhpIndex
 
 /**
  * A view file, by the conventions of its structure: its template key, and the plugin it belongs
@@ -54,6 +58,26 @@ object ViewHelperReceivers {
     fun ofFile(project: Project, settings: Settings, file: PsiFile): List<String>? {
         val virtualFile = file.originalFile.virtualFile ?: return null
         return viewFileOf(project, settings, virtualFile)?.let { of(project, it) }
+    }
+
+    /**
+     * The configured type of helper [fieldName] in a view rendered by [receivers]. A view loads
+     * any helper by name, so the result only determines the type when every receiver loads it.
+     */
+    fun helperMemberType(project: Project, receivers: Collection<String>, fieldName: String): MemberTypeResult? {
+        val perReceiver = receivers.map {
+            ConfiguredMemberService.memberType(project, listOf(it), setOf(MemberKind.HELPER), fieldName)
+        }
+        if (perReceiver.all { it == null || it.classFqns.isEmpty() }) {
+            return null
+        }
+        val fqns = perReceiver.flatMap { it?.classFqns.orEmpty() }.toSet()
+        val phpIndex = PhpIndex.getInstance(project)
+        return MemberTypeResult(
+            classFqns = fqns,
+            classes = fqns.flatMap { phpIndex.getClassesByFQN(it) },
+            hasInitializeLoad = perReceiver.all { it != null && it.classFqns.isNotEmpty() && it.hasInitializeLoad },
+        )
     }
 
     /**

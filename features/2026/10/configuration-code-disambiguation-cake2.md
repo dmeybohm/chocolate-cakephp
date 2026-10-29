@@ -673,7 +673,7 @@ Tests:
    check in the resolver; the template key in the deferred signature, the rendering
    controllers with the plugin-aware lookup, the element walk and caching. Helper and plugin
    template tests.
-7. Layouts: index `$layout` declarations and assignments (in controllers and view files) and
+7. Done: layouts: index `$layout` declarations and assignments (in controllers and view files) and
    `render()`'s second argument, layout receivers including `default`, the element walk for
    view file assignments and plugin-aware layout keys. Layout tests.
 8. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
@@ -946,3 +946,41 @@ lacks falling back to the app's. Two things it ran into:
   `resolve-element-paths-at-lookup`), so the test creates both `Elements` directories first.
 
 Full suite: 1027 tests, 0 failures.
+
+### Session #6
+
+Step 7, layouts.
+
+- **Indexing.** For structures with a layout directory (`TemplateDirStructure.layoutDirectory`,
+  `Layouts` for CakePHP 2 only), the view file index records under `Layouts/{name}`:
+  `render()`'s second argument (`MethodCallInfo.secondParameterValues`; a `render()` with only
+  a layout, as in `render(null, 'ajax')`, is kept now), `$this->layout = '...'` in controllers
+  and view files, and `public $layout = '...'` declarations in controllers, as a new
+  `ElementType.FIELD` that `referencingElementsInSmartReadAction()` maps to the `Field`.
+  Index version 21.
+- **Plugin context.** A layout name resolves in the plugin of the controller rendering it, not
+  the class naming it (an `AppController` assignment renders a plugin controller's own
+  `default.ctp`). So the index now records only an explicit `Foo.` prefix
+  (`ViewReferenceData.pluginPrefix`), and `RenderingControllers` works out the context: the
+  prefix, or the plugin of the candidate controller, or of the including view file. Templates
+  and elements behave as in Session #5.
+- **Receivers.** A layout reference in controller class `C` covers `C` and its controller
+  subclasses: all of them for an assignment or `render()`, those whose nearest `$layout`
+  declaration is `C`'s for a declaration. `default` also covers every app controller (from
+  `TemplateDirStructure.appControllerClass`) whose nearest declaration is `'default'` or absent,
+  so it does not depend on the framework's `Controller` being indexed, and a declaration in a
+  file not named like a controller still counts.
+- **Unions in views.** `ViewHelperReceivers.helperMemberType()` resolves each receiver of a view
+  separately, and only lets the configuration determine the type when every receiver loads the
+  helper. `configuredHelperType(loadsAnyHelper = true)` and the goto handler use it. Before,
+  `backend.ctp` rendered by an aliasing and a non-aliasing controller lost the convention class
+  that the non-aliasing one gets at runtime.
+- The cake2 vendor stub declares `Controller::$layout = 'default'`.
+
+`LayoutHelperTest`: a layout assigned in an action, passed to `render()`, declared, and declared
+on a base class (inherited by one subclass, redeclared by another); `default.ctp` as the union
+of the controllers that render it; a `json` data view layout; a layout in another subdirectory
+falling back to `AppController`; layouts assigned in a template and in an element; a plugin's
+own `default.ctp`; and a `Foo.`-prefixed layout named by an app controller.
+
+Full suite: 1037 tests, 0 failures.

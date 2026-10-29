@@ -50,14 +50,12 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
                 ViewHelperReceivers.ofFile(project, settings, psiElement.containingFile)
             else
                 null
-            val receiverTypes = helperTypes.ifEmpty { viewReceivers.orEmpty() }
-            val configured = ConfiguredMemberService.memberType(
-                project, receiverTypes, setOf(MemberKind.HELPER), fieldName
-            )
+            val configured = if (viewReceivers != null)
+                ViewHelperReceivers.helperMemberType(project, viewReceivers, fieldName)
+            else
+                ConfiguredMemberService.memberType(project, helperTypes, setOf(MemberKind.HELPER), fieldName)
             val result = configured?.classes.orEmpty().toMutableList()
-            // A view loads a helper its receivers do not list by name:
-            val loadsAnyHelper = viewReceivers != null && configured?.classFqns?.isEmpty() == true
-            if (configured == null || !configured.hasInitializeLoad || loadsAnyHelper) {
+            if (configured == null || !configured.hasInitializeLoad) {
                 result += phpIndex.viewHelperClassesFromFieldName(settings, fieldName)
             }
             return result.distinct().toTypedArray()

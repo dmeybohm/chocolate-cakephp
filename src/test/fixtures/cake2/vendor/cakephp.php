@@ -17,6 +17,8 @@ class Controller {
 
     public $helpers = array();
 
+    public $layout = 'default';
+
     public function __get() {}
 
     public function set($keyOrArray, $value = null) {}

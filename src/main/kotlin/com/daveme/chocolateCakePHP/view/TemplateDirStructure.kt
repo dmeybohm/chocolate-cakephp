@@ -30,13 +30,34 @@ sealed class TemplateDirStructure(val id: Char) {
     abstract fun overridePrefix(plugin: String): String
 
     /**
-     * A view name without its plugin prefix, and the plugin it resolves in, for a name used in
-     * a file belonging to [ownPlugin].
+     * A view name without its plugin prefix, and the plugin the prefix names, if it has one.
+     * Without a prefix, the name resolves in the plugin of whatever renders the view.
      */
-    open fun resolveName(name: String, ownPlugin: String?): Pair<String, String?> {
-        val match = pluginPrefix.matchEntire(name) ?: return name to ownPlugin
+    open fun resolveName(name: String): Pair<String, String?> {
+        val match = pluginPrefix.matchEntire(name) ?: return name to null
         return match.groupValues[2] to match.groupValues[1]
     }
+
+    /**
+     * The directory layouts are in, under the templates directory, when layouts are tracked.
+     */
+    open val layoutDirectory: String? = null
+
+    /**
+     * Whether [templateKey] is the key of a layout.
+     */
+    fun isLayoutKey(templateKey: String): Boolean =
+        layoutDirectory?.let { templateKey.startsWith("$it/") } ?: false
+
+    /**
+     * The key of the layout a controller renders when nothing in its chain names one.
+     */
+    val defaultLayoutKey: String? get() = layoutDirectory?.let { "$it/default" }
+
+    /**
+     * The class every application controller extends, when layouts are tracked.
+     */
+    open val appControllerClass: String? = null
 
     /**
      * The classes that supply the helpers of every view file, whatever renders it.
@@ -65,6 +86,10 @@ sealed class TemplateDirStructure(val id: Char) {
         override val usesRenderingControllers = true
 
         override val fallbackReceivers = listOf("\\AppController")
+
+        override val layoutDirectory = "Layouts"
+
+        override val appControllerClass = "\\AppController"
     }
 
     // Controller-side helpers, and with them plugins, are not resolved for CakePHP 3 to 5 yet:
@@ -73,7 +98,7 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override fun overridePrefix(plugin: String) = "$overrideDirectory/$plugin/"
 
-        override fun resolveName(name: String, ownPlugin: String?): Pair<String, String?> = name to null
+        override fun resolveName(name: String): Pair<String, String?> = name to null
 
         override fun viewClassReceivers(settings: Settings) = listOf("${settings.appNamespace}\\View\\AppView")
 

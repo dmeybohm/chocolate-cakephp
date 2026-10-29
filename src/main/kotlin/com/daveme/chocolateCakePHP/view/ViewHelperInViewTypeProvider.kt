@@ -82,7 +82,7 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
 /**
  * The type of helper property [fieldName] on receivers of type [receiverClasses]: the helpers
  * they load, plus the helpers by convention unless an initialize load determined the type.
- * With [loadsAnyHelper], a helper the receivers do not load still has its convention type.
+ * With [loadsAnyHelper], a helper any receiver does not load still has its convention type.
  */
 fun configuredHelperType(
     project: Project,
@@ -92,16 +92,14 @@ fun configuredHelperType(
     loadsAnyHelper: Boolean = false
 ): PhpType {
     val result = PhpType()
-    val configured = ConfiguredMemberService.memberType(
-        project,
-        receiverClasses,
-        setOf(MemberKind.HELPER),
-        fieldName
-    )
+    val configured = if (loadsAnyHelper)
+        ViewHelperReceivers.helperMemberType(project, receiverClasses, fieldName)
+    else
+        ConfiguredMemberService.memberType(project, receiverClasses, setOf(MemberKind.HELPER), fieldName)
     if (configured != null) {
         result.add(configured.type)
     }
-    if (configured == null || !configured.hasInitializeLoad || (loadsAnyHelper && configured.classFqns.isEmpty())) {
+    if (configured == null || !configured.hasInitializeLoad) {
         result.add(viewHelperTypeFromFieldName(settings, fieldName))
     }
     return result
