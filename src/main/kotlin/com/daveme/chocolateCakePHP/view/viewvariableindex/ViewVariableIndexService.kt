@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.ControllerPath
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.application.ReadAction
@@ -551,6 +552,10 @@ object ViewVariableIndexService {
         val expandedPaths = mutableSetOf<String>()
         fun enqueueReferencesTo(viewKey: String) {
             for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, viewKey)) {
+                // A cell template renders in its own view, so its callers' variables do not reach it
+                if (next.elementType == ElementType.CELL_RENDER) {
+                    continue
+                }
                 if (seenReferences.add(next.path to next.offset)) {
                     toProcess.add(next)
                 }

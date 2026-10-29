@@ -236,3 +236,20 @@ private fun firstExpressionChild(node: ASTNode): ASTNode? {
 internal fun isExpressionNode(node: ASTNode): Boolean {
     return node.firstChildNode != null
 }
+
+/**
+ * The right-hand sides of the plain `$name = <expr>` assignments that precede a use of
+ * `$name` in the same scope, in document order. `$this` has none.
+ */
+internal fun assignedValueNodes(variableNode: ASTNode, ctx: TemplateNameContext): List<ASTNode> {
+    val name = variableNode.text.removePrefix("$")
+    if (name == "this") {
+        return emptyList()
+    }
+    val scope = scopeNodeOf(variableNode)
+    val assignmentsByName = ctx.assignmentsByScope.getOrPut(scope) { collectAssignmentsInScope(scope) }
+    val assignments = assignmentsByName[name] ?: return emptyList()
+    return assignments
+        .takeWhile { it.startOffset < variableNode.startOffset }
+        .mapNotNull { assignmentValueNode(it) }
+}

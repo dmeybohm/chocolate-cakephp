@@ -25,7 +25,8 @@ enum class ElementType {
     METHOD,
     METHOD_REFERENCE,
     FIELD_ASSIGNMENT,
-    VIEW_BUILDER
+    VIEW_BUILDER,
+    CELL_RENDER
 }
 
 data class ViewReferenceData(
@@ -37,7 +38,8 @@ data class ViewReferenceData(
 data class PsiElementAndPath(
     val path: String,
     val elementPointer: SmartPsiElementPointer<PsiElement>,
-    val offset: Int
+    val offset: Int,
+    val elementType: ElementType,
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
@@ -170,8 +172,9 @@ object ViewFileIndexService {
                         ElementType.METHOD -> PsiTreeUtil.getParentOfType(leaf, Method::class.java, false)
                         ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
                         ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
+                        ElementType.CELL_RENDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset)
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset, data.elementType)
                 }
                 true
             },
@@ -256,6 +259,33 @@ fun elementPathPrefixFromSourceFile(
         return ViewPathPrefix(elementPath.name + "/")
     else
         return null
+}
+
+/**
+ * The cell template directory prefix for references in a source file: `cell/` in CakePHP 4+
+ * and `Cell/` in CakePHP 3, found from the templates directory the file belongs to.
+ */
+fun cellPathPrefixFromSourceFile(
+    projectDir: VirtualFile,
+    sourceFile: VirtualFile,
+): ViewPathPrefix {
+    var currentDir: VirtualFile? = sourceFile.parent
+    while (currentDir != null) {
+        val templatesDir = if (currentDir.name == "templates" || currentDir.name == "Template")
+            currentDir
+        else
+            currentDir.findChild("templates") ?: currentDir.findChild("Template")
+        if (templatesDir != null && templatesDir.isDirectory) {
+            val cellDir = templatesDir.findChild("cell") ?: templatesDir.findChild("Cell")
+            val defaultName = if (templatesDir.name == "Template") "Cell" else "cell"
+            return ViewPathPrefix((cellDir?.name ?: defaultName) + "/")
+        }
+        if (currentDir == projectDir) {
+            break
+        }
+        currentDir = currentDir.parent
+    }
+    return ViewPathPrefix("cell/")
 }
 
 fun fullExplicitViewPath(
