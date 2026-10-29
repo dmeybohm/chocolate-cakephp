@@ -332,6 +332,58 @@ controller renders it. The layout is chosen with `$this->viewBuilder()->setLayou
 `viewBuilder()` calls for `setTemplate()` and `setTemplatePath()`, so `setLayout()` would be a
 small addition there.
 
+### Plugin templates
+
+Verified against 2.10 `View::pluginSplit()`, `_getViewFileName()`, `_getElementFileName()`,
+`_getLayoutFileName()` and `_paths()` (CakePHP 5 works the same way, with
+`templates/plugin/{Name}/` for the override directory):
+
+- A view, element or layout name resolves in a plugin: the `Foo.` prefix when plugin `Foo` is
+  loaded, otherwise the current view's plugin (the rendering controller's request plugin),
+  otherwise none.
+- With a plugin, the search order is the app's override directory `View/Plugin/Foo/`, then the
+  plugin's own `View/`, then the app's `View/`. Without one, only the app's `View/`.
+
+So a template can be reached by more than one name:
+
+- A plugin file, `Plugin/Foo/View/Bars/index.ctp`, by the unprefixed `Bars/index` from plugin
+  `Foo`'s context, and by `Foo.Bars/index` from anywhere.
+- An app file, `View/Bars/index.ctp`, by the unprefixed name from app context, and from plugin
+  `Foo`'s context when `Foo` has no file of that name.
+- An app override, `View/Plugin/Foo/Bars/index.ctp`, counts as `Foo`'s file, ahead of the
+  plugin's own.
+
+The view file index keys a template relative to its templates directory, with no plugin, so a
+plugin's `Bars/index` and the app's share a key, and an app `BarsController` and a plugin
+`BarsController` both match either file. Make the lookup plugin-aware instead of storing plugin
+templates under two keys:
+
+- Index each reference by its unprefixed name, as now, and record the plugin it resolves in:
+  its `Foo.` prefix, or the plugin of the file that makes it (a plugin controller, or a template
+  or element in a plugin). This is a value format change for the view file index: bump its
+  version. Check how the index treats a `Foo.` prefix today first.
+- A plugin file's rendering controllers are the references with its unprefixed key and its
+  plugin.
+- An app file's are the references with no plugin, plus plugin-context references whose plugin
+  has no file of that name (a VFS existence check at lookup time, through the plugin's override
+  and own directories).
+- The same applies to element keys for the element walk and to layout keys (step 7):
+  `$this->element('Foo.sidebar')`, `$this->layout = 'Foo.admin'`, and a plugin's own
+  `Layouts/default.ctp` for its controllers.
+
+**Plugin identity** comes from the file path, without new settings: a file belongs to plugin
+`{Name}` when it is under `{app}/Plugin/{Name}/` or `{root}/plugins/{Name}/` (the default
+`CakePlugin::load()` paths), or under a configured plugin's `pluginPath` (named after its last
+segment). A template under `{app}/View/Plugin/{Name}/` belongs to `{Name}` too. The CakePHP 3
+`PluginConfig` namespace is not used. Proper CakePHP 2 plugin settings are the separate
+`cake2-plugin-settings` idea.
+
+**`{Plugin}AppController` in the resolver.** Step 3 treats any class in the chain named
+`...AppController`, other than `AppController`, as a plugin `AppController`. CakePHP merges
+`{Plugin}AppController` only for a controller in that plugin, so an app base class such as
+`AdminAppController` contributes through plain PHP inheritance only. Narrow the check to a class
+named `{Name}AppController` where `{Name}` is the plugin the controller's file belongs to.
+
 ### Plugins and same-named classes
 
 CakePHP 2 classes are global. `'DebugKit.Toolbar'` loads `\ToolbarComponent` from the
@@ -545,6 +597,16 @@ Tests:
 - Helpers: an aliased helper on the controller resolves in its template; an element included
   from that template picks up the alias, including through a nested element; an element that
   nothing includes falls back to `AppController`; a helper's own `$helpers` still resolves.
+- Plugin templates: an app `BarsController` and a plugin `BarsController` with different helper
+  aliases each resolve only in their own `Bars/index.ctp`; an app override under
+  `View/Plugin/Foo/` takes the plugin controller's alias; `$this->element('Foo.sidebar')` from
+  an app template gives the plugin element the app controller's alias; an unprefixed element
+  in a plugin template that the plugin does not have falls back to the app's element and gives
+  it the plugin controller's alias; a plugin's own `Layouts/default.ctp` gets its controllers'
+  aliases.
+- `{Plugin}AppController`: a plugin controller merges its plugin's `AppController`, and an app
+  controller extending `AdminAppController` does not merge it (an `AdminAppController` entry the
+  child's `$components` redeclaration drops is gone).
 - Layouts: a layout a child controller assigns with `$this->layout`, one it passes as
   `render()`'s second argument, and one it declares with `public $layout = 'admin'` each pick
   up that controller's alias; a `$layout` declared on `AppController` applies to the
@@ -608,11 +670,14 @@ Tests:
 5. Done: associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
    tests.
-6. Template helpers: the template key in the deferred signature, the rendering controllers,
-   the element walk and caching. Helper tests.
+6. Template helpers: plugin identity from file paths and the narrowed `{Plugin}AppController`
+   check in the resolver; the template key in the deferred signature, the rendering
+   controllers with the plugin-aware lookup, the element walk and caching. Helper and plugin
+   template tests.
 7. Layouts: index `$layout` and `$layoutPath` declarations and assignments (in controllers and
    view files) and `render()`'s second argument, layout receivers including `default`, layout
-   paths and the element walk for view file assignments. Layout tests.
+   paths, the element walk for view file assignments and plugin-aware layout keys. Layout
+   tests.
 8. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
 9. Run the full suite.
 
