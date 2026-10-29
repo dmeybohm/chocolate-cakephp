@@ -2,6 +2,8 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.view.TemplateDirStructure
+import com.intellij.openapi.project.Project
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -62,6 +64,28 @@ data class ViewBuilderCallInfo(
     val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
 )
 
+
+/**
+ * How the view references in one file resolve to plugins, by the conventions of its structure.
+ */
+class ReferencePluginContext(private val structure: TemplateDirStructure, val ownPlugin: String?) {
+
+    /**
+     * A view name without its plugin prefix, and the plugin it resolves in.
+     */
+    fun split(name: String): Pair<String, String?> = structure.resolveName(name, ownPlugin)
+}
+
+private fun referencePluginContext(
+    project: Project,
+    projectDir: VirtualFile,
+    settings: Settings,
+    file: VirtualFile,
+    isController: Boolean
+): ReferencePluginContext? {
+    val structure = TemplateDirStructure.ofSourceFile(project, settings, file, isController) ?: return null
+    return ReferencePluginContext(structure, structure.pluginOf(file, projectDir, settings))
+}
 
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
     val logger = this.thisLogger()
@@ -505,9 +529,10 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             return result
         }
 
-        indexRenderCalls(result, projectDir, astRenderCalls, virtualFile)
-        indexElementCalls(result, projectDir, astElementCalls, virtualFile)
-        indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile)
+        val pluginContext = referencePluginContext(project, projectDir, settings, virtualFile, isController)
+        indexRenderCalls(result, projectDir, astRenderCalls, virtualFile, pluginContext)
+        indexElementCalls(result, projectDir, astElementCalls, virtualFile, pluginContext)
+        indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile, pluginContext)
         indexViewBuilderCalls(result, projectDir, astViewBuilderCalls, virtualFile)
 
         if (isController) {
@@ -515,7 +540,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val astMethods = findMethodDeclarations(rootNode)
                 .filter { it.isPublic && !cakeSkipRenderingMethods.contains(it.name.lowercase()) }
             
-            indexImplicitRender(result, projectDir, settings, astMethods, virtualFile)
+            indexImplicitRender(result, projectDir, settings, astMethods, virtualFile, pluginContext)
         }
 
         return result
@@ -525,7 +550,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         renderCalls: List<MethodCallInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (renderCalls.isEmpty()) {
             return
@@ -534,14 +560,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(renderCalls, viewPathPrefix, result)
+        setViewPath(renderCalls, viewPathPrefix, result, pluginContext)
     }
 
     private fun indexElementCalls(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         elementCalls: List<MethodCallInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (elementCalls.isEmpty()) {
             return
@@ -550,14 +577,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(elementCalls, viewPathPrefix, result)
+        setViewPath(elementCalls, viewPathPrefix, result, pluginContext)
     }
 
     private fun indexViewFieldAssignments(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         fieldAssignments: List<FieldAssignmentInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (fieldAssignments.isEmpty()) {
             return
@@ -568,7 +596,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         for (assignment in fieldAssignments) {
             for (assignedValue in assignment.assignedValues) {
-                val renderPath = RenderPath(assignedValue)
+                val (path, plugin) = pluginContext?.split(assignedValue) ?: (assignedValue to null)
+                val renderPath = RenderPath(path)
 
                 if (renderPath.path.isEmpty()) {
                     continue
@@ -578,7 +607,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 addViewReference(result, fullViewPath, ViewReferenceData(
                     methodName = assignment.fieldName,
                     elementType = ElementType.FIELD_ASSIGNMENT,
-                    offset = assignment.offset
+                    offset = assignment.offset,
+                    plugin = plugin
                 ))
             }
         }
@@ -654,7 +684,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         projectDir: VirtualFile,
         settings: Settings,
         methods: List<MethodInfo>,
-        controllerFile: VirtualFile
+        controllerFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         // todo check for $this->autoRender = false
         if (methods.isEmpty()) {
@@ -676,7 +707,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val newViewReferenceData = ViewReferenceData(
                 methodName = method.name,
                 elementType = ElementType.METHOD,
-                offset = method.offset
+                offset = method.offset,
+                plugin = pluginContext?.ownPlugin
             )
             val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
@@ -686,11 +718,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     private fun setViewPath(
         methodCalls: List<MethodCallInfo>,
         viewPathPrefix: ViewPathPrefix,
-        result: MutableMap<String, List<ViewReferenceData>>
+        result: MutableMap<String, List<ViewReferenceData>>,
+        pluginContext: ReferencePluginContext?
     ) {
         for (methodCall in methodCalls) {
             for (parameterText in methodCall.firstParameterValues) {
-                val content = RenderPath(parameterText)
+                val (path, plugin) = pluginContext?.split(parameterText) ?: (parameterText to null)
+                val content = RenderPath(path)
 
                 if (content.path.isEmpty()) {
                     continue
@@ -702,7 +736,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 addViewReference(result, fullViewPath, ViewReferenceData(
                     methodName = methodCall.methodName,
                     elementType = ElementType.METHOD_REFERENCE,
-                    offset = methodCall.offset
+                    offset = methodCall.offset,
+                    plugin = plugin
                 ))
             }
         }

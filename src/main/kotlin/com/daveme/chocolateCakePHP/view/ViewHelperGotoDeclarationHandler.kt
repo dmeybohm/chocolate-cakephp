@@ -1,11 +1,9 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
-import com.daveme.chocolateCakePHP.viewType
 import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -48,22 +46,17 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             val phpIndex = PhpIndex.getInstance(project)
             val helperTypes = classReference.type.lookupCompleteType(project, phpIndex, null).types
                 .filter { it.startsWith("\\") && it.contains("Helper") }
-            val cakeTwoReceivers = if (helperTypes.isEmpty())
-                CakeTwoRenderingControllers.helperReceiversOfFile(project, settings, psiElement.containingFile)
+            val viewReceivers = if (helperTypes.isEmpty())
+                ViewHelperReceivers.ofFile(project, settings, psiElement.containingFile)
             else
                 null
-            val receiverTypes = when {
-                helperTypes.isNotEmpty() -> helperTypes
-                cakeTwoReceivers != null -> cakeTwoReceivers
-                isCakeViewFile(project, settings, psiElement.containingFile) -> viewType(settings).types.toList()
-                else -> emptyList()
-            }
+            val receiverTypes = helperTypes.ifEmpty { viewReceivers.orEmpty() }
             val configured = ConfiguredMemberService.memberType(
                 project, receiverTypes, setOf(MemberKind.HELPER), fieldName
             )
             val result = configured?.classes.orEmpty().toMutableList()
-            // A CakePHP 2 view loads a helper its controllers do not list by name:
-            val loadsAnyHelper = cakeTwoReceivers != null && configured?.classFqns?.isEmpty() == true
+            // A view loads a helper its receivers do not list by name:
+            val loadsAnyHelper = viewReceivers != null && configured?.classFqns?.isEmpty() == true
             if (configured == null || !configured.hasInitializeLoad || loadsAnyHelper) {
                 result += phpIndex.viewHelperClassesFromFieldName(settings, fieldName)
             }

@@ -31,13 +31,15 @@ enum class ElementType {
 data class ViewReferenceData(
     val methodName: String,
     val elementType: ElementType,
-    val offset: Int
+    val offset: Int,
+    val plugin: String? = null
 )
 
 data class PsiElementAndPath(
     val path: String,
     val elementPointer: SmartPsiElementPointer<PsiElement>,
-    val offset: Int
+    val offset: Int,
+    val plugin: String? = null
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
@@ -171,7 +173,7 @@ object ViewFileIndexService {
                         ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
                         ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset)
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset, data.plugin)
                 }
                 true
             },

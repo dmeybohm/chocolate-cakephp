@@ -15,7 +15,7 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
 
     companion object {
-        private const val CAKE_TWO_TEMPLATE_MARKER = '2'
+        private const val VIEW_FILE_MARKER = 'v'
     }
 
     override fun getKey(): Char {
@@ -28,14 +28,14 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         }
         val signature = expression.substringOrNull(2) ?: return null
         val settings = Settings.getInstance(project)
-        if (signature.firstOrNull() == CAKE_TWO_TEMPLATE_MARKER) {
-            val templateKey = signature.substring(1).substringBefore(key)
-            val fieldName = signature.substringAfter(key, "")
-            if (templateKey.isEmpty() || fieldName.isEmpty()) {
-                return null
-            }
-            val receivers = CakeTwoRenderingControllers.helperReceivers(project, templateKey)
-            return configuredHelperType(project, settings, receivers, fieldName, loadsAnyHelper = true)
+        if (signature.firstOrNull() == VIEW_FILE_MARKER) {
+            val viewFile = ViewHelperReceivers.decode(signature.substring(1).substringBeforeLast(key), key)
+                ?: return null
+            val fieldName = signature.substringAfterLast(key, "").ifEmpty { return null }
+            // A view loads any helper by name, so one its receivers do not load keeps its convention type:
+            return configuredHelperType(
+                project, settings, ViewHelperReceivers.of(project, viewFile), fieldName, loadsAnyHelper = true
+            )
         }
         return configuredHelperType(project, settings, viewType(settings).types, signature)
     }
@@ -59,13 +59,16 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         if (!isCakeViewFile(psiElement.project, settings, psiElement.containingFile)) {
             return null
         }
-        // A CakePHP 2 view has the helpers of the controllers that render it, so the
-        // signature carries the template for complete() to find them:
-        val templateKey = psiElement.containingFile.originalFile.virtualFile?.let {
-            CakeTwoRenderingControllers.templateKeyOfViewFile(psiElement.project, settings, it)
+        // A view's helpers can depend on what renders it, so the signature carries the view
+        // file for complete() to find its receivers:
+        val viewFile = psiElement.containingFile.originalFile.virtualFile?.let {
+            ViewHelperReceivers.viewFileOf(psiElement.project, settings, it)
         }
-        if (templateKey != null) {
-            return PhpType().add("#" + getKey() + CAKE_TWO_TEMPLATE_MARKER + templateKey + getKey() + fieldReferenceName)
+        if (viewFile != null) {
+            return PhpType().add(
+                "#" + getKey() + VIEW_FILE_MARKER + ViewHelperReceivers.encode(viewFile, getKey()) +
+                        getKey() + fieldReferenceName
+            )
         }
         // Defer lookup to complete() to consult the helpers the view loads.
         return PhpType().add("#" + getKey() + fieldReferenceName)

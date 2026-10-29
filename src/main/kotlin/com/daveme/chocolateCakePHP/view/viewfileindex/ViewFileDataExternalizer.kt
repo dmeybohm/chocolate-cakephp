@@ -12,6 +12,8 @@ object ViewReferenceDataExternalizer : DataExternalizer<List<ViewReferenceData>>
             out.writeUTF(data.methodName)
             out.writeByte(data.elementType.ordinal)
             out.writeInt(data.offset)
+            out.writeBoolean(data.plugin != null)
+            data.plugin?.let { out.writeUTF(it) }
         }
     }
 
@@ -21,7 +23,8 @@ object ViewReferenceDataExternalizer : DataExternalizer<List<ViewReferenceData>>
             ViewReferenceData(
                 methodName = `in`.readUTF(),
                 elementType = ElementType.values()[`in`.readByte().toInt()],
-                offset = `in`.readInt()
+                offset = `in`.readInt(),
+                plugin = if (`in`.readBoolean()) `in`.readUTF() else null
             )
         }
     }

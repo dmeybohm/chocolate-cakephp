@@ -597,8 +597,8 @@ Tests:
 - Helpers: an aliased helper on the controller resolves in its template; an element included
   from that template picks up the alias, including through a nested element; an element that
   nothing includes falls back to `AppController`; a helper's own `$helpers` still resolves.
-- Plugin templates: an app `BarsController` and a plugin `BarsController` with different helper
-  aliases each resolve only in their own `Bars/index.ctp`; an app override under
+- Plugin templates: same-named app and plugin elements each get only their own controllers
+  (not same-named controllers, which share a global FQN and so a configuration); an app override under
   `View/Plugin/Foo/` takes the plugin controller's alias; `$this->element('Foo.sidebar')` from
   an app template gives the plugin element the app controller's alias; an unprefixed element
   in a plugin template that the plugin does not have falls back to the app's element and gives
@@ -670,7 +670,7 @@ Tests:
 5. Done: associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
    tests.
-6. Template helpers: plugin identity from file paths and the narrowed `{Plugin}AppController`
+6. Done: template helpers: plugin identity from file paths and the narrowed `{Plugin}AppController`
    check in the resolver; the template key in the deferred signature, the rendering
    controllers with the plugin-aware lookup, the element walk and caching. Helper and plugin
    template tests.
@@ -908,3 +908,40 @@ Step 6, part 2: template helper receivers.
 template, a helper no controller loads, an element and a nested element, an element nothing
 includes (`AppController`'s alias, and convention for the rest), completion, and goto. Full
 suite: 1023 tests, 0 failures.
+
+Step 6, part 3: plugin-aware lookup, behind a version-neutral facade.
+
+- The generic modules no longer call CakePHP 2 code. `ViewHelperReceivers` is the one entry
+  point: `viewFileOf()` (a `ViewFile`: template key, plugin and `TemplateDirStructure`),
+  `of()`/`ofFile()` for the receivers, and `encode()`/`decode()` for type signatures. The
+  per-version rules live in `TemplateDirStructure`, chosen by the `TemplatesDir` subtype: the
+  plugin of a file, the override directory prefix, how a view name resolves to a plugin, the
+  view-class receivers, whether rendering controllers count, and the fallback receivers.
+  `RenderingControllers` is the generic cached walk (part 2's `CakeTwoRenderingControllers`).
+- CakePHP 2: plugin from `cakeTwoPluginName()`, override prefix `Plugin/{Name}/`, no view-class
+  receivers, rendering controllers with an `AppController` fallback. CakePHP 3 to 5: `AppView`
+  only, no plugin and no prefix splitting yet; `controller-side-helpers` turns those on. Their
+  override prefixes are `Plugin/{Name}/` (3) and `plugin/{Name}/` (4 and 5).
+- `ViewHelperInViewTypeProvider` gives every view file `#<key>v<structure id><template key>
+  <key><plugin><key><field>`, so CakePHP 3 to 5 views get a per-file signature too.
+- View file index: `ViewReferenceData.plugin` records the plugin a reference resolves in,
+  through `ReferencePluginContext`, which asks the referencing file's structure
+  (`TemplateDirStructure.ofSourceFile()`: a view file's own, or for a controller CakePHP 2 when
+  only CakePHP 2 is enabled or the controller is under the app, CakePHP 3+ otherwise). A
+  `Foo.` prefix is split off the key into the plugin for CakePHP 2. Index version 20.
+- `RenderingControllers` keeps a reference for a plugin's file only when it resolves in that
+  plugin, and for an app file when it resolves in no plugin, or in a plugin that has no file
+  of that key (found with `FilenameIndex` and `viewFileOf()`).
+
+`PluginTemplateHelperTest`: same-named app and plugin elements, an app override of a plugin
+template, a `Foo.`-prefixed element from an app template, and an unprefixed element a plugin
+lacks falling back to the app's. Two things it ran into:
+
+- **Same-named controllers.** An app `BarsController` and a plugin `BarsController` are both
+  `\BarsController`, so the resolver merges their configurations; plugin awareness cannot
+  separate them. The plan's test for that became the same-named elements test.
+- **Element directory ordering.** Element references are only indexed when the element
+  directory exists as the including template is indexed (the bug in
+  `resolve-element-paths-at-lookup`), so the test creates both `Elements` directories first.
+
+Full suite: 1027 tests, 0 failures.

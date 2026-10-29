@@ -54,7 +54,7 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             if (!isCakeViewFile(psiElement.project, settings, containingFile)) {
                 return
             }
-            val receivers = CakeTwoRenderingControllers.helperReceiversOfFile(psiElement.project, settings, containingFile)
+            val receivers = ViewHelperReceivers.ofFile(psiElement.project, settings, containingFile)
                 ?: viewType(settings).types
             val loaded = ConfiguredMemberService.loadedMembers(
                 psiElement.project,
