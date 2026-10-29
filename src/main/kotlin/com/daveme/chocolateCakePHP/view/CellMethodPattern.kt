@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.cake.CELL_TRAIT
+import com.daveme.chocolateCakePHP.cake.precedingAssignments
+import com.intellij.psi.PsiElement
 import com.intellij.patterns.PatternCondition
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
@@ -48,4 +50,18 @@ object CellMethodPattern :
         return false
     }
 
+}
+
+/**
+ * The `cell()` calls a receiver evaluates to: the call itself, or the `cell()` calls assigned to
+ * a variable before its use in the same scope.
+ */
+fun cellCallsFromReceiver(receiver: PsiElement?): List<MethodReference> {
+    return when (receiver) {
+        is MethodReference -> listOfNotNull(receiver.takeIf { CellMethodPattern.accepts(it, ProcessingContext()) })
+        is Variable -> precedingAssignments(receiver)
+            .mapNotNull { it.value as? MethodReference }
+            .filter { CellMethodPattern.accepts(it, ProcessingContext()) }
+        else -> emptyList()
+    }
 }

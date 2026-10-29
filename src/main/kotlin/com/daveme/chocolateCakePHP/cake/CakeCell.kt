@@ -63,3 +63,47 @@ fun cellNameFromClassFqn(namespace: String, classFqn: String): String? {
     }
     return name.replace('\\', '/')
 }
+
+val TemplatesDir.cellDirName: String
+    get() = when (this) {
+        is CakeFourTemplatesDir -> "cell"
+        else -> "Cell"
+    }
+
+fun cellPluginLookupResult(settings: Settings, cellName: CellName): PluginLookupResult {
+    val pluginConfig = cellName.plugin?.let { settings.findPluginConfigByName(it) }
+        ?: return PluginLookupResult.NoPlugin(cellName.name)
+    return PluginLookupResult.PluginFound(cellName.name, pluginConfig)
+}
+
+/**
+ * The view paths of a cell template: `template` under the cell's template directory, such as
+ * `cell/Admin/Inventory/` in CakePHP 4+ or `Cell/Admin/Inventory/` in CakePHP 3.
+ */
+fun allViewPathsFromCellTemplate(
+    allTemplatePaths: AllTemplatePaths,
+    settings: Settings,
+    cellName: CellName,
+    template: String,
+    convertCase: Boolean,
+): AllViewPaths {
+    val viewPaths = allTemplatePaths.allPaths.map { templatesDirWithPath ->
+        ViewPath(
+            label = template,
+            templatePath = templatesDirWithPath.templatesPath,
+            prefix = "${templatesDirWithPath.templatesDir.cellDirName}/${cellName.name}/",
+            altLabel = template,
+            relativePath = addViewFilenameExtension(
+                templatesDirectory = templatesDirWithPath.templatesDir,
+                name = template,
+                settings = settings,
+                convertCase = convertCase,
+            )
+        )
+    }.toList()
+    return AllViewPaths(
+        defaultViewPaths = viewPaths,
+        otherViewPaths = listOf(),
+        dataViewPaths = listOf()
+    )
+}

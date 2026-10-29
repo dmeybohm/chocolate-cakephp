@@ -1,9 +1,7 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.cellClassFqn
-import com.daveme.chocolateCakePHP.cake.parseCellName
-import com.daveme.chocolateCakePHP.cake.templateArgumentFromLiteral
+import com.daveme.chocolateCakePHP.cake.*
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -37,6 +35,9 @@ class CellGotoDeclarationHandler : GotoDeclarationHandler {
         if (parameterList.parameters.getOrNull(0) != argument) {
             return PsiElement.EMPTY_ARRAY
         }
+        if (methodRef.name.equals("render", ignoreCase = true)) {
+            return cellTemplateTargets(settings, psiElement, methodRef, stringLiteral.contents)
+        }
         if (!CellMethodPattern.accepts(methodRef, ProcessingContext())) {
             return PsiElement.EMPTY_ARRAY
         }
@@ -51,6 +52,34 @@ class CellGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
         return classes.toTypedArray()
+    }
+
+    // $this->cell('Inventory')->render('compact'), or render() on a variable assigned a cell()
+    private fun cellTemplateTargets(
+        settings: Settings,
+        psiElement: PsiElement,
+        renderRef: MethodReference,
+        template: String,
+    ): Array<PsiElement> {
+        val cellNames = cellCallsFromReceiver(renderRef.classReference)
+            .flatMap { templateNamesFromExpression(it.parameterList?.parameters?.getOrNull(0)) }
+            .mapNotNull { parseCellName(it) }
+            .distinct()
+        if (cellNames.isEmpty()) {
+            return PsiElement.EMPTY_ARRAY
+        }
+        val project = psiElement.project
+        val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiElement.containingFile)
+            ?: return PsiElement.EMPTY_ARRAY
+        val allTemplatesPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topSourceDirectory)
+            ?: return PsiElement.EMPTY_ARRAY
+        return cellNames.flatMap { cellName ->
+            val allViewPaths = allViewPathsFromCellTemplate(
+                allTemplatesPaths, settings, cellName, template, convertCase = false
+            )
+            TemplatePathResolution(allViewPaths, cellPluginLookupResult(settings, cellName))
+                .toFiles(project, allTemplatesPaths)
+        }.distinct().toTypedArray()
     }
 
     override fun getActionText(dataContext: DataContext): String? = null
