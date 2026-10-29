@@ -27,6 +27,16 @@ empty. This feature gives CakePHP 2 plugins proper settings instead.
   `ConfiguredMemberService` that read `namespace` to build class FQNs. A CakePHP 2 config
   contributes an empty namespace there today, producing a harmless but bogus candidate such as
   `\Controller\Component\FooComponent`.
+- Convention-based class lookup reads `namespace` from every config to build FQNs:
+  `Classes.kt` (helper, component and table classes from a field name, and the helper,
+  component and controller type strings), and `CakeModel.kt` (table classes from a possible
+  table name). These run only when CakePHP 3+ is enabled and produce the same bogus
+  candidates for a CakePHP 2 config.
+- `ContainCompletionContributor` builds a list of allowed FQN prefixes from the app namespace
+  and every config's `namespace`, and keeps a `Table` subclass when its FQN starts with any of
+  them. A CakePHP 2 config contributes an empty prefix, which every FQN starts with, so one
+  CakePHP 2 entry lets every `Table` subclass through. This is an existing bug the typed model
+  fixes.
 - `AssetCompletionContributor` uses `pluginPath`, `assetPath` and `effectivePluginName()` only.
 - `cakeTwoPluginName()` on the disambiguation branch scans configured plugins by path.
 
@@ -53,8 +63,10 @@ serialized form excludes the irrelevant fields with no custom serializer.
 
 With typed configs, `pluginAndThemeTemplatePaths()` probes only the layout the plugin has:
 `View` for `CakeTwoPluginConfig`, `templates` and `{srcPath}/Template` for
-`CakeThreePluginConfig`. `ConfiguredMemberService` collects namespaces from
-`CakeThreePluginConfig` only. `cakeTwoPluginName()` on the disambiguation branch filters to
+`CakeThreePluginConfig`. Every namespace consumer (`ConfiguredMemberService`, `Classes.kt`,
+`CakeModel.kt`, `ContainCompletionContributor`) iterates `CakeThreePluginConfig` only; a
+`Settings.cakeThreePluginConfigs` accessor that filters the list keeps those call sites to a
+one-word change. `cakeTwoPluginName()` on the disambiguation branch filters to
 `CakeTwoPluginConfig` and drops its directory-name fallback.
 
 ### Serialization
@@ -85,13 +97,28 @@ through a cached service reading the VFS, and that is fragile during settings lo
 
 The rule, in order:
 
-1. `pluginPath` starts with `{cake2AppDirectory}/` (the setting, not the literal `app/`; plugin
+1. The entry has a namespace: CakePHP 3+. A CakePHP 2 plugin has none, so a namespace is a
+   deliberate CakePHP 3+ choice. "Has a namespace" means anything other than blank or a lone
+   `\`: `PluginForm.setPluginConfig()` prefixes the namespace with a backslash when it writes
+   the table row, so a CakePHP 2 entry saved through the current UI carries `\` rather than
+   `""`.
+2. `pluginPath` starts with `{cake2AppDirectory}/` (the setting, not the literal `app/`; plugin
    paths are always relative to the project root, as the settings form says): CakePHP 2.
-2. CakePHP 2 is enabled and CakePHP 3+ is not: CakePHP 2.
-3. Otherwise CakePHP 3+.
+3. CakePHP 2 is enabled and CakePHP 3+ is not: CakePHP 2.
+4. Otherwise CakePHP 3+.
 
-The same rule picks the default version in the edit dialog, so adding a plugin in a CakePHP 2
+Rules 2 to 4 also pick the default version in the edit dialog, so adding a plugin in a CakePHP 2
 project does not require flipping the selector each time.
+
+**A legacy entry classified as CakePHP 2 may have no name.** The current dialog does not require
+one (its duplicate check runs only when the name is non-empty), and a CakePHP 2 entry added
+today typically has a blank name and a blank namespace, so `effectivePluginName()` is `""`. The
+new `CakeTwoPluginConfig` requires a name and has no fallback, so classification supplies one:
+the last segment of `pluginPath` with any trailing slash removed, `app/Plugin/DebugKit` giving
+`DebugKit`. This is the same derivation `cakeTwoPluginName()` uses today, and the directory
+name is the plugin name under CakePHP 2's loading rules. An entry with a blank name and a blank
+path is dropped, since it identifies nothing. New CakePHP 2 entries get a name in the dialog,
+so the derivation only ever runs on legacy entries.
 
 Rule 2 only fires for CakePHP 2 projects where composer detection does not also enable CakePHP
 3+. Today detection sets the CakePHP 3+ flag whenever `cakephp/cakephp` appears in `require`,
@@ -100,6 +127,21 @@ and only rule 1 applies there. In such a project a legacy entry for a CakePHP 2 
 the app directory (root-level `plugins/Foo`, or a vendor path) would be classified CakePHP 3+
 and lose its `View` probe. The fix for that is version-aware detection, described next, rather
 than a filesystem tie-breaker in the rule.
+
+### Merging the deprecated namespace list
+
+`Settings.pluginConfigs` also folds in the deprecated `pluginNamespaces` list, for settings that
+predate `PluginConfig` and have never been re-saved (`PluginForm.apply()` clears the list).
+`synthesizePluginEntries()` does this with a map keyed by namespace, which collapses every
+CakePHP 2 config onto the one empty key. The merge becomes, in order:
+
+1. Classify legacy entries, giving a list of typed configs.
+2. For each deprecated namespace, append a synthesized `CakeThreePluginConfig` with that
+   namespace unless some `CakeThreePluginConfig` in the list already has it.
+
+No map is involved; typed configs are kept as they are, and CakePHP 2 configs take no part in
+the comparison. The deprecated list is a list of namespaces, so it can only ever stand for
+CakePHP 3+ plugins.
 
 ### Prerequisite: version-aware composer detection
 
@@ -177,12 +219,18 @@ feature because it depends on plugin identity, which this feature makes a single
    `Settings.pluginConfigs`. Update test base classes that construct `PluginConfig`
    (`Cake3BaseTestCase`, `Cake4BaseTestCase`, `Cake5BaseTestCase`, `PluginSupportTest`,
    `SettingsTest`).
-4. Consumers: layout-specific probing in `pluginAndThemeTemplatePaths()`, namespace collection
-   in `ConfiguredMemberService`, and (when the branches meet) `cakeTwoPluginName()`.
+4. Consumers: layout-specific probing in `pluginAndThemeTemplatePaths()`; the namespace readers
+   `ConfiguredMemberService` (two sites), `Classes.kt` (six sites), `CakeModel.kt` (one) and
+   `ContainCompletionContributor` (one) switched to CakePHP 3+ configs only; and (when the
+   branches meet) `cakeTwoPluginName()`.
 5. UI: dialog selector and field visibility, `PluginEntry` version field, table Version column.
 6. Cake 2 tests: a configured `CakeTwoPluginConfig` resolves `{pluginPath}/View` templates,
-   elements and assets, and a legacy entry under the CakePHP 2 app directory is classified as
-   CakePHP 2.
+   elements and assets; a legacy entry under the CakePHP 2 app directory is classified as
+   CakePHP 2; a legacy entry with a blank name and a lone-backslash namespace gets its name
+   from the last path segment and is found by `findPluginConfigByName()`; a legacy entry with a
+   namespace stays CakePHP 3+ whatever its path; two CakePHP 2 configs survive a merge with a
+   non-empty deprecated namespace list; and a CakePHP 2 config no longer widens contain
+   completion to every `Table` subclass.
 
 ## Open questions
 
