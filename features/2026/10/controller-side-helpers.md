@@ -72,6 +72,21 @@ and a plugin controller with the same name both match either template. Reuse the
 lookup from the CakePHP 2 feature, with the plugin taken from the configured `PluginConfig` a
 file is under, and a template under `templates/plugin/{Name}/` belonging to `{Name}`.
 
+### Facade from the CakePHP 2 feature
+
+`configuration-code-disambiguation-cake2` puts view helper receivers behind a version-neutral
+facade, `ViewHelperReceivers`, with the per-version rules in `TemplateDirStructure` (chosen by
+the `TemplatesDir` subtype) and the cached walk in `RenderingControllers`. For CakePHP 3 to 5
+its `CakeThreeAndLater` structure currently returns `AppView` only, resolves no plugins and
+does not split `Foo.` prefixes. This feature mostly changes that structure:
+
+- `usesRenderingControllers = true`, with `AppView` still among the view-class receivers.
+- `pluginOf()` from the configured `PluginConfig` a file is under, and `resolveName()` splitting
+  `Foo.` prefixes, as the CakePHP 2 structure does. The view file index then records plugins
+  for CakePHP 3 to 5 references too (an index version bump).
+- `TemplateDirStructure.ofSourceFile()` tells CakePHP 3+ controllers apart; plugin controllers
+  under `plugins/{Name}/src/Controller` need to count.
+
 ## Dependencies
 
 Builds on `configuration-code-disambiguation-cake2`, for the rendering-controller mapping, the
