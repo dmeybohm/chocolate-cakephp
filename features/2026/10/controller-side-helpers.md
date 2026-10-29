@@ -62,6 +62,16 @@ helper loads. The CakePHP 2 feature adds a complete flag to property declaration
 so an incomplete `$helpers` keeps the convention fallback. The same applies to a non-literal
 `className` in an `addHelper()` or `loadComponent()` options array.
 
+### 4. Plugin templates
+
+CakePHP 3 to 5 resolve plugin template, element and layout names as CakePHP 2 does (checked in
+CakePHP 5's `View::pluginSplit()` and `_paths()`): a `Foo.` prefix or the view's own plugin
+picks the plugin, and the search order is the app's `templates/plugin/Foo/`, then the plugin's
+`templates/`, then the app's `templates/`. Template keys carry no plugin, so an app controller
+and a plugin controller with the same name both match either template. Reuse the plugin-aware
+lookup from the CakePHP 2 feature, with the plugin taken from the configured `PluginConfig` a
+file is under, and a template under `templates/plugin/{Name}/` belonging to `{Name}`.
+
 ## Dependencies
 
 Builds on `configuration-code-disambiguation-cake2`, for the rendering-controller mapping, the
