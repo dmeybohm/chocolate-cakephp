@@ -14,9 +14,15 @@ CakePHP 2 has no cells, so everything here is gated on `settings.cake3Enabled`.
 
 From `Cake\View\CellTrait` and `Cake\View\Cell` (checked against 3.x, 4.4 and 5.0 sources):
 
-- `cell()` lives in `CellTrait`, which only `View` uses. Controllers do not have `$this->cell()`
-  in any of 3, 4 or 5, so the "and controllers" in `ideas.md` is wrong; this feature covers
-  templates, elements, layouts and view helpers (`$this->_View->cell()` is the helper form).
+- `cell()` lives in `CellTrait`. `View` uses it, so templates, elements and layouts have
+  `$this->cell()` and helpers have `$this->_View->cell()`. Controllers do not use the trait
+  themselves, but the 3.x and 5.x docs show adding `use CellTrait;` to a controller, so
+  `$this->cell()` in a controller is a supported call too. The method pattern therefore accepts
+  `$this->cell(...)` on any receiver class, as `ElementMethodPattern` does, rather than checking
+  for a view.
+- The caller can pick the template on the returned cell: `$this->cell('Inventory')->render('compact')`
+  or `$cell = $this->cell('Inventory'); echo $cell->render('compact');`. `render()` runs the
+  action and then uses the given template under the cell's template path.
 - The string is `[Plugin.]Name[::action]`. `pluginSplit()` takes the plugin, `App::className()`
   resolves `Name` to `App\View\Cell\NameCell` (or `Plugin\View\Cell\NameCell`), and the action
   defaults to `display`. `Name` may contain a sub-namespace: `Admin/Inventory` resolves to
@@ -48,6 +54,16 @@ The method pattern mirrors `ElementMethodPattern`; `templateArgumentFromLiteral`
 handles the ternary / match / parenthesised cases so the click resolves on the branch that was
 clicked.
 
+The chained `$this->cell('Inventory')->render('compact')` form gets a goto declaration on the
+`render()` argument that resolves to `cell/Inventory/compact.php`: the receiver is a `cell()`
+`MethodReference` whose first argument names the cell, so the cell path is known structurally.
+`RenderMethodPattern` only matches `$this->render()`, so this does not collide with
+`TemplateGotoDeclarationHandler`. The `$cell = $this->cell(...); $cell->render('compact')` form
+resolves the variable to its preceding `cell()` assignment in the same scope, using the same
+preceding-assignment rule `templateNamesFromVariable` applies; anything else (parameters,
+properties, a cell built in another method) is not resolved. Both forms are also indexed in
+`ViewFileDataIndexer` under the cell template path so the template side can find the usage.
+
 ### 2. Cell action to template
 
 A cell file is `{Name}Cell.php` under a `View/Cell` directory. `ControllerMethodLineMarker`
@@ -60,6 +76,12 @@ free. `actionNamesFromControllerMethod` is already source-agnostic.
 
 `CreateViewFileAction` (Ctrl-click on the marker) should create the cell template in the right
 directory too.
+
+`ToggleBetweenControllerAndViewAction` checks `isCakeControllerFile` explicitly in both
+`update()` and `actionPerformed()`, so it needs its own `isCakeCellFile` branch: enabled in a
+cell file, and `tryToNavigateToView` built on the same controller-or-cell source as the marker.
+The template-to-cell direction comes from the index (step 3); the cell-to-template direction
+does not.
 
 ### 3. Index cells like controllers
 
@@ -110,10 +132,17 @@ flow.
 ## Tests (cake5 first)
 
 - `CellGotoDeclarationTest`: plain name to class, `Name::action` to method, plugin-prefixed
-  name, sub-namespace name, no navigation on other receivers, ternary branches.
+  name, sub-namespace name, the same call from a controller that uses `CellTrait`, no
+  navigation on other receivers, ternary branches.
+- `CellRenderGotoDeclarationTest`: `$this->cell('Inventory')->render('compact')` goes to
+  `cell/Inventory/compact.php`; the `$cell = ...; $cell->render('compact')` form too; a
+  `render()` on an unrelated receiver does not navigate.
 - `CellCompletionTest`: cell names offered, plugin names prefixed, actions offered after `::`.
 - `CellMethodLineMarkerTest` (or extend the existing controller marker test): marker on
-  `display()` targets the template, `render('compact')` and `setTemplate()` markers.
+  `display()` targets the template, and `setTemplate()` / `render()` inside the action get
+  their own markers as they do in a controller.
+- `CellToggleActionTest`: the toggle action is enabled in a cell file and goes from `display()`
+  to its template, and back from the template.
 - `CellViewVariableTest`: `$items` completes with its type in the cell template; the
   undefined-variable suppressor accepts it.
 - `CellTemplateToCellGotoRelatedTest`: from `cell/Inventory/display.php` to `display()`.
