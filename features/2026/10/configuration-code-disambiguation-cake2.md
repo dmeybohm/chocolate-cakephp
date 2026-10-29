@@ -604,7 +604,7 @@ Tests:
    `with` join models, in-model `bindModel()`, the property name, empty declarations and the
    complete flag. Indexer tests.
 3. Done: resolver: CakePHP 2 convention candidates and the property-level rules.
-4. Components and models on controllers. Component and model tests.
+4. Done: components and models on controllers. Component and model tests.
 5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
    tests.
@@ -711,3 +711,42 @@ with no `$components`, and `$this->ArtistFormatter` in a helper with no `$helper
 exists in CakePHP 2.10, so each test now declares the member it uses.
 
 Full suite: 988 tests, 0 failures.
+
+### Session #3
+
+Step 4, components and models on controllers:
+
+- `MemberTypeResult.excludedKinds`: the requested kinds that every receiver's configuration
+  knows and does not load the alias in. `memberType()` now also returns a result when only some
+  requested kinds are ruled out, with `hasInitializeLoad` false.
+- `ControllerFieldTypeProvider` and `ControllerFieldGotoDeclarationHandler` add the convention
+  part only for kinds that are not ruled out: with `$uses` known and `$components` incomplete,
+  `$this->Foo` is `\FooComponent`, not `\Foo|\FooComponent`. Only CakePHP 2 rules kinds out,
+  so the provider adds the CakePHP 2 global names in that case and the full
+  `componentOrModelTypeFromFieldName()` union otherwise.
+- The completion contributors needed no change: they already hide a kind's convention list when
+  it is in `initializeKinds`, which for CakePHP 2 means known.
+- `ControllerComponentsGotoDeclarationHandler`: a string that is an entry of a configuring
+  property array (`$components`, `$helpers`, `$uses`), or that entry's `className`, resolves
+  through `memberType()` for the declaring class. So an alias navigates to its `className`, a
+  child entry without one navigates to the `className` it inherits from `AppController`, and
+  `$uses` entries navigate. Other strings keep the previous by-name lookup.
+
+`ConfiguredControllerTest` covers these through the type provider, completion and both goto
+handlers: aliased, plain and `AppController`-merged components; an unloaded component with an
+existing class; completion of loaded components only; `$uses` entries, other models, completion,
+the default model, `$uses = false`, appended `AppController` models and `loadModel()`; an
+incomplete `$components` keeping only the component convention; convention without the
+framework classes; goto on an aliased field and on property array strings.
+
+Two things the tests ran into:
+
+- `$this->Foo` on a CakePHP 2 controller also has `\void`, from the stub's
+  `Controller::__get() {}`. It is the `__get` dilution `fix-magic-get-type-dilution` fixes for
+  CakePHP 3 to 5, which leaves CakePHP 2 out. The test helper ignores it here. Real CakePHP
+  2.10 documents `Controller::__get()` as `@return mixed`, so against the real framework the
+  dilution is `mixed` rather than `void`. That branch's open question on CakePHP 2 covers it.
+- Component convention completion lists subclasses of `\AppComponent`, so it lists nothing in
+  an app without one. That predates this feature.
+
+Full suite: 1003 tests, 0 failures.

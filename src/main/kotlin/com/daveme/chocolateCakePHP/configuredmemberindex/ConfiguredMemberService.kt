@@ -12,13 +12,15 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 /**
- * The resolved type of one configured member, and whether an `initialize()` load (or a
- * property array) in the receiver's chain determined it.
+ * The resolved type of one configured member, whether an `initialize()` load (or a property
+ * array) in the receiver's chain determined it, and the kinds the member cannot be because
+ * every receiver's configuration of them is known and does not load it.
  */
 data class MemberTypeResult(
     val classFqns: Set<String>,
     val classes: List<PhpClass>,
     val hasInitializeLoad: Boolean,
+    val excludedKinds: Set<MemberKind> = emptySet(),
 ) {
     val type: PhpType
         get() = PhpType().apply { classFqns.forEach { add(it) } }
@@ -107,7 +109,14 @@ object ConfiguredMemberService {
     ): MemberTypeResult? {
         val perReceiver = resolutions.map { it.members[alias] }
         val excluded = resolutions.map { it.excludesUnloaded.containsAll(kinds) }
-        if (perReceiver.all { it == null } && !(resolutions.isNotEmpty() && excluded.all { it })) {
+        val excludedKinds = if (perReceiver.all { it == null }) {
+            resolutions.map { it.excludesUnloaded intersect kinds }
+                .reduceOrNull { all, other -> all intersect other }
+                .orEmpty()
+        } else {
+            emptySet()
+        }
+        if (perReceiver.all { it == null } && excludedKinds.isEmpty()) {
             return null
         }
         val fqns = perReceiver.filterNotNull().flatMap { it.first }.toSet()
@@ -118,6 +127,7 @@ object ConfiguredMemberService {
             hasInitializeLoad = perReceiver.indices.all { index ->
                 perReceiver[index]?.second ?: excluded[index]
             },
+            excludedKinds = excludedKinds,
         )
     }
 

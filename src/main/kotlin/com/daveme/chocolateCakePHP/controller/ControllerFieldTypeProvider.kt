@@ -169,7 +169,22 @@ class ControllerFieldTypeProvider : PhpTypeProvider4 {
             result.add(configured.type)
         }
         if (configured == null || !configured.hasInitializeLoad) {
-            result.add(componentOrModelTypeFromFieldName(settings, fieldName))
+            result.add(conventionType(settings, fieldName, configured?.excludedKinds.orEmpty()))
+        }
+        return result
+    }
+
+    // Only CakePHP 2 configuration rules kinds out, and its classes are global:
+    private fun conventionType(settings: Settings, fieldName: String, excludedKinds: Set<MemberKind>): PhpType {
+        if (excludedKinds.isEmpty()) {
+            return componentOrModelTypeFromFieldName(settings, fieldName)
+        }
+        val result = PhpType()
+        if (MemberKind.COMPONENT !in excludedKinds) {
+            result.add("\\${fieldName}Component")
+        }
+        if (MemberKind.TABLE !in excludedKinds) {
+            result.add("\\$fieldName")
         }
         return result
     }
