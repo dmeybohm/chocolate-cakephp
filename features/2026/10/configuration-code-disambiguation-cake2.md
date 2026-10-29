@@ -244,40 +244,40 @@ controllers) that renders it, not `AppView`.
   declares `public $layout = 'default'` and `public $layoutPath = null`, both are in
   `View::$_passedVars`, and `View::_getLayoutFileName()` looks up
   `Layouts/{layoutPath}/{layout}` (no `layoutPath` segment when it is null). A controller sets
-  either one by declaring the property, by assigning it (in an action or `beforeFilter()`),
-  or, for the layout only, through `render()`'s second argument. None of these is indexed
-  today, so:
+  the layout by declaring the property, by assigning it (in an action or `beforeFilter()`), or
+  through `render()`'s second argument. None of these is indexed today, so:
   - A controller's **layout names** are the effective `$layout` property (the nearest
     declaration in its class chain, PHP inheritance, `default` from `\Controller`, or
     `default` when `\Controller` is not indexed), plus every literal value assigned to
-    `$this->layout` or passed as `render()`'s second argument in its chain. Its **layout
-    paths** are the effective `$layoutPath` property (null by default) plus every literal value
-    assigned to `$this->layoutPath`. Assignments use `findFieldAssignments()`, like the
-    existing `$this->view` assignments, which already collects every literal value the
-    expression can take.
-  - The controller can render any layout key `Layouts/{path}/{name}` from those two sets (a
-    product, since assignments in different methods can combine), with no path segment for a
-    null path. A name may contain slashes itself (`'admin/default'`) and may be plugin-dotted
-    (`'TestPlugin.admin'`, which looks in the plugin's `Layouts/`).
-  - A layout's receivers are the controllers whose keys include its key. So the lookup for a
-    layout file goes from its key to candidate `(path, name)` splits, then to the controllers
-    with that name and path. Index layout names by name (so `default` and an inherited
-    declaration need a walk over subclasses) or resolve every controller's keys once and cache
-    the reverse map; choose during implementation.
+    `$this->layout` or passed as `render()`'s second argument in its chain. Assignments use
+    `findFieldAssignments()`, like the existing `$this->view` assignments, which already
+    collects every literal value the expression can take.
+  - A layout name maps to the key `Layouts/{name}`. A name may contain slashes itself
+    (`'admin/default'`) and may be plugin-dotted (`'TestPlugin.admin'`, which looks in the
+    plugin's `Layouts/`), through the same plugin-aware lookup as templates and elements.
+  - A layout's receivers are the controllers whose layout names include it. Index layout
+    names by name (so `default` and an inherited declaration need a walk over subclasses) or
+    resolve every controller's names once and cache the reverse map; choose during
+    implementation.
   - With the union rules, `$this->Html` in `default.ctp` resolves to
     `HtmlHelper|BootstrapHtmlHelper` when only some controllers that render it alias `Html`,
     which matches what can render it.
-  - `canonicalizeFilenameToKey()` already drops a data view extension directory (`json`,
-    `xml`), so the `layoutPath` that `RequestHandlerComponent` sets for those maps onto the plain
-    layout key. Other paths stay part of the key.
   - A layout no controller can render falls back to `AppController`.
-  - A template or element can also assign `$this->layout` or `$this->layoutPath`, since
-    `View::render()` renders the template before it picks the layout (`$this->layout = 'ajax'`
-    in a template is a common CakePHP 2 idiom). Index those assignments in view files too,
-    with the same `findFieldAssignments()` call, and resolve a reference from a view file
-    through the element walk: the layout's receivers include that template's rendering
-    controllers. A layout path assigned in a view file combines with the layout names of the
-    same file's controllers, as for an assignment in the controller.
+  - A template or element can also assign `$this->layout`, since `View::render()` renders the
+    template before it picks the layout (`$this->layout = 'ajax'` in a template is a common
+    CakePHP 2 idiom). Index those assignments in view files too, with the same
+    `findFieldAssignments()` call, and resolve a reference from a view file through the element
+    walk: the layout's receivers include that template's rendering controllers.
+  - **`$layoutPath` is not tracked**, neither the property nor assignments. Its main user is
+    `RequestHandlerComponent`, which sets it to a data view type, and
+    `canonicalizeFilenameToKey()` already drops a data view extension directory (`json`,
+    `xml`), so those layouts map onto the plain layout key. Apps rarely set it themselves:
+    separate admin layouts are usually `$this->layout = 'admin'` or `public $layout = 'admin'`.
+    Tracking it would need per-class inheritance like `$layout`, a product of names and paths,
+    and splitting keys into path and name at lookup. A layout in any other subdirectory falls
+    back to `AppController`, which still gives it the aliases apps usually configure there; it
+    misses only an alias configured solely on the controller that sets that layout path. See
+    Open questions.
 - The receiver list is a union, so the per-receiver rules from the union fix apply: an alias
   only loses its convention candidates when every rendering controller has an override load
   of it.
@@ -612,12 +612,11 @@ Tests:
   up that controller's alias; a `$layout` declared on `AppController` applies to the
   controllers that do not redeclare it; `default.ctp` unions the alias with the convention
   class when only one controller aliases it, and not when that controller declares another
-  `$layout` and never assigns `default`; a controller with `public $layoutPath = 'admin'`, and
-  one assigning `$this->layoutPath`, renders `Layouts/admin/default.ctp` with its alias; a
-  `json` layout path maps onto the plain layout; `$this->layout = 'print'` in
+  `$layout` and never assigns `default`; a `json` layout file maps onto the plain layout; a
+  layout in another subdirectory falls back to `AppController`; `$this->layout = 'print'` in
   `Movie/view.ctp` makes `print.ctp` pick up `MovieController`'s alias, and the same through an
   element; a layout no controller can render falls back to `AppController`. Indexer tests for
-  each layout and layout path source.
+  each layout source.
 - Associations: an aliased association resolves inside the model and through
   `$this->Movie->Alias` in a controller; a redeclared association property replaces the parent's.
 - Unlisted association, completion: a `Movie` model whose association properties do not list
@@ -674,10 +673,9 @@ Tests:
    check in the resolver; the template key in the deferred signature, the rendering
    controllers with the plugin-aware lookup, the element walk and caching. Helper and plugin
    template tests.
-7. Layouts: index `$layout` and `$layoutPath` declarations and assignments (in controllers and
-   view files) and `render()`'s second argument, layout receivers including `default`, layout
-   paths, the element walk for view file assignments and plugin-aware layout keys. Layout
-   tests.
+7. Layouts: index `$layout` declarations and assignments (in controllers and view files) and
+   `render()`'s second argument, layout receivers including `default`, the element walk for
+   view file assignments and plugin-aware layout keys. Layout tests.
 8. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
 9. Run the full suite.
 
@@ -689,6 +687,9 @@ Commit after each step.
   carry it? (Step 8.)
 - Is it worth resolving a helper's `$helpers` aliases through the rendering controllers, given
   the controller's alias wins at runtime?
+- `$layoutPath` is not tracked (see Helpers in templates), so a layout in a subdirectory other
+  than a data view type's falls back to `AppController`. Track it if an app turns out to
+  configure helper aliases only on the controller that sets a layout path.
 - CakePHP 3 to 5 have the same gap as incomplete declarations: `readLoadArray()` skips an entry
   such as `protected $helpers = [self::X]`, and a helper with any other initialize load then
   hides the convention list (`ViewHelperInViewHelperCompletionContributor`). The complete flag
