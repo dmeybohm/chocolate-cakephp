@@ -34,13 +34,15 @@ From `Cake\View\CellTrait` and `Cake\View\Cell` (checked against 3.x, 4.4 and 5.
   - Cake 4/5: `templates/cell/Admin/Inventory/display.php` (`Cell::TEMPLATE_FOLDER` is `cell`)
   - Cake 3: `src/Template/Cell/Admin/Inventory/display.ctp`
 - Inside the action the cell may call `$this->viewBuilder()->setTemplate()` /
-  `setTemplatePath()`, and `Cell::render($template)` takes an explicit template. The path
-  prefix is only applied when the builder has no template path, so an action-level
-  `setTemplatePath()` wins, as it does in controllers.
+  `setTemplatePath()`. The path prefix is only applied when the builder has no template path,
+  so an action-level `setTemplatePath()` wins, as it does in controllers. `$this->render()`
+  from inside the action is not a valid call: `Cell::render()` invokes the action itself, so
+  that would run the action again. The caller picks an alternate template with
+  `Cell::render($template)` on the returned cell, as above.
 - Cells use `ViewVarsTrait`, so `$this->set()` in an action feeds the cell template. For
-  tables, Cake 3 and 4 cells use `ModelAwareTrait` (`$this->loadModel()`) and
-  `LocatorAwareTrait`; Cake 5 drops `ModelAwareTrait`, leaving `$this->fetchTable()` (4.3+)
-  and the locator. They have no component registry.
+  tables: Cake 3 cells load them with `$this->loadModel()` (`ModelAwareTrait`); Cake 4 keeps
+  `loadModel()` and adds `$this->fetchTable()` from 4.3; Cake 5 has only `fetchTable()`. They
+  have no component registry.
 - A cell template renders in its own `View` with only the cell's `set()` variables; the
   calling template's variables do not reach it.
 
@@ -85,9 +87,11 @@ A cell file is `{Name}Cell.php` under a `View/Cell` directory. `ControllerMethod
 works from a `ControllerPath` (name + prefix, giving `Admin/Movie/`); the cell equivalent is a
 path of `cell/Admin/Inventory/` on Cake 4/5 and `Cell/Admin/Inventory/` on Cake 3. The plan is
 to generalise the marker's `RelatedLookupInfo` from `ControllerPath` to a small sealed source
-type (controller or cell) rather than copying the marker, so `render()`, `setTemplate()` and
+type (controller or cell) rather than copying the marker, so `setTemplate()` and
 `setTemplatePath()` inside a cell action get the same markers as inside a controller action for
-free. `actionNamesFromControllerMethod` is already source-agnostic.
+free. `actionNamesFromControllerMethod` is already source-agnostic; it also collects
+`$this->render()` calls, which do not occur in a valid cell action, so nothing is done about
+them either way.
 
 `CreateViewFileAction` (Ctrl-click on the marker) should create the cell template in the right
 directory too.
@@ -155,8 +159,8 @@ flow.
   `render()` on an unrelated receiver does not navigate.
 - `CellCompletionTest`: cell names offered, plugin names prefixed, actions offered after `::`.
 - `CellMethodLineMarkerTest` (or extend the existing controller marker test): marker on
-  `display()` targets the template, and `setTemplate()` / `render()` inside the action get
-  their own markers as they do in a controller.
+  `display()` targets the template, and `setTemplate()` / `setTemplatePath()` inside the
+  action get their own markers as they do in a controller.
 - `CellToggleActionTest`: the toggle action is enabled in a cell file and goes from `display()`
   to its template, and back from the template.
 - `CellViewVariableTest`: `$items` completes with its type in the cell template; the
