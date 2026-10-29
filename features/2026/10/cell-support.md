@@ -17,9 +17,11 @@ From `Cake\View\CellTrait` and `Cake\View\Cell` (checked against 3.x, 4.4 and 5.
 - `cell()` lives in `CellTrait`. `View` uses it, so templates, elements and layouts have
   `$this->cell()` and helpers have `$this->_View->cell()`. Controllers do not use the trait
   themselves, but the 3.x and 5.x docs show adding `use CellTrait;` to a controller, so
-  `$this->cell()` in a controller is a supported call too. The method pattern therefore accepts
-  `$this->cell(...)` on any receiver class, as `ElementMethodPattern` does, rather than checking
-  for a view.
+  `$this->cell()` in a controller is a supported call too. The method pattern accepts
+  `$this->cell(...)` when there is no enclosing class (a template file) or the enclosing class
+  is a `Cake\View\View` subclass or uses `Cake\View\CellTrait`, directly or through a parent,
+  and `$this->_View->cell(...)` in a helper. An unrelated class with its own `cell()` method
+  does not match: PhpStorm resolves that call natively and the handler adds nothing.
 - The caller can pick the template on the returned cell: `$this->cell('Inventory')->render('compact')`
   or `$cell = $this->cell('Inventory'); echo $cell->render('compact');`. `render()` runs the
   action and then uses the given template under the cell's template path.
@@ -35,8 +37,12 @@ From `Cake\View\CellTrait` and `Cake\View\Cell` (checked against 3.x, 4.4 and 5.
   `setTemplatePath()`, and `Cell::render($template)` takes an explicit template. The path
   prefix is only applied when the builder has no template path, so an action-level
   `setTemplatePath()` wins, as it does in controllers.
-- Cells use `ViewVarsTrait`, so `$this->set()` in an action feeds the cell template, and
-  `LocatorAwareTrait`, so `$this->fetchTable()` works. They have no component registry.
+- Cells use `ViewVarsTrait`, so `$this->set()` in an action feeds the cell template. For
+  tables, Cake 3 and 4 cells use `ModelAwareTrait` (`$this->loadModel()`) and
+  `LocatorAwareTrait`; Cake 5 drops `ModelAwareTrait`, leaving `$this->fetchTable()` (4.3+)
+  and the locator. They have no component registry.
+- A cell template renders in its own `View` with only the cell's `set()` variables; the
+  calling template's variables do not reach it.
 
 ## Scope
 
@@ -61,8 +67,17 @@ The chained `$this->cell('Inventory')->render('compact')` form gets a goto decla
 `TemplateGotoDeclarationHandler`. The `$cell = $this->cell(...); $cell->render('compact')` form
 resolves the variable to its preceding `cell()` assignment in the same scope, using the same
 preceding-assignment rule `templateNamesFromVariable` applies; anything else (parameters,
-properties, a cell built in another method) is not resolved. Both forms are also indexed in
-`ViewFileDataIndexer` under the cell template path so the template side can find the usage.
+properties, a cell built in another method) is not resolved.
+
+Caller-side references, both `cell('Inventory')` (the default `display` template) and the
+`render('compact')` forms, are indexed in `ViewFileDataIndexer` under the cell template path so
+the template side can find its usages. They are not variable sources, though:
+`forEachContributingSource` in `ViewVariableIndexService` treats every reference to a template
+as a `ViewSet` source and expands it further, which would hand the calling template's variables
+to the cell template. So these references get their own `ElementType.CELL_RENDER`,
+`PsiElementAndPath` carries the element type through from `ViewReferenceData`, and the variable
+walk skips `CELL_RENDER` references without expanding them. The cell template's variables come
+only from the cell action's `set()` calls (step 3).
 
 ### 2. Cell action to template
 
@@ -132,8 +147,9 @@ flow.
 ## Tests (cake5 first)
 
 - `CellGotoDeclarationTest`: plain name to class, `Name::action` to method, plugin-prefixed
-  name, sub-namespace name, the same call from a controller that uses `CellTrait`, no
-  navigation on other receivers, ternary branches.
+  name, sub-namespace name, the same call from a controller that uses `CellTrait`, from a
+  helper via `$this->_View->cell()`, no navigation for `$obj->cell()` or for `$this->cell()`
+  in a class that has its own `cell()` and no trait, ternary branches.
 - `CellRenderGotoDeclarationTest`: `$this->cell('Inventory')->render('compact')` goes to
   `cell/Inventory/compact.php`; the `$cell = ...; $cell->render('compact')` form too; a
   `render()` on an unrelated receiver does not navigate.
@@ -144,7 +160,8 @@ flow.
 - `CellToggleActionTest`: the toggle action is enabled in a cell file and goes from `display()`
   to its template, and back from the template.
 - `CellViewVariableTest`: `$items` completes with its type in the cell template; the
-  undefined-variable suppressor accepts it.
+  undefined-variable suppressor accepts it; a variable set only in the template that calls
+  `$this->cell('Inventory')` is not offered in the cell template.
 - `CellTemplateToCellGotoRelatedTest`: from `cell/Inventory/display.php` to `display()`.
 
 ## Implementation Progress
