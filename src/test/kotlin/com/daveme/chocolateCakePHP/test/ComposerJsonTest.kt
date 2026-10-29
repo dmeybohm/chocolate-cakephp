@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.ComposerInfo
+import com.daveme.chocolateCakePHP.constraintMajorVersions
 import com.daveme.chocolateCakePHP.parseComposerJson
 import junit.framework.TestCase
 
@@ -8,18 +9,18 @@ class ComposerJsonTest : TestCase() {
 
     fun `test cakephp detected in require`() {
         val info = parseComposerJson("""{"require": {"cakephp/cakephp": "^5.0"}}""", "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertNull(info.appDirectory)
     }
 
     fun `test cakephp only in require-dev is not detected`() {
         val info = parseComposerJson("""{"require-dev": {"cakephp/cakephp": "^5.0"}}""", "\\App")
-        assertFalse(info.cakePhpRequired)
+        assertNull(info.cakePhpMajorVersions)
     }
 
     fun `test cakephp absent when require has other packages`() {
         val info = parseComposerJson("""{"require": {"laravel/framework": "^10"}}""", "\\App")
-        assertFalse(info.cakePhpRequired)
+        assertNull(info.cakePhpMajorVersions)
     }
 
     fun `test app directory from psr-4 with trailing slash removed`() {
@@ -84,18 +85,18 @@ class ComposerJsonTest : TestCase() {
                 "require": {"php": ">=8.1"}
             }
         """.trimIndent()
-        assertFalse(parseComposerJson(json, "\\App").cakePhpRequired)
+        assertNull(parseComposerJson(json, "\\App").cakePhpMajorVersions)
         val reversed = """
             {
                 "require": {"php": ">=8.1"},
                 "require": {"cakephp/cakephp": "^5.0"}
             }
         """.trimIndent()
-        assertTrue(parseComposerJson(reversed, "\\App").cakePhpRequired)
+        assertNotNull(parseComposerJson(reversed, "\\App").cakePhpMajorVersions)
     }
 
     fun `test require that is not an object is not detected`() {
-        assertFalse(parseComposerJson("""{"require": "cakephp/cakephp"}""", "\\App").cakePhpRequired)
+        assertNull(parseComposerJson("""{"require": "cakephp/cakephp"}""", "\\App").cakePhpMajorVersions)
     }
 
     fun `test custom nested namespace and directory`() {
@@ -122,7 +123,7 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(json, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("src", info.appDirectory)
     }
 
@@ -137,7 +138,7 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(json, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("src", info.appDirectory)
     }
 
@@ -153,7 +154,7 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(json, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("src", info.appDirectory)
     }
 
@@ -168,7 +169,7 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(json, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("app/src", info.appDirectory)
     }
 
@@ -180,7 +181,7 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(json, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("app/src", info.appDirectory)
     }
 
@@ -253,7 +254,42 @@ class ComposerJsonTest : TestCase() {
             }
         """.trimIndent()
         val info = parseComposerJson(jsonString, "\\App")
-        assertTrue(info.cakePhpRequired)
+        assertNotNull(info.cakePhpMajorVersions)
         assertEquals("src", info.appDirectory)
+    }
+
+    fun `test major versions of cakephp constraint in require`() {
+        val info = parseComposerJson("""{"require": {"cakephp/cakephp": "2.10.*"}}""", "\\App")
+        assertEquals(setOf(2), info.cakePhpMajorVersions)
+    }
+
+    fun `test branch constraint gives no major versions`() {
+        val info = parseComposerJson("""{"require": {"cakephp/cakephp": "dev-master"}}""", "\\App")
+        assertEquals(emptySet<Int>(), info.cakePhpMajorVersions)
+    }
+
+    fun `test constraint major versions for single alternatives`() {
+        assertEquals(setOf(2), constraintMajorVersions("2.10.*"))
+        assertEquals(setOf(2), constraintMajorVersions("~2.9"))
+        assertEquals(setOf(2), constraintMajorVersions("^2.0"))
+        assertEquals(setOf(2), constraintMajorVersions(">=2.5,<3.0"))
+        assertEquals(setOf(2), constraintMajorVersions(">=2.5 <3.0"))
+        assertEquals(setOf(2), constraintMajorVersions("v2.10.0"))
+        assertEquals(setOf(4), constraintMajorVersions("4.4.*"))
+        assertEquals(setOf(5), constraintMajorVersions("  >= 5.0  "))
+    }
+
+    fun `test constraint major versions for multiple alternatives`() {
+        assertEquals(setOf(4, 5), constraintMajorVersions("^4.4 || ^5.0"))
+        assertEquals(setOf(2, 3), constraintMajorVersions("^2.10||^3.0"))
+        assertEquals(setOf(3, 4), constraintMajorVersions("^3.0 | ^4.0"))
+    }
+
+    fun `test constraint without leading version gives no major versions`() {
+        assertEquals(emptySet<Int>(), constraintMajorVersions("dev-master"))
+        assertEquals(emptySet<Int>(), constraintMajorVersions("*"))
+        assertEquals(emptySet<Int>(), constraintMajorVersions("@dev"))
+        assertEquals(emptySet<Int>(), constraintMajorVersions(""))
+        assertEquals(setOf(5), constraintMajorVersions("dev-master || ^5.0"))
     }
 }

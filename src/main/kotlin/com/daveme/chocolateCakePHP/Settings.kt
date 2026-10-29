@@ -154,7 +154,7 @@ class CakePhpAutoDetector(val project: Project)
         val composerInfo = parseComposerJson(composerContents, namespace)
 
         return CakeAutoDetectedValues(
-            cake3OrLaterPresent = composerInfo.cakePhpRequired,
+            cake3OrLaterPresent = composerInfo.cakePhpMajorVersions != null,
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )

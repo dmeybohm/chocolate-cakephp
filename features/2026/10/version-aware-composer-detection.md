@@ -121,3 +121,12 @@ The `.form` file is edited by hand; the layout follows the CakePHP 3+ row.
   why a version turned on? Not needed for this branch.
 - `app/composer.json` in CakePHP 2 skeletons that keep composer under the app directory is not
   looked at; only the project root's composer.json is. Worth checking how common that is.
+
+## Implementation Progress
+
+### Session #1
+
+- Step 1 done: `constraintMajorVersions()` and `ComposerInfo.cakePhpMajorVersions`. A repeated
+  `cakephp/cakephp` key inside `require` is last-wins, like the other duplicate keys. Until
+  step 2, the detector sets `cake3OrLaterPresent` from `cakePhpMajorVersions != null`, so its
+  behaviour is unchanged.
