@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
 import com.daveme.chocolateCakePHP.cake.parseCellName
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.guessProjectDir
@@ -796,7 +797,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             return
         }
 
-        val cellPathPrefix = cellPathPrefixFromSourceFile(projectDir, virtualFile)
+        val cellDirName = cellDirNameFromSourceFile(projectDir, virtualFile)
 
         for (reference in cellReferences) {
             for (cellString in reference.cellNames) {
@@ -807,7 +808,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     if (template.isEmpty() || template.startsWith("/")) {
                         continue
                     }
-                    addViewReference(result, "${cellPathPrefix.prefix}${cellName.name}/${template}", ViewReferenceData(
+                    addViewReference(result, "${cellDirName}/${cellName.name}/${template}", ViewReferenceData(
                         methodName = reference.methodName,
                         elementType = ElementType.CELL_RENDER,
                         offset = reference.offset

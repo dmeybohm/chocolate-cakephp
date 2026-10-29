@@ -61,8 +61,9 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         } else {
             val isViewFile = isCakeViewFile(project, settings, psiFile)
             val isControllerFile = isCakeControllerFile(psiFile)
+            val isCellFile = settings.cake3Enabled && psiFile.virtualFile?.let { isCakeCellFile(it) } == true
 
-            e.presentation.isEnabled = isViewFile || isControllerFile
+            e.presentation.isEnabled = isViewFile || isControllerFile || isCellFile
             e.presentation.isVisible = isViewFile
         }
     }
@@ -76,7 +77,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         if (isCakeViewFile(project, settings, psiFile)) {
             tryToNavigateFromView(project, settings, virtualFile, psiFile, e)
-        } else if (isCakeControllerFile(psiFile)) {
+        } else if (isCakeControllerFile(psiFile) || (settings.cake3Enabled && isCakeCellFile(virtualFile))) {
             tryToNavigateToView(project, settings, virtualFile, psiFile, e)
         }
     }
@@ -92,7 +93,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val offset = editor.caretModel.offset
         val element = psiFile.findElementAt(offset)
         val method = PsiTreeUtil.getParentOfType(element, Method::class.java) ?: return
-        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
+        val ownerPath = viewOwnerPathFromFile(project, settings, virtualFile) ?: return
 
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
@@ -101,7 +102,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             ?: return
 
         val allViewPaths = allViewPathsFromController(
-            controllerPath,
+            ownerPath,
             allTemplatesPaths,
             settings,
             actionNames

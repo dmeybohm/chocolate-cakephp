@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.cake
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
+import com.intellij.openapi.vfs.VirtualFile
 
 const val CELL_PARENT_CLASS = "\\Cake\\View\\Cell"
 const val CELL_TRAIT = "\\Cake\\View\\CellTrait"
@@ -106,4 +107,67 @@ fun allViewPathsFromCellTemplate(
         otherViewPaths = listOf(),
         dataViewPaths = listOf()
     )
+}
+
+/**
+ * The template path of a cell's templates, such as `cell/Admin/Inventory/`.
+ */
+data class CellPath(
+    val name: String,
+    val cellDirName: String,
+) : ViewOwnerPath {
+    override val viewPath: String get() = "${cellDirName}/${name}/"
+}
+
+/**
+ * The name `cell()` takes for a cell class file under a `View/Cell` directory, such as
+ * `Admin/Inventory` for `View/Cell/Admin/InventoryCell.php`, or null for any other file.
+ */
+fun cellNameFromCellFile(cellFile: VirtualFile): String? {
+    val baseName = cellFile.nameWithoutExtension
+    if (!baseName.endsWith("Cell") || baseName == "Cell") {
+        return null
+    }
+    val subNamespace = mutableListOf<String>()
+    var parent: VirtualFile? = cellFile.parent
+    while (parent != null) {
+        if (parent.name == "Cell" && parent.parent?.name == "View") {
+            return (subNamespace.reversed() + baseName.removeSuffix("Cell")).joinToString("/")
+        }
+        subNamespace.add(parent.name)
+        parent = parent.parent
+    }
+    return null
+}
+
+fun isCakeCellFile(file: VirtualFile): Boolean =
+    cellNameFromCellFile(file) != null
+
+fun cellPathFromCellFile(projectDir: VirtualFile, cellFile: VirtualFile): CellPath? {
+    val name = cellNameFromCellFile(cellFile) ?: return null
+    return CellPath(name, cellDirNameFromSourceFile(projectDir, cellFile))
+}
+
+/**
+ * The cell template directory name for a source file: `cell` in CakePHP 4+ and `Cell` in
+ * CakePHP 3, found from the templates directory the file belongs to.
+ */
+fun cellDirNameFromSourceFile(projectDir: VirtualFile, sourceFile: VirtualFile): String {
+    var currentDir: VirtualFile? = sourceFile.parent
+    while (currentDir != null) {
+        val templatesDir = if (currentDir.name == "templates" || currentDir.name == "Template")
+            currentDir
+        else
+            currentDir.findChild("templates") ?: currentDir.findChild("Template")
+        if (templatesDir != null && templatesDir.isDirectory) {
+            val cellDir = templatesDir.findChild("cell") ?: templatesDir.findChild("Cell")
+            val defaultName = if (templatesDir.name == "Template") "Cell" else "cell"
+            return cellDir?.name ?: defaultName
+        }
+        if (currentDir == projectDir) {
+            break
+        }
+        currentDir = currentDir.parent
+    }
+    return "cell"
 }
