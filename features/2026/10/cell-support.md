@@ -276,3 +276,34 @@ cell goto and the plugin `render()` goto, and cake4 a `fetchTable()` case.
 
 Tests: `CellFetchTableTest` (cake5), additions to `CellRenderGotoDeclarationTest`,
 `CellMethodLineMarkerTest` and both `CellTest` classes.
+
+### Session #5
+
+Review fixes from PR #297.
+
+- `render()` with no template argument renders the action's own template, so
+  `$this->cell('Inventory')->render()` and `$cell->render()` are now indexed under it. Before,
+  the `cell()` call was skipped because it fed a `render()`, and the `render()` was dropped for
+  having no template, so the caller disappeared from the "Cell usages".
+- A `cell()` call that feeds a `render()` is now skipped only when that `render()` is itself
+  indexed. With an argument that doesn't resolve, such as `render($template)`, the `cell()` call
+  keeps its default-template usage instead of losing the link.
+- `$cell = $this->cell('Inventory')` is no longer counted as a `display` usage when every later
+  use of `$cell` in the scope is an indexed `$cell->render(...)`. This replaces Session #2's
+  "indexed under its default template as well". Any other use (`echo $cell`, passing it on,
+  reassigning it) keeps the default usage, so `echo $cell; $cell->render('compact');` lists one
+  usage under each template. An assignment with no later use still counts.
+  `laterUsesOfAssignedVariable` in `TemplateNames.kt` finds the uses. It stops at the outer
+  `VARIABLE` node, because the variable's own token is also a `VARIABLE` and would otherwise
+  be counted as a second use that isn't a receiver.
+- The view file index version went to 22.
+
+The reviewer also found that an app cell and a plugin cell with the same name share keys,
+which affects variables (completion, types, undefined-variable suppression) as well as usage
+lists. The view file index keys plugin templates relative to their own templates directory,
+so `cell/Widget/display` matches both cells' actions before the variable key comes into it.
+Plugin controllers share the same collision through `controllerMethodKey`. Plugin-aware keys
+for controllers and cells together are left for a follow-up.
+
+Tests: six new cases in `CellReferenceIndexTest`: chained and variable `render()` with no
+argument, an unresolved template argument, rendered-only, echoed-only, and echoed-then-rendered.

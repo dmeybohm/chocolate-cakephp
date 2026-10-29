@@ -253,3 +253,38 @@ internal fun assignedValueNodes(variableNode: ASTNode, ctx: TemplateNameContext)
         .takeWhile { it.startOffset < variableNode.startOffset }
         .mapNotNull { assignmentValueNode(it) }
 }
+
+/**
+ * The uses of `$name` after a plain `$name = <valueNode>` assignment in the same scope, in
+ * document order, or null when [valueNode] is not the right-hand side of one.
+ */
+internal fun laterUsesOfAssignedVariable(valueNode: ASTNode): List<ASTNode>? {
+    val assignment = valueNode.treeParent ?: return null
+    if (!assignment.isAssignmentExpression() || assignmentValueNode(assignment) != valueNode) {
+        return null
+    }
+    val target = firstExpressionChild(assignment)?.takeIf { it.isVariable() } ?: return null
+    if (target.text == "\$this") {
+        return null
+    }
+    val result = mutableListOf<ASTNode>()
+    collectVariableUses(scopeNodeOf(assignment), target.text, assignment.startOffset + assignment.textLength, result)
+    return result
+}
+
+private fun collectVariableUses(node: ASTNode, variableText: String, after: Int, result: MutableList<ASTNode>) {
+    if (node.isVariable()) {
+        // The variable's own token is also a VARIABLE, so stop at the outer node
+        if (node.text == variableText && node.startOffset >= after) {
+            result.add(node)
+        }
+        return
+    }
+    var child = node.firstChildNode
+    while (child != null) {
+        if (!child.isScopeNode()) {
+            collectVariableUses(child, variableText, after, result)
+        }
+        child = child.treeNext
+    }
+}

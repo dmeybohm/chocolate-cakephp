@@ -61,6 +61,61 @@ class CellReferenceIndexTest : Cake5BaseTestCase() {
         assertEquals(listOf("\$cell->render('compact')"), referencesTo("cell/Inventory/compact"))
     }
 
+    fun `test chained render without a template is indexed under the default template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('Inventory')->render();
+        """.trimIndent())
+        assertEquals(listOf("\$this->cell('Inventory')->render()"), referencesTo("cell/Inventory/display"))
+    }
+
+    fun `test render without a template on a variable is indexed under the default template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        ${'$'}cell = ${'$'}this->cell('Inventory::compact');
+        echo ${'$'}cell->render();
+        """.trimIndent())
+        assertEquals(listOf("\$cell->render()"), referencesTo("cell/Inventory/compact"))
+    }
+
+    fun `test chained render with an unresolved template keeps the cell call under the default template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('Inventory')->render(${'$'}template);
+        """.trimIndent())
+        assertEquals(listOf("\$this->cell('Inventory')"), referencesTo("cell/Inventory/display"))
+    }
+
+    fun `test cell assigned to a variable and rendered is indexed only under the rendered template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        ${'$'}cell = ${'$'}this->cell('Inventory');
+        echo ${'$'}cell->render('compact');
+        """.trimIndent())
+        assertEquals(listOf("\$cell->render('compact')"), referencesTo("cell/Inventory/compact"))
+        assertEmpty(referencesTo("cell/Inventory/display"))
+    }
+
+    fun `test cell assigned to a variable and echoed is indexed under the default template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        ${'$'}cell = ${'$'}this->cell('Inventory');
+        echo ${'$'}cell;
+        """.trimIndent())
+        assertEquals(listOf("\$this->cell('Inventory')"), referencesTo("cell/Inventory/display"))
+    }
+
+    fun `test cell assigned to a variable echoed and then rendered keeps both usages`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        ${'$'}cell = ${'$'}this->cell('Inventory');
+        echo ${'$'}cell;
+        echo ${'$'}cell->render('compact');
+        """.trimIndent())
+        assertEquals(listOf("\$this->cell('Inventory')"), referencesTo("cell/Inventory/display"))
+        assertEquals(listOf("\$cell->render('compact')"), referencesTo("cell/Inventory/compact"))
+    }
+
     fun `test cell call through the view in a helper is indexed`() {
         myFixture.configureByFilePathAndText("cake5/src5/View/Helper/MovieFormatterHelper.php", """
         <?php

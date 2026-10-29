@@ -498,10 +498,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         //   1. $this->cell('Name') or $this->_View->cell('Name')
         //   2. $this->cell('Name')->render('template')
         //   3. $cell = $this->cell('Name'); $cell->render('template')
+        // A render() with no template renders the action's own template, so it is indexed like
+        // a bare cell() call. The cell() call itself is left out when an indexed render() stands
+        // for it: chained directly, or as the only later use of the variable it is assigned to.
         val methodName = getMethodName(node) ?: return null
         val offset = getMethodNameOffset(node) ?: return null
         if (methodName.equals("cell", ignoreCase = true)) {
-            if (!isCellCall(node) || isReceiverOfRender(node)) {
+            if (!isCellCall(node) || isReceiverOfIndexedRender(node, ctx) || isOnlyRenderedThroughVariable(node, ctx)) {
                 return null
             }
             val cellNames = firstParameterValues(node, ctx)
@@ -520,11 +523,20 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             else -> emptyList()
         }.filter { it.isMethodReference() && isCellCall(it) }
         val cellNames = cellCalls.flatMap { firstParameterValues(it, ctx) }.distinct()
-        val templates = firstParameterValues(node, ctx)
-        if (cellNames.isEmpty() || templates.isEmpty()) {
+        val templates = renderTemplates(node, ctx)
+        if (cellNames.isEmpty() || templates == null) {
             return null
         }
-        return CellReferenceInfo(methodName, cellNames, templates, offset)
+        return CellReferenceInfo(methodName, cellNames, templates.ifEmpty { null }, offset)
+    }
+
+    /**
+     * The templates a render() call names: empty when it has no template argument, and null
+     * when the argument does not resolve to any template name.
+     */
+    private fun renderTemplates(renderNode: ASTNode, ctx: TemplateNameContext): List<String>? {
+        val argument = firstParameterNode(renderNode) ?: return emptyList()
+        return extractTemplateNames(argument, ctx).ifEmpty { null }
     }
 
     private fun isCellCall(node: ASTNode): Boolean {
@@ -543,29 +555,41 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
     }
 
-    private fun isReceiverOfRender(node: ASTNode): Boolean {
+    private fun isReceiverOfIndexedRender(node: ASTNode, ctx: TemplateNameContext): Boolean {
         val parent = node.treeParent ?: return false
         return parent.isMethodReference() &&
             parent.firstChildNode == node &&
-            getMethodName(parent)?.equals("render", ignoreCase = true) == true
+            getMethodName(parent)?.equals("render", ignoreCase = true) == true &&
+            renderTemplates(parent, ctx) != null
+    }
+
+    // $cell = $this->cell('Name'), where every later use of $cell is an indexed $cell->render()
+    private fun isOnlyRenderedThroughVariable(node: ASTNode, ctx: TemplateNameContext): Boolean {
+        val uses = laterUsesOfAssignedVariable(node) ?: return false
+        return uses.isNotEmpty() && uses.all { isReceiverOfIndexedRender(it, ctx) }
     }
 
     private fun firstParameterValues(node: ASTNode, ctx: TemplateNameContext): List<String> {
+        val parameter = firstParameterNode(node) ?: return emptyList()
+        return extractTemplateNames(parameter, ctx)
+    }
+
+    private fun firstParameterNode(node: ASTNode): ASTNode? {
         var child = node.firstChildNode
         while (child != null) {
             if (child.isParameterList()) {
                 var paramChild = child.firstChildNode
                 while (paramChild != null) {
                     if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
-                        return extractTemplateNames(paramChild, ctx)
+                        return paramChild
                     }
                     paramChild = paramChild.treeNext
                 }
-                return emptyList()
+                return null
             }
             child = child.treeNext
         }
-        return emptyList()
+        return null
     }
 
     private fun getMethodNameOffset(node: ASTNode): Int? {
