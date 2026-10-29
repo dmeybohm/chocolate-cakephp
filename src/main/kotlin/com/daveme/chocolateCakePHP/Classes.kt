@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.cake.CELL_PARENT_CLASS
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -133,6 +134,13 @@ fun PhpIndex.getComponentSubclasses(settings: Settings): Collection<PhpClass> {
         result += getAllSubclassesRecursively(COMPONENT_CAKE3_PARENT_CLASS)
     }
     return result
+}
+
+fun PhpIndex.getCellSubclasses(settings: Settings): Collection<PhpClass> {
+    if (!settings.cake3Enabled) {
+        return emptyList()
+    }
+    return getAllSubclassesRecursively(CELL_PARENT_CLASS)
 }
 
 fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> {
