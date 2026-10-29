@@ -886,3 +886,25 @@ Step 6, part 1: plugin identity and the `{Plugin}AppController` check.
 - Tests: a plugin controller merges `FooAppController`; an app `UsersController` extending
   `AdminAppController` does not merge its `$components` (it redeclares its own). cake2 tests:
   152, 0 failures.
+
+Step 6, part 2: template helper receivers.
+
+- `CakeTwoRenderingControllers` finds the controllers that render a CakePHP 2 view file from its
+  template key: references in a controller class are rendering controllers, and a reference in
+  a view file (an element include) walks on to that file's key, with a visited set and a limit
+  of 200 files. The result is cached per key against `PhpFilesModificationTracker`, as the
+  view variable cache is. A file that reaches no controller gets `AppController`.
+- `ViewHelperInViewTypeProvider` gives CakePHP 2 view files the signature
+  `#<key>2<templateKey><key><field>`; `complete()` resolves the field against the rendering
+  controllers. CakePHP 3 to 5 views keep `#<key><field>` and `AppView`.
+- `configuredHelperType()` takes `loadsAnyHelper`: in a CakePHP 2 view, a helper the controllers'
+  known `$helpers` does not list keeps its convention type, since `View::__get()` loads any
+  helper by name. Inside a helper it stays ruled out, as `Helper::__get()` only loads its own
+  `$helpers`.
+- `ViewHelperInViewCompletionContributor` and `ViewHelperGotoDeclarationHandler` use the same
+  receivers; goto also keeps the convention class for a helper the controllers do not list.
+
+`TemplateHelperTest`: a controller alias in its template, an `AppController` alias in a child's
+template, a helper no controller loads, an element and a nested element, an element nothing
+includes (`AppController`'s alias, and convention for the rest), completion, and goto. Full
+suite: 1023 tests, 0 failures.

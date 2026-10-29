@@ -48,8 +48,13 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             val phpIndex = PhpIndex.getInstance(project)
             val helperTypes = classReference.type.lookupCompleteType(project, phpIndex, null).types
                 .filter { it.startsWith("\\") && it.contains("Helper") }
+            val cakeTwoReceivers = if (helperTypes.isEmpty())
+                CakeTwoRenderingControllers.helperReceiversOfFile(project, settings, psiElement.containingFile)
+            else
+                null
             val receiverTypes = when {
                 helperTypes.isNotEmpty() -> helperTypes
+                cakeTwoReceivers != null -> cakeTwoReceivers
                 isCakeViewFile(project, settings, psiElement.containingFile) -> viewType(settings).types.toList()
                 else -> emptyList()
             }
@@ -57,7 +62,9 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
                 project, receiverTypes, setOf(MemberKind.HELPER), fieldName
             )
             val result = configured?.classes.orEmpty().toMutableList()
-            if (configured == null || !configured.hasInitializeLoad) {
+            // A CakePHP 2 view loads a helper its controllers do not list by name:
+            val loadsAnyHelper = cakeTwoReceivers != null && configured?.classFqns?.isEmpty() == true
+            if (configured == null || !configured.hasInitializeLoad || loadsAnyHelper) {
                 result += phpIndex.viewHelperClassesFromFieldName(settings, fieldName)
             }
             return result.distinct().toTypedArray()
