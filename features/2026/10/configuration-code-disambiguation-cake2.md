@@ -676,15 +676,15 @@ Tests:
 7. Done: layouts: index `$layout` declarations and assignments (in controllers and view files) and
    `render()`'s second argument, layout receivers including `default`, the element walk for
    view file assignments and plugin-aware layout keys. Layout tests.
-8. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
-9. Run the full suite.
+8. Moved to `cake2-plugin-settings`: plugin path filtering for navigation. It only changes which
+   of two same-named classes goto and completion type text pick, not inferred types, and it
+   builds on plugin identity, which that feature makes a single source.
+9. Done: run the full suite (1037 tests, 0 failures, as of Session #6).
 
 Commit after each step.
 
 ## Open questions
 
-- Is plugin-path filtering for same-named classes worth doing, given that types cannot
-  carry it? (Step 8.)
 - Is it worth resolving a helper's `$helpers` aliases through the rendering controllers, given
   the controller's alias wins at runtime?
 - `$layoutPath` is not tracked (see Helpers in templates), so a layout in a subdirectory other
@@ -694,6 +694,9 @@ Commit after each step.
   such as `protected $helpers = [self::X]`, and a helper with any other initialize load then
   hides the convention list (`ViewHelperInViewHelperCompletionContributor`). The complete flag
   added here could fix that too; out of scope for this feature.
+
+Resolved after step 7: plugin-path filtering for same-named classes is not worth doing here,
+since types cannot carry it; it moved to `cake2-plugin-settings` (step 8).
 
 Resolved by step 1: the merge rules (property-level, `AppController` only, recursive option
 merge; associations unmerged) and helper lazy-loading in views (yes, so template completion
