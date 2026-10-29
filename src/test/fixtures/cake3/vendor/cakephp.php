@@ -30,14 +30,35 @@ namespace Cake\Controller\Component {
 
 namespace Cake\View {
     class View {
+        use CellTrait;
+
         public function initialize() {}
 
         public function loadHelper($name, array $config = []) {
             return new Helper();
         }
     }
-    class Helper {}
+    class Helper {
+        /**
+         * @var \Cake\View\View
+         */
+        protected $_View;
+    }
     class ViewBuilder {}
+    trait CellTrait {
+        protected function cell($cell, array $data = [], array $options = []) {
+            return new Cell();
+        }
+    }
+    abstract class Cell {
+        use ViewVarsTrait;
+
+        public function initialize() {}
+
+        public function render($template = null) {
+            return '';
+        }
+    }
 
     trait ViewVarsTrait {
         /**

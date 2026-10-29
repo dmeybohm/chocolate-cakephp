@@ -217,3 +217,44 @@ lists the callers of a cell template under "Controllers" for now.
 
 Tests: `CellGotoDeclarationTest`, `CellRenderGotoDeclarationTest`, `CellCompletionTest`,
 `CellReferenceIndexTest` (cake5). Full suite passes (989 tests).
+
+### Session #3
+
+Steps 2 and 3 are done, with cake4 and cake3 coverage for all three steps.
+
+- `ViewOwnerPath` is the sealed controller-or-cell type the plan called for: `ControllerPath`
+  and the new `CellPath` (`cell/Admin/Inventory/`) implement it, and
+  `allViewPathsFromController` / `viewPathsFromControllerNameAndActionName` take it, since
+  they only ever used `viewPath`. Cells get no data view paths. `RelatedLookupInfo` holds an
+  `ownerPath` built by `viewOwnerPathFromFile`, so the controller marker, its `setTemplate()`
+  markers, `setTemplatePath()->setTemplate()` chains and the create-file popup all work in a
+  cell without further changes.
+- `isCakeCellFile` / `cellNameFromPath` take the name from the path after the last `View/Cell`.
+  `cellDirNameFromSourceFile` (moved from the view file index into `CakeCell.kt`) gives the
+  cell path its `cell` / `Cell` directory.
+- `ToggleBetweenControllerAndViewAction` is enabled in a cell file and builds the cell-to-template
+  lookup from the same owner path. From a template it drops `CELL_RENDER` references, so a cell
+  template toggles to its cell action and not to the templates calling it. The template-to-cell
+  direction runs as a non-blocking read action and has no test of its own; the goto-related
+  test covers the same index lookup.
+- `ViewFileDataIndexer` treats a cell file like a controller: public actions are implicit
+  renders and `viewPathPrefixFromSourceFile` returns the cell path, so `setTemplate()` and
+  `render()` inside a cell are keyed under it. Before this, a cell's `setTemplate('x')` was
+  keyed as `Cell/x`, because the walk up from `src/View/Cell` stopped at `View`.
+- `ViewVariableASTDataIndexer` indexes a cell action's `set()` calls under
+  `cellActionKey(name, method)` (`cell:Admin/Inventory:display`); the controller indexing became
+  `indexActions` with a key function. `forEachContributingSource` turns a reference from a
+  cell file into a `ControllerAction` source with that key. Both index versions were bumped.
+- `ViewToControllerGotoRelatedProvider` groups a cell template's references as "Cells" (the
+  action) and "Cell usages" (`cell()` / `render()` callers), and controllers as before.
+- The toggle action is enabled but not visible outside view files, so `testAction()` does not
+  perform it; `CellToggleActionTest` builds the event and calls `actionPerformed` itself.
+
+Tests: `CellMethodLineMarkerTest`, `CellToggleActionTest`, `CellViewVariableTest`,
+`CellTemplateToCellGotoRelatedTest` (cake5), and `CellTest` in cake4 and cake3 covering the
+`cell()` goto, `render()` goto, the action marker, cell variables (including that caller
+variables are kept out) and template-to-cell navigation. The cake4 and cake3 stubs gained
+`CellTrait`, `Cell` and `Helper::$_View`.
+
+Still open from the plan: step 4 (`$_validCellOptions` completion, cell `initialize()` as a
+configured-member source), and cake4/cake3 coverage of completion and plugin cells.
