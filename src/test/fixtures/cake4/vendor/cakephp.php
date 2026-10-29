@@ -53,6 +53,8 @@ namespace Cake\View {
         }
     }
     abstract class Cell {
+        use \Cake\ORM\Locator\LocatorAwareTrait;
+
         public function initialize(): void {}
 
         /**

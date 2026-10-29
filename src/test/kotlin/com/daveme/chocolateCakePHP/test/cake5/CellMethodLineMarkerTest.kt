@@ -17,6 +17,7 @@ class CellMethodLineMarkerTest : Cake5BaseTestCase() {
             "cake5/templates/cell/Inventory/display.php",
             "cake5/templates/cell/Inventory/compact.php",
             "cake5/templates/cell/Admin/Report/display.php",
+            "cake5/vendor/test/test_plugin/templates/cell/Widget/display.php",
             "cake5/vendor/cakephp.php",
         )
     }
@@ -141,6 +142,24 @@ class CellMethodLineMarkerTest : Cake5BaseTestCase() {
         val fullPath = handler.allViewPaths.defaultViewPath.fullPath
         assertTrue(fullPath, fullPath.endsWith("templates/cell/Inventory/big_list.php"))
         assertEmpty(handler.allViewPaths.dataViewPaths)
+    }
+
+    fun `test marker on a plugin cell action targets the plugin's template`() {
+        myFixture.configureByFilePathAndText("cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php", """
+        <?php
+        namespace TestPlugin\View\Cell;
+
+        use Cake\View\Cell;
+
+        class WidgetCell extends Cell
+        {
+            public function display(): void {}
+        }
+        """.trimIndent())
+        assertEquals(
+            setOf("vendor/test/test_plugin/templates/cell/Widget/display.php"),
+            targetPaths(method("display").nameIdentifier!!)
+        )
     }
 
 }

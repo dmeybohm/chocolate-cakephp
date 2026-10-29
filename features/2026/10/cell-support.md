@@ -256,5 +256,23 @@ Tests: `CellMethodLineMarkerTest`, `CellToggleActionTest`, `CellViewVariableTest
 variables are kept out) and template-to-cell navigation. The cake4 and cake3 stubs gained
 `CellTrait`, `Cell` and `Helper::$_View`.
 
-Still open from the plan: step 4 (`$_validCellOptions` completion, cell `initialize()` as a
-configured-member source), and cake4/cake3 coverage of completion and plugin cells.
+### Session #4
+
+Step 4 was dropped: `$_validCellOptions` completion is a rarely used corner, cells seldom load
+anything in `initialize()`, and typing `cell()` as the specific subclass mostly helps `render()`,
+which already works. What a cell does most is fetch a table in its action, and that was
+missing: `fetchTable()` was only recognised on controllers, so in a cell the call had no
+argument completion, no navigation and only the base `Table` type. `String.isAnyCellClass()` /
+`PhpType.isProbablyCellClass()` now sit next to the controller checks in
+`TableLocatorMethodPattern`, `TableLocatorCompletionContributor`,
+`TableLocatorGotoDeclarationHandler` and `TableLocatorTypeProvider`. `loadModel()` gets no
+table-specific return type in controllers either, so nothing was done for it in cells. The
+cake5 and cake4 stub `Cell` gained `LocatorAwareTrait`, as the real one has from 4.3.
+
+Plugin cells now have templates in the fixtures for all three versions, with tests for the
+`render()` goto and the action marker into the plugin's templates. The cake4 and cake3
+`CellTest` gained name completion (including plugin names), action completion, the plugin
+cell goto and the plugin `render()` goto, and cake4 a `fetchTable()` case.
+
+Tests: `CellFetchTableTest` (cake5), additions to `CellRenderGotoDeclarationTest`,
+`CellMethodLineMarkerTest` and both `CellTest` classes.

@@ -21,6 +21,8 @@ class CellTest : Cake3BaseTestCase() {
         myFixture.copyFileToProject("cake3/src/View/Cell/InventoryCell.php")
         myFixture.copyFileToProject("cake3/src/Template/Cell/Inventory/display.ctp")
         myFixture.copyFileToProject("cake3/src/Template/Cell/Inventory/compact.ctp")
+        myFixture.copyFileToProject("cake3/vendor/test/test_plugin/src/View/Cell/WidgetCell.php")
+        myFixture.copyFileToProject("cake3/vendor/test/test_plugin/src/Template/Cell/Widget/display.ctp")
     }
 
     private fun gotoTargets() =
@@ -96,6 +98,52 @@ class CellTest : Cake3BaseTestCase() {
                 val method = it.element as Method
                 "${method.containingClass?.name}::${method.name}"
             }
+        )
+    }
+
+    fun `test cell names are completed including plugin cells`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}this->cell('<caret>');
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertContainsElements(result!!, "Inventory", "TestPlugin.Widget")
+    }
+
+    fun `test cell actions are completed after the separator`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}this->cell('Inventory::<caret>');
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertContainsElements(result!!, "Inventory::display", "Inventory::compact")
+    }
+
+    fun `test plugin cell name goes to the plugin cell class`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}this->cell('TestPlugin.<caret>Widget');
+        """.trimIndent())
+        assertEquals(
+            listOf("\\TestPlugin\\View\\Cell\\WidgetCell"),
+            gotoTargets().filterIsInstance<PhpClass>().map { it.fqn }
+        )
+    }
+
+    fun `test render on a plugin cell goes to the plugin's cell template`() {
+        myFixture.configureByFilePathAndText("cake3/src/Template/Movie/artist.ctp", """
+        <?php
+        echo ${'$'}this->cell('TestPlugin.Widget')->render('<caret>display');
+        """.trimIndent())
+        assertEquals(
+            listOf("vendor/test/test_plugin/src/Template/Cell/Widget/display.ctp"),
+            gotoTargets().mapNotNull { (it as? PsiFile)?.virtualFile?.path?.substringAfter("/cake3/") }
         )
     }
 

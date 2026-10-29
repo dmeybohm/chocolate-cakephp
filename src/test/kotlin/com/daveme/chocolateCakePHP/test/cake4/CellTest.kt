@@ -21,6 +21,8 @@ class CellTest : Cake4BaseTestCase() {
         myFixture.copyFileToProject("cake4/src4/View/Cell/InventoryCell.php")
         myFixture.copyFileToProject("cake4/templates/cell/Inventory/display.php")
         myFixture.copyFileToProject("cake4/templates/cell/Inventory/compact.php")
+        myFixture.copyFileToProject("cake4/vendor/test/test_plugin/src/View/Cell/WidgetCell.php")
+        myFixture.copyFileToProject("cake4/vendor/test/test_plugin/templates/cell/Widget/display.php")
     }
 
     private fun gotoTargets() =
@@ -97,6 +99,74 @@ class CellTest : Cake4BaseTestCase() {
                 "${method.containingClass?.name}::${method.name}"
             }
         )
+    }
+
+    fun `test cell names are completed including plugin cells`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('<caret>');
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertContainsElements(result!!, "Inventory", "TestPlugin.Widget")
+    }
+
+    fun `test cell actions are completed after the separator`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('Inventory::<caret>');
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertContainsElements(result!!, "Inventory::display", "Inventory::compact")
+    }
+
+    fun `test plugin cell name goes to the plugin cell class`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('TestPlugin.<caret>Widget');
+        """.trimIndent())
+        assertEquals(
+            listOf("\\TestPlugin\\View\\Cell\\WidgetCell"),
+            gotoTargets().filterIsInstance<PhpClass>().map { it.fqn }
+        )
+    }
+
+    fun `test render on a plugin cell goes to the plugin's cell template`() {
+        myFixture.configureByFilePathAndText("cake4/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('TestPlugin.Widget')->render('<caret>display');
+        """.trimIndent())
+        assertEquals(
+            listOf("vendor/test/test_plugin/templates/cell/Widget/display.php"),
+            gotoTargets().mapNotNull { (it as? PsiFile)?.virtualFile?.path?.substringAfter("/cake4/") }
+        )
+    }
+
+    fun `test fetchTable in a cell returns the table class`() {
+        myFixture.copyFileToProject("cake4/src4/Model/Table/ArticlesTable.php")
+        myFixture.configureByFilePathAndText("cake4/src4/View/Cell/InventoryCell.php", """
+        <?php
+        namespace App\View\Cell;
+
+        use Cake\View\Cell;
+
+        class InventoryCell extends Cell
+        {
+            public function display() {
+                ${'$'}this->fetchTable('Articles')-><caret>
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertContainsElements(result!!, "myCustomArticleMethod")
     }
 
 }

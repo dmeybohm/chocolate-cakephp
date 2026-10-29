@@ -16,6 +16,8 @@ class CellRenderGotoDeclarationTest : Cake5BaseTestCase() {
             "cake5/templates/cell/Inventory/display.php",
             "cake5/templates/cell/Inventory/compact.php",
             "cake5/templates/cell/Admin/Report/display.php",
+            "cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php",
+            "cake5/vendor/test/test_plugin/templates/cell/Widget/display.php",
             "cake5/vendor/cakephp.php",
         )
     }
@@ -66,6 +68,14 @@ class CellRenderGotoDeclarationTest : Cake5BaseTestCase() {
         echo ${'$'}obj->cell('Inventory')->render('<caret>compact');
         """.trimIndent())
         assertEmpty(targetPaths())
+    }
+
+    fun `test render on a plugin cell goes to the plugin's cell template`() {
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        echo ${'$'}this->cell('TestPlugin.Widget')->render('<caret>display');
+        """.trimIndent())
+        assertEquals(listOf("vendor/test/test_plugin/templates/cell/Widget/display.php"), targetPaths())
     }
 
 }
