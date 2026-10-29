@@ -177,3 +177,43 @@ flow.
 
 Created the branch and worktree, surveyed the controller/template machinery and the
 CakePHP 3/4/5 cell sources, and wrote this plan.
+
+### Session #2
+
+Step 1 is done for cake5:
+
+- `CellMethodPattern` accepts `$this->cell()` with no enclosing class, in a `Cake\View\View`
+  subclass or in a class using `Cake\View\CellTrait` (walking the parent chain), and
+  `$this->_View->cell()`. `cellCallsFromReceiver` resolves a `render()` receiver to the
+  `cell()` call itself or to the `cell()` calls assigned to the variable before it.
+- `cake/CakeCell.kt` holds the `[Plugin.]Name[::action]` parsing (`parseCellName`), the class
+  FQN, the cell template directory name per `TemplatesDir` (`cell` / `Cell`) and
+  `allViewPathsFromCellTemplate`. An unknown plugin prefix falls back to the plugin name as
+  the namespace, as `App::className()` does.
+- `CellGotoDeclarationHandler` covers both the `cell()` string (class, or the action method
+  when it exists) and the `render()` argument on a cell (the template under the cell's
+  directory). `CellCompletionContributor` matches against the whole literal up to the caret,
+  since `.`, `/` and `::` break the default prefix; after `::` it offers the cell's own public
+  methods as `Name::method`.
+- The preceding-assignment scan in `templateNamesFromVariable` is now `precedingAssignments`,
+  shared with `cellCallsFromReceiver`; `TemplateNames.kt` gained the AST equivalent
+  `assignedValueNodes` for the indexer.
+- `ViewFileDataIndexer` indexes `cell()` under `{cell dir}/{Name}/{underscored action}` and
+  `render()` on a cell under `{cell dir}/{Name}/{template}` as `ElementType.CELL_RENDER`, with
+  the method name's offset so the reference resolves to that exact call. A `cell()` that is
+  directly the receiver of `render()` is indexed only under the rendered template; one
+  assigned to a variable is indexed under its default template as well. The index version
+  went to 20. `cellPathPrefixFromSourceFile` finds the cell directory from the caller's
+  templates directory (or the one next to its `src`), defaulting to `Cell` beside a `Template`
+  directory and `cell` otherwise.
+- `PsiElementAndPath` carries the `ElementType`, and `forEachContributingSource` drops
+  `CELL_RENDER` references before enqueueing them. The test for this fails without the skip
+  (the calling controller's `$metadata` reaches the cell template).
+
+Known limits: plugin cells are indexed without the plugin, so `cell/Widget/display` cannot
+tell an app `Widget` cell from a plugin one; the indexer cannot check for `CellTrait`, so an
+unrelated class's own `$this->cell()` is indexed too. `ViewToControllerGotoRelatedProvider`
+lists the callers of a cell template under "Controllers" for now.
+
+Tests: `CellGotoDeclarationTest`, `CellRenderGotoDeclarationTest`, `CellCompletionTest`,
+`CellReferenceIndexTest` (cake5). Full suite passes (989 tests).
