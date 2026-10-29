@@ -9,7 +9,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class ConfiguredAssociationTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.copyFileToProject("cake2/vendor/cakephp.php")
+        configureByFiles("cake2/vendor/cakephp.php")
         myFixture.addFileToProject("app/Controller/AppController.php", """
             <?php
             class AppController extends Controller {}
@@ -77,9 +77,8 @@ class ConfiguredAssociationTest : Cake2BaseTestCase() {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
-        return fieldReference!!.type.lookupCompleteType(project, null).types
-            .filter { it.startsWith("\\") && it != "\\void" }
-            .toSet()
+        // The framework's __get() return types are not part of the configured type:
+        return projectClassTypes(fieldReference!!.type.lookupCompleteType(project, null).types)
     }
 
     private fun completions(): List<String> {

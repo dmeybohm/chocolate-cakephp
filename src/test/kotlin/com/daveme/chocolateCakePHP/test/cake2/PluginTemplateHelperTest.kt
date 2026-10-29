@@ -7,7 +7,7 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class PluginTemplateHelperTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.copyFileToProject("cake2/vendor/cakephp.php")
+        configureByFiles("cake2/vendor/cakephp.php")
         myFixture.addFileToProject("cake2/app/View/Helper/Helpers.php", """
             <?php
             class AppHelper extends Helper {}

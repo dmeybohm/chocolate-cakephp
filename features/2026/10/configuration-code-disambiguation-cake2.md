@@ -987,3 +987,21 @@ falling back to `AppController`; layouts assigned in a template and in an elemen
 own `default.ctp`; and a `Foo.`-prefixed layout named by an app controller.
 
 Full suite: 1037 tests, 0 failures.
+
+### Session #7
+
+Merged `main`, which brought the real CakePHP test mode (#294) and the `__get` fix (#295).
+
+- The new cake2 test classes loaded the stub with `copyFileToProject()` or
+  `myFixture.configureByFiles()`, which bypass real mode; they now use
+  `BaseTestCase.configureByFiles()`, which leaves the stub out when real CakePHP is attached.
+  The "without the framework" test in `ConfiguredControllerTest` is skipped in real mode, where
+  the framework is always attached.
+- Against real CakePHP 2.10, `Model::__get()` and `Controller::__get()` add their return types
+  to associations and to members the configuration rules out, because #295's
+  `ConfiguredMemberFieldTypeProvider` does not cover CakePHP 2 models, chained receivers or
+  ruled-out members. `ConfiguredControllerTest` and `ConfiguredAssociationTest` compare
+  `Cake2BaseTestCase.projectClassTypes()` (no pseudo-types, no framework-only classes) for now;
+  the proper fix is planned in `cake2-magic-get-type-dilution`.
+
+Full check: stub 1039 tests, 0 failures; real 1039 tests, 0 failures, 1 skipped.

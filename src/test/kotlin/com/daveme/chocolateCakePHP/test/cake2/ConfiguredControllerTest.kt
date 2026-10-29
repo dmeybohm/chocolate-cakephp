@@ -26,7 +26,7 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
     }
 
     private fun withFramework() {
-        myFixture.copyFileToProject("cake2/vendor/cakephp.php")
+        configureByFiles("cake2/vendor/cakephp.php")
     }
 
     private fun appController(body: String = "") {
@@ -49,10 +49,8 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
-        // The stub Controller::__get() has no return statement, so it adds \void:
-        return fieldReference!!.type.lookupCompleteType(project, null).types
-            .filter { it.startsWith("\\") && it != "\\void" }
-            .toSet()
+        // The framework's __get() return types are not part of the configured type:
+        return projectClassTypes(fieldReference!!.type.lookupCompleteType(project, null).types)
     }
 
     private fun completions(): List<String> {
@@ -165,6 +163,7 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
     }
 
     fun `test without the framework and declarations convention stays`() {
+        assumeStubVendor("The real framework is always attached in real mode")
         appController()
         configureController("", "\$this->Fo<caret>o;")
         assertEquals(setOf("\\Foo", "\\FooComponent"), fieldTypeAtCaret())
