@@ -33,6 +33,16 @@ data class LoadedMembers(
     val initializeKinds: Set<MemberKind>,
 )
 
+/**
+ * The members one receiver's class chain configures, by alias, with whether the configuration
+ * determined each one, and the kinds it determines completely.
+ */
+internal class ChainResolution(
+    val members: Map<String, Pair<Set<String>, Boolean>>,
+    val initializeKinds: Set<MemberKind>,
+    val excludesUnloaded: Set<MemberKind> = emptySet(),
+)
+
 object ConfiguredMemberService {
 
     private val frameworkBaseClasses = setOf(
@@ -41,11 +51,6 @@ object ConfiguredMemberService {
         "\\Cake\\View\\Helper",
         "\\Cake\\ORM\\Table",
     ).map { it.lowercase() }.toSet()
-
-    private class ChainResolution(
-        val members: Map<String, Pair<Set<String>, Boolean>>,
-        val initializeKinds: Set<MemberKind>,
-    )
 
     /**
      * The type of [alias] on receivers of type [classFqns], or null when no class in any
@@ -58,7 +63,7 @@ object ConfiguredMemberService {
         alias: String
     ): MemberTypeResult? {
         val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, alias) }
-        return combine(project, resolutions, alias)
+        return combine(project, resolutions, kinds, alias)
     }
 
     fun loadedMembers(
@@ -69,7 +74,7 @@ object ConfiguredMemberService {
         val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, null) }
         val aliases = resolutions.flatMap { it.members.keys }.toSet()
         val members = aliases.mapNotNull { alias ->
-            combine(project, resolutions, alias)?.let { alias to it }
+            combine(project, resolutions, kinds, alias)?.let { alias to it }
         }.toMap()
         // A receiver without initialize loads of a kind still has that kind's members by convention:
         val initializeKinds = resolutions.map { it.initializeKinds }
@@ -91,15 +96,18 @@ object ConfiguredMemberService {
     private fun specificReceivers(classFqns: Collection<String>): List<String> =
         classFqns.filter { it.lowercase() !in frameworkBaseClasses }
 
-    // A receiver whose chain does not load the alias falls back to convention, so the result
-    // only counts as an initialize load when every receiver had one.
+    // A receiver whose chain does not load the alias falls back to convention, unless its
+    // configuration rules the alias out, so the result only counts as an initialize load when
+    // every receiver had one or ruled it out.
     private fun combine(
         project: Project,
         resolutions: List<ChainResolution>,
+        kinds: Set<MemberKind>,
         alias: String
     ): MemberTypeResult? {
         val perReceiver = resolutions.map { it.members[alias] }
-        if (perReceiver.all { it == null }) {
+        val excluded = resolutions.map { it.excludesUnloaded.containsAll(kinds) }
+        if (perReceiver.all { it == null } && !(resolutions.isNotEmpty() && excluded.all { it })) {
             return null
         }
         val fqns = perReceiver.filterNotNull().flatMap { it.first }.toSet()
@@ -107,7 +115,9 @@ object ConfiguredMemberService {
         return MemberTypeResult(
             classFqns = fqns,
             classes = fqns.flatMap { phpIndex.getClassesByFQN(it) },
-            hasInitializeLoad = perReceiver.all { it != null && it.second },
+            hasInitializeLoad = perReceiver.indices.all { index ->
+                perReceiver[index]?.second ?: excluded[index]
+            },
         )
     }
 
@@ -123,10 +133,18 @@ object ConfiguredMemberService {
         val scope = GlobalSearchScope.allScope(project)
 
         // Most-derived class first:
-        val loadsByClass = classChain(phpIndex, classFqn).map { fqn ->
-            fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
-                .flatMap { it.loads }
-                .filter { it.kind in kinds && (alias == null || it.alias == alias) }
+        val chain = classChain(phpIndex, classFqn)
+        val configurations = chain.map { fqn ->
+            val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
+            ClassConfiguration(values.flatMap { it.loads }, values.flatMap { it.declarations })
+        }
+        val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
+        if (cakeTwoBase != null) {
+            return CakeTwoChainResolver(cakeTwoBase, chain, configurations)
+                .resolve(kinds, alias) { resolveCakeTwoLoad(it) }
+        }
+        val loadsByClass = configurations.map { configuration ->
+            configuration.loads.filter { it.kind in kinds && (alias == null || it.alias == alias) }
         }
         val allLoads = loadsByClass.flatten()
 
@@ -183,6 +201,9 @@ object ConfiguredMemberService {
         }
         return conventionCandidates(phpIndex, settings, load.kind, name)
     }
+
+    private fun resolveCakeTwoLoad(load: MemberLoad): List<String> =
+        listOf(cakeTwoClassFqn(load.kind, (load.className ?: load.loadedName).substringAfterLast('.')))
 
     private fun conventionCandidates(
         phpIndex: PhpIndex,

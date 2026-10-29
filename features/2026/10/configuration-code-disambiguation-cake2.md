@@ -603,7 +603,7 @@ Tests:
 2. Done: index: the new property sources and text needles, the comma-separated association string,
    `with` join models, in-model `bindModel()`, the property name, empty declarations and the
    complete flag. Indexer tests.
-3. Resolver: CakePHP 2 convention candidates and the property-level rules.
+3. Done: resolver: CakePHP 2 convention candidates and the property-level rules.
 4. Components and models on controllers. Component and model tests.
 5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
@@ -667,3 +667,47 @@ class only; telling CakePHP 2 chains apart is the rest of step 3.
 Full suite before that fix: 968 tests, 1 failure (the one above). After it, cake2 and the
 indexer tests pass (118); Cake 3 to 5 are unaffected, since the change applies only with CakePHP
 2 enabled.
+
+### Session #2
+
+Step 3, the resolver:
+
+- `CakeTwoChainResolver` resolves a chain that ends in a global `\Controller`, `\Model`,
+  `\Helper` or `\View` when CakePHP 2 is enabled. The base is found from the classes' own
+  FQNs or their `superFQN`, so it works when the framework classes are not indexed.
+- Controllers: `$components` and `$helpers` are the nearest declaration merged onto the plugin
+  `AppController`'s and `AppController`'s (each their own nearest declaration), the child's
+  entry winning and inheriting a missing `className`. `$uses` follows
+  `_mergeControllerVars()` as verified in step 1, with the default model from
+  `Inflector.singularize()` of the controller name, plus `loadModel()` calls in the chain.
+- Helpers: their own effective `$helpers`. Models: each association property's nearest
+  declaration plus the chain's `bindModel()` loads. Views resolve nothing, since the rendering
+  controller's helpers replace the view's.
+- A kind is known when its effective declaration, and every declaration merged into it, is
+  complete. Loads of a known kind are authoritative; of an unknown kind, convention is
+  unioned. An unread `className` makes its alias non-authoritative. Association loads from a
+  property are always authoritative, `bindModel()` loads never.
+- `ChainResolution` gains `excludesUnloaded`: the known kinds other than associations. When
+  every receiver excludes all requested kinds, `memberType()` returns an empty result that
+  counts as an initialize load, so callers stop adding convention. Associations stay out of it
+  for the by-name type fallback.
+- CakePHP 2 loads resolve to the global class name after the dot, so plugin loads no longer
+  resolve to a namespaced plugin class (the gap from Session #1).
+- The cake2 vendor stub declares the 2.10 defaults: `Controller::$uses = true`,
+  `$components = array('Session', 'Flash')`, `$helpers = array()`, the four association
+  properties on `Model`, and `$helpers` on `View` and a new `Helper`.
+
+`ConfiguredMemberResolutionTest` covers the rules at the service level, ahead of the provider
+changes in step 4: aliases, the `AppController` merge and inherited `className`, an
+intermediate controller's lost components, the `Controller` defaults, incomplete declarations,
+an unread `className`, the `$uses` cases (list, default model, `false`, appended and prepended
+`AppController` models, both `array()` cases, `loadModel()`), associations (nearest
+declaration, comma-separated string, redeclared property, unlisted association, in-model
+`bindModel()`), helpers, and the view not being a receiver.
+
+The rules already reach the providers through `hasInitializeLoad`, and two existing tests
+relied on members nothing loads: `$this->MovieMetadata` on a controller extending `Controller`
+with no `$components`, and `$this->ArtistFormatter` in a helper with no `$helpers`. Neither
+exists in CakePHP 2.10, so each test now declares the member it uses.
+
+Full suite: 988 tests, 0 failures.

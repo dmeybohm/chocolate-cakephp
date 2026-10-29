@@ -11,12 +11,26 @@ class App {
 
 class Controller {
 
+    public $uses = true;
+
+    public $components = array('Session', 'Flash');
+
+    public $helpers = array();
+
     public function __get() {}
 
     public function set($keyOrArray, $value = null) {}
 }
 
 class Model {
+
+    public $belongsTo = array();
+
+    public $hasOne = array();
+
+    public $hasMany = array();
+
+    public $hasAndBelongsToMany = array();
 
     /**
      * @param string $id
@@ -33,6 +47,12 @@ class Component {
 
 class View {
 
+    public $helpers = array();
+}
+
+class Helper {
+
+    public $helpers = array();
 }
 
 class ClassRegistry {
