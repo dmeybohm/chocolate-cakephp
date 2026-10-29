@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.isCakeTwoModel
 import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.modelFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
@@ -46,7 +47,9 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
             ?.filter { it.startsWith("\\") }
             .orEmpty()
         val controllerTypes = receiverTypes.filter { it.isAnyControllerClass() }
-        val tableTypes = receiverTypes.filter { it.isAnyTableClass() }
+        val tableTypes = receiverTypes.filter {
+            it.isAnyTableClass() || (settings.cake2Enabled && phpIndex.isCakeTwoModel(it))
+        }
         val configured = when {
             controllerTypes.isNotEmpty() -> ConfiguredMemberService.memberType(
                 project, controllerTypes, setOf(MemberKind.COMPONENT, MemberKind.TABLE), fieldName

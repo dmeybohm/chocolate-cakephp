@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.isCakeTwoModel
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.codeInsight.completion.*
@@ -35,6 +36,16 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
                                                 .with(IsUpperCaseFieldRefPattern)
                                 )
                 )
+
+        // When typing $this-><caret> inside a CakePHP 2 model
+        val fieldOnVariablePattern = PlatformPatterns.psiElement(LeafPsiElement::class.java)
+                .withParent(
+                        PlatformPatterns.psiElement(FieldReference::class.java)
+                                .withFirstChild(PlatformPatterns.psiElement(Variable::class.java))
+                )
+        val modelProvider = CakeTwoModelAssociationCompletionProvider()
+        extend(CompletionType.BASIC, fieldOnVariablePattern, modelProvider)
+        extend(CompletionType.SMART, fieldOnVariablePattern, modelProvider)
 
         extend(
             CompletionType.BASIC,
@@ -135,15 +146,22 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             val modelClasses = phpIndex.getModelSubclasses(settings)
 
             // Resolve the preceding $this->FieldReference by type, so an alias of a table works:
-            val tableTypes = fieldReferenceChild.type.lookupCompleteType(project, phpIndex, null).types
-                .filter { it.startsWith("\\") && it.isAnyTableClass() && phpIndex.getClassesByFQN(it).isNotEmpty() }
+            val receiverTypes = fieldReferenceChild.type.lookupCompleteType(project, phpIndex, null).types
+                .filter { it.startsWith("\\") }
+            val tableTypes = receiverTypes
+                .filter { it.isAnyTableClass() && phpIndex.getClassesByFQN(it).isNotEmpty() } +
+                    receiverTypes.filter { settings.cake2Enabled && phpIndex.isCakeTwoModel(it) }
             val loaded = if (tableTypes.isNotEmpty())
                 ConfiguredMemberService.loadedMembers(project, tableTypes, setOf(MemberKind.ASSOCIATION))
             else
                 null
 
             if (loaded == null) {
-                // CakePHP 2 models are not table classes, so check by name:
+                // A CakePHP 2 model receiver resolves by type, even by convention, so an
+                // unresolved one is not a model the controller has:
+                if (!settings.cake3Enabled) {
+                    return
+                }
                 val fieldStr = "\\" + fieldReferenceChild.name
                 if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
                     return
@@ -158,6 +176,47 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             completionResultSet.completeFromClasses(
                     modelClasses.filter { it.name.removeFromEnd("Table", ignoreCase = true) !in loadedAliases },
                     removeFromEnd = "Table"
+            )
+        }
+    }
+
+    private class CakeTwoModelAssociationCompletionProvider : CompletionProvider<CompletionParameters>() {
+
+        override fun addCompletions(
+            completionParameters: CompletionParameters,
+            processingContext: ProcessingContext,
+            completionResultSet: CompletionResultSet
+        ) {
+            val fieldReference = PsiTreeUtil.getParentOfType(
+                completionParameters.position,
+                FieldReference::class.java
+            ) ?: return
+            val variable = fieldReference.classReference as? Variable ?: return
+            if (variable.name != "this") {
+                return
+            }
+            val project = fieldReference.project
+            if (DumbService.getInstance(project).isDumb) {
+                return
+            }
+            val settings = Settings.getInstance(project)
+            if (!settings.enabled || !settings.cake2Enabled) {
+                return
+            }
+            val phpIndex = PhpIndex.getInstance(project)
+            val models = variable.type.lookupCompleteType(project, phpIndex, null).types
+                .filter { it.startsWith("\\") && phpIndex.isCakeTwoModel(it) }
+            if (models.isEmpty()) {
+                return
+            }
+            val loaded = ConfiguredMemberService.loadedMembers(project, models, setOf(MemberKind.ASSOCIATION))
+            completionResultSet.completeFromLoadedMembers(loaded.members)
+            if (MemberKind.ASSOCIATION in loaded.initializeKinds) {
+                return
+            }
+            completionResultSet.completeFromClasses(
+                phpIndex.getModelSubclasses(settings).filter { it.name !in loaded.members },
+                removeFromEnd = "Table"
             )
         }
     }

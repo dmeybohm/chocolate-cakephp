@@ -605,7 +605,7 @@ Tests:
    complete flag. Indexer tests.
 3. Done: resolver: CakePHP 2 convention candidates and the property-level rules.
 4. Done: components and models on controllers. Component and model tests.
-5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
+5. Done: associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
    tests.
 6. Template helpers: the template key in the deferred signature, the rendering controllers,
@@ -750,3 +750,48 @@ Two things the tests ran into:
   an app without one. That predates this feature.
 
 Full suite: 1003 tests, 0 failures.
+
+### Session #4
+
+Step 5, associations. The CakePHP 2 code stays in `ControllerFieldTypeProvider`, as the plan
+preferred:
+
+- **Chain signature.** With CakePHP 2 enabled, a nested chain such as
+  `$this->Movie->Director->Studio` gets `#<key>m<field names joined by '.'><key><types of the
+  chain's first receiver>`, and `$this->Author` inside a class that may be a model (`$this`,
+  in a class not named `...Controller`, `...Component`, `...Helper` or `...View`) gets the same
+  with one field name. `complete()` resolves the first receiver's types, then each link in
+  turn: a controller through its configured members (`configuredFieldType()`, the old
+  `completeConfiguredField()` body), a CakePHP 2 model through its associations.
+- This differs from the plan, which embedded the previous link's signature in each link, as
+  CakePHP 3's `v1` does. Those signatures join receiver types with `|`, so one embedded in
+  another cannot be split back apart. Encoding the field names and the first receiver instead
+  resolves every link in one `complete()` call, with no recursion through this provider. The
+  chain is capped at 10 links.
+- **Association links:** the model's configured association type, plus `\<Field>` when that is
+  a CakePHP 2 model and the configuration does not determine the alias, for associations bound
+  with `bindModel()` on another receiver.
+- `isCakeTwoModel()` recognises a model through its whole chain (`\AppModel` or `\Model` at
+  any depth). The existing `isCakeTwoModelClass()` only checks for a direct `\AppModel` parent.
+- The old `#<key><first><key><last>` signature is now emitted only with CakePHP 3 enabled, and
+  its CakePHP 2 branch (`getCakeTwoClass()`, by name for both fields) is gone.
+- **Completion:** `nestedLookup()` accepts CakePHP 2 model receivers, and a new provider in
+  `ControllerModelOrTableCompletionContributor` completes `$this->` inside a CakePHP 2 model.
+  Both offer the configured associations and, when the configuration is unknown, the
+  convention list.
+- `nestedLookup()` had a by-name fallback for receivers that did not resolve to a table class,
+  added because CakePHP 2 models were not recognised by type. With them recognised, reaching it
+  on CakePHP 2 means the receiver was ruled out or is not a model, so it is skipped unless
+  CakePHP 3 is enabled.
+- **Navigation:** `ControllerFieldGotoDeclarationHandler` treats CakePHP 2 model receivers like
+  tables, so an aliased association goes to its `className`.
+
+`ConfiguredAssociationTest` covers an alias inside the model and through a controller, a
+redeclared association property, a comma-separated property, completion offering only
+configured associations (nested and inside the model), an externally bound association
+(type, method completion and goto, but not offered), an in-model `bindModel()` with a
+`className`, `with` join models in string and array form, a chain resolving `Studio` against
+the aliased `Person`, a model the controller does not load (no nested type or completion),
+and goto on an aliased association.
+
+Full suite: 1014 tests, 0 failures.
