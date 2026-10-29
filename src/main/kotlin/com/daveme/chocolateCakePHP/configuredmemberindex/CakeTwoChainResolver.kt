@@ -39,6 +39,7 @@ internal class CakeTwoChainResolver(
     private val base: CakeTwoBase,
     private val chain: List<String>,
     private val configurations: List<ClassConfiguration>,
+    private val pluginName: String?,
 ) {
 
     private class Declared(
@@ -53,8 +54,9 @@ internal class CakeTwoChainResolver(
 
     private val appControllerIndex = indexOfClass { it.equals("\\AppController", ignoreCase = true) }
 
-    private val pluginAppControllerIndex = indexOfClass {
-        it.endsWith("AppController", ignoreCase = true) && !it.equals("\\AppController", ignoreCase = true)
+    // Only a controller in a plugin merges that plugin's AppController:
+    private val pluginAppControllerIndex = if (pluginName == null) -1 else indexOfClass {
+        it.equals("\\${pluginName}AppController", ignoreCase = true)
     }
 
     fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution {

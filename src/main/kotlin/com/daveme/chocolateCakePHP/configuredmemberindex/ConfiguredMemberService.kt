@@ -2,9 +2,11 @@ package com.daveme.chocolateCakePHP.configuredmemberindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
+import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FileBasedIndex
 import com.jetbrains.php.PhpIndex
@@ -150,7 +152,11 @@ object ConfiguredMemberService {
         }
         val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
         if (cakeTwoBase != null) {
-            return CakeTwoChainResolver(cakeTwoBase, chain, configurations)
+            val pluginName = if (cakeTwoBase == CakeTwoBase.CONTROLLER)
+                cakeTwoPluginOfClass(project, phpIndex, settings, classFqn)
+            else
+                null
+            return CakeTwoChainResolver(cakeTwoBase, chain, configurations, pluginName)
                 .resolve(kinds, alias) { resolveCakeTwoLoad(it) }
         }
         val loadsByClass = configurations.map { configuration ->
@@ -210,6 +216,13 @@ object ConfiguredMemberService {
             return conventionCandidates(phpIndex, settings, load.kind, shortName)
         }
         return conventionCandidates(phpIndex, settings, load.kind, name)
+    }
+
+    private fun cakeTwoPluginOfClass(project: Project, phpIndex: PhpIndex, settings: Settings, classFqn: String): String? {
+        val projectDir = project.guessProjectDir()
+        return phpIndex.getClassesByFQN(classFqn).firstNotNullOfOrNull { phpClass ->
+            phpClass.containingFile?.virtualFile?.let { cakeTwoPluginName(it, projectDir, settings) }
+        }
     }
 
     private fun resolveCakeTwoLoad(load: MemberLoad): List<String> =

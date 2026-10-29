@@ -93,6 +93,42 @@ class ConfiguredMemberResolutionTest : Cake2BaseTestCase() {
         assertEquals(setOf("Session", "Flash"), loadedAliases("\\UsersController", MemberKind.COMPONENT))
     }
 
+    fun `test a plugin controller merges its plugin AppController`() {
+        appController()
+        myFixture.addFileToProject("app/Plugin/Foo/Controller/FooAppController.php", """
+            <?php
+            class FooAppController extends AppController {
+                public ${'$'}components = array('Acl');
+            }
+        """.trimIndent())
+        myFixture.addFileToProject("app/Plugin/Foo/Controller/BarsController.php", """
+            <?php
+            class BarsController extends FooAppController {
+                public ${'$'}components = array('Paginator');
+            }
+        """.trimIndent())
+        assertEquals(
+            setOf("Paginator", "Acl", "Session", "Flash"),
+            loadedAliases("\\BarsController", MemberKind.COMPONENT)
+        )
+    }
+
+    fun `test an app base class named like a plugin AppController is not merged`() {
+        appController()
+        addClasses("""
+            class AdminAppController extends AppController {
+                public ${'$'}components = array('Acl');
+            }
+            class UsersController extends AdminAppController {
+                public ${'$'}components = array('Paginator');
+            }
+        """)
+        assertEquals(
+            setOf("Paginator", "Session", "Flash"),
+            loadedAliases("\\UsersController", MemberKind.COMPONENT)
+        )
+    }
+
     fun `test an incomplete components declaration keeps convention`() {
         appController()
         addClasses("class MoviesController extends AppController { public \$components = array(self::AUTH, 'Paginator'); }")

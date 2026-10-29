@@ -870,3 +870,19 @@ an unresolvable receiver. It then offered every table whenever any model FQN con
 to no table or CakePHP 2 model offers no association completion. No test relied on the
 fallback; full suite still 1014 tests, 0 failures. No test exercises the removed case
 directly either, since it needs a receiver whose type does not resolve.
+
+### Session #5
+
+Step 6, part 1: plugin identity and the `{Plugin}AppController` check.
+
+- `cakeTwoPluginName()` (`cake/CakeTwoPlugins.kt`) gives the plugin a file belongs to: the
+  directory under the nearest `Plugin` or `plugins` ancestor (covering `{app}/Plugin/{Name}/`,
+  `{root}/plugins/{Name}/` and the `View/Plugin/{Name}/` override directory), or a configured
+  plugin whose `pluginPath` contains the file, named by `effectivePluginName()` or the path's last
+  segment.
+- `CakeTwoChainResolver` takes the receiver controller's plugin and only merges a class named
+  `{Plugin}AppController` for it. Before, any `...AppController` other than `AppController` in
+  the chain was merged.
+- Tests: a plugin controller merges `FooAppController`; an app `UsersController` extending
+  `AdminAppController` does not merge its `$components` (it redeclares its own). cake2 tests:
+  152, 0 failures.
