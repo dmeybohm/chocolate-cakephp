@@ -151,28 +151,18 @@ class ControllerModelOrTableCompletionContributor : CompletionContributor() {
             val tableTypes = receiverTypes
                 .filter { it.isAnyTableClass() && phpIndex.getClassesByFQN(it).isNotEmpty() } +
                     receiverTypes.filter { settings.cake2Enabled && phpIndex.isCakeTwoModel(it) }
-            val loaded = if (tableTypes.isNotEmpty())
-                ConfiguredMemberService.loadedMembers(project, tableTypes, setOf(MemberKind.ASSOCIATION))
-            else
-                null
 
-            if (loaded == null) {
-                // A CakePHP 2 model receiver resolves by type, even by convention, so an
-                // unresolved one is not a model the controller has:
-                if (!settings.cake3Enabled) {
-                    return
-                }
-                val fieldStr = "\\" + fieldReferenceChild.name
-                if (!modelClasses.any { modelClass -> modelClass.fqn.contains(fieldStr) }) {
-                    return
-                }
-            } else {
-                completionResultSet.completeFromLoadedMembers(loaded.members)
-                if (MemberKind.ASSOCIATION in loaded.initializeKinds) {
-                    return
-                }
+            // A receiver that does not resolve to a table or model, even by convention, has no
+            // associations:
+            if (tableTypes.isEmpty()) {
+                return
             }
-            val loadedAliases = loaded?.members?.keys.orEmpty()
+            val loaded = ConfiguredMemberService.loadedMembers(project, tableTypes, setOf(MemberKind.ASSOCIATION))
+            completionResultSet.completeFromLoadedMembers(loaded.members)
+            if (MemberKind.ASSOCIATION in loaded.initializeKinds) {
+                return
+            }
+            val loadedAliases = loaded.members.keys
             completionResultSet.completeFromClasses(
                     modelClasses.filter { it.name.removeFromEnd("Table", ignoreCase = true) !in loadedAliases },
                     removeFromEnd = "Table"

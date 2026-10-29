@@ -795,3 +795,13 @@ the aliased `Person`, a model the controller does not load (no nested type or co
 and goto on an aliased association.
 
 Full suite: 1014 tests, 0 failures.
+
+Follow-up: the `nestedLookup()` by-name fallback is removed for every version, not just skipped
+for CakePHP 2. In CakePHP 3 to 5 the receiver's type already carries the configured members,
+through the configured-field signature from #292 with convention unioned in, so the fallback
+was only reached when no existing table class was in the type: a component, a missing table, or
+an unresolvable receiver. It then offered every table whenever any model FQN contained
+`\<Field>`, which is loose (`$this->Art->` matched `ArticlesTable`). Now a receiver that resolves
+to no table or CakePHP 2 model offers no association completion. No test relied on the
+fallback; full suite still 1014 tests, 0 failures. No test exercises the removed case
+directly either, since it needs a receiver whose type does not resolve.
