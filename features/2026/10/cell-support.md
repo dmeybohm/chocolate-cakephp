@@ -87,9 +87,11 @@ A cell file is `{Name}Cell.php` under a `View/Cell` directory. `ControllerMethod
 works from a `ControllerPath` (name + prefix, giving `Admin/Movie/`); the cell equivalent is a
 path of `cell/Admin/Inventory/` on Cake 4/5 and `Cell/Admin/Inventory/` on Cake 3. The plan is
 to generalise the marker's `RelatedLookupInfo` from `ControllerPath` to a small sealed source
-type (controller or cell) rather than copying the marker, so `setTemplate()` and
-`setTemplatePath()` inside a cell action get the same markers as inside a controller action for
-free. `actionNamesFromControllerMethod` is already source-agnostic; it also collects
+type (controller or cell) rather than copying the marker, so `setTemplate()` inside a cell
+action, alone or at the end of a `setTemplatePath()->setTemplate()` chain, gets the same marker
+as inside a controller action for free. As in controllers, a standalone `setTemplatePath()`
+gets no marker of its own; it only sets the prefix of the `setTemplate()` calls after it.
+`actionNamesFromControllerMethod` is already source-agnostic; it also collects
 `$this->render()` calls, which do not occur in a valid cell action, so nothing is done about
 them either way.
 
@@ -159,8 +161,9 @@ flow.
   `render()` on an unrelated receiver does not navigate.
 - `CellCompletionTest`: cell names offered, plugin names prefixed, actions offered after `::`.
 - `CellMethodLineMarkerTest` (or extend the existing controller marker test): marker on
-  `display()` targets the template, and `setTemplate()` / `setTemplatePath()` inside the
-  action get their own markers as they do in a controller.
+  `display()` targets the template, a `setTemplate()` inside the action gets its own marker,
+  and a `setTemplatePath('cell/Other')->setTemplate('x')` chain marks `cell/Other/x.php`,
+  as in a controller.
 - `CellToggleActionTest`: the toggle action is enabled in a cell file and goes from `display()`
   to its template, and back from the template.
 - `CellViewVariableTest`: `$items` completes with its type in the cell template; the
