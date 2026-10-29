@@ -51,6 +51,7 @@ namespace Cake\View {
     }
     abstract class Cell {
         use ViewVarsTrait;
+        use \Cake\ORM\Locator\LocatorAwareTrait;
 
         public function initialize(): void {}
 
