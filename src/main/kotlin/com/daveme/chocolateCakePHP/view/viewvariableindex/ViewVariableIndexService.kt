@@ -436,7 +436,7 @@ sealed class ViewVariableSource(val key: ViewVariablesKey) {
     /** `$this->set()` calls in [file] made before the render call at [visibleBefore]. */
     class ViewSet(key: ViewVariablesKey, val file: VirtualFile, val visibleBefore: Int) : ViewVariableSource(key)
 
-    /** A controller action reached by walking render / element references backwards. */
+    /** A controller or cell action reached by walking render / element references backwards. */
     class ControllerAction(key: ViewVariablesKey) : ViewVariableSource(key)
 }
 
@@ -509,6 +509,14 @@ object ViewVariableIndexService {
     private fun controllerKeyFromElementAndPath(
         elementAndPath: PsiElementAndPath
     ): String? {
+        val methodName = actionNameFromElementAndPath(elementAndPath) ?: return null
+        val controllerPath = elementAndPath.controllerPath ?: return null
+        return controllerMethodKey(controllerPath, methodName)
+    }
+
+    private fun actionNameFromElementAndPath(
+        elementAndPath: PsiElementAndPath
+    ): String? {
         val psiElement = elementAndPath.psiElement ?: return null
         val element = if (psiElement is Method)
             psiElement
@@ -517,8 +525,7 @@ object ViewVariableIndexService {
         if (element == null || !element.isValid) {
             return null
         }
-        val controllerPath = elementAndPath.controllerPath ?: return null
-        return controllerMethodKey(controllerPath, element.name)
+        return element.name
     }
 
     /**
@@ -574,6 +581,12 @@ object ViewVariableIndexService {
             if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
                 val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
                 if (!process(ViewVariableSource.ControllerAction(controllerKey))) return
+                continue
+            }
+            val cellName = elementAndPath.cellName
+            if (settings.cake3Enabled && cellName != null) {
+                val methodName = actionNameFromElementAndPath(elementAndPath) ?: continue
+                if (!process(ViewVariableSource.ControllerAction(cellActionKey(cellName, methodName)))) return
                 continue
             }
 
@@ -923,6 +936,12 @@ fun controllerMethodKey(
         "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
     }
 }
+
+private const val CELL_ACTION_KEY_PREFIX = "cell:"
+
+/** Key under which the `$this->set()` calls of a cell action are indexed. */
+fun cellActionKey(cellName: String, methodName: String): ViewVariablesKey =
+    "${CELL_ACTION_KEY_PREFIX}${cellName}:${methodName}"
 
 private const val ELEMENT_DATA_KEY_PREFIX = "element-data:"
 private const val VIEW_SET_KEY_PREFIX = "view-set:"

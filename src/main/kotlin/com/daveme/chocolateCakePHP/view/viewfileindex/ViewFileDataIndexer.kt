@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
+import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.parseCellName
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.guessProjectDir
@@ -630,7 +631,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             findCellReferences(rootNode, ctx)
         }
 
-        val isController = isCakeControllerFile(virtualFile)
+        val isController = isCakeControllerFile(virtualFile) ||
+            (settings.cake3Enabled && isCakeCellFile(virtualFile))
         if (
             astRenderCalls.isEmpty() &&
             astElementCalls.isEmpty() &&

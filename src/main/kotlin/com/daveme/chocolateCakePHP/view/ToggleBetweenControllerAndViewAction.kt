@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.createViewActionPopupFromAllViewPaths
 import com.daveme.chocolateCakePHP.getScreenPoint
 import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
+import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -159,6 +160,8 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             val acc = ArrayList<PsiElement>(list.size)
             for (p in list) {
                 ProgressManager.checkCanceled()
+                // A template's callers are not its controller or cell
+                if (p.elementType == ElementType.CELL_RENDER) continue
                 val el = p.psiElement ?: continue
                 if (!el.isValid) continue
                 acc += el

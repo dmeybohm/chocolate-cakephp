@@ -42,6 +42,7 @@ data class PsiElementAndPath(
     val elementType: ElementType,
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
+    val cellName: String? by lazy { cellNameFromPath(path) }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
     val psiElement: PsiElement? get() = elementPointer.element
 
@@ -207,6 +208,10 @@ fun viewPathPrefixFromSourceFile(
     val controllerPath = controllerPathFromControllerFile(sourceFile)
     if (controllerPath != null) {
         return ViewPathPrefix(controllerPath.viewPath)
+    }
+    val cellPath = cellPathFromCellFile(projectDir, sourceFile)
+    if (cellPath != null) {
+        return ViewPathPrefix(cellPath.viewPath)
     }
 
     val containingDir = sourceFile.parent ?: return null

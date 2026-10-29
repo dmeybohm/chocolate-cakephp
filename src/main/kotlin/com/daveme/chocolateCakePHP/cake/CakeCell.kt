@@ -123,21 +123,20 @@ data class CellPath(
  * The name `cell()` takes for a cell class file under a `View/Cell` directory, such as
  * `Admin/Inventory` for `View/Cell/Admin/InventoryCell.php`, or null for any other file.
  */
-fun cellNameFromCellFile(cellFile: VirtualFile): String? {
-    val baseName = cellFile.nameWithoutExtension
+fun cellNameFromCellFile(cellFile: VirtualFile): String? =
+    cellNameFromPath(cellFile.path)
+
+fun cellNameFromPath(path: String): String? {
+    val parts = path.split("/")
+    val cellDirIndex = (parts.size - 2 downTo 1).firstOrNull {
+        parts[it] == "Cell" && parts[it - 1] == "View"
+    } ?: return null
+    val baseName = parts.last().substringBeforeLast('.')
     if (!baseName.endsWith("Cell") || baseName == "Cell") {
         return null
     }
-    val subNamespace = mutableListOf<String>()
-    var parent: VirtualFile? = cellFile.parent
-    while (parent != null) {
-        if (parent.name == "Cell" && parent.parent?.name == "View") {
-            return (subNamespace.reversed() + baseName.removeSuffix("Cell")).joinToString("/")
-        }
-        subNamespace.add(parent.name)
-        parent = parent.parent
-    }
-    return null
+    return (parts.subList(cellDirIndex + 1, parts.size - 1) + baseName.removeSuffix("Cell"))
+        .joinToString("/")
 }
 
 fun isCakeCellFile(file: VirtualFile): Boolean =
