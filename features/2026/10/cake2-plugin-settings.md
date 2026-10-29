@@ -152,6 +152,23 @@ paths, plugin-aware template lookup, `{Plugin}AppController` recognition and dot
 navigation one source of plugin identity, and would let the disambiguation branch drop its
 separate path scan. It is a second step once the model exists and detection is version-aware.
 
+### Later: filtering same-named classes by plugin
+
+Moved here from `configuration-code-disambiguation-cake2`, where it was the optional step 8.
+CakePHP 2 classes are global, so `'DebugKit.Toolbar'` and an app's own `'Toolbar'` both resolve
+to `\ToolbarComponent`, and `getClassesByFQN()` returns both classes when the app and a plugin
+each define one. Filtering those results by the plugin each class's file belongs to would let:
+
+- goto on `$this->Toolbar`, or on a `'DebugKit.Toolbar'` string in `$components`, go straight to
+  the plugin's class, and a plain `'Toolbar'` to the app's, instead of offering a chooser;
+- completion type text name the right class.
+
+It cannot separate the inferred types, which are sets of FQN strings, so method completion on
+`$this->Toolbar->` still unions both classes; nor same-named controllers, which share a
+configuration in the resolver. The plugin of a load (its `Foo.` prefix, or none) would need to
+reach `ConfiguredMemberService.loadClasses()` and the goto handlers. It belongs after this
+feature because it depends on plugin identity, which this feature makes a single source.
+
 ## Implementation order
 
 1. Separate branch: version-aware composer detection and the CakePHP 2 enable semantics.
