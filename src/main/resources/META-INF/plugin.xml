@@ -70,6 +70,7 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewVariableTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.TableLocatorTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.AssociatedTableTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberFieldTypeProvider" />
 
         <libraryRoot id="chocolate_cake_files" path="/chocolate-cakephp/" runtime="false"  />
     </extensions>

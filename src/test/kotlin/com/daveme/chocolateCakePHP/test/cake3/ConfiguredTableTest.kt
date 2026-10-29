@@ -7,7 +7,7 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class ConfiguredTableTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/ConfiguredTableController.php",
             "cake3/src/Model/Table/MoviesTable.php",

@@ -6,6 +6,8 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class NestedAppDirectoryTest : BaseTestCase() {
 
+    override val cakeMajorVersion = 5
+
     override fun setUp() {
         super.setUp()
 
@@ -21,7 +23,7 @@ class NestedAppDirectoryTest : BaseTestCase() {
     }
 
     private fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5_nested/app/src5/Controller/AppController.php",
             "cake5_nested/app/src5/Model/Table/MoviesTable.php",
             "cake5_nested/templates/Movie/index.php",

@@ -6,7 +6,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 class ViewVariableTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/MovieController.php",
             "cake2/app/Controller/Component/MovieMetadataComponent.php",

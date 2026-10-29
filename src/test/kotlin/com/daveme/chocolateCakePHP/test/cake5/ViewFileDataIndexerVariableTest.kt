@@ -11,7 +11,7 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewFileDataIndexerVariableTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake5/vendor/cakephp.php"
         )
     }

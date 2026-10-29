@@ -3,7 +3,7 @@ package com.daveme.chocolateCakePHP.test.cake3
 class LocatorAwareTraitTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
+        configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
             "cake3/src/Model/Entity/Article.php",

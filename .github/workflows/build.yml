@@ -25,8 +25,13 @@ jobs:
   # Run verifyPlugin, IntelliJ Plugin Verifier, and test Gradle tasks
   # Build plugin and provide the artifact for the next workflow jobs
   build:
-    name: Build
+    name: Build (${{ matrix.cakeVendor }} CakePHP)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 'stub' runs the tests against hand-written framework stubs, 'real' against pinned CakePHP releases
+        cakeVendor: [stub, real]
     outputs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}
@@ -47,20 +52,29 @@ jobs:
           distribution: zulu
           java-version: 21
 
+      # Cache the downloaded CakePHP releases
+      - name: Cache CakePHP Releases
+        if: ${{ matrix.cakeVendor == 'real' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/chocolate-cakephp
+          key: cakephp-releases-${{ hashFiles('build.gradle.kts') }}
+
       # Run tests
       - name: Run Tests
-        run: ./gradlew check
+        run: ./gradlew check -PcakeVendor=${{ matrix.cakeVendor }}
 
       # Collect Tests Result of failed tests
       - name: Collect Tests Result
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: tests-result
+          name: tests-result-${{ matrix.cakeVendor }}
           path: ${{ github.workspace }}/build/reports/tests
 
       # Upload Kover report to CodeCov
       - name: Upload Code Coverage Report
+        if: ${{ matrix.cakeVendor == 'stub' }}
         uses: codecov/codecov-action@v3
         with:
           files: ${{ github.workspace }}/build/reports/kover/xml/report.xml
