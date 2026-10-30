@@ -93,6 +93,11 @@ class PluginTableModel private constructor(
         fireTableRowsInserted(size - 1, size - 1)
     }
 
+    fun setRow(idx: Int, item: PluginEntry) {
+        pluginEntries[idx] = item
+        fireTableRowsUpdated(idx, idx)
+    }
+
     override fun removeRow(idx: Int) {
         pluginEntries.removeAt(idx)
         fireTableRowsDeleted(idx, idx)

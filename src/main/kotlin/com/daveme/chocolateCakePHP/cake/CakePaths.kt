@@ -242,7 +242,7 @@ private fun pluginAndThemeTemplatePaths(
                 results.add(templatesDir)
             }
             when (pluginOrThemeConfig) {
-                is PluginConfig -> {
+                is CakeThreePluginConfig -> {
                     val cake3PluginTemplatePath = "${pluginOrThemeConfig.pluginPath}/${pluginOrThemeConfig.srcPath}/Template"
                     val cakeThreePluginTemplateDir = findRelativeFile(appRootDir.directory, cake3PluginTemplatePath)
                     if (cakeThreePluginTemplateDir != null) {

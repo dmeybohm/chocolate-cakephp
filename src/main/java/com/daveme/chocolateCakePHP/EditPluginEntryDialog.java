@@ -28,6 +28,7 @@ public class EditPluginEntryDialog extends DialogWrapper {
     final private Project project;
     private final List<PluginEntry> existingEntries;
     private final int editingIndex;
+    private final boolean initialCakeTwo;
 
     private Consumer<PluginConfig> action;
 
@@ -44,11 +45,13 @@ public class EditPluginEntryDialog extends DialogWrapper {
         this.existingEntries = existingEntries;
         this.editingIndex = editingIndex;
 
-        pluginNameTextField.setText(initialPluginConfig.getPluginName());
-        namespaceTextField.setText(initialPluginConfig.getNamespace());
-        pluginPathTextField.setText(initialPluginConfig.getPluginPath());
-        sourcePathTextField.setText(initialPluginConfig.getSrcPath());
-        assetsPathTextField.setText(initialPluginConfig.getAssetPath());
+        PluginEntry initialEntry = PluginEntry.fromPluginConfig(initialPluginConfig);
+        this.initialCakeTwo = initialEntry.getCakeTwo();
+        pluginNameTextField.setText(initialEntry.getPluginName());
+        namespaceTextField.setText(initialEntry.getNamespace());
+        pluginPathTextField.setText(initialEntry.getPluginPath());
+        sourcePathTextField.setText(initialEntry.getSrcPath());
+        assetsPathTextField.setText(initialEntry.getAssetPath());
 
         setTitle(title);
         init();
@@ -99,12 +102,27 @@ public class EditPluginEntryDialog extends DialogWrapper {
     }
 
     public PluginConfig getPluginConfig() {
-        return new PluginConfig(
+        if (editingIndex < 0 && project != null) {
+            PluginConfig classified = Settings.getInstance(project).classifyLegacyPluginConfig(
+                new LegacyPluginConfig(
+                    pluginNameTextField.getText(),
+                    namespaceTextField.getText(),
+                    sourcePathTextField.getText(),
+                    pluginPathTextField.getText(),
+                    assetsPathTextField.getText()
+                )
+            );
+            if (classified != null) {
+                return classified;
+            }
+        }
+        return new PluginEntry(
             pluginNameTextField.getText(),
             namespaceTextField.getText(),
-            sourcePathTextField.getText(),
             pluginPathTextField.getText(),
-            assetsPathTextField.getText()
-        );
+            assetsPathTextField.getText(),
+            sourcePathTextField.getText(),
+            editingIndex >= 0 && initialCakeTwo
+        ).toPluginConfig();
     }
 }

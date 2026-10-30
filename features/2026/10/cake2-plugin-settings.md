@@ -253,3 +253,20 @@ feature because it depends on plugin identity, which this feature makes a single
   `SettingsState` load as the legacy class. It is a plain `TestCase` rather than part of the
   heavy `SettingsTest`, and for now it uses stand-in classes. Step 3 switches it to the real
   ones.
+- Step 3 done: `PluginConfig` is now a sealed interface over `CakeTwoPluginConfig` and
+  `CakeThreePluginConfig`. Old entries load as `LegacyPluginConfig`. Both it and `PluginConfig`
+  extend `StoredPluginConfig`, the element type of `SettingsState.pluginConfigs`, so code that
+  reads `Settings.pluginConfigs` never sees a legacy entry. Classification is
+  `Settings.classifyLegacyPluginConfig()`, with rules 2 and 3 in
+  `Settings.pluginPathIsCakeTwo()`. The serialization test now uses the real classes, and
+  reads a literal XML snippet in the old format.
+- To compile, step 3 also took on step 4's namespace readers: `Classes.kt`, `CakeModel.kt`,
+  `ContainCompletionContributor`, `ConfiguredMemberService` (both sites), the CakePHP 3+ probe
+  in `pluginAndThemeTemplatePaths()`, and `CakeCell.kt` (new from `cell-support`; two sites)
+  now use `Settings.cakeThreePluginConfigs` or check for `CakeThreePluginConfig`.
+- UI until step 5: `PluginEntry` has a `cakeTwo` flag, carried through from the config. The
+  dialog keeps an edited entry's kind and classifies a new one with the legacy rule.
+  `PluginForm.setPluginConfig()` replaces the whole row (new `PluginTableModel.setRow()`), so
+  the flag survives an edit. A project whose settings still hold legacy entries shows the
+  plugin page as modified when opened, because the form rebuilds the list from typed entries.
+  Saving clears this.

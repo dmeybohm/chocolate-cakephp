@@ -25,7 +25,7 @@ private const val DEFAULT_APP_DIRECTORY = "src"
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
 
 fun defaultPluginConfig(): PluginConfig {
-    return PluginConfig()
+    return CakeThreePluginConfig()
 }
 
 fun defaultThemeConfig(): ThemeConfig {
@@ -37,11 +37,42 @@ interface ThemeOrPluginConfig {
     val assetPath: String
 }
 
-@Tag("PluginConfig")
-data class PluginConfig(
+/**
+ * A plugin entry as stored in the settings.
+ */
+sealed interface StoredPluginConfig
+
+/**
+ * A configured plugin.
+ */
+sealed interface PluginConfig : ThemeOrPluginConfig, StoredPluginConfig {
+    val pluginName: String
+}
+
+/**
+ * A CakePHP 2 plugin, whose classes are global and whose templates are under `View`.
+ */
+@Tag("CakeTwoPluginConfig")
+data class CakeTwoPluginConfig(
 
     @Property
-    val pluginName: String = "",
+    override val pluginName: String = "",
+
+    @Property
+    override val pluginPath: String = "",
+
+    @Property
+    override val assetPath: String = "webroot",
+) : PluginConfig
+
+/**
+ * A CakePHP 3 or later plugin, whose classes are under a namespace.
+ */
+@Tag("CakeThreePluginConfig")
+data class CakeThreePluginConfig(
+
+    @Property
+    override val pluginName: String = "",
 
     @Property
     val namespace: String = "",
@@ -54,19 +85,41 @@ data class PluginConfig(
 
     @Property
     override val assetPath: String = "webroot",
-) : ThemeOrPluginConfig
+) : PluginConfig
+
+/**
+ * A plugin entry saved before plugins had a CakePHP version.
+ */
+@Tag("PluginConfig")
+data class LegacyPluginConfig(
+
+    @Property
+    val pluginName: String = "",
+
+    @Property
+    val namespace: String = "",
+
+    @Property
+    val srcPath: String = "src",
+
+    @Property
+    val pluginPath: String = "",
+
+    @Property
+    val assetPath: String = "webroot",
+) : StoredPluginConfig
 
 /**
  * Returns the effective plugin name for this configuration.
  *
  * If pluginName is set, it is returned directly. Otherwise, for backwards
- * compatibility, the plugin name is derived from the namespace by taking
- * the last segment (e.g., "\Vendor\MyPlugin" -> "MyPlugin").
+ * compatibility, a CakePHP 3+ plugin name is derived from the namespace by
+ * taking the last segment (e.g., "\Vendor\MyPlugin" -> "MyPlugin").
  *
  * @return The plugin name to use for CakePHP dot notation lookups
  */
 fun PluginConfig.effectivePluginName(): String {
-    if (pluginName.isNotEmpty()) {
+    if (pluginName.isNotEmpty() || this !is CakeThreePluginConfig) {
         return pluginName
     }
     // Backwards compat: derive from namespace
@@ -101,8 +154,12 @@ data class SettingsState(
 
     var dataViewExtensions: List<String> = arrayListOf("json", "xml"),
 
-    @XCollection
-    var pluginConfigs: List<PluginConfig> = listOf(),
+    @XCollection(elementTypes = [
+        CakeTwoPluginConfig::class,
+        CakeThreePluginConfig::class,
+        LegacyPluginConfig::class,
+    ])
+    var pluginConfigs: List<StoredPluginConfig> = listOf(),
 
     @XCollection
     var themeConfigs: List<ThemeConfig> = listOf(),
@@ -243,21 +300,50 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
         pluginNamespaces: List<String>,
         pluginConfigs: List<PluginConfig>
     ): List<PluginConfig> {
-        val result = hashMapOf<String, PluginConfig>()
-        for (pluginConfig in pluginConfigs) {
-            result.set(pluginConfig.namespace, pluginConfig)
-        }
-
+        val result = pluginConfigs.toMutableList()
         for (pluginNamespace in pluginNamespaces) {
-            if (!result.containsKey(pluginNamespace)) {
-                result.set(pluginNamespace, PluginConfig(
+            if (pluginConfigs.none { it is CakeThreePluginConfig && it.namespace == pluginNamespace }) {
+                result += CakeThreePluginConfig(
                     namespace = pluginNamespace,
                     pluginPath = ""
-                ))
+                )
             }
         }
+        return result
+    }
 
-        return result.values.toList()
+    /**
+     * Whether a plugin at [pluginPath] with no namespace is taken as a CakePHP 2 plugin.
+     */
+    fun pluginPathIsCakeTwo(pluginPath: String): Boolean =
+        pluginPath.startsWith(cake2AppDirectory.trimEnd('/') + "/") ||
+                (cake2Enabled && !cake3Enabled)
+
+    /**
+     * The typed plugin config a legacy entry stands for, or null if it identifies nothing.
+     */
+    fun classifyLegacyPluginConfig(legacy: LegacyPluginConfig): PluginConfig? {
+        val hasNamespace = legacy.namespace.isNotBlank() && legacy.namespace != "\\"
+        if (hasNamespace || !pluginPathIsCakeTwo(legacy.pluginPath)) {
+            return CakeThreePluginConfig(
+                pluginName = legacy.pluginName,
+                namespace = legacy.namespace,
+                srcPath = legacy.srcPath,
+                pluginPath = legacy.pluginPath,
+                assetPath = legacy.assetPath,
+            )
+        }
+        val pluginName = legacy.pluginName.ifBlank {
+            legacy.pluginPath.trimEnd('/').substringAfterLast('/')
+        }
+        if (pluginName.isBlank()) {
+            return null
+        }
+        return CakeTwoPluginConfig(
+            pluginName = pluginName,
+            pluginPath = legacy.pluginPath,
+            assetPath = legacy.assetPath,
+        )
     }
 
     val dataViewExtensions: List<String>
@@ -267,15 +353,24 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
 
     val pluginConfigs: List<PluginConfig>
         get() {
+            val pluginConfigs = state.pluginConfigs.mapNotNull {
+                when (it) {
+                    is PluginConfig -> it
+                    is LegacyPluginConfig -> classifyLegacyPluginConfig(it)
+                }
+            }
             if (state.pluginNamespaces.isEmpty()) {
-                return state.pluginConfigs
+                return pluginConfigs
             } else {
                 return synthesizePluginEntries(
                     state.pluginNamespaces,
-                    state.pluginConfigs
+                    pluginConfigs
                 )
             }
         }
+
+    val cakeThreePluginConfigs: List<CakeThreePluginConfig>
+        get() = pluginConfigs.filterIsInstance<CakeThreePluginConfig>()
 
     val themeConfigs: List<ThemeConfig>
         get() {

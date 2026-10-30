@@ -35,7 +35,7 @@ fun PhpIndex.getPossibleTableClasses(settings: Settings, possibleTableName: Stri
     val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
     resultClasses += this.getClassesByFQN(possibleAppNamespaceClass)
 
-    settings.pluginConfigs.forEach { pluginConfig ->
+    settings.cakeThreePluginConfigs.forEach { pluginConfig ->
         resultClasses += this.getClassesByFQN("${pluginConfig.namespace}\\Model\\Table\\${possibleTableName}Table")
     }
     return resultClasses

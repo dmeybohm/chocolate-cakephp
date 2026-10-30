@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
-import com.daveme.chocolateCakePHP.PluginConfig
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 
@@ -17,7 +17,7 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
         newState.cake3ForceEnabled = true
         newState.cake2Enabled = false
         newState.appDirectory = "src5"
-        newState.pluginConfigs = listOf(PluginConfig(
+        newState.pluginConfigs = listOf(CakeThreePluginConfig(
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"
         ))

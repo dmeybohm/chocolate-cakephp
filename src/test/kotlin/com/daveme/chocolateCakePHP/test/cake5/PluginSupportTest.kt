@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
-import com.daveme.chocolateCakePHP.PluginConfig
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler
@@ -36,14 +36,14 @@ class PluginSupportTest : Cake5BaseTestCase() {
         val settings = Settings.getInstance(myFixture.project)
         val state = settings.state.copy()
         state.pluginConfigs = listOf(
-            PluginConfig(
+            CakeThreePluginConfig(
                 pluginName = "TestPlugin",
                 namespace = "\\TestPlugin",
                 pluginPath = "plugins/TestPlugin",
                 srcPath = "src",
                 assetPath = "webroot"
             ),
-            PluginConfig(
+            CakeThreePluginConfig(
                 pluginName = "TestPluginExtra",
                 namespace = "\\TestPluginExtra",
                 pluginPath = "plugins/TestPluginExtra",
