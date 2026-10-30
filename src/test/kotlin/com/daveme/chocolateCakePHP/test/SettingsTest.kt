@@ -198,6 +198,83 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertTrue(detected().cake3OrLaterPresent)
     }
 
+    // ========== Version-aware detection tests ==========
+
+    private fun detectedFor(constraint: String): CakeAutoDetectedValues {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"$constraint\""))
+        return detected()
+    }
+
+    fun `test cakephp 2 constraint detects only cakephp 2`() {
+        val values = detectedFor("2.10.*")
+        assertTrue(values.cake2Present)
+        assertFalse(values.cake3OrLaterPresent)
+    }
+
+    fun `test cakephp 4 constraint detects only cakephp 3 or later`() {
+        val values = detectedFor("^4.4")
+        assertFalse(values.cake2Present)
+        assertTrue(values.cake3OrLaterPresent)
+    }
+
+    fun `test constraint allowing cakephp 2 and 3 detects both`() {
+        val values = detectedFor("^2.10 || ^3.0")
+        assertTrue(values.cake2Present)
+        assertTrue(values.cake3OrLaterPresent)
+    }
+
+    fun `test branch constraint detects only cakephp 3 or later`() {
+        val values = detectedFor("dev-master")
+        assertFalse(values.cake2Present)
+        assertTrue(values.cake3OrLaterPresent)
+    }
+
+    fun `test branch alternative alongside cakephp 2 detects both`() {
+        val values = detectedFor("dev-master || ^2.10")
+        assertTrue(values.cake2Present)
+        assertTrue(values.cake3OrLaterPresent)
+    }
+
+    fun `test cakephp 2 enabled follows detection unless auto-detect is off`() {
+        val settings = Settings.getInstance(project)
+        assertFalse(settings.cake2Enabled)
+        detectedFor("2.10.*")
+        assertTrue(settings.cake2Enabled)
+        assertFalse(settings.cake3Enabled)
+
+        val noAutoDetect = Settings.getDefaults(project).state.copy()
+        noAutoDetect.cake2AutoDetect = false
+        settings.loadState(noAutoDetect)
+        assertFalse(settings.cake2Enabled)
+
+        settings.loadState(Settings.getDefaults(project).state.copy())
+    }
+
+    fun `test cakephp 2 force enable works without composer json`() {
+        val settings = Settings.getInstance(project)
+        val forced = Settings.getDefaults(project).state.copy()
+        forced.cake2Enabled = true
+        forced.cake2AutoDetect = false
+        settings.loadState(forced)
+        assertTrue(settings.cake2Enabled)
+        assertTrue(settings.cake2ForceEnabled)
+
+        settings.loadState(Settings.getDefaults(project).state.copy())
+    }
+
+    fun `test cakephp 3 auto-detect off does not hide cakephp 2 detection`() {
+        val settings = Settings.getInstance(project)
+        val noCake3 = Settings.getDefaults(project).state.copy()
+        noCake3.cake3Enabled = false
+        settings.loadState(noCake3)
+        detectedFor("^2.0")
+        assertTrue(settings.cake2Enabled)
+        assertFalse(settings.cake3Enabled)
+
+        settings.loadState(Settings.getDefaults(project).state.copy())
+    }
+
     // ========== effectivePluginName() Tests ==========
 
     fun `test effectivePluginName returns pluginName when set`() {

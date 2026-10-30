@@ -46,7 +46,7 @@ class ConfigForm implements SearchableConfigurable {
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
-        enableCake2SupportCheckBox.setSelected(settings.getCake2Enabled());
+        enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
