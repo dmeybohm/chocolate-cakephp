@@ -7,6 +7,10 @@
 ### Added
 - Complete and type-infer variables passed to elements through the `$this->element($name, $data)` data array (array literal, `compact()`, or a variable holding either) from templates, layouts and nested elements, and variables set with `$this->set()` inside view files
 - Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
+- Support `Plugin.Table` aliases and the `className` option in `fetchTable()`, `getTableLocator()->get()` and `TableRegistry::get()`, for return types, navigation and completion
+
+### Changed
+- A table locator alias without a plugin prefix now navigates only to the app's table, as CakePHP loads it, and completion inserts the `Plugin.Table` alias for plugin tables
 
 ## [1.1.0] - 2026-04-09
 
