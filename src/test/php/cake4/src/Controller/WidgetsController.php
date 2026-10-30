@@ -44,4 +44,9 @@ class WidgetsController extends AppController
     public function prefixedappelement(): void
     {
     }
+
+    public function prefixedinner(): void
+    {
+        $this->render('Probe.inner');
+    }
 }

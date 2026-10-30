@@ -33,4 +33,29 @@ class ElementResolutionTest extends ControllerTestCase {
 		$this->assertSame('app:element/app_only', $this->renderedBy('/widgets/prefixedappelement'));
 	}
 
+	public function testPluginTemplateRendersOtherPluginElement() {
+		$this->assertSame('other:element/other_only', $this->renderedBy('/probe/things/crosselement'));
+	}
+
+	public function testOtherPluginElementFallsBackToAppElement() {
+		$this->assertSame('app:element/app_only', $this->renderedBy('/probe/things/crosselementfallback'));
+	}
+
+	public function testOtherPluginElementDoesNotFallBackToCallingPlugin() {
+		$rendered = $this->renderedBy('/probe/things/crosselementnotcaller');
+		$this->assertContains('Element Not Found: Other.Elements/plugin_only.ctp', $rendered);
+		$this->assertNotContains('plugin:element/plugin_only', $rendered);
+	}
+
+	public function testElementInFallbackTemplateResolvesInControllerPlugin() {
+		$this->assertSame('plugin:element/shared', $this->renderedBy('/probe/things/fallbackinner'));
+	}
+
+	public function testElementInPrefixedTemplateResolvesInControllerPlugin() {
+		$this->assertSame('app:element/shared', $this->renderedBy('/widgets/prefixedinner'));
+	}
+
+	public function testElementInOtherPluginTemplateResolvesInControllerPlugin() {
+		$this->assertSame('plugin:element/shared', $this->renderedBy('/probe/things/crossinner'));
+	}
 }

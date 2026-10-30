@@ -39,4 +39,45 @@ class ThingsController extends AppController
     {
         $this->set('name', $this->getRequest()->getQuery('name'));
     }
+
+    public function crossplugin(): void
+    {
+        $this->render('Other.in_other');
+    }
+
+    public function crossfallback(): void
+    {
+        $this->render('Other.in_app');
+    }
+
+    public function crossnotcaller(): void
+    {
+        $this->render('Other.in_probe');
+    }
+
+    public function crossoverride(): void
+    {
+        $this->render('Other.overridden_other');
+    }
+
+    public function crossinner(): void
+    {
+        $this->render('Other.inner');
+    }
+
+    public function crosselement(): void
+    {
+    }
+
+    public function crosselementfallback(): void
+    {
+    }
+
+    public function crosselementnotcaller(): void
+    {
+    }
+
+    public function fallbackinner(): void
+    {
+    }
 }

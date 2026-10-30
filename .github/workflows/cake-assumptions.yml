@@ -38,5 +38,5 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: src/test/php/cake${{ matrix.cake }}/vendor
-          key: cake-assumptions-${{ matrix.cake }}-${{ hashFiles(format('src/test/php/cake{0}/composer.lock', matrix.cake)) }}
+          key: cake-assumptions-${{ matrix.cake }}-${{ hashFiles(format('src/test/php/cake{0}/composer.json', matrix.cake), format('src/test/php/cake{0}/composer.lock', matrix.cake)) }}
       - run: scripts/run-cakephp-assumption-tests.sh test ${{ matrix.cake }}

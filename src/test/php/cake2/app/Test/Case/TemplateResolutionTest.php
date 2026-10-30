@@ -48,4 +48,20 @@ class TemplateResolutionTest extends ControllerTestCase {
 		$this->assertSame('override:Widgets/overridden_widget', $this->renderedBy('/widgets/prefixedoverride'));
 	}
 
+	public function testPluginControllerRendersOtherPluginTemplate() {
+		$this->assertSame('other:Things/in_other', $this->renderedBy('/probe/things/crossplugin'));
+	}
+
+	public function testRenderOfOtherPluginFallsBackToAppTemplate() {
+		$this->assertSame('app:Things/in_app', $this->renderedBy('/probe/things/crossfallback'));
+	}
+
+	public function testRenderOfOtherPluginDoesNotFallBackToCallingPlugin() {
+		$this->setExpectedException('MissingViewException', 'in_probe.ctp');
+		$this->renderedBy('/probe/things/crossnotcaller');
+	}
+
+	public function testAppOverrideWinsForRenderOfOtherPlugin() {
+		$this->assertSame('override:Things/overridden_other', $this->renderedBy('/probe/things/crossoverride'));
+	}
 }

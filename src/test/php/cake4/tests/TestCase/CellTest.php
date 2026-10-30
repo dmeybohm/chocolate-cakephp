@@ -65,4 +65,17 @@ class CellTest extends TestCase
         $this->get('/probe/things/showcell?name=Lamp::own');
         $this->assertResponseEquals('app:cell/Lamp/own');
     }
+
+    public function testPluginTemplateRendersOtherPluginCell(): void
+    {
+        $this->get('/probe/things/showcell?name=Other.Sprocket::own');
+        $this->assertResponseEquals('other:cell/Sprocket/own');
+    }
+
+    public function testOtherPluginCellDoesNotFallBackToCallingPlugin(): void
+    {
+        $this->expectException(MissingCellTemplateException::class);
+        $this->expectExceptionMessage('inprobe');
+        $this->get('/probe/things/showcell?name=Other.Sprocket::inprobe');
+    }
 }
