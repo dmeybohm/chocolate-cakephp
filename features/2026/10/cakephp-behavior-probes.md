@@ -44,19 +44,21 @@ No single PHP release runs all four frameworks:
 | CakePHP | Pinned | PHP supported |
 |---|---|---|
 | 2.10.24 | same as `build.gradle.kts` | 5.3 to 7.4; breaks on 8 |
-| 3.10.5 | same | 5.6 to 8.1 |
+| 3.10.5 | same | 5.6 to 7.4 |
 | 4.6.5 | same | 7.4 to 8.4 |
-| 5.4.3 | same | 8.1 to 8.4 |
+| 5.4.3 | same | 8.2 to 8.4 |
 
-So each version runs in a container. Two images cover everything: PHP 7.4 for Cake 2 and 3,
-PHP 8.3 for Cake 4 and 5. Podman is the runtime, rootless, so files written by
+The ranges are what each release's `composer.json` declares. So each version runs in a
+container. Two images cover everything: PHP 7.4 for Cake 2 and 3, PHP 8.3 for Cake 4 and 5.
+Podman is the runtime, rootless, so files written by
 `composer install` inside the container are owned by the host user. Docker works as a fallback
 because the two share a command line; the runner picks `$CONTAINER_RUNTIME`, else `podman`,
 else `docker`. GitHub's `ubuntu-latest` runners ship with both.
 
 The pinned versions are the same four that `build.gradle.kts` fetches for the real-vendor test
-mode, so the static and dynamic checks describe the same releases. Keeping the two lists in
-step is a manual step noted in the README.
+mode, so the static and dynamic checks describe the same releases. The suite installs from its own
+`composer.lock`, so a pin moved in one place and not the other would go unnoticed; the runner's
+`check-pins` subcommand compares the two lists, and CI runs it (see below).
 
 ### Why PHPUnit and the framework's own test harness
 
@@ -66,11 +68,13 @@ container pins its own PHPUnit, so the usual version conflict never arises:
 - Cake 3, 4 and 5: `Cake\TestSuite\TestCase` sets the app namespace, loads plugins and
   overrides `App.paths`. `IntegrationTestTrait` (Cake 3.7+) issues a request to a controller
   and asserts on the rendered body, so a template resolution assumption is tested through the
-  real dispatcher. Cake 3.10 wants PHPUnit 5.7 or 6, Cake 4.6 wants 8.5 or 9, Cake 5.4 wants 10
-  or newer; each version's `composer.json` pins the range its release declares in `require-dev`.
+  real dispatcher. Each version's `composer.json` pins the PHPUnit range its release declares in
+  `require-dev`: `^5.7.14|^6.0` for 3.10.5, `^8.5 || ^9.3` for 4.6.5 and
+  `^11.5.3 || ^12.1.3 || ^13.0` for 5.4.3.
 - Cake 2: `lib/Cake/TestSuite` provides `CakeTestCase` and `ControllerTestCase`, whose
-  `testAction()` renders through the real `Dispatcher`. It runs under the PHPUnit range 2.10.24
-  declares, checked in step 2 before pinning.
+  `testAction()` renders through the real `Dispatcher`. 2.10.24 declares PHPUnit `^3.7`, but
+  `CakeTestCase` extends the underscore-named `PHPUnit_Framework_TestCase`, which exists
+  through PHPUnit 5.7, and 5.7 runs on PHP 7.4. Pin `^5.7` and confirm in step 2.
 
 An assertion is the recorded assumption. When a pin moves and a test fails, PHPUnit's failure
 message is the drift report, and a missing template exception already lists the paths searched.
@@ -145,10 +149,10 @@ cannot drift apart without a reviewer noticing.
 
 ### The runner
 
-`scripts/run-cakephp-assumption-tests.sh` has three subcommands, each taking an optional list of
-versions. It finds the suite relative to its own location, so it runs from any directory. The
-name deliberately does not end in `-test.sh`, because `scripts/run-all-tests.sh` executes every
-file matching that pattern as a shell test.
+`scripts/run-cakephp-assumption-tests.sh` has four subcommands, the first three taking an
+optional list of versions. It finds the suite relative to its own location, so it runs from any
+directory. The name deliberately does not end in `-test.sh`, because `scripts/run-all-tests.sh`
+executes every file matching that pattern as a shell test.
 
 - `build` builds the two images, tagged `chocolate-cake-assumptions:php74` and `:php83`.
 - `install [2 3 4 5]` runs `composer install` in each version directory inside its image,
@@ -158,6 +162,8 @@ file matching that pattern as a shell test.
   inside its image, with `src/test/php` mounted read-write at `/suite`, forwarding any
   extra arguments (a `--filter`, `--testdox`). It prints each version's PHPUnit output under a
   heading and exits non-zero if any version fails.
+- `check-pins` reads the version from each `cakeN/composer.json` and the matching `CakeRelease`
+  entry in `build.gradle.kts`, and exits non-zero if any pair differs. It needs no container.
 
 The whole tree is mounted rather than one version, so `composer install` writes `vendor/` back
 to the host and the per-version apps can share a `Probe` plugin fixture if that turns out to be
@@ -166,11 +172,13 @@ worth it.
 ### CI
 
 A separate workflow, `cake-assumptions.yml`, runs on pushes and pull requests that touch
-`src/test/php/**` or `scripts/run-cakephp-assumption-tests.sh`, as a four-way version matrix
-with `fail-fast: false`. Each job builds its image, restores `vendor/` from a cache keyed on
-that version's `composer.lock`, and runs the suite. It is kept out of `build.yml` so the plugin
-build is not slowed by framework downloads, and so a failing assumption surfaces on its own PR
-rather than blocking an unrelated one.
+`src/test/php/**`, `scripts/run-cakephp-assumption-tests.sh` or `build.gradle.kts`. A first job
+runs `check-pins`, so a framework pin moved in the Gradle build without the matching
+`composer.json` change fails before anything is downloaded. The suite then runs as a four-way
+version matrix with `fail-fast: false`. Each job builds its image, restores `vendor/` from a
+cache keyed on that version's `composer.lock`, and runs the suite. It is kept out of
+`build.yml` so the plugin build is not slowed by framework downloads, and so a failing
+assumption surfaces on its own PR rather than blocking an unrelated one.
 
 ## First assumptions
 
@@ -218,8 +226,8 @@ touched:
    images build rootless with Podman.
 2. The four apps with `composer.json`, the PHPUnit range each release declares, the committed
    locks, a `phpunit.xml` and test bootstrap per version, and one `FrameworkVersionTest` per
-   version asserting `Configure::version()` matches the pin. This proves each harness boots and
-   gives the `test` subcommand its first green run.
+   version asserting `Configure::version()` matches the pin, and the `check-pins` subcommand.
+   This proves each harness boots and gives the `test` subcommand its first green run.
 3. The `Probe` plugin fixture and the app-side override directory in each version's layout.
 4. `TemplateResolutionTest` on Cake 5 first, then 4, 3 and 2. Record each version's answers in
    the catalogue as they are learned.
