@@ -296,3 +296,7 @@ feature because it depends on plugin identity, which this feature makes a single
   plugin table has a "CakePHP Version" column (`2` or `3+`) as its last column, so the existing
   column indexes are unchanged. Checked that `instrumentCode` binds the new combo box; the
   dialog has not been tried in a running IDE.
+- Added the checkbox left over from `version-aware-composer-detection`: `ConfigForm` has an
+  "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
+  matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Checked in
+  the instrumented class; not tried in a running IDE.

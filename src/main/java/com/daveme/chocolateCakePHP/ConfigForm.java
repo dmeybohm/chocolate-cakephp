@@ -21,6 +21,7 @@ class ConfigForm implements SearchableConfigurable {
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
     private JButton templateExtensionDefaultButton;
+    private JCheckBox enableAutoDetectCake2CheckBox;
     private JCheckBox enableCake2SupportCheckBox;
     private JTextField cake2AppDirectoryTextField;
     private JButton cake2AppDirectoryDefaultButton;
@@ -46,6 +47,7 @@ class ConfigForm implements SearchableConfigurable {
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
+        enableAutoDetectCake2CheckBox.setSelected(settings.getCake2AutoDetect());
         enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
@@ -62,6 +64,7 @@ class ConfigForm implements SearchableConfigurable {
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());
 
+        newState.setCake2AutoDetect(enableAutoDetectCake2CheckBox.isSelected());
         newState.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         newState.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
         newState.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
@@ -114,6 +117,10 @@ class ConfigForm implements SearchableConfigurable {
             this.updateCake3SettingsVisibility()
         );
 
+        enableAutoDetectCake2CheckBox.addActionListener(e ->
+            this.updateCake2SettingsVisibility()
+        );
+
         enableCake2SupportCheckBox.addActionListener(e ->
             this.updateCake2SettingsVisibility()
         );
@@ -130,7 +137,9 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void updateCake2SettingsVisibility() {
-        cake2Panel.setVisible(enableCake2SupportCheckBox.isSelected());
+        cake2Panel.setVisible(enableAutoDetectCake2CheckBox.isSelected() ||
+                enableCake2SupportCheckBox.isSelected());
+        enableAutoDetectCake2CheckBox.setEnabled(!enableCake2SupportCheckBox.isSelected());
     }
 
     private void updateCake3SettingEditability() {
