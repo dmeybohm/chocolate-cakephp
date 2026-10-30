@@ -4,7 +4,8 @@ package com.daveme.chocolateCakePHP
  * The facts the plugin needs from a project's composer.json.
  */
 data class ComposerInfo(
-    val cakePhpRequired: Boolean = false,
+    val cakePhpMajorVersions: Set<Int>? = null,
+    val cakePhpUnversionedAlternative: Boolean = false,
     val appDirectory: String? = null,
 )
 
@@ -14,7 +15,10 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
 /**
  * Extract CakePHP-related facts from the contents of a composer.json file.
  *
- * - [ComposerInfo.cakePhpRequired] is true when `require` lists `cakephp/cakephp`.
+ * - [ComposerInfo.cakePhpMajorVersions] is the set of major versions the
+ *   `cakephp/cakephp` constraint in `require` allows, or null if absent.
+ * - [ComposerInfo.cakePhpUnversionedAlternative] is true when that constraint
+ *   has an alternative with no version number, such as `dev-master`.
  * - [ComposerInfo.appDirectory] is the directory mapped to [namespace] under
  *   `autoload.psr-4`, with any trailing slash removed, or null if absent.
  *
@@ -26,15 +30,43 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
 fun parseComposerJson(contents: String, namespace: String): ComposerInfo {
     val entries = scanJsonEntries(contents)
     val targetNamespace = canonicalNamespace(namespace)
+    val cakePhpConstraint = membersOfLastObject(entries, REQUIRE_PATH)
+        .lastOrNull { it.key == "cakephp/cakephp" }
+        ?.let { it.value ?: "" }
     return ComposerInfo(
-        cakePhpRequired = membersOfLastObject(entries, REQUIRE_PATH)
-            .any { it.key == "cakephp/cakephp" },
+        cakePhpMajorVersions = cakePhpConstraint?.let { constraintMajorVersions(it) },
+        cakePhpUnversionedAlternative = cakePhpConstraint
+            ?.let { hasUnversionedAlternative(it) } ?: false,
         appDirectory = membersOfLastObject(entries, PSR4_PATH)
             .lastOrNull { canonicalNamespace(it.key) == targetNamespace }
             ?.value
             ?.removeFromEnd("/"),
     )
 }
+
+private val ALTERNATIVE_SEPARATOR = Regex("""\|\|?""")
+private val LEADING_MAJOR_VERSION = Regex("""^[<>=!^~\s]*v?(\d+)""")
+
+/**
+ * The major versions a Composer version constraint allows, read from the
+ * lower bound of each `||` alternative. Alternatives that do not start with
+ * a version number, such as `dev-master` or `*`, contribute nothing.
+ */
+fun constraintMajorVersions(constraint: String): Set<Int> =
+    constraint.split(ALTERNATIVE_SEPARATOR)
+        .mapNotNull { leadingMajorVersion(it) }
+        .toSet()
+
+/**
+ * Whether a Composer version constraint has an alternative that does not
+ * start with a version number, such as `dev-master` or `*`.
+ */
+fun hasUnversionedAlternative(constraint: String): Boolean =
+    constraint.split(ALTERNATIVE_SEPARATOR)
+        .any { leadingMajorVersion(it) == null }
+
+private fun leadingMajorVersion(alternative: String): Int? =
+    LEADING_MAJOR_VERSION.find(alternative.trim())?.groupValues?.get(1)?.toIntOrNull()
 
 /**
  * The direct members of the last object found at [path], in document order.

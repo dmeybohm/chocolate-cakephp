@@ -6,11 +6,18 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 
+/**
+ * A class whose actions render templates under a path of their own: a controller or a cell.
+ */
+sealed interface ViewOwnerPath {
+    val viewPath: String
+}
+
 data class ControllerPath(
     val name: String,
     val prefix: String
-) {
-    val viewPath: String get() =
+) : ViewOwnerPath {
+    override val viewPath: String get() =
         if (prefix.isEmpty())
             "${name}/"
         else
@@ -98,6 +105,15 @@ fun controllerPathFromControllerFile(controllerFile: VirtualFile): ControllerPat
     )
 }
 
+fun viewOwnerPathFromFile(project: Project, settings: Settings, file: VirtualFile): ViewOwnerPath? {
+    controllerPathFromControllerFile(file)?.let { return it }
+    if (!settings.cake3Enabled) {
+        return null
+    }
+    val projectDir = project.guessProjectDir() ?: return null
+    return cellPathFromCellFile(projectDir, file)
+}
+
 data class TemplatePathResolution(
     val allViewPaths: AllViewPaths,
     val pluginLookupResult: PluginLookupResult,
@@ -167,7 +183,7 @@ fun viewPathsFromControllerNameAndActionName(
     templatesPaths: Sequence<TemplatesDirWithPath>,
     settings: Settings,
     label: String,
-    controllerPath: ControllerPath,
+    controllerPath: ViewOwnerPath,
     actionName: ActionName,
     convertCase: Boolean,
     altLabel: String = ""
@@ -194,12 +210,14 @@ fun viewPathsFromControllerNameAndActionName(
 
 
 fun allViewPathsFromController(
-    controllerPath: ControllerPath,
+    controllerPath: ViewOwnerPath,
     allTemplatePaths: AllTemplatePaths,
     settings: Settings,
     actionNames: ActionNames,
 ): AllViewPaths {
-    val dataViewPaths = settings.dataViewExtensions.flatMap {
+    // Cells render a single template, never a data view
+    val dataViewExtensions = if (controllerPath is CellPath) emptyList() else settings.dataViewExtensions
+    val dataViewPaths = dataViewExtensions.flatMap {
         val dataViewPrefix = if (actionNames.defaultActionName.isAbsolute)
             actionNames.defaultActionName.pathPrefix
         else

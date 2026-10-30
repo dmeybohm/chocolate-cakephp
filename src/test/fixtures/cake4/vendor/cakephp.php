@@ -28,6 +28,8 @@ namespace Cake\Controller\Component {
 
 namespace Cake\View {
     class View {
+        use CellTrait;
+
         public function initialize() {}
 
         public function loadHelper($name, array $config = []) {
@@ -38,7 +40,41 @@ namespace Cake\View {
             return $this;
         }
     }
-    class Helper {}
+    class Helper {
+        /**
+         * @var \Cake\View\View
+         */
+        protected $_View;
+    }
+    class ViewBuilder {}
+    trait CellTrait {
+        protected function cell(string $cell, array $data = [], array $options = []): Cell {
+            return new Cell();
+        }
+    }
+    abstract class Cell {
+        use \Cake\ORM\Locator\LocatorAwareTrait;
+
+        public function initialize(): void {}
+
+        /**
+         * @return \Cake\View\ViewBuilder
+         */
+        public function viewBuilder() {
+            return new ViewBuilder();
+        }
+
+        /**
+         * @return $this
+         */
+        public function set($name, $value = null) {
+            return $this;
+        }
+
+        public function render(?string $template = null): string {
+            return '';
+        }
+    }
 }
 
 namespace Cake\Validation {

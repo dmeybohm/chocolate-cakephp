@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.navigation.CakeGotoRelatedItem
+import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.navigation.GotoRelatedProvider
@@ -58,16 +59,20 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
         // Get all controller references to this view file
         val referencingElements = ViewFileIndexService
             .referencingElementsInSmartReadAction(project, filenameKey)
-            .mapNotNull { it.psiElement }
-            .filter { it.isValid }
 
         // Convert to GotoRelatedItems
-        return referencingElements.map { element ->
-            createGotoRelatedItem(element)
+        return referencingElements.mapNotNull { elementAndPath ->
+            val element = elementAndPath.psiElement?.takeIf { it.isValid } ?: return@mapNotNull null
+            val group = when {
+                elementAndPath.elementType == ElementType.CELL_RENDER -> "Cell usages"
+                elementAndPath.cellName != null -> "Cells"
+                else -> "Controllers"
+            }
+            createGotoRelatedItem(element, group)
         }
     }
 
-    private fun createGotoRelatedItem(element: PsiElement): GotoRelatedItem {
+    private fun createGotoRelatedItem(element: PsiElement, group: String): GotoRelatedItem {
         // Pre-compute all data from PSI elements to avoid EDT access violations
         val customName = computeCustomName(element)
         val containerName = computeContainerName(element)
@@ -75,7 +80,7 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
 
         return CakeGotoRelatedItem(
             element = element,
-            group = "Controllers",
+            group = group,
             customName = customName,
             containerName = containerName,
             iconPath = iconPath

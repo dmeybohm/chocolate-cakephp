@@ -15,36 +15,82 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
  * Indexes the calls and property arrays that configure the dynamic properties of a class,
  * keyed by the FQN of the class they appear in.
  */
-object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileContent> {
+object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, FileContent> {
 
     private val textNeedles = listOf(
-        "load", "addHelper", "belongsTo", "hasOne", "hasMany", "addAssociations", "helpers"
+        "load", "addHelper", "belongsTo", "hasOne", "hasMany", "addAssociations", "helpers",
+        "components", "uses", "bindModel",
     )
 
-    override fun map(inputData: FileContent): Map<String, List<MemberLoad>> {
+    override fun map(inputData: FileContent): Map<String, ClassConfiguration> {
         val text = inputData.contentAsText
         if (textNeedles.none { text.contains(it, ignoreCase = true) }) {
             return emptyMap()
         }
-        val result = mutableMapOf<String, MutableList<MemberLoad>>()
+        val loadsByClass = mutableMapOf<String, MutableList<MemberLoad>>()
+        val declarationsByClass = mutableMapOf<String, MutableList<PropertyDeclaration>>()
         for (phpClass in PsiTreeUtil.findChildrenOfType(inputData.psiFile, PhpClass::class.java)) {
             val loads = mutableListOf<MemberLoad>()
-            readPropertyArrays(phpClass, loads)
+            val declarations = mutableListOf<PropertyDeclaration>()
+            readPropertyArrays(phpClass, loads, declarations)
             collectMethodCallLoads(phpClass.node, null, loads)
-            if (loads.isNotEmpty()) {
-                result.getOrPut(phpClass.fqn) { mutableListOf() } += loads
+            if (loads.isNotEmpty() || declarations.isNotEmpty()) {
+                loadsByClass.getOrPut(phpClass.fqn) { mutableListOf() } += loads
+                declarationsByClass.getOrPut(phpClass.fqn) { mutableListOf() } += declarations
             }
         }
-        return result
+        return loadsByClass.mapValues { (fqn, loads) ->
+            ClassConfiguration(loads, declarationsByClass[fqn].orEmpty())
+        }
     }
 
-    private fun readPropertyArrays(phpClass: PhpClass, out: MutableList<MemberLoad>) {
+    private fun readPropertyArrays(
+        phpClass: PhpClass,
+        out: MutableList<MemberLoad>,
+        declarations: MutableList<PropertyDeclaration>
+    ) {
         for ((fieldName, kind) in propertyArraySources) {
-            val defaultValue = phpClass.findOwnFieldByName(fieldName, false)?.defaultValue?.node ?: continue
-            if (defaultValue.isArrayCreationExpression()) {
-                readLoadArray(defaultValue, kind, LoadSource.PROPERTY_ARRAY, null, out)
+            val field = phpClass.findOwnFieldByName(fieldName, false) ?: continue
+            val defaultValue = field.defaultValue?.node
+            val value = declaredValue(defaultValue)
+            val reader = LoadReader(kind, LoadSource.PROPERTY_ARRAY, null, fieldName, out)
+            val isComplete = when {
+                defaultValue == null -> true
+                value == DeclaredValue.ARRAY -> reader.readArray(defaultValue)
+                value == DeclaredValue.STRING && kind == MemberKind.ASSOCIATION ->
+                    reader.readCommaSeparated(defaultValue)
+                value == DeclaredValue.STRING || value == DeclaredValue.OTHER -> false
+                else -> true
+            }
+            declarations += PropertyDeclaration(
+                property = fieldName,
+                kind = kind,
+                value = value,
+                isComplete = isComplete,
+                offset = (defaultValue ?: field.node).startOffset,
+            )
+        }
+    }
+
+    private fun declaredValue(node: ASTNode?): DeclaredValue {
+        if (node == null) {
+            return DeclaredValue.NULL
+        }
+        if (node.isArrayCreationExpression()) {
+            return DeclaredValue.ARRAY
+        }
+        if (node.isString()) {
+            return if (node.stringLiteralValue() != null) DeclaredValue.STRING else DeclaredValue.OTHER
+        }
+        if (node.elementType == PhpElementTypes.CONSTANT_REF) {
+            return when (node.text.lowercase()) {
+                "true" -> DeclaredValue.TRUE
+                "false" -> DeclaredValue.FALSE
+                "null" -> DeclaredValue.NULL
+                else -> DeclaredValue.OTHER
             }
         }
+        return DeclaredValue.OTHER
     }
 
     private fun collectMethodCallLoads(node: ASTNode, methodName: String?, out: MutableList<MemberLoad>) {
@@ -76,16 +122,30 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileC
         val calledName = call.methodName?.lowercase() ?: return
         val firstParam = call.parameters.getOrNull(0) ?: return
         if (calledName == ADD_ASSOCIATIONS_METHOD) {
-            readAddAssociations(firstParam, methodName, out)
+            readAssociationsByType(firstParam, associationTypeKeys, LoadSource.METHOD_CALL, methodName, out)
+            return
+        }
+        if (calledName == BIND_MODEL_METHOD) {
+            readAssociationsByType(firstParam, cakeTwoAssociationTypeKeys, LoadSource.BIND_MODEL, methodName, out)
             return
         }
         val kind = methodCallSources[calledName] ?: return
         val loadedName = literalString(firstParam) ?: return
         val options = if (calledName in sourcesWithoutOptions) null else call.parameters.getOrNull(1)
-        out += memberLoad(kind, LoadSource.METHOD_CALL, loadedName, options, methodName, firstParam.startOffset)
+        out += LoadReader(kind, LoadSource.METHOD_CALL, methodName, null, out)
+            .memberLoad(loadedName, options, firstParam.startOffset)
     }
 
-    private fun readAddAssociations(arrayNode: ASTNode, methodName: String?, out: MutableList<MemberLoad>) {
+    /**
+     * Reads associations keyed by their type, such as `['hasMany' => ['Comments']]`.
+     */
+    private fun readAssociationsByType(
+        arrayNode: ASTNode,
+        typeKeys: Set<String>,
+        source: LoadSource,
+        methodName: String?,
+        out: MutableList<MemberLoad>
+    ) {
         if (!arrayNode.isArrayCreationExpression()) {
             return
         }
@@ -94,10 +154,11 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileC
             if (child.isHashArrayElement()) {
                 val key = ViewVariableArgumentParser.hashElementKey(child)
                 val value = ViewVariableArgumentParser.hashElementValueNode(child)
-                if (key != null && value != null && value.isArrayCreationExpression() &&
-                    associationTypeKeys.any { it.equals(key, ignoreCase = true) }
-                ) {
-                    readLoadArray(value, MemberKind.ASSOCIATION, LoadSource.METHOD_CALL, methodName, out)
+                val typeKey = typeKeys.firstOrNull { it.equals(key, ignoreCase = true) }
+                if (typeKey != null && value != null && value.isArrayCreationExpression()) {
+                    // bindModel() adds to the model's association property of the same name:
+                    val property = if (source == LoadSource.BIND_MODEL) typeKey else null
+                    LoadReader(MemberKind.ASSOCIATION, source, methodName, property, out).readArray(value)
                 }
             }
             child = child.treeNext
@@ -105,70 +166,124 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, List<MemberLoad>, FileC
     }
 
     /**
-     * Reads an array of loads such as `['Html', 'Fmt' => ['className' => 'MovieFormatter']]`:
-     * a string value is a plain load, a string key with an array value is a load with options.
+     * Reads the loads of one configuring property or method call into [out].
      */
-    private fun readLoadArray(
-        arrayNode: ASTNode,
-        kind: MemberKind,
-        source: LoadSource,
-        methodName: String?,
-        out: MutableList<MemberLoad>
+    private class LoadReader(
+        val kind: MemberKind,
+        val source: LoadSource,
+        val methodName: String?,
+        val property: String?,
+        val out: MutableList<MemberLoad>,
     ) {
-        var child = arrayNode.firstChildNode
-        while (child != null) {
-            if (child.isArrayValue()) {
-                val loadedName = child.firstChildNode?.let { literalString(it) }
-                if (loadedName != null) {
-                    out += memberLoad(kind, source, loadedName, null, methodName, child.startOffset)
+
+        /**
+         * Reads an array of loads such as `['Html', 'Fmt' => ['className' => 'MovieFormatter']]`:
+         * a string value is a plain load, a string key with an array value is a load with
+         * options. Returns whether every entry could be read.
+         */
+        fun readArray(arrayNode: ASTNode): Boolean {
+            var isComplete = true
+            var child = arrayNode.firstChildNode
+            while (child != null) {
+                if (child.isArrayValue()) {
+                    val loadedName = child.firstChildNode?.let { literalString(it) }
+                    if (loadedName != null) {
+                        out += memberLoad(loadedName, null, child.startOffset)
+                    } else {
+                        isComplete = false
+                    }
+                } else if (child.isHashArrayElement()) {
+                    val loadedName = ViewVariableArgumentParser.hashElementKey(child)
+                    val options = ViewVariableArgumentParser.hashElementValueNode(child)
+                    if (loadedName != null && loadedName.isNotEmpty() &&
+                        options != null && options.isArrayCreationExpression()
+                    ) {
+                        out += memberLoad(loadedName, options, child.startOffset)
+                        if (property == HABTM_PROPERTY && !readJoinModel(options)) {
+                            isComplete = false
+                        }
+                    } else {
+                        isComplete = false
+                    }
                 }
-            } else if (child.isHashArrayElement()) {
-                val loadedName = ViewVariableArgumentParser.hashElementKey(child)
-                val options = ViewVariableArgumentParser.hashElementValueNode(child)
-                if (loadedName != null && loadedName.isNotEmpty() &&
-                    options != null && options.isArrayCreationExpression()
-                ) {
-                    out += memberLoad(kind, source, loadedName, options, methodName, child.startOffset)
-                }
+                child = child.treeNext
             }
-            child = child.treeNext
+            return isComplete
         }
-    }
 
-    private fun memberLoad(
-        kind: MemberKind,
-        source: LoadSource,
-        loadedName: String,
-        options: ASTNode?,
-        methodName: String?,
-        offset: Int
-    ) = MemberLoad(
-        kind = kind,
-        source = source,
-        alias = loadedName.substringAfterLast('.'),
-        loadedName = loadedName,
-        className = options?.let { classNameOption(it) },
-        methodName = methodName,
-        offset = offset,
-    )
+        /**
+         * Reads a comma-separated string of plain loads, such as `'User, Category'`.
+         */
+        fun readCommaSeparated(stringNode: ASTNode): Boolean {
+            val value = stringNode.stringLiteralValue() ?: return false
+            value.split(',')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .forEach { out += memberLoad(it, null, stringNode.startOffset) }
+            return true
+        }
 
-    private fun classNameOption(options: ASTNode): String? {
-        if (!options.isArrayCreationExpression()) {
+        // The join model a `with` option names is lazy-loaded as a property too:
+        private fun readJoinModel(options: ASTNode): Boolean {
+            val with = optionValue(options, "with") ?: return true
+            val loadedName = literalString(with)
+                ?: firstStringKey(with)
+                ?: return false
+            out += memberLoad(loadedName, null, with.startOffset)
+            return true
+        }
+
+        private fun firstStringKey(arrayNode: ASTNode): String? {
+            if (!arrayNode.isArrayCreationExpression()) {
+                return null
+            }
+            var child = arrayNode.firstChildNode
+            while (child != null) {
+                if (child.isHashArrayElement()) {
+                    return ViewVariableArgumentParser.hashElementKey(child)?.takeIf { it.isNotEmpty() }
+                }
+                if (child.isArrayValue()) {
+                    return null
+                }
+                child = child.treeNext
+            }
             return null
         }
-        var child = options.firstChildNode
-        while (child != null) {
-            if (child.isHashArrayElement() && ViewVariableArgumentParser.hashElementKey(child) == "className") {
-                val value = ViewVariableArgumentParser.hashElementValueNode(child) ?: return null
-                // A string is kept as written; it is not necessarily an FQN.
-                return literalString(value)
-                    ?: (value.psi as? ClassConstantReference)?.getStaticClassRefOrNull()
+
+        fun memberLoad(loadedName: String, options: ASTNode?, offset: Int): MemberLoad {
+            val classNameNode = options?.let { optionValue(it, "className") }
+            // A string is kept as written; it is not necessarily an FQN.
+            val className = classNameNode?.let {
+                literalString(it) ?: (it.psi as? ClassConstantReference)?.getStaticClassRefOrNull()
             }
-            child = child.treeNext
+            return MemberLoad(
+                kind = kind,
+                source = source,
+                alias = loadedName.substringAfterLast('.'),
+                loadedName = loadedName,
+                className = className,
+                methodName = methodName,
+                offset = offset,
+                property = property,
+                hasUnreadClassName = classNameNode != null && className == null,
+            )
         }
+    }
+}
+
+private fun optionValue(options: ASTNode, key: String): ASTNode? {
+    if (!options.isArrayCreationExpression()) {
         return null
     }
-
-    private fun literalString(node: ASTNode): String? =
-        if (node.isString()) node.stringLiteralValue()?.takeIf { it.isNotEmpty() } else null
+    var child = options.firstChildNode
+    while (child != null) {
+        if (child.isHashArrayElement() && ViewVariableArgumentParser.hashElementKey(child) == key) {
+            return ViewVariableArgumentParser.hashElementValueNode(child)
+        }
+        child = child.treeNext
+    }
+    return null
 }
+
+private fun literalString(node: ASTNode): String? =
+    if (node.isString()) node.stringLiteralValue()?.takeIf { it.isNotEmpty() } else null

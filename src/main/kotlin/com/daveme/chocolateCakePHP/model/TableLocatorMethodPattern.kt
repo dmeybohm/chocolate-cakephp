@@ -9,7 +9,7 @@ object TableLocatorMethodPattern :
     PatternCondition<MethodReference>("TableLocatorMethodPattern")
 {
     // $this->getTableLocator()->get("Movies")
-    // $this->fetchTable("Movies")
+    // $this->fetchTable("Movies"), in a controller or a cell
     // TableRegistry::getTableLocator()->get("Movies")
     // TableRegistry::get("Movies")
     override fun accepts(methodReference: MethodReference, context: ProcessingContext): Boolean {
@@ -26,6 +26,7 @@ object TableLocatorMethodPattern :
         val type = methodReference.classReference?.type ?: return false
         return type.isProbablyTableLocatorClass() ||
                 type.isProbablyControllerClass() ||
+                type.isProbablyCellClass() ||
                 type.isProbablyTableRegistryClass()
     }
 }
