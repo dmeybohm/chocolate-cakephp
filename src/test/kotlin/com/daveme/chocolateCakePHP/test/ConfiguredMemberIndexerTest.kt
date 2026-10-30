@@ -1,25 +1,34 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.configuredmemberindex.ClassConfiguration
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberDataIndexer
+import com.daveme.chocolateCakePHP.configuredmemberindex.DeclaredValue
 import com.daveme.chocolateCakePHP.configuredmemberindex.LoadSource
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberLoad
+import com.daveme.chocolateCakePHP.configuredmemberindex.PropertyDeclaration
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.indexing.FileContentImpl
 
 class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
 
-    private fun index(code: String): Map<String, List<MemberLoad>> {
+    private fun index(code: String): Map<String, ClassConfiguration> {
         myFixture.configureByText("Indexed.php", code.trimIndent())
         val fileContent = FileContentImpl.createByFile(myFixture.file.virtualFile, project)
         return ConfiguredMemberDataIndexer.map(fileContent)
     }
 
-    private fun loadsOf(code: String, fqn: String): List<MemberLoad> {
+    private fun configurationOf(code: String, fqn: String): ClassConfiguration {
         val result = index(code)
         assertTrue("Expected key $fqn in ${result.keys}", result.containsKey(fqn))
         return result[fqn]!!
     }
+
+    private fun loadsOf(code: String, fqn: String): List<MemberLoad> =
+        configurationOf(code, fqn).loads
+
+    private fun declarationsOf(code: String, fqn: String): Map<String, PropertyDeclaration> =
+        configurationOf(code, fqn).declarations.associateBy { it.property }
 
     fun `test each source method maps to its kind`() {
         val loads = loadsOf("""
@@ -214,7 +223,185 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
         """)
 
         assertEquals(setOf("\\App\\Controller\\FirstController", "\\App\\Controller\\SecondController"), result.keys)
-        assertEquals(listOf("First"), result["\\App\\Controller\\FirstController"]!!.map { it.alias })
-        assertEquals(listOf("Second"), result["\\App\\Controller\\SecondController"]!!.map { it.alias })
+        assertEquals(listOf("First"), result["\\App\\Controller\\FirstController"]!!.loads.map { it.alias })
+        assertEquals(listOf("Second"), result["\\App\\Controller\\SecondController"]!!.loads.map { it.alias })
+    }
+
+    fun `test cake2 property arrays map to their kinds and properties`() {
+        val loads = loadsOf("""
+            <?php
+            class MovieController extends AppController {
+                public ${'$'}components = array('Session', 'Meta' => array('className' => 'MovieMetadata'), 'DebugKit.Toolbar');
+                public ${'$'}uses = ['Movie', 'TestPlugin.Rating'];
+                public ${'$'}helpers = array('Html' => array('className' => 'BootstrapHtml'));
+            }
+        """, "\\MovieController")
+
+        assertEquals(
+            listOf(
+                listOf("Html", "BootstrapHtml", "helpers", MemberKind.HELPER),
+                listOf("Session", null, "components", MemberKind.COMPONENT),
+                listOf("Meta", "MovieMetadata", "components", MemberKind.COMPONENT),
+                listOf("Toolbar", null, "components", MemberKind.COMPONENT),
+                listOf("Movie", null, "uses", MemberKind.TABLE),
+                listOf("Rating", null, "uses", MemberKind.TABLE),
+            ),
+            loads.map { listOf(it.alias, it.className, it.property, it.kind) }
+        )
+        assertTrue(loads.all { it.source == LoadSource.PROPERTY_ARRAY && it.isInitializeLoad })
+    }
+
+    fun `test cake2 association properties including a comma-separated string`() {
+        val loads = loadsOf("""
+            <?php
+            class Movie extends AppModel {
+                public ${'$'}belongsTo = 'Director, TestPlugin.Studio ,';
+                public ${'$'}hasOne = array('Poster');
+                public ${'$'}hasMany = array('Review' => array('className' => 'Critique'));
+                public ${'$'}hasAndBelongsToMany = array('Tag');
+            }
+        """, "\\Movie")
+
+        assertEquals(
+            listOf(
+                listOf("Director", "Director", null, "belongsTo"),
+                listOf("Studio", "TestPlugin.Studio", null, "belongsTo"),
+                listOf("Poster", "Poster", null, "hasOne"),
+                listOf("Review", "Review", "Critique", "hasMany"),
+                listOf("Tag", "Tag", null, "hasAndBelongsToMany"),
+            ),
+            loads.map { listOf(it.alias, it.loadedName, it.className, it.property) }
+        )
+        assertTrue(loads.all { it.kind == MemberKind.ASSOCIATION })
+    }
+
+    fun `test declarations are recorded even when they load nothing`() {
+        val code = """
+            <?php
+            class EmptyController extends AppController {
+                public ${'$'}uses = false;
+                public ${'$'}components = array();
+                public ${'$'}helpers = [];
+            }
+            class TrueController extends AppController {
+                public ${'$'}uses = true;
+                public ${'$'}components;
+            }
+            class NullController extends AppController {
+                public ${'$'}uses = null;
+            }
+        """
+        val empty = declarationsOf(code, "\\EmptyController")
+        assertEquals(
+            mapOf(
+                "uses" to DeclaredValue.FALSE,
+                "components" to DeclaredValue.ARRAY,
+                "helpers" to DeclaredValue.ARRAY,
+            ),
+            empty.mapValues { it.value.value }
+        )
+        assertTrue(empty.values.all { it.isComplete })
+        assertTrue(configurationOf(code, "\\EmptyController").loads.isEmpty())
+
+        val withTrue = declarationsOf(code, "\\TrueController")
+        assertEquals(DeclaredValue.TRUE, withTrue["uses"]!!.value)
+        assertEquals(DeclaredValue.NULL, withTrue["components"]!!.value)
+        assertEquals(DeclaredValue.NULL, declarationsOf(code, "\\NullController")["uses"]!!.value)
+    }
+
+    fun `test declarations the reader cannot fully read are incomplete`() {
+        val declarations = declarationsOf("""
+            <?php
+            class PartialController extends AppController {
+                public ${'$'}components = array(self::AUTH, 'Session');
+                public ${'$'}uses = self::MODELS;
+                public ${'$'}helpers = 'Html';
+            }
+        """, "\\PartialController")
+
+        assertFalse(declarations["components"]!!.isComplete)
+        assertEquals(DeclaredValue.ARRAY, declarations["components"]!!.value)
+        assertFalse(declarations["uses"]!!.isComplete)
+        assertEquals(DeclaredValue.OTHER, declarations["uses"]!!.value)
+        assertFalse(declarations["helpers"]!!.isComplete)
+        assertEquals(DeclaredValue.STRING, declarations["helpers"]!!.value)
+    }
+
+    fun `test a className that cannot be read is marked`() {
+        val configuration = configurationOf("""
+            <?php
+            class AliasController extends AppController {
+                public ${'$'}helpers = array(
+                    'Html' => array('className' => SOME_CONST),
+                    'Form' => array('className' => 'BootstrapForm'),
+                    'Time' => array('format' => 'Y'),
+                );
+            }
+        """, "\\AliasController")
+
+        assertEquals(
+            listOf(Triple("Html", null, true), Triple("Form", "BootstrapForm", false), Triple("Time", null, false)),
+            configuration.loads.map { Triple(it.alias, it.className, it.hasUnreadClassName) }
+        )
+        assertTrue(configuration.declarations.single().isComplete)
+    }
+
+    fun `test with join models in string, dotted and array forms`() {
+        val configuration = configurationOf("""
+            <?php
+            class Movie extends AppModel {
+                public ${'$'}hasAndBelongsToMany = array(
+                    'Tag' => array('with' => 'MoviesTag'),
+                    'Genre' => array('with' => 'TestPlugin.MoviesGenre'),
+                    'Actor' => array('with' => array('MoviesActor' => array('role'))),
+                    'Award' => array('joinTable' => 'movies_awards'),
+                );
+            }
+        """, "\\Movie")
+
+        assertEquals(
+            listOf(
+                "Tag" to "Tag",
+                "MoviesTag" to "MoviesTag",
+                "Genre" to "Genre",
+                "MoviesGenre" to "TestPlugin.MoviesGenre",
+                "Actor" to "Actor",
+                "MoviesActor" to "MoviesActor",
+                "Award" to "Award",
+            ),
+            configuration.loads.map { it.alias to it.loadedName }
+        )
+        assertTrue(configuration.declarations.single().isComplete)
+    }
+
+    fun `test bindModel leaves on this are unioned loads`() {
+        val loads = loadsOf("""
+            <?php
+            class Movie extends AppModel {
+                public function initialize() {
+                    ${'$'}this->bindModel(array(
+                        'hasMany' => array('Review', 'Critic' => array('className' => 'User')),
+                        'belongsTo' => array('Studio'),
+                        'hasAndBelongsToMany' => array('Tag' => array('with' => 'MoviesTag')),
+                        'belongsToMany' => array('Ignored'),
+                    ));
+                    ${'$'}this->Director->bindModel(array('hasMany' => array('NotThis')));
+                }
+            }
+        """, "\\Movie")
+
+        assertEquals(
+            listOf(
+                Triple("Review", null, "hasMany"),
+                Triple("Critic", "User", "hasMany"),
+                Triple("Studio", null, "belongsTo"),
+                Triple("Tag", null, "hasAndBelongsToMany"),
+                Triple("MoviesTag", null, "hasAndBelongsToMany"),
+            ),
+            loads.map { Triple(it.alias, it.className, it.property) }
+        )
+        assertTrue(loads.all {
+            it.kind == MemberKind.ASSOCIATION && it.source == LoadSource.BIND_MODEL && !it.isInitializeLoad
+        })
     }
 }

@@ -4,8 +4,10 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.LoadSource
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberLoad
 import com.daveme.chocolateCakePHP.configuredmemberindex.methodCallSources
+import com.daveme.chocolateCakePHP.configuredmemberindex.propertyArraySources
 import com.daveme.chocolateCakePHP.configuredmemberindex.sourcesWithoutOptions
 import com.daveme.chocolateCakePHP.findParentWithClass
 import com.daveme.chocolateCakePHP.getStaticClassRefOrNull
@@ -53,6 +55,10 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
         }
 
         val field = findParentWithClass(psiElement, Field::class.java) as Field? ?: return PsiElement.EMPTY_ARRAY
+        val configured = propertyArrayTargets(field, literal)
+        if (configured != null) {
+            return configured
+        }
 
         val phpIndex = PhpIndex.getInstance(psiElement.project)
 
@@ -68,6 +74,39 @@ class ControllerComponentsGotoDeclarationHandler : GotoDeclarationHandler {
             else ->
                 PsiElement.EMPTY_ARRAY
         }
+    }
+
+    // The classes the configuring property array entry a literal names loads, resolved against
+    // the declaring class, when the literal is the entry's name or its `className` option.
+    private fun propertyArrayTargets(field: Field, literal: StringLiteralExpression): Array<PsiElement>? {
+        val kind = propertyArraySources[field.name]?.takeIf { it != MemberKind.ASSOCIATION } ?: return null
+        val array = field.defaultValue as? ArrayCreationExpression ?: return null
+        val loadedName = propertyArrayEntryName(array, literal) ?: return null
+        val phpClass = field.containingClass ?: return null
+        return ConfiguredMemberService.memberType(
+            literal.project,
+            listOf(phpClass.fqn),
+            setOf(kind),
+            loadedName.substringAfterLast('.')
+        )?.classes?.takeIf { it.isNotEmpty() }?.toTypedArray()
+    }
+
+    private fun propertyArrayEntryName(array: ArrayCreationExpression, literal: StringLiteralExpression): String? {
+        var entry: PsiElement = literal
+        while (entry.parent != array) {
+            entry = entry.parent ?: return null
+        }
+        if (entry !is ArrayHashElement) {
+            return literal.contents.takeIf { entry.firstChild == literal }
+        }
+        val key = entry.key as? StringLiteralExpression ?: return null
+        if (key == literal) {
+            return key.contents
+        }
+        val isClassNameOption = (entry.value as? ArrayCreationExpression)?.hashElements?.any {
+            (it.key as? StringLiteralExpression)?.contents == "className" && it.value == literal
+        } ?: false
+        return key.contents.takeIf { isClassNameOption }
     }
 
     // The load for a literal that is the first argument of a source method such as
