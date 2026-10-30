@@ -160,9 +160,9 @@ class CakePhpAutoDetector(val project: Project)
 
         return CakeAutoDetectedValues(
             cake2Present = majorVersions?.contains(2) == true,
-            // A constraint with no version, such as a branch, is taken as CakePHP 3+:
+            // An alternative with no version, such as a branch, is taken as CakePHP 3+:
             cake3OrLaterPresent = majorVersions != null &&
-                    (majorVersions.isEmpty() || majorVersions.any { it >= 3 }),
+                    (composerInfo.cakePhpUnversionedAlternative || majorVersions.any { it >= 3 }),
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )

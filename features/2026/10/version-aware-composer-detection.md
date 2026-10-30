@@ -49,7 +49,7 @@ keeps an old CakePHP 2 app on CakePHP 2.
 |---------------------|----------------|-----------------------|
 | not required        | false          | false                 |
 | empty (`dev-master`)| false          | true (today's answer) |
-| contains 2          | true           | if it also has ≥ 3    |
+| contains 2          | true           | if it also has ≥ 3 or an unversioned alternative |
 | only ≥ 3            | false          | true                  |
 
 Majors below 2 count as neither.
@@ -136,3 +136,6 @@ The `.form` file is edited by hand; the layout follows the CakePHP 3+ row.
   longer depends on the CakePHP 3+ flags. `ConfigForm` now loads its CakePHP 2 checkbox from
   `cake2ForceEnabled`, so saving the form doesn't turn a detected CakePHP 2 into a forced one.
 - The full suite is left to CI. Step 3 (the form's auto-detect checkbox) is not done yet.
+- Review fix: `dev-master || ^2.10` gave majors `{2}`, which switched CakePHP 3+ off even though
+  `dev-master` alone counts as CakePHP 3+. `ComposerInfo.cakePhpUnversionedAlternative` now
+  records an alternative with no version, and the detector treats it as CakePHP 3+.

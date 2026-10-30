@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.test
 
 import com.daveme.chocolateCakePHP.ComposerInfo
 import com.daveme.chocolateCakePHP.constraintMajorVersions
+import com.daveme.chocolateCakePHP.hasUnversionedAlternative
 import com.daveme.chocolateCakePHP.parseComposerJson
 import junit.framework.TestCase
 
@@ -266,6 +267,21 @@ class ComposerJsonTest : TestCase() {
     fun `test branch constraint gives no major versions`() {
         val info = parseComposerJson("""{"require": {"cakephp/cakephp": "dev-master"}}""", "\\App")
         assertEquals(emptySet<Int>(), info.cakePhpMajorVersions)
+    }
+
+    fun `test branch alternative alongside a version is reported`() {
+        val info = parseComposerJson("""{"require": {"cakephp/cakephp": "dev-master || ^2.10"}}""", "\\App")
+        assertEquals(setOf(2), info.cakePhpMajorVersions)
+        assertTrue(info.cakePhpUnversionedAlternative)
+    }
+
+    fun `test unversioned alternatives`() {
+        assertTrue(hasUnversionedAlternative("dev-master"))
+        assertTrue(hasUnversionedAlternative("dev-master || ^2.10"))
+        assertTrue(hasUnversionedAlternative("^5.0 || *"))
+        assertTrue(hasUnversionedAlternative(""))
+        assertFalse(hasUnversionedAlternative("^4.4 || ^5.0"))
+        assertFalse(hasUnversionedAlternative("2.10.*"))
     }
 
     fun `test constraint major versions for single alternatives`() {

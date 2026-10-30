@@ -230,6 +230,12 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertTrue(values.cake3OrLaterPresent)
     }
 
+    fun `test branch alternative alongside cakephp 2 detects both`() {
+        val values = detectedFor("dev-master || ^2.10")
+        assertTrue(values.cake2Present)
+        assertTrue(values.cake3OrLaterPresent)
+    }
+
     fun `test cakephp 2 enabled follows detection unless auto-detect is off`() {
         val settings = Settings.getInstance(project)
         assertFalse(settings.cake2Enabled)
