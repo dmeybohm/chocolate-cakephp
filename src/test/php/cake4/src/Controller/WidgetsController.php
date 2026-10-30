@@ -1,0 +1,28 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controller;
+
+/**
+ * An application controller, outside any plugin.
+ */
+class WidgetsController extends AppController
+{
+    public function unprefixed(): void
+    {
+        $this->render('only_in_plugin');
+    }
+
+    public function prefixed(): void
+    {
+        $this->render('Probe.only_in_plugin');
+    }
+
+    public function pluginelement(): void
+    {
+    }
+
+    public function prefixedelement(): void
+    {
+    }
+}

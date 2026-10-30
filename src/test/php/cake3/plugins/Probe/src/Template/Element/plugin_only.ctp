@@ -1,0 +1,1 @@
+plugin:element/plugin_only

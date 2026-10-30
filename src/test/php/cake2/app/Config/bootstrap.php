@@ -1,1 +1,3 @@
 <?php
+
+CakePlugin::load('Probe');

@@ -11,6 +11,7 @@ Configure::write('Exception', array(
 	'renderer' => 'ExceptionRenderer',
 	'log' => false,
 ));
+Configure::write('Routing.prefixes', array('admin'));
 Configure::write('App.encoding', 'UTF-8');
 Configure::write('Security.salt', 'assumption-tests-only-assumption-tests-only');
 Configure::write('Security.cipherSeed', '7685930965746');

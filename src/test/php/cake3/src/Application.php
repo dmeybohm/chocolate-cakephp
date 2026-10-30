@@ -11,6 +11,12 @@ use Cake\Routing\Middleware\RoutingMiddleware;
  */
 class Application extends BaseApplication
 {
+    public function bootstrap()
+    {
+        parent::bootstrap();
+        $this->addPlugin('Probe');
+    }
+
     public function middleware($middlewareQueue)
     {
         return $middlewareQueue->add(new RoutingMiddleware($this));
