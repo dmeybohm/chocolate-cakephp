@@ -1,0 +1,30 @@
+{
+    "name": "chocolate-cakephp/assumptions-cake2",
+    "description": "CakePHP 2 app for the Chocolate CakePHP assumption tests",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "cakephp/cakephp": "2.10.24"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.7"
+    },
+    "config": {
+        "sort-packages": true,
+        "policy": {
+            "advisories": {
+                "ignore-id": {
+                    "PKSA-8jvz-y796-qyx9": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-b14r-zh1d-vdrc": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-ft77-7h5f-p3r6": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-hv96-tqmc-t3j9": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-v5yj-8nmz-sk2q": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-vxgj-bmcq-9b6x": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-wx2k-k564-z67n": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-xz3r-9gp4-4m1z": "Pinned end-of-life release, only run in a test container and never shipped",
+                    "PKSA-z3gr-8qht-p93v": "Pinned end-of-life release, only run in a test container and never shipped"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,42 @@
+# Runs the CakePHP assumption tests against the pinned framework releases.
+# Kept apart from build.yml so framework downloads do not slow the plugin build.
+
+name: CakePHP assumptions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/test/php/**'
+      - 'scripts/run-cakephp-assumption-tests.sh'
+      - 'build.gradle.kts'
+      - '.github/workflows/cake-assumptions.yml'
+  pull_request:
+    paths:
+      - 'src/test/php/**'
+      - 'scripts/run-cakephp-assumption-tests.sh'
+      - 'build.gradle.kts'
+      - '.github/workflows/cake-assumptions.yml'
+
+jobs:
+  check-pins:
+    name: Check framework pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/run-cakephp-assumption-tests.sh check-pins
+
+  test:
+    name: CakePHP ${{ matrix.cake }}
+    needs: check-pins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cake: [2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: src/test/php/cake${{ matrix.cake }}/vendor
+          key: cake-assumptions-${{ matrix.cake }}-${{ hashFiles(format('src/test/php/cake{0}/composer.json', matrix.cake), format('src/test/php/cake{0}/composer.lock', matrix.cake)) }}
+      - run: scripts/run-cakephp-assumption-tests.sh test ${{ matrix.cake }}

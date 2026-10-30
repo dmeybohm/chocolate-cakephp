@@ -1,0 +1,1 @@
+<?php echo $this->element('Other.plugin_only');
