@@ -240,10 +240,39 @@ Commit after each step.
 
 ## Open questions
 
-- Cake 2 on PHP 7.4 emits deprecation notices from a few framework files. The test bootstrap
-  should keep them out of the PHPUnit output, but a test must be able to turn them back on when
-  a deprecation is the behavior under test.
-- `IntegrationTestTrait` exists from Cake 3.7, so Cake 3.10 has it. If its request routing turns
-  out to need more app scaffolding than a `View` instance does, the template tests can build a
-  `View` directly and call `render()`, which is closer to what the plugin's navigation models
-  anyway. Decide on Cake 5 in step 4 and keep the four versions consistent.
+Both questions from planning were settled during implementation.
+
+- Cake 2 deprecation notices did not reach the PHPUnit output. `core.php` sets the error level to
+  `E_ALL & ~E_DEPRECATED`, and a test can change that level when a deprecation is under test.
+- `IntegrationTestTrait` needs only a small `Application` class and a routes file, so all of
+  Cake 3, 4 and 5 test through the real dispatcher. Cake 3 also calls `useHttpServer(true)`.
+
+## Implementation Progress
+
+### Session #1
+
+All six steps are implemented, and the suite passes on all four versions.
+
+Findings from the first run, also recorded in the README catalogue:
+
+- The case in doubt is settled. An app controller's unprefixed `render()` does not reach a plugin's
+  template on any version, and the `Plugin.name` form does.
+- A plugin controller finds its own unprefixed template, and the app override wins, on every version.
+- Cake 2 differs for a missing element. It raises a notice that renders into the page and the rest
+  of the page continues, while Cake 3, 4 and 5 throw `MissingElementException`.
+- Cake 2 has no prefix subdirectory. An `admin` route renders `Widgets/admin_index`.
+
+Changes from the plan:
+
+- The PHP 7.4 image is based on Debian 11, whose packages have moved to `archive.debian.org`, so
+  the Containerfile points apt there.
+- Composer now refuses to resolve packages with security advisories. The Cake 2 and 3 manifests
+  allow the advisories on their locked packages by ID, including the transitive `symfony/yaml` and
+  `laminas-diactoros`. Blocking stays on, so a new advisory stops the next resolve for review.
+- Cake 5.3 and later deprecate plugins without a plugin class, so Cake 5 has `Probe\ProbePlugin`.
+- Cake 2's `CakeTestCase::expectException()` also asserts on the message, so the Cake 2 tests use
+  `setExpectedException()`.
+- The fixtures are separate per version. Sharing one `Probe` plugin was not worth it, because the
+  template extensions and directory layouts differ.
+
+The `cake-assumptions.yml` workflow has not run on GitHub yet.
