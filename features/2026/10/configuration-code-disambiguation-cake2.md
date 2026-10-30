@@ -1053,3 +1053,28 @@ Tests: `posts.ctp` gets both `PostsHtmlHelper` and `AdminPostsHtmlHelper` with a
 `Posts/index.ctp` fixture; an extended `ReportsController` with a `render()` call counts for
 `reports.ctp`; `AppController` and `BackendController` gained a public `isAuthorized()` with no
 template and still do not count.
+
+### Session #10
+
+Two more review findings on the evidence rule from Session #9:
+
+- **Inherited actions.** It checked only a controller's own methods, but CakePHP dispatches
+  inherited public methods too, so a `CatalogController` inheriting `index()` with its own
+  `Catalog/index.ctp` was dropped once another controller extended it. The actions are now every
+  public, non-`_` method in the chain below the framework controller
+  (`TemplateDirStructure.frameworkControllerClass`, `\Controller` for CakePHP 2), still matched
+  against templates under the controller's own name. A public method added to a base class still
+  changes nothing unless such a template exists.
+- **`render()` naming a layout.** Any `$this->render()` counted, but `render('summary', 'print')`
+  renders with `print`, which the index already records separately. Only calls without a layout
+  argument count now.
+
+Known limitation, not addressed: layout analysis is per controller, not per action. An action
+that assigns `$this->layout` before rendering still counts its template as evidence for the
+controller's declared layout, and a leaf controller that declares a layout counts for it even if
+every action overrides it. Fixing that means tracking the layout each action ends up with, across
+declarations, `beforeFilter()`, assignments and `render()` arguments.
+
+Tests: an extended controller whose template is for an inherited `index()`, and an extended
+controller whose only action renders with another layout not counting for its declared one.
+Stub mode: cake2 180 tests, 0 failures; real mode is left to CI.

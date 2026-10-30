@@ -60,6 +60,11 @@ sealed class TemplateDirStructure(val id: Char) {
     open val appControllerClass: String? = null
 
     /**
+     * The framework class controllers extend, whose methods are not actions.
+     */
+    open val frameworkControllerClass: String? = null
+
+    /**
      * The classes that supply the helpers of every view file, whatever renders it.
      */
     abstract fun viewClassReceivers(settings: Settings): List<String>
@@ -90,6 +95,8 @@ sealed class TemplateDirStructure(val id: Char) {
         override val layoutDirectory = "Layouts"
 
         override val appControllerClass = "\\AppController"
+
+        override val frameworkControllerClass = "\\Controller"
     }
 
     // Controller-side helpers, and with them plugins, are not resolved for CakePHP 3 to 5 yet:

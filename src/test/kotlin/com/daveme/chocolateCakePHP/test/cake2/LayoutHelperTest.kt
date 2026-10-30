@@ -25,6 +25,10 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             class AdminPostsHtmlHelper extends HtmlHelper {}
             class ReportsHtmlHelper extends HtmlHelper {}
             class MonthlyReportsHtmlHelper extends HtmlHelper {}
+            class CatalogHtmlHelper extends HtmlHelper {}
+            class SaleCatalogHtmlHelper extends HtmlHelper {}
+            class ExportsHtmlHelper extends HtmlHelper {}
+            class PdfExportsHtmlHelper extends HtmlHelper {}
         """.trimIndent())
         // A public method with no template does not make a base class render pages:
         addController("AppController", "Controller", "public function isAuthorized(\$user) { return true; }")
@@ -90,6 +94,30 @@ class LayoutHelperTest : Cake2BaseTestCase() {
         """)
         addController("MonthlyReportsController", "ReportsController", """
             public ${'$'}helpers = array('Html' => array('className' => 'MonthlyReportsHtml'));
+        """)
+        myFixture.addFileToProject("cake2/app/Controller/CatalogBaseController.php", """
+            <?php
+            abstract class CatalogBaseController extends AppController {
+                public function index() {}
+            }
+        """.trimIndent())
+        addController("CatalogController", "CatalogBaseController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'CatalogHtml'));
+            public ${'$'}layout = 'catalog';
+        """)
+        addController("SaleCatalogController", "CatalogController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'SaleCatalogHtml'));
+        """)
+        myFixture.addFileToProject("cake2/app/View/Catalog/index.ctp", "<?php\n")
+        addController("ExportsController", "AppController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'ExportsHtml'));
+            public ${'$'}layout = 'exports';
+            public function pdf() {
+                ${'$'}this->render('summary', 'print_export');
+            }
+        """)
+        addController("PdfExportsController", "ExportsController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'PdfExportsHtml'));
         """)
         myFixture.addFileToProject("cake2/app/Plugin/Foo/Controller/FooAppController.php", """
             <?php
@@ -168,6 +196,18 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             setOf("\\PostsHtmlHelper", "\\AdminPostsHtmlHelper"),
             htmlTypeIn("cake2/app/View/Layouts/posts.ctp")
         )
+    }
+
+    fun `test an extended controller with a template for an inherited action renders its layout`() {
+        assertEquals(
+            setOf("\\CatalogHtmlHelper", "\\SaleCatalogHtmlHelper"),
+            htmlTypeIn("cake2/app/View/Layouts/catalog.ctp")
+        )
+    }
+
+    fun `test a render call that names another layout does not count for the declared one`() {
+        // ExportsController's only action renders with print_export, so only its subclass renders exports:
+        assertEquals(setOf("\\PdfExportsHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/exports.ctp"))
     }
 
     fun `test an extended controller with a render call of its own renders its layout`() {

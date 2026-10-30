@@ -115,11 +115,12 @@ object RenderingControllers {
                             rendersOwnPages(viewFile, phpClass)
                     )
 
-        // A template for one of its own actions, or a render() call of its own, rather than any
-        // public method, so adding a helper method to a base class changes nothing:
+        // A template under its own name for one of its actions, or an action that renders with
+        // the controller's layout, rather than any public method, so adding a helper method to a
+        // base class changes nothing:
         private fun rendersOwnPages(viewFile: ViewFile, phpClass: PhpClass): Boolean {
-            val actions = phpClass.ownMethods.filter { it.access.isPublic && !it.name.startsWith("_") }
-            if (actions.any { callsRender(it) }) {
+            val actions = actionsOf(viewFile, phpClass)
+            if (actions.any { rendersWithOwnLayout(it) }) {
                 return true
             }
             val controllerName = phpClass.name.removeSuffix("Controller")
@@ -127,9 +128,27 @@ object RenderingControllers {
             return actions.any { viewFileExists(ViewFile(viewFile.structure, "$controllerName/${it.name}", plugin)) }
         }
 
-        private fun callsRender(method: Method): Boolean =
+        // CakePHP dispatches inherited public methods too, but not the framework controller's:
+        private fun actionsOf(viewFile: ViewFile, phpClass: PhpClass): List<Method> {
+            val frameworkController = viewFile.structure.frameworkControllerClass
+            val actions = mutableListOf<Method>()
+            var current: PhpClass? = phpClass
+            var depth = 0
+            while (current != null && depth++ < MAX_CHAIN_LENGTH &&
+                !current.fqn.equals(frameworkController, ignoreCase = true)
+            ) {
+                current.ownMethods.filterTo(actions) { it.access.isPublic && !it.name.startsWith("_") }
+                current = current.superClass
+            }
+            return actions
+        }
+
+        // A render() call that names a layout renders with that one, which is indexed separately:
+        private fun rendersWithOwnLayout(method: Method): Boolean =
             PsiTreeUtil.findChildrenOfType(method, MethodReference::class.java).any {
-                it.name.equals("render", ignoreCase = true) && it.classReference?.textMatches("\$this") == true
+                it.name.equals("render", ignoreCase = true) &&
+                        it.classReference?.textMatches("\$this") == true &&
+                        it.parameters.size < 2
             }
 
         // Controllers whose chain declares the default layout, or none (as when the framework
