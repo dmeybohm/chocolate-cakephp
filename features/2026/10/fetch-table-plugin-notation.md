@@ -47,6 +47,9 @@ Non-goals:
 - `fetchTable()` with no arguments, and callers other than controllers such as commands and cells.
 - `loadModel()` on Cake 3 and 4, `contain()` strings and association `className` values.
 - `getPossibleTableClasses` behavior for its other callers. See "Resolution" below.
+- Falling back to `Cake\ORM\Entity` for a table with no entity class. `tableToEntityClass()` builds
+  the name without checking that the class exists, for app and plugin tables alike. This is an
+  existing gap, and this feature leaves it as it is.
 
 ## Assumption tests
 
@@ -83,8 +86,9 @@ The `fetchTable()` tests apply to Cake 4 and 5 only, because Cake 3 does not hav
 | 16 | `className` wins over a `Plugin.Table` alias | `testClassNameOptionWinsOverAlias` | Keeps the second parameter's priority |
 | 17 | A fully qualified class string as the alias loads that class | `testFullyQualifiedAliasLoadsClass` | Handle `\` in the first parameter |
 | 18 | A plugin table's entity class is the plugin's | `testPluginTableUsesPluginEntity` | `tableToEntityClass()` is right for plugin tables |
-| 19 | A plugin table with no plugin entity uses `Cake\ORM\Entity`, even if the app has one of that name | `testPluginTableDoesNotFallBackToAppEntity` | `->get()` on a table with no entity class gets no app entity type |
+| 19 | A plugin table with no plugin entity uses `Cake\ORM\Entity`, even if the app has one of that name | `testPluginTableDoesNotFallBackToAppEntity` | A plugin table never gets the app's entity type. The fallback to `Cake\ORM\Entity` is a non-goal |
 | 20 | `TableRegistry::get('Probe.Widgets')` on Cake 3 loads the plugin's class | `testStaticRegistryGetLoadsPluginTable` | Static form behaves the same; Cake 3 only |
+| 21 | `.Widgets`, with an empty plugin part, is a generic table and does not load the app's | `testEmptyPluginSegmentDoesNotLoadAppTable` | Decides rule 5 below |
 
 ### Fixtures
 
@@ -121,8 +125,11 @@ the tests above:
 3. Split on the first `.` (11). Without a dot, the namespace is `settings.appNamespace` (2, 3, 4).
 4. With a dot, the namespace is the configured namespace from `findPluginConfigByName()` if there is
    one, and otherwise the plugin part with `/` replaced by `\` (7, 8).
-5. A table part containing another `.` returns `null` (11), so no dot ever reaches a signature.
-6. Replace `/` with `\` in the table part (10), and return
+5. An empty plugin part depends on test 21. If `.Widgets` is a generic table, return `null`. If it
+   loads the app's table, treat it as the bare alias `Widgets`.
+6. An empty table part, or a table part containing another `.` (11), returns `null`, so no dot ever
+   reaches a signature.
+7. Replace `/` with `\` in the table part (10), and return
    `<namespace>\Model\Table\<table>Table`.
 
 A configured namespace wins over the derived one so that an explicit setting is respected, which
@@ -138,8 +145,18 @@ because there it handles field chains such as `$this->Movies->Articles->get()`, 
 
 `getTableClassFromFirstParam` calls `tableClassFqnFromAlias`, and returns no type when it returns
 `null`. `getTableClassFromSecondParam` applies the same function to string values, while `::class`
-values keep using `getStringifiedClassOrNull()`. Entity types need no change if tests 18 and 19 hold,
-apart from a test.
+values keep using `getStringifiedClassOrNull()`. Entity typing does not change.
+
+The resolver is pure, so it still names a class for a table that does not exist: bare `Gadgets`
+(test 3), `Probe.AppOnly` (test 5) and misspelled names. The framework gives a generic table for
+these, if those tests hold. Whether generic `Table` methods still complete alongside the nonexistent
+class is unknown, and the plugin tests below establish it. Do not expand the type provider until
+they have run. If they fail, a separate step defers the existence check to `complete()`, because
+`getType()` can't use the index. That step also has to deal with `tableToEntityClass()`, which gives
+a bad entity class for `\Cake\ORM\Table`.
+
+Known limitation until then: if the app has `App\Model\Entity\Gadget`, then
+`fetchTable('Gadgets')->get(1)` is typed as that entity for a table that does not exist.
 
 ### Go to declaration
 
@@ -184,9 +201,9 @@ Commit after each step.
 
 ## Plugin tests
 
-Plugin fixtures need one addition, a `TestPlugin\Model\Entity\PluginItem`. `RatingsTable` in the
-Cake 5 app and plugin already covers a name that exists in both; check the same for the Cake 3 and 4
-fixtures and add what is missing.
+Plugin fixtures need a `TestPlugin\Model\Entity\PluginItem` and an `App\Model\Entity\Rating`, with no
+plugin `Rating` entity. `RatingsTable` in the Cake 5 app and plugin already covers a name that exists
+in both; check the same for the Cake 3 and 4 fixtures and add what is missing.
 
 Replace the empty tests above with ones that assert the target, using `TestPlugin.PluginItems`, in
 `cake3/GetTableLocatorTest` and cake4 and cake5 `FetchTableTest`.
@@ -203,7 +220,11 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
 - A plugin configured with an explicit `pluginName` different from its namespace's last segment
   resolves through the configured namespace. An unconfigured `Acme/Vendored.Things` resolves through
   the derived namespace.
-- Malformed aliases give no type and don't throw: `TestPlugin.`, `.PluginItems`, `A.B.C`.
+- Malformed aliases give no type and don't throw: `TestPlugin.` and `A.B.C`. `.PluginItems` follows
+  rule 5, so its expected result is set after test 21 runs.
+- Missing tables: `fetchTable('PluginItems')->` and `fetchTable('TestPlugin.Missing')->` offer generic
+  `Table` methods. A failure here triggers the `complete()` step in "Type provider".
+- Entities: `fetchTable('TestPlugin.Ratings')->get(1)` is not typed as `App\Model\Entity\Rating`.
 - Completion: the list holds `Ratings` and `TestPlugin.Ratings`. Choosing the second inserts it in
   full. After typing `TestPlugin.`, the plugin tables are offered and the result has no doubled
   prefix.
