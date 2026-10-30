@@ -43,7 +43,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val referenceType = classReference.type.filterUnknown()
             for (type in referenceType.types) {
-                if (type.isAnyControllerClass()) {
+                if (type.isAnyControllerClass() || type.isAnyCellClass()) {
                     val tableClass = getTableClass(psiElement, settings)
                     if (tableClass != null) {
                         return tableClass

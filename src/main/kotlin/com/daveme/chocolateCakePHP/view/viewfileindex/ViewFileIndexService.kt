@@ -27,7 +27,8 @@ enum class ElementType {
     METHOD_REFERENCE,
     FIELD_ASSIGNMENT,
     VIEW_BUILDER,
-    FIELD
+    FIELD,
+    CELL_RENDER
 }
 
 data class ViewReferenceData(
@@ -41,9 +42,11 @@ data class PsiElementAndPath(
     val path: String,
     val elementPointer: SmartPsiElementPointer<PsiElement>,
     val offset: Int,
+    val elementType: ElementType,
     val pluginPrefix: String? = null
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
+    val cellName: String? by lazy { cellNameFromPath(path) }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
     val psiElement: PsiElement? get() = elementPointer.element
 
@@ -175,8 +178,9 @@ object ViewFileIndexService {
                         ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
                         ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                         ElementType.FIELD -> PsiTreeUtil.getParentOfType(leaf, Field::class.java, false)
+                        ElementType.CELL_RENDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset, data.pluginPrefix)
+                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset, data.elementType, data.pluginPrefix)
                 }
                 true
             },
@@ -209,6 +213,10 @@ fun viewPathPrefixFromSourceFile(
     val controllerPath = controllerPathFromControllerFile(sourceFile)
     if (controllerPath != null) {
         return ViewPathPrefix(controllerPath.viewPath)
+    }
+    val cellPath = cellPathFromCellFile(projectDir, sourceFile)
+    if (cellPath != null) {
+        return ViewPathPrefix(cellPath.viewPath)
     }
 
     val containingDir = sourceFile.parent ?: return null

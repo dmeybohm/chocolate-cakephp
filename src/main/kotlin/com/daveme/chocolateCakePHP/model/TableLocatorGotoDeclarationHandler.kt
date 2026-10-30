@@ -70,11 +70,11 @@ class TableLocatorGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        // For fetchTable(), verify it's called on a Controller
+        // For fetchTable(), verify it's called on a Controller or a Cell
         if (isFetchTable) {
             val classReference = methodReference.classReference ?: return PsiElement.EMPTY_ARRAY
             val type = classReference.type
-            val isControllerContext = type.isProbablyControllerClass()
+            val isControllerContext = type.isProbablyControllerClass() || type.isProbablyCellClass()
             if (!isControllerContext) {
                 return PsiElement.EMPTY_ARRAY
             }

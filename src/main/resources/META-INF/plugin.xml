@@ -40,8 +40,10 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.TableLocatorCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.CustomFinderCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.ContainCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.CellCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.CellGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.model.CustomFinderGotoDeclarationHandler" />
