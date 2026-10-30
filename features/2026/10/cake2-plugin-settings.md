@@ -270,3 +270,7 @@ feature because it depends on plugin identity, which this feature makes a single
   the flag survives an edit. A project whose settings still hold legacy entries shows the
   plugin page as modified when opened, because the form rebuilds the list from typed entries.
   Saving clears this.
+- Step 4 done: `pluginAndThemeTemplatePaths()` probes `templates` and `{srcPath}/Template` only
+  for CakePHP 3+ configs and themes, and `View` only for `CakeTwoPluginConfig`.
+  `cakeTwoPluginName()` matches only CakePHP 2 configs and drops its directory-name fallback,
+  since classification already names them.

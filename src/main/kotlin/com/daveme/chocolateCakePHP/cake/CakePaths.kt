@@ -230,7 +230,7 @@ private fun pluginAndThemeTemplatePaths(
     // todo: optimize the filesystem traversals here, as they are doing extra work
     val resultPaths = settings.pluginAndThemeConfigs.flatMap { pluginOrThemeConfig ->
         val results = mutableListOf<TemplatesDirWithPath>()
-        if (hasCakeThree) {
+        if (hasCakeThree && pluginOrThemeConfig !is CakeTwoPluginConfig) {
             val cakeFourTemplatesPath = "${pluginOrThemeConfig.pluginPath}/templates"
             val cakeFourTemplateDir = findRelativeFile(appRootDir.directory, cakeFourTemplatesPath)
             if (cakeFourTemplateDir != null) {
@@ -278,7 +278,7 @@ private fun pluginAndThemeTemplatePaths(
                         results.add(templatesDir)
                     }
                 }
-                is PluginConfig -> {
+                is CakeTwoPluginConfig -> {
                     val viewPath = "${pluginOrThemeConfig.pluginPath}/View"
                     val cakeTwoPluginTemplateDir = findRelativeFile(appRootDir.directory, viewPath)
                     if (cakeTwoPluginTemplateDir != null) {

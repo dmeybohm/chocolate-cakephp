@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.cake
 
+import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.effectivePluginName
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 
@@ -25,10 +25,8 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
     if (projectDir == null) {
         return null
     }
-    return settings.pluginConfigs.firstOrNull { pluginConfig ->
+    return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().firstOrNull { pluginConfig ->
         val pluginDir = projectDir.findFileByRelativePath(pluginConfig.pluginPath)
         pluginConfig.pluginPath.isNotEmpty() && pluginDir != null && VfsUtil.isAncestor(pluginDir, file, false)
-    }?.let { pluginConfig ->
-        pluginConfig.effectivePluginName().ifEmpty { pluginConfig.pluginPath.trimEnd('/').substringAfterLast('/') }
-    }
+    }?.pluginName
 }
