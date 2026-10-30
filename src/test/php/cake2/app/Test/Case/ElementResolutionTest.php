@@ -29,4 +29,8 @@ class ElementResolutionTest extends ControllerTestCase {
 		$this->assertSame('plugin:element/plugin_only', $this->renderedBy('/widgets/prefixedelement'));
 	}
 
+	public function testPrefixedElementFallsBackToAppElement() {
+		$this->assertSame('app:element/app_only', $this->renderedBy('/widgets/prefixedappelement'));
+	}
+
 }

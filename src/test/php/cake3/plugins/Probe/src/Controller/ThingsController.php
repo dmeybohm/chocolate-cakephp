@@ -33,4 +33,9 @@ class ThingsController extends AppController
     public function appfallback()
     {
     }
+
+    public function showcell()
+    {
+        $this->set('name', $this->getRequest()->getQuery('name'));
+    }
 }

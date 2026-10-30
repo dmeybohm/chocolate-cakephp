@@ -62,4 +62,16 @@ class TemplateResolutionTest extends TestCase
         $this->get('/admin/widgets/index');
         $this->assertResponseEquals('app:Admin/Widgets/index');
     }
+
+    public function testPrefixedRenderFallsBackToAppTemplate(): void
+    {
+        $this->get('/widgets/prefixedfallback');
+        $this->assertResponseEquals('app:Widgets/app_only');
+    }
+
+    public function testAppOverrideWinsForPrefixedRender(): void
+    {
+        $this->get('/widgets/prefixedoverride');
+        $this->assertResponseEquals('override:Widgets/overridden_widget');
+    }
 }

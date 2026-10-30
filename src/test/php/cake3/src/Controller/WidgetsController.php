@@ -24,4 +24,23 @@ class WidgetsController extends AppController
     public function prefixedelement()
     {
     }
+
+    public function showcell()
+    {
+        $this->set('name', $this->getRequest()->getQuery('name'));
+    }
+
+    public function prefixedfallback()
+    {
+        $this->render('Probe.app_only');
+    }
+
+    public function prefixedoverride()
+    {
+        $this->render('Probe.overridden_widget');
+    }
+
+    public function prefixedappelement()
+    {
+    }
 }

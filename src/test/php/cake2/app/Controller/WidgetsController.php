@@ -24,4 +24,15 @@ class WidgetsController extends AppController {
 	public function admin_index() {
 	}
 
+	public function prefixedfallback() {
+		$this->render('Probe.app_only');
+	}
+
+	public function prefixedoverride() {
+		$this->render('Probe.overridden_widget');
+	}
+
+	public function prefixedappelement() {
+	}
+
 }

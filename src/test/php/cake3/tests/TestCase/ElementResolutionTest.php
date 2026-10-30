@@ -44,4 +44,10 @@ class ElementResolutionTest extends TestCase
         $this->get('/widgets/prefixedelement');
         $this->assertResponseEquals('plugin:element/plugin_only');
     }
+
+    public function testPrefixedElementFallsBackToAppElement()
+    {
+        $this->get('/widgets/prefixedappelement');
+        $this->assertResponseEquals('app:element/app_only');
+    }
 }

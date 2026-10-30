@@ -40,4 +40,12 @@ class TemplateResolutionTest extends ControllerTestCase {
 		$this->assertSame('app:Widgets/admin_index', $this->renderedBy('/admin/widgets/index'));
 	}
 
+	public function testPrefixedRenderFallsBackToAppTemplate() {
+		$this->assertSame('app:Widgets/app_only', $this->renderedBy('/widgets/prefixedfallback'));
+	}
+
+	public function testAppOverrideWinsForPrefixedRender() {
+		$this->assertSame('override:Widgets/overridden_widget', $this->renderedBy('/widgets/prefixedoverride'));
+	}
+
 }
