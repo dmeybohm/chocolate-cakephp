@@ -93,3 +93,35 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | A plugin template's unprefixed `cell()` finds the app's cell | `testPluginTemplateRendersAppCellUnprefixed` | Same |
 | A plugin template's `cell()` of another plugin finds that plugin's cell | `testPluginTemplateRendersOtherPluginCell` | Same |
 | Another plugin's cell does not fall back to the calling plugin's template | `testOtherPluginCellDoesNotFallBackToCallingPlugin` | Same |
+
+### `TableLocatorTest`
+
+Relied on by table locator types, navigation and completion. CakePHP 2 has no table locator, so
+"Same" here means 3, 4 and 5. `fetchTable()` does not exist on Cake 3, so its controller and cell
+tests are 4 and 5 only.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A `Plugin.Table` alias loads the plugin's table, with an app table of the same name present | `testPluginAliasLoadsPluginTable` | Same |
+| A bare alias loads the app's table, with a plugin table of the same name present | `testBareAliasLoadsAppTable` | Same |
+| A bare alias of a table only in a plugin is a generic `Table` | `testBareAliasDoesNotReachPluginTable` | Same |
+| A bare `fetchTable()` in a plugin controller loads the app's table | `testPluginControllerBareFetchTableLoadsAppTable` | 4, 5 |
+| A `Plugin.Table` alias missing from the plugin is a generic `Table`, with no fallback to the app | `testPluginAliasDoesNotFallBackToAppTable` | Same |
+| A plugin controller's alias of another plugin loads that plugin's table | `testPluginControllerLoadsOtherPluginTable` | Same |
+| A `Vendor/Plugin.Table` alias maps the slash to a namespace separator | `testVendorPrefixedAliasMapsSlashesToNamespace` | Same |
+| A table in an autoloadable plugin that was never loaded still resolves | `testUnloadedPluginTableResolvesByNamespace` | Same |
+| A lowercase plugin part in an alias | `testLowercasePluginAliasResolution` | 3: resolves, because the alias is camelized first. 4, 5: a generic `Table` |
+| A slash in the table part selects a sub-namespace, with or without a plugin | `testSlashInTableNameSelectsSubNamespace` | Same |
+| An alias splits on its first dot only, so further dots give a generic `Table` | `testAliasSplitsOnFirstDotOnly` | Same |
+| A `Plugin.Table` table has the short alias and the full registry alias | `testPluginAliasSetsShortAlias` | Same |
+| A bare alias and a `Plugin.Table` alias of the same name are cached separately | `testBareAndPluginAliasesAreCachedSeparately` | Same |
+| The `className` option accepts plugin notation and keeps the given alias | `testClassNameOptionAcceptsPluginNotation` | Same |
+| The `className` option accepts a fully qualified class | `testClassNameOptionAcceptsFullyQualifiedClass` | Same |
+| The `className` option wins over a `Plugin.Table` alias | `testClassNameOptionWinsOverAlias` | Same |
+| A fully qualified class as the alias loads that class | `testFullyQualifiedAliasLoadsClass` | Same |
+| A plugin table uses the plugin's entity | `testPluginTableUsesPluginEntity` | Same |
+| A plugin table with no entity uses `Cake\ORM\Entity`, not the app's entity of that name | `testPluginTableDoesNotFallBackToAppEntity` | Same |
+| `TableRegistry::get()` with a `Plugin.Table` alias loads the plugin's table | `testStaticRegistryGetLoadsPluginTable` | 3 |
+| An alias with an empty plugin part, `.Table`, loads the app's table | `testEmptyPluginSegmentLoadsAppTable` | Same |
+| A bare `fetchTable()` in a plugin cell loads the app's table | `testPluginCellBareFetchTableLoadsAppTable` | 4, 5 |
+| A plugin cell's `fetchTable()` of another plugin loads that plugin's table | `testPluginCellLoadsOtherPluginTable` | 4, 5 |

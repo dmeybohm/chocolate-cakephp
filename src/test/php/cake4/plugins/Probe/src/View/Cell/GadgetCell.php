@@ -21,4 +21,9 @@ class GadgetCell extends Cell
     public function overridden(): void
     {
     }
+
+    public function loadTable($alias)
+    {
+        return $this->fetchTable($alias);
+    }
 }

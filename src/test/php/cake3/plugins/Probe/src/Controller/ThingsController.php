@@ -79,4 +79,9 @@ class ThingsController extends AppController
     public function fallbackinner()
     {
     }
+
+    public function loadTable($alias)
+    {
+        return $this->getTableLocator()->get($alias);
+    }
 }

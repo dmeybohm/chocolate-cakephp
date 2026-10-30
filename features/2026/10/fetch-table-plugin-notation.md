@@ -55,8 +55,8 @@ Non-goals:
 
 These run first, because they decide the resolution rules. Per the
 [assumption suite](cakephp-behavior-probes.md), each is written as the assumption the plugin would
-like to make, and a failure says what the framework does instead. The vendor trees are not installed
-in this checkout and none of these have been run, so every expected result below is unverified.
+like to make, and a failure says what the framework does instead. All are implemented and pass. The
+table below records what the suite verified, and Session #2 lists where it differed from the plan.
 
 Add `TableLocatorTest` to `cake3`, `cake4` and `cake5` under `src/test/php`, with the same method
 names on each. Cake 2 has no equivalent. Add a section to the README catalogue, relied on by
@@ -79,7 +79,7 @@ because Cake 3 does not have the method, so test 6 uses `$this->getTableLocator(
 | 6 | `Other.Widgets` from a `Probe` controller loads only from `Other` | `testPluginControllerLoadsOtherPluginTable` | No special case for cross-plugin calls |
 | 7 | `Acme/Vendored.Things` loads `Acme\Vendored\Model\Table\ThingsTable` | `testVendorPrefixedAliasMapsSlashesToNamespace` | The name can derive a namespace |
 | 8 | A table in an autoloadable plugin that was never loaded with `addPlugin()` still resolves | `testUnloadedPluginTableResolvesByNamespace` | The namespace comes from the name, so plugins missing from settings can work |
-| 9 | `probe.Widgets` with the wrong case is a generic table | `testPluginAliasIsCaseSensitive` | Plugin name match stays exact, as in `findPluginConfigByName` |
+| 9 | `probe.Cased` with a lowercase plugin part is a generic table on Cake 4 and 5, but resolves on Cake 3, which camelizes the alias | `testLowercasePluginAliasResolution` | Plugin name match stays exact, as in `findPluginConfigByName`. The Cake 3 case is not modelled |
 | 10 | `Probe.Sub/Nested` and `Sub/Nested` load tables from a `Sub` namespace | `testSlashInTableNameSelectsSubNamespace` | Names map `/` to `\` |
 | 11 | `Probe.Sub.Widgets` splits on the first dot and is a generic table | `testAliasSplitsOnFirstDotOnly` | Further dots produce no type |
 | 12 | `get('Probe.Widgets')` has alias `Widgets` and registry alias `Probe.Widgets` | `testPluginAliasSetsShortAlias` | Confirms the two names are distinct |
@@ -91,7 +91,7 @@ because Cake 3 does not have the method, so test 6 uses `$this->getTableLocator(
 | 18 | A plugin table's entity class is the plugin's | `testPluginTableUsesPluginEntity` | `tableToEntityClass()` is right for plugin tables |
 | 19 | A plugin table with no plugin entity uses `Cake\ORM\Entity`, even if the app has one of that name | `testPluginTableDoesNotFallBackToAppEntity` | A plugin table never gets the app's entity type. The fallback to `Cake\ORM\Entity` is a non-goal |
 | 20 | `TableRegistry::get('Probe.Widgets')` on Cake 3 loads the plugin's class | `testStaticRegistryGetLoadsPluginTable` | Static form behaves the same; Cake 3 only |
-| 21 | `.Widgets`, with an empty plugin part, is a generic table and does not load the app's | `testEmptyPluginSegmentDoesNotLoadAppTable` | Decides rule 5 below |
+| 21 | `.Widgets`, with an empty plugin part, loads the app's table | `testEmptyPluginSegmentLoadsAppTable` | Rule 5 below treats it as a bare alias |
 | 22 | A bare alias inside a plugin cell's `fetchTable()` still means the app's table | `testPluginCellBareFetchTableLoadsAppTable` | Cells follow the same rules as controllers; Cake 4 and 5 only |
 | 23 | `Other.Widgets` inside a `Probe` cell's `fetchTable()` loads only from `Other` | `testPluginCellLoadsOtherPluginTable` | No special case for cross-plugin calls in cells; Cake 4 and 5 only |
 
@@ -99,7 +99,8 @@ because Cake 3 does not have the method, so test 6 uses `$this->getTableLocator(
 
 In each version's app, in that version's layout:
 
-- `Probe\Model\Table`: `WidgetsTable`, `GadgetsTable`, `Sub\NestedTable`
+- `Probe\Model\Table`: `WidgetsTable`, `GadgetsTable`, `CasedTable`, `Sub\NestedTable`. No other test
+  loads `CasedTable`, because PHP ignores case for a class that is already loaded
 - `Probe\Model\Entity\Widget`
 - `Other\Model\Table\WidgetsTable`
 - `App\Model\Table`: `WidgetsTable`, `AppOnlyTable`, `Sub\NestedTable`
@@ -124,16 +125,15 @@ Add one pure function to `cake/CakeModel.kt`:
 fun tableClassFqnFromAlias(settings: Settings, alias: String): String?
 ```
 
-It uses only settings, never the index, so `getType()` can call it. Provisional rules, each tied to
-the tests above:
+It uses only settings, never the index, so `getType()` can call it. The rules, each tied to the tests
+above:
 
 1. Empty or too long: `null`.
 2. Contains `\`: the absolute class name (17).
 3. Split on the first `.` (11). Without a dot, the namespace is `settings.appNamespace` (2, 3, 4).
 4. With a dot, the namespace is the configured namespace from `findPluginConfigByName()` if there is
    one, and otherwise the plugin part with `/` replaced by `\` (7, 8).
-5. An empty plugin part depends on test 21. If `.Widgets` is a generic table, return `null`. If it
-   loads the app's table, treat it as the bare alias `Widgets`.
+5. An empty plugin part is the bare alias, so `.Widgets` means `Widgets` (21).
 6. An empty table part, or a table part containing another `.` (11), returns `null`, so no dot ever
    reaches a signature.
 7. Replace `/` with `\` in the table part (10), and return
@@ -234,8 +234,8 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
   through `$this->getTableLocator()->get()`, because its cells have no `fetchTable()`. The Cake 3
   stub `Cell` (`cake3/vendor/cakephp.php:53`) lacks that method, so it gains `LocatorAwareTrait`, as
   the real class has.
-- Malformed aliases give no type and don't throw: `TestPlugin.` and `A.B.C`. `.PluginItems` follows
-  rule 5, so its expected result is set after test 21 runs.
+- Malformed aliases give no type and don't throw: `TestPlugin.` and `A.B.C`. `.Ratings` follows
+  rule 5 and gives the app's table.
 - Missing tables: `fetchTable('PluginItems')->` and `fetchTable('TestPlugin.Missing')->` offer generic
   `Table` methods. A failure here triggers the `complete()` step in "Type provider".
 - Entities: `fetchTable('TestPlugin.Ratings')->get(1)` is not typed as `App\Model\Entity\Rating`.
@@ -245,12 +245,30 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
 
 ## Open questions
 
-Whether test 8 holds decides how far unconfigured plugins go. If an unloaded plugin's table does not
-resolve at runtime, the derived namespace stays, because the plugin can't tell which plugins are
-loaded, but go to declaration may then offer a class the framework would not load.
+None. Test 8 settled the one question from planning: a table in a plugin that was never loaded still
+resolves, so the derived namespace matches the framework for plugins missing from settings.
 
 ## Implementation Progress
 
 ### Session #1
 
 Plan written, on branch `fetch-table-plugin-notation`. No code or tests have been written yet.
+
+### Session #2
+
+Step 1 is done. `TableLocatorTest` passes on Cake 3, 4 and 5, with results in the README catalogue.
+Steps 2 to 6 have not started.
+
+Two results differed from the plan:
+
+- `.Widgets` loads the app's table on all three versions, because `App::className()` uses the app
+  namespace when the plugin part is empty. Rule 5 treats it as a bare alias, and the test is now
+  `testEmptyPluginSegmentLoadsAppTable`.
+- `probe.Cased` resolves on Cake 3 and is a generic table on Cake 4 and 5. Cake 3's
+  `TableLocator::_getClassName()` runs `Inflector::camelize()` on the alias first. The test is now
+  `testLowercasePluginAliasResolution`, and the plugin does not model this.
+
+The other assumptions held as written, including no fallback from a `Plugin.Table` alias to the app,
+which differs from templates and elements. `CasedTable` was added because PHP matches an
+already-loaded class regardless of case, so reusing `WidgetsTable` would have made the test depend
+on order.
