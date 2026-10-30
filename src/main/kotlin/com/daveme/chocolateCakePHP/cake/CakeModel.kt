@@ -3,8 +3,12 @@ package com.daveme.chocolateCakePHP.cake
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
+import com.daveme.chocolateCakePHP.getStringifiedClassOrNull
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 fun isCakeTwoModelClass(classes: Collection<PhpClass>): Boolean {
     return classes.any { phpClass -> phpClass.superFQN == "\\AppModel" }
@@ -63,4 +67,24 @@ fun tableClassFqnFromAlias(settings: Settings, alias: String): String? {
         else -> settings.findPluginConfigByName(plugin)?.namespace ?: plugin.replace('/', '\\')
     }
     return "${namespace.absoluteClassName()}\\Model\\Table\\${table.replace('/', '\\')}Table"
+}
+
+/**
+ * The class a table locator call loads, or null if its arguments don't name one.
+ */
+fun tableClassFqnFromLocatorCall(settings: Settings, methodReference: MethodReference): String? {
+    val parameters = methodReference.parameters
+    val options = parameters.getOrNull(1) as? ArrayCreationExpression
+    val classNameOption = options?.hashElements
+        ?.firstOrNull { (it.key as? StringLiteralExpression)?.contents == "className" }
+        ?.value
+    val fromOption = when (classNameOption) {
+        is StringLiteralExpression -> tableClassFqnFromAlias(settings, classNameOption.contents)
+        else -> classNameOption?.getStringifiedClassOrNull()
+    }
+    if (fromOption != null && fromOption.length < 255) {
+        return fromOption
+    }
+    val alias = parameters.firstOrNull() as? StringLiteralExpression ?: return null
+    return tableClassFqnFromAlias(settings, alias.contents)
 }

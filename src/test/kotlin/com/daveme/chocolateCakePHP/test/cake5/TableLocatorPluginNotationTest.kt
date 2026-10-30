@@ -2,7 +2,9 @@ package com.daveme.chocolateCakePHP.test.cake5
 
 import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.model.TableLocatorGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+import com.jetbrains.php.lang.psi.elements.PhpClass
 
 class TableLocatorPluginNotationTest : Cake5BaseTestCase() {
 
@@ -205,5 +207,96 @@ class TableLocatorPluginNotationTest : Cake5BaseTestCase() {
         val result = myFixture.lookupElementStrings.orEmpty()
         assertContainsElements(result, "appRatingsMethod")
         assertDoesntContain(result, "pluginRatingsMethod")
+    }
+
+    private fun gotoTargets(call: String): Set<String> {
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class MovieController extends Controller
+        {
+            public function index() {
+                $call;
+            }
+        }
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(TableLocatorGotoDeclarationHandler())
+        assertNotNull(targets)
+        return targets!!.map { (it as PhpClass).fqn }.toSet()
+    }
+
+    fun `test goto declaration from a plugin alias reaches the plugin table`() {
+        assertEquals(
+            setOf("\\TestPlugin\\Model\\Table\\PluginItemsTable"),
+            gotoTargets("\$this->fetchTable('<caret>TestPlugin.PluginItems')")
+        )
+    }
+
+    fun `test goto declaration from a plugin alias excludes the app table of the same name`() {
+        assertEquals(
+            setOf("\\TestPlugin\\Model\\Table\\RatingsTable"),
+            gotoTargets("\$this->fetchTable('<caret>TestPlugin.Ratings')")
+        )
+    }
+
+    fun `test goto declaration from a bare alias excludes the plugin table of the same name`() {
+        assertEquals(
+            setOf("\\App\\Model\\Table\\RatingsTable"),
+            gotoTargets("\$this->fetchTable('<caret>Ratings')")
+        )
+    }
+
+    fun `test goto declaration from a bare alias does not reach a plugin only table`() {
+        assertEmpty(gotoTargets("\$this->fetchTable('<caret>PluginItems')"))
+    }
+
+    fun `test goto declaration from an unknown plugin finds nothing`() {
+        assertEmpty(gotoTargets("\$this->fetchTable('<caret>Unknown.PluginItems')"))
+    }
+
+    fun `test goto declaration from a plugin alias of a missing table finds nothing`() {
+        assertEmpty(gotoTargets("\$this->fetchTable('<caret>TestPlugin.Missing')"))
+    }
+
+    fun `test goto declaration from a getTableLocator get reaches the plugin table`() {
+        assertEquals(
+            setOf("\\TestPlugin\\Model\\Table\\RatingsTable"),
+            gotoTargets("\$this->getTableLocator()->get('<caret>TestPlugin.Ratings')")
+        )
+    }
+
+    fun `test goto declaration from an alias follows the className option`() {
+        assertEquals(
+            setOf("\\TestPlugin\\Model\\Table\\RatingsTable"),
+            gotoTargets("\$this->fetchTable('<caret>Foo', ['className' => 'TestPlugin.Ratings'])")
+        )
+    }
+
+    fun `test goto declaration from an unconfigured vendor plugin reaches its table`() {
+        assertEquals(
+            setOf("\\Acme\\Vendored\\Model\\Table\\ThingsTable"),
+            gotoTargets("\$this->fetchTable('<caret>Acme/Vendored.Things')")
+        )
+    }
+
+    fun `test goto declaration from a plugin cell reaches the plugin table`() {
+        myFixture.configureByFilePathAndText("cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php", """
+        <?php
+        namespace TestPlugin\View\Cell;
+
+        use Cake\View\Cell;
+
+        class WidgetCell extends Cell
+        {
+            public function display() {
+                ${'$'}this->fetchTable('<caret>TestPlugin.Ratings');
+            }
+        }
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(TableLocatorGotoDeclarationHandler())
+        assertEquals(setOf("\\TestPlugin\\Model\\Table\\RatingsTable"), targets!!.map { (it as PhpClass).fqn }.toSet())
     }
 }

@@ -285,3 +285,9 @@ are still to come in step 5.
 - The missing-table tests pass, so nothing was added for `complete()`.
 - A `className` string the resolver rejects, such as `A.B.C`, falls through to the alias, as a
   non-string `className` value already did.
+
+### Session #4
+
+Step 3 is done. `tableClassFqnFromLocatorCall` in `cake/CakeModel.kt` chooses between the `className`
+option and the alias, and both the type provider and `TableLocatorGotoDeclarationHandler` use it.
+Bare names no longer navigate to plugin tables.
