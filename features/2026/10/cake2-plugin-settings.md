@@ -288,3 +288,11 @@ feature because it depends on plugin identity, which this feature makes a single
   `src/Template` or `View`. It returns an `AllViewPaths` with empty lists, and the constructor
   calls `first()` on them. The step 4 layout split makes this easier to reach, since a CakePHP
   3+ config in a CakePHP 2-only project now gets no template paths.
+- Step 5 done, replacing step 3's stopgap dialog: `EditPluginEntryDialog` has a "CakePHP
+  Version" selector at the top of the `.form`, edited by hand with the rows below shifted
+  down. Selecting CakePHP 2 hides the namespace and source path rows. An edited entry keeps its
+  version; a new one defaults from `Settings.pluginPathIsCakeTwo()`. On OK, a CakePHP 2 entry
+  with no name takes the last segment of its path, or shows an error when there is none. The
+  plugin table has a "CakePHP Version" column (`2` or `3+`) as its last column, so the existing
+  column indexes are unchanged. Checked that `instrumentCode` binds the new combo box; the
+  dialog has not been tried in a running IDE.
