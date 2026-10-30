@@ -307,3 +307,19 @@ for controllers and cells together are left for a follow-up.
 
 Tests: six new cases in `CellReferenceIndexTest`: chained and variable `render()` with no
 argument, an unresolved template argument, rendered-only, echoed-only, and echoed-then-rendered.
+
+### Session #6
+
+Merged main after #299, which conflicted in the view file index:
+
+- `ElementType` keeps both main's `FIELD` and this branch's `CELL_RENDER`, and
+  `ViewReferenceData`/`PsiElementAndPath` carry both `elementType` and main's `pluginPrefix`.
+- The view file index version went to 23, past both sides' versions.
+- Cell files count as controllers in the indexer, so they also get main's plugin context and
+  `$layout` handling. Cells don't declare `$layout`, so nothing changes for them.
+- Main's rendering-controller lookup also walks view references, but only for CakePHP 2
+  templates, so `CELL_RENDER` references never reach it.
+
+Main's `pluginPrefix` is a starting point for the plugin-aware keys follow-up.
+
+Full stub suite: 1118 tests passing.

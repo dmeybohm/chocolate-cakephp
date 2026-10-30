@@ -30,6 +30,8 @@ class ViewTest : Cake2BaseTestCase() {
 
         class MovieFormatterHelper extends AppHelper
         {
+            public ${'$'}helpers = array('ArtistFormatter');
+
             public function format(array ${'$'}movies): string {
                 return ${'$'}this-><caret>;
             }

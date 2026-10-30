@@ -103,7 +103,9 @@ class ControllerTest : Cake2BaseTestCase() {
         
         class MovieController extends Controller
         {
-            public function testNestedCake2Model() 
+            public ${'$'}components = array('MovieMetadata');
+
+            public function testNestedCake2Model()
             {
                 ${'$'}this->MovieMetadata-><caret>
             }
