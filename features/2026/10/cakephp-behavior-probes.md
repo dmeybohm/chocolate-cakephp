@@ -23,8 +23,9 @@ plugin's templates when the name is not prefixed with the plugin, and how each v
 
 ## Goals
 
-- One command runs the whole suite against every supported major version from a clean
-  checkout, with no PHP on the host.
+- One command, `scripts/run-cakephp-assumption-tests.sh test`, runs the whole suite against
+  every supported major version from a clean checkout, with no PHP on the host. It builds the
+  images and installs the dependencies it finds missing.
 - Every assumption is one test method with a name that states the behavior, in a class named
   for the plugin area that depends on it, so that a feature log or a code comment can cite it.
 - The suite catches drift: when a pinned framework release moves, a behavior change fails a
@@ -41,14 +42,14 @@ the real-vendor test mode. It asserts what the framework does, not what the plug
 
 No single PHP release runs all four frameworks:
 
-| CakePHP | Pinned | PHP supported |
+| CakePHP | Pinned | PHP constraint in its `composer.json` |
 |---|---|---|
-| 2.10.24 | same as `build.gradle.kts` | 5.3 to 7.4; breaks on 8 |
-| 3.10.5 | same | 5.6 to 7.4 |
-| 4.6.5 | same | 7.4 to 8.4 |
-| 5.4.3 | same | 8.2 to 8.4 |
+| 2.10.24 | same as `build.gradle.kts` | `>=5.3.0,<8.0.0` |
+| 3.10.5 | same | `>=5.6.0,<8.0.0` |
+| 4.6.5 | same | `>=7.4.0,<9` |
+| 5.4.3 | same | `>=8.2` |
 
-The ranges are what each release's `composer.json` declares. So each version runs in a
+Cake 2 and 3 exclude PHP 8 outright, and Cake 5 needs 8.2. So each version runs in a
 container. Two images cover everything: PHP 7.4 for Cake 2 and 3, PHP 8.3 for Cake 4 and 5.
 Podman is the runtime, rootless, so files written by
 `composer install` inside the container are owned by the host user. Docker works as a fallback
@@ -156,9 +157,10 @@ executes every file matching that pattern as a shell test.
 
 - `build` builds the two images, tagged `chocolate-cake-assumptions:php74` and `:php83`.
 - `install [2 3 4 5]` runs `composer install` in each version directory inside its image,
-  with the host Composer cache mounted so repeated installs are quick. `test` does this
-  implicitly when a `vendor/` directory is missing.
-- `test [2 3 4 5] [-- phpunit args]` runs `vendor/bin/phpunit` in each version directory
+  with the host Composer cache mounted so repeated installs are quick.
+- `test [2 3 4 5] [-- phpunit args]` is the one command for a clean checkout. It first runs
+  `build` for any image the runtime does not have and `install` for any version whose
+  `vendor/` directory is missing, then runs `vendor/bin/phpunit` in each version directory
   inside its image, with `src/test/php` mounted read-write at `/suite`, forwarding any
   extra arguments (a `--filter`, `--testdox`). It prints each version's PHPUnit output under a
   heading and exits non-zero if any version fails.
