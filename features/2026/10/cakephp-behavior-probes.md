@@ -79,12 +79,16 @@ and the failure says what the framework does instead.
 
 ### Layout
 
-Everything lives under `dev/cake-assumptions/`, beside the other developer tooling in `dev/`:
+The suite lives under `src/test/php/`, the Gradle place for test sources in a language the
+build has no source set for. Gradle ignores it, and it sits next to `src/test/fixtures`, the
+hand-written stubs these tests keep honest. The runner lives in `scripts/` with the other
+project scripts:
 
 ```
-dev/cake-assumptions/
+scripts/
+  run-cakephp-assumption-tests.sh   build | install | test, per version or all
+src/test/php/
   README.md                 how to run, how to add an assumption, the catalogue (below)
-  run.sh                    build | install | test, per version or all
   images/
     php74/Containerfile     php:7.4-cli + intl + composer
     php83/Containerfile     php:8.3-cli + intl + composer
@@ -141,14 +145,17 @@ cannot drift apart without a reviewer noticing.
 
 ### The runner
 
-`dev/cake-assumptions/run.sh` has three subcommands, each taking an optional list of versions:
+`scripts/run-cakephp-assumption-tests.sh` has three subcommands, each taking an optional list of
+versions. It finds the suite relative to its own location, so it runs from any directory. The
+name deliberately does not end in `-test.sh`, because `scripts/run-all-tests.sh` executes every
+file matching that pattern as a shell test.
 
-- `run.sh build` builds the two images, tagged `chocolate-cake-assumptions:php74` and `:php83`.
-- `run.sh install [2 3 4 5]` runs `composer install` in each version directory inside its image,
+- `build` builds the two images, tagged `chocolate-cake-assumptions:php74` and `:php83`.
+- `install [2 3 4 5]` runs `composer install` in each version directory inside its image,
   with the host Composer cache mounted so repeated installs are quick. `test` does this
   implicitly when a `vendor/` directory is missing.
-- `run.sh test [2 3 4 5] [-- phpunit args]` runs `vendor/bin/phpunit` in each version directory
-  inside its image, with `dev/cake-assumptions` mounted read-write at `/suite`, forwarding any
+- `test [2 3 4 5] [-- phpunit args]` runs `vendor/bin/phpunit` in each version directory
+  inside its image, with `src/test/php` mounted read-write at `/suite`, forwarding any
   extra arguments (a `--filter`, `--testdox`). It prints each version's PHPUnit output under a
   heading and exits non-zero if any version fails.
 
@@ -159,10 +166,11 @@ worth it.
 ### CI
 
 A separate workflow, `cake-assumptions.yml`, runs on pushes and pull requests that touch
-`dev/cake-assumptions/**`, as a four-way version matrix with `fail-fast: false`. Each job builds
-its image, restores `vendor/` from a cache keyed on that version's `composer.lock`, and runs the
-suite. It is kept out of `build.yml` so the plugin build is not slowed by framework downloads,
-and so a failing assumption surfaces on its own PR rather than blocking an unrelated one.
+`src/test/php/**` or `scripts/run-cakephp-assumption-tests.sh`, as a four-way version matrix
+with `fail-fast: false`. Each job builds its image, restores `vendor/` from a cache keyed on
+that version's `composer.lock`, and runs the suite. It is kept out of `build.yml` so the plugin
+build is not slowed by framework downloads, and so a failing assumption surfaces on its own PR
+rather than blocking an unrelated one.
 
 ## First assumptions
 
@@ -205,12 +213,13 @@ touched:
 
 ## Implementation steps
 
-1. Images and runner: the two Containerfiles, `run.sh build`, runtime detection. Verify both
+1. Images and runner: the two Containerfiles, the `build` subcommand of
+   `scripts/run-cakephp-assumption-tests.sh`, runtime detection. Verify both
    images build rootless with Podman.
 2. The four apps with `composer.json`, the PHPUnit range each release declares, the committed
    locks, a `phpunit.xml` and test bootstrap per version, and one `FrameworkVersionTest` per
    version asserting `Configure::version()` matches the pin. This proves each harness boots and
-   gives `run.sh test` its first green run.
+   gives the `test` subcommand its first green run.
 3. The `Probe` plugin fixture and the app-side override directory in each version's layout.
 4. `TemplateResolutionTest` on Cake 5 first, then 4, 3 and 2. Record each version's answers in
    the catalogue as they are learned.
