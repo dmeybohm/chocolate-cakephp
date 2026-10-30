@@ -260,6 +260,13 @@ Findings from the first run, also recorded in the README catalogue:
 - A plugin controller finds its own unprefixed template, and the app override wins, on every version.
 - A plugin controller whose template is missing from the plugin falls back to the app's template
   of the same name, on every version.
+- `Plugin.name` renders and elements fall back to the app the same way, and the app override wins
+  for a prefixed render, on every version.
+- Plugin cells fall back to the app's template on Cake 3, 4 and 5, and the app override wins. An
+  app cell does not reach a plugin's template.
+- Cell class names do not follow the calling file. An unprefixed `cell()` always means the app's
+  cell, even inside the plugin that has a cell of that name. The
+  [plugin-aware view keys](plugin-aware-view-keys.md) plan changed because of this.
 - Cake 2 differs for a missing element. It raises a notice that renders into the page and the rest
   of the page continues, while Cake 3, 4 and 5 throw `MissingElementException`.
 - Cake 2 has no prefix subdirectory. An `admin` route renders `Widgets/admin_index`.

@@ -47,15 +47,17 @@ lookup, at query time rather than in the keys:
   doesn't split.
 - `ViewReferenceData.pluginPrefix` / `PsiElementAndPath.pluginPrefix`: the plugin a reference
   names explicitly, as in `render('Blog.Articles/index')`.
-- `ViewFile(structure, templateKey, plugin)` and `RenderingControllers.resolvesTo`, which keep a
-  reference only when its plugin matches the template's, including the app's override directory
-  for a plugin (`templates/plugin/Blog/...`).
+- `ViewFile(structure, templateKey, plugin)` and `RenderingControllers.resolvesTo`, which decide
+  whether a reference reaches a template, including the app's override directory for a plugin
+  (`templates/plugin/Blog/...`).
 
 ## The framework falls back from a plugin to the app
 
 A plugin controller whose template is missing from the plugin renders the app's template of the
 same name. The [assumption tests](cakephp-behavior-probes.md) record this on all four versions as
-`testPluginControllerFallsBackToAppTemplate`.
+`testPluginControllerFallsBackToAppTemplate`. A `Plugin.name` render does the same, and so does a
+plugin cell on CakePHP 3 to 5 (`testPrefixedRenderFallsBackToAppTemplate`,
+`testPluginCellFallsBackToAppTemplate`).
 
 So a template can be rendered by a class in a different plugin, and whether it is depends on which
 files exist. A reference is kept by this rule, which `resolvesTo` already implements:
@@ -67,6 +69,22 @@ files exist. A reference is kept by this rule, which `resolvesTo` already implem
 | The app | The app | Yes |
 | The app | A plugin | Only if that plugin has no template of its own |
 
+An app cell does not reach a plugin's template (`testAppCellDoesNotReachPluginTemplate`), which the
+second row covers.
+
+### `cell()` names do not follow the calling file
+
+Templates and elements look in the calling file's plugin first. Cell classes do not: an unprefixed
+`cell('Gadget')` always means the app's cell, even inside a template of the plugin that has a
+`GadgetCell` (`testPluginTemplateDoesNotReachOwnPluginCellUnprefixed`,
+`testPluginTemplateRendersAppCellUnprefixed`). `cellClassFqn` already resolves names this way.
+
+So the plugin of a caller-side `cell()` reference is its prefix or the app, never the plugin of the
+file it appears in. The view file index can't express that yet: `ViewFileDataIndexer` parses the
+cell's plugin but leaves `pluginPrefix` unset on `CELL_RENDER` references. Filtering them now would
+go wrong both ways. `cell('Blog.Widget')` in an app template would count as the app's, and
+`cell('Widget')` in a plugin template would count as the plugin's.
+
 ## Plan
 
 1. **Plugin of a CakePHP 3+ file.** Implement `pluginOf` for the CakePHP 3+ structure from the
@@ -77,7 +95,10 @@ files exist. A reference is kept by this rule, which `resolvesTo` already implem
    controllers and cells (`ViewVariableIndexService.forEachContributingSource`, the toggle action,
    `ViewToControllerGotoRelatedProvider`), keep a reference by the rule above, using the
    referencing file's plugin (or its `pluginPrefix`). The plugins do not have to match: a plain
-   match would drop the fallback. Reuse `resolvesTo`, and prefer a shared helper next to `ViewFile` over copying the rule. No index version bump.
+   match would drop the fallback. Reuse `resolvesTo`, and prefer a shared helper next to
+   `ViewFile` over copying the rule. For `CELL_RENDER` references, store the cell's plugin in
+   `pluginPrefix` and treat no prefix as the app, not the calling file's plugin. That is the one
+   change here that needs a view file index version bump.
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
    `cellActionKey`, such as `Blog.Articles:index` and `cell:Blog.Widget:display`, on both the
    indexing side (`ViewVariableASTDataIndexer`, from the source file) and the lookup side (from the
@@ -106,7 +127,11 @@ different variable, plus an app and a plugin cell of the same name. For each pai
 - When the plugin has no template of its own, the app's template lists both classes and offers
   both sets of variables. Adding the plugin's template drops the plugin's class from the app's.
 - "Go to related" and the toggle action list only the matching class.
-- A `Plugin.`-prefixed `render()` from an app controller still links to the plugin template.
+- A `Plugin.`-prefixed `render()` from an app controller still links to the plugin template. When
+  the plugin has no such template, it links to the app's template instead.
+- `cell('Blog.Widget')` in an app template is a usage of the plugin's cell template, and of the
+  app's when the plugin has none. `cell('Widget')` in a plugin template is a usage of the app's
+  cell template, even when the plugin has a template at the same path.
 - An app override template for a plugin (`templates/plugin/Blog/Articles/index.php`) resolves to
   the plugin's controller.
 

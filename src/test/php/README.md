@@ -49,6 +49,8 @@ Relied on by view navigation, the controller action line marker and view file cr
 | A plugin controller's unprefixed `render()` finds the plugin's template | `testPluginControllerRendersUnprefixedTemplateFromPlugin` | Same |
 | A plugin controller's template missing from the plugin falls back to the app's template of the same name | `testPluginControllerFallsBackToAppTemplate` | Same |
 | The app's override directory wins over the plugin's own template | `testAppOverrideWinsOverPluginTemplate` | Same |
+| A `Plugin.name` `render()` missing from the plugin falls back to the app's template | `testPrefixedRenderFallsBackToAppTemplate` | Same |
+| The app's override directory wins for a `Plugin.name` `render()` | `testAppOverrideWinsForPrefixedRender` | Same |
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
@@ -63,3 +65,19 @@ Relied on by element navigation and element related usages.
 | A plugin template falls back to the app's element | `testPluginTemplateFallsBackToAppElement` | Same |
 | An app template's unprefixed element does not reach a plugin | `testAppTemplateDoesNotReachPluginElementUnprefixed` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
 | An app template's `Plugin.name` element finds the plugin's element | `testAppTemplateRendersPrefixedPluginElement` | Same |
+| A `Plugin.name` element missing from the plugin falls back to the app's element | `testPrefixedElementFallsBackToAppElement` | Same |
+
+### `CellTest`
+
+Relied on by cell navigation, the cell action line marker and cell view variables. Cells do not
+exist on CakePHP 2, so "Same" here means 3, 4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A plugin cell's template comes from the plugin | `testPluginCellRendersTemplateFromPlugin` | Same |
+| A plugin cell's template missing from the plugin falls back to the app's | `testPluginCellFallsBackToAppTemplate` | Same |
+| The app's override directory wins over a plugin cell's template | `testAppOverrideWinsOverPluginCellTemplate` | Same |
+| An app cell does not reach a plugin's template | `testAppCellDoesNotReachPluginTemplate` | Same |
+| An app template's unprefixed `cell()` does not reach a plugin's cell | `testAppTemplateDoesNotReachPluginCellUnprefixed` | Same |
+| A plugin template's unprefixed `cell()` does not reach that plugin's own cell | `testPluginTemplateDoesNotReachOwnPluginCellUnprefixed` | Same |
+| A plugin template's unprefixed `cell()` finds the app's cell | `testPluginTemplateRendersAppCellUnprefixed` | Same |
