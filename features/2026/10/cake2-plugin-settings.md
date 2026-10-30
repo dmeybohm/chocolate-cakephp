@@ -247,3 +247,9 @@ feature because it depends on plugin identity, which this feature makes a single
   the existing checkbox now means force enable.
 - Merged `main`, which also brings in `configuration-code-disambiguation-cake2`
   (`cakeTwoPluginName()` in `CakeTwoPlugins.kt`) and `cell-support`.
+- Step 2 done: `PluginConfigSerializationTest` confirms that xmlb dispatches on the `@Tag` of
+  each `elementTypes` class in a polymorphic `@XCollection`. A mixed list round-trips, a
+  CakePHP 2 entry is written without `namespace` or `srcPath`, and entries saved by today's
+  `SettingsState` load as the legacy class. It is a plain `TestCase` rather than part of the
+  heavy `SettingsTest`, and for now it uses stand-in classes. Step 3 switches it to the real
+  ones.
