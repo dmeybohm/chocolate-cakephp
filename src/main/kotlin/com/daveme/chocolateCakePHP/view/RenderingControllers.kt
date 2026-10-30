@@ -102,14 +102,20 @@ object RenderingControllers {
                 it.fqn.isAnyControllerClass() &&
                         (!isDeclaration || nearestLayoutDeclaration(it)?.fqn == phpClass.fqn)
             }
-            return listOf(phpClass) + subclasses
+            return (listOf(phpClass) + subclasses).filter { isRenderingLeaf(it) }
         }
+
+        // A controller others extend, or an abstract one, is a base, not one that renders a layout:
+        private fun isRenderingLeaf(phpClass: PhpClass): Boolean =
+            !phpClass.isAbstract &&
+                    phpIndex.getDirectSubclasses(phpClass.fqn).none { it.fqn.isAnyControllerClass() }
 
         // Controllers whose chain declares the default layout, or none (as when the framework
         // class that declares it is not indexed):
         private fun controllersWithDefaultLayout(viewFile: ViewFile): List<PhpClass> {
             val appController = viewFile.structure.appControllerClass ?: return emptyList()
             return (phpIndex.getClassesByFQN(appController) + phpIndex.getAllSubclasses(appController))
+                .filter { isRenderingLeaf(it) }
                 .filter { controller ->
                     val declaration = nearestLayoutDeclaration(controller) ?: return@filter true
                     val layout = declaration.findOwnFieldByName("layout", false)?.defaultValue

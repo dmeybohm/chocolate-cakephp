@@ -1005,3 +1005,30 @@ Merged `main`, which brought the real CakePHP test mode (#294) and the `__get` f
   the proper fix is planned in `cake2-magic-get-type-dilution`.
 
 Full check: stub 1039 tests, 0 failures; real 1039 tests, 0 failures, 1 skipped.
+
+### Session #8
+
+Review of #299 found the `default` layout gaining `\HtmlHelper` from `AppController`, a base
+class that never renders it: layout references spread down the class hierarchy, and base
+classes with no alias of their own added the convention type to the union.
+
+- **Leaf rule.** When a layout reference spreads across the hierarchy (declarations,
+  assignments, `default`), only non-abstract controllers with no controller subclasses count
+  as rendering it. A class others extend, or an abstract one, is their base; its configuration
+  still reaches them through the class chain. Template and element references are unaffected,
+  since they come from specific action methods.
+- **Why not "has an action".** CakePHP 2 dispatches any public, non-`_` method a controller has
+  beyond `Controller`'s, so a rule following that would change which helpers a layout gets
+  whenever someone added a public method such as `isAuthorized()` to a base class. The leaf rule
+  depends on the hierarchy only.
+- **Cost.** A concrete controller that another extends (`PostsController` under
+  `AdminPostsController`) no longer counts for its layouts; the subclass usually shares its
+  configuration.
+- In real mode, `default.ctp` also gets `\HtmlHelper`: CakePHP's own `CakeErrorController` is a
+  leaf that renders error pages in the default layout (plus the bake skeleton's
+  `PagesController`). The test expects that per mode (`BaseTestCase.usesRealVendor`).
+
+New tests: an abstract base's helpers and layout reaching its subclass, a layout only an abstract
+class names falling back to `AppController`, an extended controller not rendering its own layout,
+and `default.ctp` unioning a controller without the alias. `default.ctp`, its `json` variant,
+`backend.ctp` and the plugin's `default.ctp` lost the base classes' `\HtmlHelper`.

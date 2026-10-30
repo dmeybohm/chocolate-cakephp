@@ -19,6 +19,10 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             class UsersHtmlHelper extends HtmlHelper {}
             class GroupsHtmlHelper extends HtmlHelper {}
             class FooHtmlHelper extends HtmlHelper {}
+            class AdminHtmlHelper extends HtmlHelper {}
+            class OrphanHtmlHelper extends HtmlHelper {}
+            class PostsHtmlHelper extends HtmlHelper {}
+            class AdminPostsHtmlHelper extends HtmlHelper {}
         """.trimIndent())
         addController("AppController", "Controller", "")
         addController("MoviesController", "AppController", """
@@ -47,6 +51,29 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             public ${'$'}helpers = array('Html' => array('className' => 'GroupsHtml'));
             public ${'$'}layout = 'groups';
         """)
+        myFixture.addFileToProject("cake2/app/Controller/AdminBaseController.php", """
+            <?php
+            abstract class AdminBaseController extends AppController {
+                public ${'$'}helpers = array('Html' => array('className' => 'AdminHtml'));
+                public ${'$'}layout = 'admin_area';
+            }
+        """.trimIndent())
+        addController("AccountsController", "AdminBaseController", "public function index() {}")
+        myFixture.addFileToProject("cake2/app/Controller/OrphanBaseController.php", """
+            <?php
+            abstract class OrphanBaseController extends AppController {
+                public ${'$'}helpers = array('Html' => array('className' => 'OrphanHtml'));
+                public ${'$'}layout = 'orphan_area';
+            }
+        """.trimIndent())
+        addController("PostsController", "AppController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'PostsHtml'));
+            public ${'$'}layout = 'posts';
+            public function index() {}
+        """)
+        addController("AdminPostsController", "PostsController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'AdminPostsHtml'));
+        """)
         myFixture.addFileToProject("cake2/app/Plugin/Foo/Controller/FooAppController.php", """
             <?php
             class FooAppController extends AppController {}
@@ -72,6 +99,9 @@ class LayoutHelperTest : Cake2BaseTestCase() {
     private fun addController(name: String, parent: String, body: String) {
         myFixture.addFileToProject("cake2/app/Controller/$name.php", "<?php\nclass $name extends $parent {\n$body\n}\n")
     }
+
+    private fun defaultLayoutHtml(): Set<String> =
+        if (usesRealVendor) setOf("\\BootstrapHtmlHelper", "\\HtmlHelper") else setOf("\\BootstrapHtmlHelper")
 
     private fun htmlTypeIn(path: String): Set<String> {
         val code = "<?php\n\$this->Html;\n"
@@ -104,17 +134,36 @@ class LayoutHelperTest : Cake2BaseTestCase() {
     }
 
     fun `test an inherited layout declaration applies to subclasses that do not redeclare it`() {
-        assertEquals(setOf("\\UsersHtmlHelper", "\\HtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/backend.ctp"))
+        // BackendController is their base, so it does not render the layout itself:
+        assertEquals(setOf("\\UsersHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/backend.ctp"))
     }
 
-    fun `test the default layout unions the controllers that render it`() {
-        // MoviesController, and AppController itself; not ArtistsController, BackendController's
-        // subclasses or the plugin's controllers, which render other layouts:
+    fun `test an abstract base's helpers and layout reach the controllers extending it`() {
+        assertEquals(setOf("\\AdminHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/admin_area.ctp"))
+    }
+
+    fun `test a layout only an abstract class names falls back to AppController`() {
+        assertEquals(setOf("\\HtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/orphan_area.ctp"))
+    }
+
+    fun `test an extended controller does not render its layout itself`() {
+        // PostsController is AdminPostsController's base, so only the subclass's aliases apply:
+        assertEquals(setOf("\\AdminPostsHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/posts.ctp"))
+    }
+
+    fun `test the default layout gets the controllers that render it`() {
+        // MoviesController; not the base classes, nor the controllers that render other layouts.
+        // Real CakePHP's CakeErrorController renders error pages in the default layout too:
+        assertEquals(defaultLayoutHtml(), htmlTypeIn("cake2/app/View/Layouts/default.ctp"))
+    }
+
+    fun `test the default layout unions a controller without the alias`() {
+        addController("PagesController", "AppController", "public function display() {}")
         assertEquals(setOf("\\BootstrapHtmlHelper", "\\HtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/default.ctp"))
     }
 
     fun `test a data view layout maps onto the plain layout`() {
-        assertEquals(setOf("\\BootstrapHtmlHelper", "\\HtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/json/default.ctp"))
+        assertEquals(defaultLayoutHtml(), htmlTypeIn("cake2/app/View/Layouts/json/default.ctp"))
     }
 
     fun `test a layout in another subdirectory falls back to AppController`() {
@@ -127,7 +176,7 @@ class LayoutHelperTest : Cake2BaseTestCase() {
     }
 
     fun `test a plugin's default layout gets the plugin's controllers`() {
-        assertEquals(setOf("\\FooHtmlHelper", "\\HtmlHelper"), htmlTypeIn("cake2/app/Plugin/Foo/View/Layouts/default.ctp"))
+        assertEquals(setOf("\\FooHtmlHelper"), htmlTypeIn("cake2/app/Plugin/Foo/View/Layouts/default.ctp"))
     }
 
     fun `test a plugin prefixed layout gets the app controller that names it`() {
