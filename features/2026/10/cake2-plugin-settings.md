@@ -127,6 +127,18 @@ entry for a CakePHP 2 plugin outside the app directory (root-level `plugins/Foo`
 path) would have been classified CakePHP 3+ and lost its `View` probe. Version-aware detection,
 described next, removes that case rather than a filesystem tie-breaker in the rule.
 
+### Known limitation: legacy CakePHP 2 plugins in mixed mode
+
+With both versions enabled, a legacy entry with no namespace and a path outside the CakePHP 2
+app directory (such as `plugins/Foo`) is classified CakePHP 3+ by rule 4, even if it is a
+CakePHP 2 plugin. Its `View` directory is no longer searched, and it gets no name from its path.
+Saving the plugin settings page persists that type. The user fixes it by selecting CakePHP 2 in
+the plugin dialog; the version column shows which entries to check.
+
+A tie-breaker that looks for `{pluginPath}/View` on disk was considered and rejected. It would
+run on every read of `pluginConfigs` until the user saves the settings page, which many never
+do, and that is permanent code for a rare combination.
+
 ### Merging the deprecated namespace list
 
 `Settings.pluginConfigs` also folds in the deprecated `pluginNamespaces` list, for settings that
@@ -162,8 +174,9 @@ With that:
   "enabled when detected or ticked". `Settings.cake2Enabled` and the existing auto-detection
   tests change accordingly.
 - Mixed mode (both enabled) becomes rare and intentional: composer requires one major version,
-  so both flags on means a forced enable during a migration. Rule 1 covers migration-era
-  CakePHP 2 plugins, which live under the CakePHP 2 app directory.
+  so both flags on means a forced enable during a migration, or a constraint that allows both.
+  Rule 2 covers migration-era CakePHP 2 plugins under the CakePHP 2 app directory. See "Known
+  limitation" for those outside it.
 - Future auto-discovery of `{app}/Plugin/*` and `{root}/plugins/*` has a trustworthy gate:
   CakePHP 2 detected or manually enabled.
 

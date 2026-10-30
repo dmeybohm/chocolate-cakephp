@@ -7,6 +7,10 @@
 ### Added
 - Complete and type-infer variables passed to elements through the `$this->element($name, $data)` data array (array literal, `compact()`, or a variable holding either) from templates, layouts and nested elements, and variables set with `$this->set()` inside view files
 - Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
+- Add a CakePHP version selector to the plugin settings dialog, and a version column to the plugin settings table
+
+### Changed
+- If both CakePHP 2 and CakePHP 3+ are enabled, check the version column in the plugin settings: an existing CakePHP 2 plugin with no namespace outside the CakePHP 2 app directory is treated as CakePHP 3+ until you select CakePHP 2 for it
 
 ## [1.1.0] - 2026-04-09
 
