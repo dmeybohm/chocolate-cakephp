@@ -48,6 +48,16 @@ class ConfiguredPluginTest : Cake2BaseTestCase() {
         assertGotoDeclarationHandlerGoesToFilename(AssetGotoDeclarationHandler(), "shop_style.css")
     }
 
+    fun `test element of a plugin with no template directory goes nowhere`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/artist.ctp", """
+        <?php
+        ${'$'}this->element('<caret>Blog.teaser');
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(ElementGotoDeclarationHandler())
+        assertNotNull(targets)
+        assertEmpty(targets!!)
+    }
+
     fun `test only the cakephp 2 plugin is searched for a View directory`() {
         val settings = Settings.getInstance(project)
         val viewFile = myFixture.findFileInTempDir("cake2/app/View/Movie/artist.ctp")

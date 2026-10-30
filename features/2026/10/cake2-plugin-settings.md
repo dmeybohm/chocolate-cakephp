@@ -282,12 +282,11 @@ feature because it depends on plugin identity, which this feature makes a single
   locations: its element and its asset resolve, and only it is searched for `View`.
   `cake5/ContainCompletionTest` checks that a CakePHP 2 config no longer lets every `Table`
   subclass into contain completion.
-- Found, not fixed (outside this feature): `allViewPathsFromPluginElementPath()` crashes with
-  `NoSuchElementException` from `AllViewPaths.defaultViewPath` when a configured plugin has no
-  template directory, e.g. `$this->element('Blog.teaser')` where `Blog` has no `templates`,
-  `src/Template` or `View`. It returns an `AllViewPaths` with empty lists, and the constructor
-  calls `first()` on them. The step 4 layout split makes this easier to reach, since a CakePHP
-  3+ config in a CakePHP 2-only project now gets no template paths.
+- Found, then fixed: `AllViewPaths` read `defaultViewPaths.first()` when constructed, so
+  `$this->element('Blog.teaser')` threw `NoSuchElementException` when a configured plugin had no
+  template directory, in any CakePHP version. `defaultViewPath` is now read on access, and an
+  empty result goes nowhere. Tests are in `cake2/ConfiguredPluginTest` and
+  `cake5/PluginSupportTest`.
 - Step 5 done, replacing step 3's stopgap dialog: `EditPluginEntryDialog` has a "CakePHP
   Version" selector at the top of the `.form`, edited by hand with the rows below shifted
   down. Selecting CakePHP 2 hides the namespace and source path rows. An edited entry keeps its
@@ -300,7 +299,3 @@ feature because it depends on plugin identity, which this feature makes a single
   "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
   matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Checked in
   the instrumented class; not tried in a running IDE.
-- Added the checkbox left over from `version-aware-composer-detection`: `ConfigForm` has an
-  "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
-  matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Not tried in
-  a running IDE.

@@ -79,8 +79,8 @@ data class AllViewPaths(
     val otherViewPaths: List<ViewPath>,
     val dataViewPaths: List<ViewPath>,
 ) {
-    val defaultViewPath: ViewPath =
-        defaultViewPaths.first()
+    val defaultViewPath: ViewPath
+        get() = defaultViewPaths.first()
 
     val all: Sequence<ViewPath>
         get() = defaultViewPaths.asSequence() +
