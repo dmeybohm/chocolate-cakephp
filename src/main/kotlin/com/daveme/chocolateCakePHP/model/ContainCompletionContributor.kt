@@ -49,7 +49,7 @@ class ContainCompletionContributor : CompletionContributor() {
 
             // Collect allowed namespace prefixes: app + all plugins
             val allowedPrefixes = mutableListOf(settings.appNamespace)
-            settings.pluginConfigs.forEach { allowedPrefixes.add(it.namespace) }
+            settings.cakeThreePluginConfigs.forEach { allowedPrefixes.add(it.namespace) }
 
             tableClasses.forEach { phpClass ->
                 val fqn = phpClass.fqn

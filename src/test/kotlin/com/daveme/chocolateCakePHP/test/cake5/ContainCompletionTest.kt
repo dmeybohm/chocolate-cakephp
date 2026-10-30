@@ -1,5 +1,7 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
+import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
+import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ContainCompletionTest : Cake5BaseTestCase() {
@@ -157,6 +159,41 @@ class ContainCompletionTest : Cake5BaseTestCase() {
         val result = myFixture.lookupElementStrings
         assertNotNull(result)
         assertTrue(result!!.contains("PluginItems"))
+    }
+
+    fun `test cakephp 2 plugin does not widen contain completion`() {
+        myFixture.addFileToProject("cake5/lib/Stray/StrayTable.php", """
+        <?php
+        namespace Vendor\Stray\Model\Table;
+
+        class StrayTable extends \Cake\ORM\Table {}
+        """.trimIndent())
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = state.pluginConfigs +
+            CakeTwoPluginConfig(pluginName = "DebugKit", pluginPath = "app/Plugin/DebugKit")
+        settings.loadState(state)
+
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}articles = ${'$'}this->fetchTable('Articles');
+                ${'$'}articles->find()->contain('<caret>');
+            }
+        }
+        """.trimIndent())
+
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue(result!!.contains("Articles"))
+        assertFalse(result.contains("Stray"))
     }
 
     fun `test contain completion in custom finder method`() {

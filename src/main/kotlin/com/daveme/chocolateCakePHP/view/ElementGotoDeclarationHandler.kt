@@ -59,7 +59,7 @@ class ElementGotoDeclarationHandler : GotoDeclarationHandler {
                     settings,
                     result.resourcePath,
                     result.pluginConfig
-                )
+                ) ?: return PsiElement.EMPTY_ARRAY
             }
             is PluginLookupResult.NoPlugin -> {
                 // No plugin prefix or unrecognized: search all template paths

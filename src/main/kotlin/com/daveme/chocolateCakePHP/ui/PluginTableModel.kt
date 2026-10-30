@@ -62,6 +62,8 @@ class PluginTableModel private constructor(
                 pluginEntries[i].srcPath
             4 ->
                 pluginEntries[i].assetPath
+            5 ->
+                versionLabel(pluginEntries[i])
             else ->
                 throw RuntimeException("Invalid column")
         }
@@ -91,6 +93,11 @@ class PluginTableModel private constructor(
         pluginEntries.add(item!!)
         val size = pluginEntries.size
         fireTableRowsInserted(size - 1, size - 1)
+    }
+
+    fun setRow(idx: Int, item: PluginEntry) {
+        pluginEntries[idx] = item
+        fireTableRowsUpdated(idx, idx)
     }
 
     override fun removeRow(idx: Int) {
@@ -123,6 +130,11 @@ class PluginTableModel private constructor(
             pluginEntry.assetPath
     }
 
+    class VersionColumn : ColumnInfo<PluginEntry, String>("CakePHP Version") {
+        override fun valueOf(pluginEntry: PluginEntry): String =
+            versionLabel(pluginEntry)
+    }
+
     companion object {
         private val myColumns =
             arrayOf(
@@ -131,6 +143,7 @@ class PluginTableModel private constructor(
                 PluginPathColumn(),
                 SourcePathColumn(),
                 AssetsPathColumn(),
+                VersionColumn(),
             )
 
         @JvmStatic
@@ -146,3 +159,6 @@ class PluginTableModel private constructor(
     }
 
 }
+
+private fun versionLabel(pluginEntry: PluginEntry): String =
+    if (pluginEntry.cakeTwo) "2" else "3+"

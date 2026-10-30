@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
-import com.daveme.chocolateCakePHP.PluginConfig
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.model.TableLocatorGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
@@ -105,7 +105,7 @@ class TableLocatorPluginNotationTest : Cake4BaseTestCase() {
 
     private fun configurePlugin(pluginName: String, namespace: String, pluginPath: String) {
         val settings = Settings.getInstance(project)
-        settings.loadState(settings.state.copy(pluginConfigs = listOf(PluginConfig(
+        settings.loadState(settings.state.copy(pluginConfigs = listOf(CakeThreePluginConfig(
             pluginName = pluginName,
             namespace = namespace,
             pluginPath = pluginPath,

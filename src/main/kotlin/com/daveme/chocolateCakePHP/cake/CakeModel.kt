@@ -40,7 +40,7 @@ fun PhpIndex.getPossibleTableClasses(settings: Settings, possibleTableName: Stri
     val possibleAppNamespaceClass = "${settings.appNamespace}\\Model\\Table\\${possibleTableName}Table"
     resultClasses += this.getClassesByFQN(possibleAppNamespaceClass)
 
-    settings.pluginConfigs.forEach { pluginConfig ->
+    settings.cakeThreePluginConfigs.forEach { pluginConfig ->
         resultClasses += this.getClassesByFQN("${pluginConfig.namespace}\\Model\\Table\\${possibleTableName}Table")
     }
     return resultClasses
@@ -92,7 +92,7 @@ fun tableClassFqnFromLocatorCall(settings: Settings, methodReference: MethodRefe
  */
 fun tableAliasesFromClassFqn(settings: Settings, classFqn: String): List<String> {
     val appName = tableNameFromClassFqn(settings.appNamespace, classFqn)
-    val pluginAliases = settings.pluginConfigs.mapNotNull { pluginConfig ->
+    val pluginAliases = settings.cakeThreePluginConfigs.mapNotNull { pluginConfig ->
         val name = tableNameFromClassFqn(pluginConfig.namespace, classFqn) ?: return@mapNotNull null
         "${pluginConfig.namespace.trim('\\').replace('\\', '/')}.${name}"
     }
