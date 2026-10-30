@@ -297,3 +297,10 @@ Bare names no longer navigate to plugin tables.
 Step 4 is done. `tableAliasesFromClassFqn` builds each lookup string, and the contributor matches
 against the whole literal, so choosing after `TestPlugin.` does not double the prefix.
 `completeMethodCallWithParameterFromClasses` had no other callers and is removed.
+
+### Session #6
+
+Steps 5 and 6 are done. `TableLocatorPluginNotationTest` now runs on Cake 3, 4 and 5, with the
+`fetchTable()` calls written as `getTableLocator()->get()` on Cake 3, which also gets `TableRegistry::get()`
+cases. The Cake 3 stub `Cell` gained `LocatorAwareTrait`. The empty plugin tests in cake4 and cake5
+`FetchTableTest` and `cake3/GetTableLocatorTest` are removed, because the new tests assert the target.
