@@ -274,3 +274,17 @@ feature because it depends on plugin identity, which this feature makes a single
   for CakePHP 3+ configs and themes, and `View` only for `CakeTwoPluginConfig`.
   `cakeTwoPluginName()` matches only CakePHP 2 configs and drops its directory-name fallback,
   since classification already names them.
+- Step 6 done ahead of step 5, since it covers behaviour rather than the UI. Classification
+  tests are in `SettingsTest`: a namespace wins over the path, an entry under
+  `cake2AppDirectory` (custom too) is CakePHP 2 and named from its path, rule 3, the fallback
+  to CakePHP 3+, a nameless pathless entry is dropped, and a merge with deprecated namespaces.
+  `cake2/ConfiguredPluginTest` covers a configured CakePHP 2 plugin outside the default
+  locations: its element and its asset resolve, and only it is searched for `View`.
+  `cake5/ContainCompletionTest` checks that a CakePHP 2 config no longer lets every `Table`
+  subclass into contain completion.
+- Found, not fixed (outside this feature): `allViewPathsFromPluginElementPath()` crashes with
+  `NoSuchElementException` from `AllViewPaths.defaultViewPath` when a configured plugin has no
+  template directory, e.g. `$this->element('Blog.teaser')` where `Blog` has no `templates`,
+  `src/Template` or `View`. It returns an `AllViewPaths` with empty lists, and the constructor
+  calls `first()` on them. The step 4 layout split makes this easier to reach, since a CakePHP
+  3+ config in a CakePHP 2-only project now gets no template paths.
