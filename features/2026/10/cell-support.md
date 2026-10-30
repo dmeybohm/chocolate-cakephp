@@ -303,7 +303,7 @@ which affects variables (completion, types, undefined-variable suppression) as w
 lists. The view file index keys plugin templates relative to their own templates directory,
 so `cell/Widget/display` matches both cells' actions before the variable key comes into it.
 Plugin controllers share the same collision through `controllerMethodKey`. Plugin-aware keys
-for controllers and cells together are left for a follow-up.
+for controllers and cells together are left for a follow-up: see [plugin-aware view keys](plugin-aware-view-keys.md).
 
 Tests: six new cases in `CellReferenceIndexTest`: chained and variable `render()` with no
 argument, an unresolved template argument, rendered-only, echoed-only, and echoed-then-rendered.
