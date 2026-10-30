@@ -31,9 +31,27 @@ data class AllTemplatePaths(
     val mainTemplatePaths: List<TemplatesDirWithPath>,
     val pluginAndThemeTemplatePaths: PluginAndThemeTemplatePaths = PluginAndThemeTemplatePaths(),
 ) {
+    init {
+        require(mainTemplatePaths.isNotEmpty()) { "At least one main template path is required" }
+    }
+
     val allPaths: Sequence<TemplatesDirWithPath>
         get() = mainTemplatePaths.asSequence() + pluginAndThemeTemplatePaths.paths.asSequence()
+
+    fun pluginTemplatePaths(pluginConfig: PluginConfig): PluginTemplatePaths? {
+        val paths = pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
+            templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
+        }
+        return if (paths.isEmpty()) null else PluginTemplatePaths(paths)
+    }
 }
+
+/**
+ * The template directories of a single plugin, of which there is at least one.
+ */
+class PluginTemplatePaths internal constructor(
+    val paths: List<TemplatesDirWithPath>,
+)
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
 {

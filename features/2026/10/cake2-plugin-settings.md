@@ -290,6 +290,10 @@ feature because it depends on plugin identity, which this feature makes a single
   other construction site has one, because `allTemplatePathsFromTopSourceDirectory()` returns
   null when there is no main template path. The first attempt read `defaultViewPath` lazily,
   which only moved the failure to whoever read it.
+- The plugin lookups used to build an `AllTemplatePaths` with no main paths to hold one plugin's
+  directories. They now use `PluginTemplatePaths`, from
+  `AllTemplatePaths.pluginTemplatePaths()`, which is null when the plugin has none.
+  `AllTemplatePaths` now requires at least one main path when constructed.
 - Step 5 done, replacing step 3's stopgap dialog: `EditPluginEntryDialog` has a "CakePHP
   Version" selector at the top of the `.form`, edited by hand with the rows below shifted
   down. Selecting CakePHP 2 hides the namespace and source path rows. An edited entry keeps its
