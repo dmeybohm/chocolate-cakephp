@@ -131,16 +131,19 @@ object RenderingControllers {
         // CakePHP dispatches inherited public methods too, but not the framework controller's:
         private fun actionsOf(viewFile: ViewFile, phpClass: PhpClass): List<Method> {
             val frameworkController = viewFile.structure.frameworkControllerClass
-            val actions = mutableListOf<Method>()
+            // A child's method overrides its parent's of the same name, case-insensitively as in PHP:
+            val actions = linkedMapOf<String, Method>()
             var current: PhpClass? = phpClass
             var depth = 0
             while (current != null && depth++ < MAX_CHAIN_LENGTH &&
                 !current.fqn.equals(frameworkController, ignoreCase = true)
             ) {
-                current.ownMethods.filterTo(actions) { it.access.isPublic && !it.name.startsWith("_") }
+                for (method in current.ownMethods) {
+                    actions.putIfAbsent(method.name.lowercase(), method)
+                }
                 current = current.superClass
             }
-            return actions
+            return actions.values.filter { it.access.isPublic && !it.name.startsWith("_") }
         }
 
         // A render() call that names a layout renders with that one, which is indexed separately:

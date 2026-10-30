@@ -1075,6 +1075,13 @@ controller's declared layout, and a leaf controller that declares a layout count
 every action overrides it. Fixing that means tracking the layout each action ends up with, across
 declarations, `beforeFilter()`, assignments and `render()` arguments.
 
-Tests: an extended controller whose template is for an inherited `index()`, and an extended
-controller whose only action renders with another layout not counting for its declared one.
-Stub mode: cake2 180 tests, 0 failures; real mode is left to CI.
+- **Overridden parent actions.** The chain walk kept every class's methods, so a parent's
+  `export()` that calls `render()` without a layout counted for a child whose own `export()`
+  renders with another layout. `actionsOf()` keeps only the nearest method for each name
+  (case-insensitively, as PHP does), then drops non-public and `_` ones, so a child overriding
+  a public action with a protected one removes it too.
+
+Tests: an extended controller whose template is for an inherited `index()`, an extended
+controller whose only action renders with another layout not counting for its declared one, and
+an overridden parent action not counting for the child. Stub mode: cake2 181 tests, 0 failures;
+real mode is left to CI.

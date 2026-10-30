@@ -29,6 +29,8 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             class SaleCatalogHtmlHelper extends HtmlHelper {}
             class ExportsHtmlHelper extends HtmlHelper {}
             class PdfExportsHtmlHelper extends HtmlHelper {}
+            class InvoicesHtmlHelper extends HtmlHelper {}
+            class CreditInvoicesHtmlHelper extends HtmlHelper {}
         """.trimIndent())
         // A public method with no template does not make a base class render pages:
         addController("AppController", "Controller", "public function isAuthorized(\$user) { return true; }")
@@ -119,6 +121,24 @@ class LayoutHelperTest : Cake2BaseTestCase() {
         addController("PdfExportsController", "ExportsController", """
             public ${'$'}helpers = array('Html' => array('className' => 'PdfExportsHtml'));
         """)
+        myFixture.addFileToProject("cake2/app/Controller/ExportBaseController.php", """
+            <?php
+            abstract class ExportBaseController extends AppController {
+                public function export() {
+                    ${'$'}this->render('summary');
+                }
+            }
+        """.trimIndent())
+        addController("InvoicesController", "ExportBaseController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'InvoicesHtml'));
+            public ${'$'}layout = 'invoices';
+            public function export() {
+                ${'$'}this->render('summary', 'print_invoice');
+            }
+        """)
+        addController("CreditInvoicesController", "InvoicesController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'CreditInvoicesHtml'));
+        """)
         myFixture.addFileToProject("cake2/app/Plugin/Foo/Controller/FooAppController.php", """
             <?php
             class FooAppController extends AppController {}
@@ -208,6 +228,11 @@ class LayoutHelperTest : Cake2BaseTestCase() {
     fun `test a render call that names another layout does not count for the declared one`() {
         // ExportsController's only action renders with print_export, so only its subclass renders exports:
         assertEquals(setOf("\\PdfExportsHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/exports.ctp"))
+    }
+
+    fun `test an overridden parent action is not evidence for the child`() {
+        // InvoicesController's export() overrides the parent's and renders with print_invoice:
+        assertEquals(setOf("\\CreditInvoicesHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/invoices.ctp"))
     }
 
     fun `test an extended controller with a render call of its own renders its layout`() {
