@@ -4,6 +4,9 @@ import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.model.TableLocatorGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupManager
+import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
 class TableLocatorPluginNotationTest : Cake5BaseTestCase() {
@@ -298,5 +301,85 @@ class TableLocatorPluginNotationTest : Cake5BaseTestCase() {
         """.trimIndent())
         val targets = gotoDeclarationHandlerTargets(TableLocatorGotoDeclarationHandler())
         assertEquals(setOf("\\TestPlugin\\Model\\Table\\RatingsTable"), targets!!.map { (it as PhpClass).fqn }.toSet())
+    }
+
+    private fun aliasCompletions(call: String): List<String> =
+        completionsInController("\$table = $call;")
+
+    private fun chooseCompletion(lookupString: String) {
+        val lookup = LookupManager.getActiveLookup(myFixture.editor) as LookupImpl
+        lookup.currentItem = myFixture.lookupElements!!.first { it.lookupString == lookupString }
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+    }
+
+    fun `test completion offers app tables bare and plugin tables prefixed`() {
+        val result = aliasCompletions("\$this->fetchTable('<caret>')")
+        assertContainsElements(result, "Ratings", "TestPlugin.Ratings", "TestPlugin.PluginItems")
+        assertDoesntContain(result, "PluginItems")
+    }
+
+    fun `test completion uses a slash for a table in a sub namespace`() {
+        val result = aliasCompletions("\$this->fetchTable('<caret>')")
+        assertContainsElements(result, "TestPlugin.Sub/Nested")
+        assertDoesntContain(result, "Nested")
+    }
+
+    fun `test completion leaves out tables in unconfigured namespaces`() {
+        val result = aliasCompletions("\$this->fetchTable('<caret>')")
+        assertDoesntContain(result, "Things", "Acme/Vendored.Things")
+    }
+
+    fun `test completion uses the configured plugin name`() {
+        val settings = Settings.getInstance(project)
+        settings.loadState(settings.state.copy(pluginConfigs = listOf(PluginConfig(
+            pluginName = "Renamed",
+            namespace = "\\TestPlugin",
+            pluginPath = "vendor/test/test_plugin",
+        ))))
+        val result = aliasCompletions("\$this->fetchTable('<caret>')")
+        assertContainsElements(result, "Renamed.Ratings")
+        assertDoesntContain(result, "TestPlugin.Ratings")
+    }
+
+    fun `test completion after a plugin prefix offers only that plugins tables`() {
+        val result = aliasCompletions("\$this->fetchTable('TestPlugin.<caret>')")
+        assertContainsElements(result, "TestPlugin.Ratings", "TestPlugin.PluginItems")
+        assertDoesntContain(result, "Ratings")
+    }
+
+    fun `test choosing a plugin table inserts the full alias`() {
+        aliasCompletions("\$this->fetchTable('<caret>')")
+        chooseCompletion("TestPlugin.Ratings")
+        assertTrue(myFixture.editor.document.text, myFixture.editor.document.text.contains("fetchTable('TestPlugin.Ratings');"))
+    }
+
+    fun `test choosing after a plugin prefix does not double the prefix`() {
+        aliasCompletions("\$this->fetchTable('TestPlugin.<caret>')")
+        chooseCompletion("TestPlugin.Ratings")
+        assertTrue(myFixture.editor.document.text, myFixture.editor.document.text.contains("fetchTable('TestPlugin.Ratings');"))
+    }
+
+    fun `test choosing with double quotes keeps the quotes`() {
+        aliasCompletions("\$this->fetchTable(\"TestPlugin.<caret>\")")
+        chooseCompletion("TestPlugin.Ratings")
+        assertTrue(myFixture.editor.document.text, myFixture.editor.document.text.contains("fetchTable(\"TestPlugin.Ratings\");"))
+    }
+
+    fun `test completion in a plugin cell offers plugin aliases`() {
+        myFixture.configureByFilePathAndText("cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php", """
+        <?php
+        namespace TestPlugin\View\Cell;
+
+        use Cake\View\Cell;
+
+        class WidgetCell extends Cell
+        {
+            public function display() {
+                ${'$'}this->fetchTable('<caret>');
+            }
+        }
+        """.trimIndent())
+        myFixture.completeBasic()
+        assertContainsElements(myFixture.lookupElementStrings.orEmpty(), "Ratings", "TestPlugin.PluginItems")
     }
 }

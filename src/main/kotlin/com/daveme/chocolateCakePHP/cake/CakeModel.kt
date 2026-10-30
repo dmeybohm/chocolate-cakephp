@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
+import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.daveme.chocolateCakePHP.getStringifiedClassOrNull
 import com.jetbrains.php.PhpIndex
@@ -87,4 +88,29 @@ fun tableClassFqnFromLocatorCall(settings: Settings, methodReference: MethodRefe
     }
     val alias = parameters.firstOrNull() as? StringLiteralExpression ?: return null
     return tableClassFqnFromAlias(settings, alias.contents)
+}
+
+/**
+ * The table locator aliases that load a table class: its name in the app namespace, and its
+ * `Plugin.Table` name in each configured plugin namespace.
+ */
+fun tableAliasesFromClassFqn(settings: Settings, classFqn: String): List<String> {
+    val namespaces = listOf(null to settings.appNamespace) +
+        settings.pluginConfigs.map { it.effectivePluginName() to it.namespace }
+    return namespaces.mapNotNull { (plugin, namespace) ->
+        val name = tableNameFromClassFqn(namespace, classFqn) ?: return@mapNotNull null
+        if (plugin == null) name else "${plugin}.${name}"
+    }
+}
+
+private fun tableNameFromClassFqn(namespace: String, classFqn: String): String? {
+    val prefix = "${namespace.absoluteClassName()}\\Model\\Table\\"
+    if (!classFqn.startsWith(prefix, ignoreCase = true) || !classFqn.endsWith("Table")) {
+        return null
+    }
+    val name = classFqn.substring(prefix.length).removeSuffix("Table")
+    if (name.isEmpty()) {
+        return null
+    }
+    return name.replace('\\', '/')
 }

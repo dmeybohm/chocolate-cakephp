@@ -291,3 +291,9 @@ are still to come in step 5.
 Step 3 is done. `tableClassFqnFromLocatorCall` in `cake/CakeModel.kt` chooses between the `className`
 option and the alias, and both the type provider and `TableLocatorGotoDeclarationHandler` use it.
 Bare names no longer navigate to plugin tables.
+
+### Session #5
+
+Step 4 is done. `tableAliasesFromClassFqn` builds each lookup string, and the contributor matches
+against the whole literal, so choosing after `TestPlugin.` does not double the prefix.
+`completeMethodCallWithParameterFromClasses` had no other callers and is removed.
