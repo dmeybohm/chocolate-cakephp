@@ -70,7 +70,29 @@ files exist. A reference is kept by this rule, which `resolvesTo` already implem
 | The app | A plugin | Only if that plugin has no template of its own |
 
 An app cell does not reach a plugin's template (`testAppCellDoesNotReachPluginTemplate`), which the
-second row covers.
+second row covers. So does a reference that names a different plugin: `render('Other.x')` from
+`Blog` finds `Other`'s template, then the app's, and never `Blog`'s, on all four versions
+(`testRenderOfOtherPluginDoesNotFallBackToCallingPlugin`). Elements and cells behave the same.
+
+### Unprefixed elements follow the rendering class
+
+An unprefixed element resolves against the plugin of the controller doing the rendering, not the
+plugin the including template lives in. All three cases hold on all four versions:
+
+| Rendering controller | Template containing `element('shared')` | Element rendered | Test |
+|---|---|---|---|
+| Plugin `Blog` | The app's, by fallback | `Blog`'s | `testElementInFallbackTemplateResolvesInControllerPlugin` |
+| The app | `Blog`'s, by `render('Blog.x')` | The app's | `testElementInPrefixedTemplateResolvesInControllerPlugin` |
+| Plugin `Blog` | `Other`'s, by `render('Other.x')` | `Blog`'s | `testElementInOtherPluginTemplateResolvesInControllerPlugin` |
+
+So the rule above can't be checked one hop at a time when a walk passes through an including file.
+An unprefixed reference from a template or element has no plugin of its own until the walk reaches
+the class. A prefixed reference can still be checked at its hop.
+
+`RenderingControllers` has this problem today, from reading the code and not from a reproduced
+failure. It checks `reference.pluginPrefix ?: including.plugin` at each hop, on CakePHP 2 only, so a
+`Blog` controller rendering an app template by fallback is not found as rendering `Blog`'s element
+from that template, and is found as rendering the app's element it does not use.
 
 ### `cell()` names do not follow the calling file
 
@@ -98,7 +120,11 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    match would drop the fallback. Reuse `resolvesTo`, and prefer a shared helper next to
    `ViewFile` over copying the rule. For `CELL_RENDER` references, store the cell's plugin in
    `pluginPrefix` and treat no prefix as the app, not the calling file's plugin. That is the one
-   change here that needs a view file index version bump.
+   change here that needs a view file index version bump. When the walk in
+   `forEachContributingSource` passes through an including file, carry its unprefixed references
+   along and check them against the plugin of the class it reaches, as
+   [above](#unprefixed-elements-follow-the-rendering-class) requires. Move `RenderingControllers`
+   to the same helper.
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
    `cellActionKey`, such as `Blog.Articles:index` and `cell:Blog.Widget:display`, on both the
    indexing side (`ViewVariableASTDataIndexer`, from the source file) and the lookup side (from the
@@ -134,5 +160,9 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   cell template, even when the plugin has a template at the same path.
 - An app override template for a plugin (`templates/plugin/Blog/Articles/index.php`) resolves to
   the plugin's controller.
+- A `render('Other.x')` from a plugin controller links to `Other`'s template or the app's, and
+  never to the calling plugin's.
+- An element in an app template that a plugin controller renders by fallback gets the plugin
+  controller's variables through the plugin's element, not through the app's element of that name.
 
 ## Implementation Progress

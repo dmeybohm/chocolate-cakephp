@@ -51,6 +51,10 @@ Relied on by view navigation, the controller action line marker and view file cr
 | The app's override directory wins over the plugin's own template | `testAppOverrideWinsOverPluginTemplate` | Same |
 | A `Plugin.name` `render()` missing from the plugin falls back to the app's template | `testPrefixedRenderFallsBackToAppTemplate` | Same |
 | The app's override directory wins for a `Plugin.name` `render()` | `testAppOverrideWinsForPrefixedRender` | Same |
+| A plugin controller's `render()` of another plugin finds that plugin's template | `testPluginControllerRendersOtherPluginTemplate` | Same |
+| A `render()` of another plugin falls back to the app's template | `testRenderOfOtherPluginFallsBackToAppTemplate` | Same |
+| A `render()` of another plugin does not fall back to the calling plugin | `testRenderOfOtherPluginDoesNotFallBackToCallingPlugin` | Same |
+| The app's override directory wins for a `render()` of another plugin | `testAppOverrideWinsForRenderOfOtherPlugin` | Same |
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
@@ -66,6 +70,12 @@ Relied on by element navigation and element related usages.
 | An app template's unprefixed element does not reach a plugin | `testAppTemplateDoesNotReachPluginElementUnprefixed` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
 | An app template's `Plugin.name` element finds the plugin's element | `testAppTemplateRendersPrefixedPluginElement` | Same |
 | A `Plugin.name` element missing from the plugin falls back to the app's element | `testPrefixedElementFallsBackToAppElement` | Same |
+| A plugin template's element of another plugin finds that plugin's element | `testPluginTemplateRendersOtherPluginElement` | Same |
+| An element of another plugin falls back to the app's element | `testOtherPluginElementFallsBackToAppElement` | Same |
+| An element of another plugin does not fall back to the calling plugin | `testOtherPluginElementDoesNotFallBackToCallingPlugin` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
+| An unprefixed element in an app template rendered by a plugin controller is the plugin's | `testElementInFallbackTemplateResolvesInControllerPlugin` | Same |
+| An unprefixed element in a plugin template rendered by an app controller is the app's | `testElementInPrefixedTemplateResolvesInControllerPlugin` | Same |
+| An unprefixed element in another plugin's template is the controller plugin's | `testElementInOtherPluginTemplateResolvesInControllerPlugin` | Same |
 
 ### `CellTest`
 
@@ -81,3 +91,5 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | An app template's unprefixed `cell()` does not reach a plugin's cell | `testAppTemplateDoesNotReachPluginCellUnprefixed` | Same |
 | A plugin template's unprefixed `cell()` does not reach that plugin's own cell | `testPluginTemplateDoesNotReachOwnPluginCellUnprefixed` | Same |
 | A plugin template's unprefixed `cell()` finds the app's cell | `testPluginTemplateRendersAppCellUnprefixed` | Same |
+| A plugin template's `cell()` of another plugin finds that plugin's cell | `testPluginTemplateRendersOtherPluginCell` | Same |
+| Another plugin's cell does not fall back to the calling plugin's template | `testOtherPluginCellDoesNotFallBackToCallingPlugin` | Same |

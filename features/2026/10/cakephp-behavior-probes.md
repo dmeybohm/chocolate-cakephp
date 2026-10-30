@@ -267,6 +267,10 @@ Findings from the first run, also recorded in the README catalogue:
 - Cell class names do not follow the calling file. An unprefixed `cell()` always means the app's
   cell, even inside the plugin that has a cell of that name. The
   [plugin-aware view keys](plugin-aware-view-keys.md) plan changed because of this.
+- A reference naming a different plugin finds that plugin's file, then the app's, and never the
+  calling plugin's, for templates, elements and cells.
+- An unprefixed element resolves against the rendering controller's plugin, not the plugin the
+  including template lives in.
 - Cake 2 differs for a missing element. It raises a notice that renders into the page and the rest
   of the page continues, while Cake 3, 4 and 5 throw `MissingElementException`.
 - Cake 2 has no prefix subdirectory. An `admin` route renders `Widgets/admin_index`.
@@ -281,6 +285,8 @@ Changes from the plan:
 - Cake 5.3 and later deprecate plugins without a plugin class, so Cake 5 has `Probe\ProbePlugin`.
 - Cake 2's `CakeTestCase::expectException()` also asserts on the message, so the Cake 2 tests use
   `setExpectedException()`.
+- A second fixture plugin, `Other`, covers references that cross between plugins. The CI cache key
+  also hashes `composer.json`, so a new autoload namespace can't restore a stale `vendor/`.
 - The fixtures are separate per version. Sharing one `Probe` plugin was not worth it, because the
   template extensions and directory layouts differ.
 
