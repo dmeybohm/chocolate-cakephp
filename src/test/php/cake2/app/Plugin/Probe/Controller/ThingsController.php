@@ -23,4 +23,7 @@ class ThingsController extends ProbeAppController {
 	public function appelement() {
 	}
 
+	public function appfallback() {
+	}
+
 }

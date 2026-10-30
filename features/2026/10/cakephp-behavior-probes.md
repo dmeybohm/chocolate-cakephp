@@ -258,6 +258,8 @@ Findings from the first run, also recorded in the README catalogue:
 - The case in doubt is settled. An app controller's unprefixed `render()` does not reach a plugin's
   template on any version, and the `Plugin.name` form does.
 - A plugin controller finds its own unprefixed template, and the app override wins, on every version.
+- A plugin controller whose template is missing from the plugin falls back to the app's template
+  of the same name, on every version.
 - Cake 2 differs for a missing element. It raises a notice that renders into the page and the rest
   of the page continues, while Cake 3, 4 and 5 throw `MissingElementException`.
 - Cake 2 has no prefix subdirectory. An `admin` route renders `Widgets/admin_index`.

@@ -30,4 +30,8 @@ class ThingsController extends AppController
     public function appelement(): void
     {
     }
+
+    public function appfallback(): void
+    {
+    }
 }

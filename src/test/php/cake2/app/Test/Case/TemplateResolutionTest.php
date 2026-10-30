@@ -19,6 +19,10 @@ class TemplateResolutionTest extends ControllerTestCase {
 		$this->assertSame('plugin:Things/other', $this->renderedBy('/probe/things/other'));
 	}
 
+	public function testPluginControllerFallsBackToAppTemplate() {
+		$this->assertSame('app:Things/appfallback', $this->renderedBy('/probe/things/appfallback'));
+	}
+
 	public function testAppOverrideWinsOverPluginTemplate() {
 		$this->assertSame('override:Things/overridden', $this->renderedBy('/probe/things/overridden'));
 	}

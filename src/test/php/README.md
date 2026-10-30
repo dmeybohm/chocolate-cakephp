@@ -47,6 +47,7 @@ Relied on by view navigation, the controller action line marker and view file cr
 |---|---|---|
 | A plugin controller's implicit template comes from the plugin | `testPluginControllerRendersImplicitTemplateFromPlugin` | Same |
 | A plugin controller's unprefixed `render()` finds the plugin's template | `testPluginControllerRendersUnprefixedTemplateFromPlugin` | Same |
+| A plugin controller's template missing from the plugin falls back to the app's template of the same name | `testPluginControllerFallsBackToAppTemplate` | Same |
 | The app's override directory wins over the plugin's own template | `testAppOverrideWinsOverPluginTemplate` | Same |
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
