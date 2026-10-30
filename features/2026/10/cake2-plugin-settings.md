@@ -120,13 +120,12 @@ name is the plugin name under CakePHP 2's loading rules. An entry with a blank n
 path is dropped, since it identifies nothing. New CakePHP 2 entries get a name in the dialog,
 so the derivation only ever runs on legacy entries.
 
-Rule 2 only fires for CakePHP 2 projects where composer detection does not also enable CakePHP
-3+. Today detection sets the CakePHP 3+ flag whenever `cakephp/cakephp` appears in `require`,
-with no version check, so a CakePHP 2 app that lists `cakephp/cakephp` 2.x counts as CakePHP 3+
-and only rule 1 applies there. In such a project a legacy entry for a CakePHP 2 plugin outside
-the app directory (root-level `plugins/Foo`, or a vendor path) would be classified CakePHP 3+
-and lose its `View` probe. The fix for that is version-aware detection, described next, rather
-than a filesystem tie-breaker in the rule.
+Rule 3 only fires for CakePHP 2 projects where detection does not also enable CakePHP 3+.
+Before version-aware detection, any `cakephp/cakephp` entry in `require` enabled CakePHP 3+, so
+a CakePHP 2 app that lists `cakephp/cakephp` 2.x was left with rules 1 and 2. There, a legacy
+entry for a CakePHP 2 plugin outside the app directory (root-level `plugins/Foo`, or a vendor
+path) would have been classified CakePHP 3+ and lost its `View` probe. Version-aware detection,
+described next, removes that case rather than a filesystem tie-breaker in the rule.
 
 ### Merging the deprecated namespace list
 
@@ -145,7 +144,8 @@ CakePHP 3+ plugins.
 
 ### Prerequisite: version-aware composer detection
 
-Shipped first, as its own branch, because it changes what the version toggles mean for existing
+Shipped as `version-aware-composer-detection` (PR #298), except the `ConfigForm` auto-detect
+checkbox; see that feature's log. Shipped first, as its own branch, because it changes what the version toggles mean for existing
 users.
 
 The composer scanner already yields key/value pairs, so the constraint for `cakephp/cakephp` is
@@ -237,3 +237,13 @@ feature because it depends on plugin identity, which this feature makes a single
 - Is auto-discovery of default-location plugins enough that the settings UI only needs to cover
   plugins in non-default locations (`App::build(array('Plugin' => ...))`)? Deferred until the
   model and detection are in place.
+
+## Implementation Progress
+
+### Session #1
+
+- Step 1 shipped separately as `version-aware-composer-detection` (PR #298). Not done there:
+  the "Auto-detect CakePHP 2" checkbox in `ConfigForm`. `cake2AutoDetect` defaults to on, and
+  the existing checkbox now means force enable.
+- Merged `main`, which also brings in `configuration-code-disambiguation-cake2`
+  (`cakeTwoPluginName()` in `CakeTwoPlugins.kt`) and `cell-support`.
