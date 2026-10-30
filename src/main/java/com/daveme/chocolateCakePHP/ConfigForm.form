@@ -47,9 +47,15 @@
                 </constraints>
                 <properties/>
               </component>
+              <component id="7c2e5" class="javax.swing.JLabel" binding="cake3DetectedLabel">
+                <constraints>
+                  <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+              </component>
               <vspacer id="2c32">
                 <constraints>
-                  <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+                  <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
                     <minimum-size width="-1" height="32"/>
                     <preferred-size width="-1" height="32"/>
                     <maximum-size width="-1" height="32"/>
@@ -251,9 +257,15 @@
                   <text value="Force enable CakePHP 2 for this project"/>
                 </properties>
               </component>
+              <component id="7c2e6" class="javax.swing.JLabel" binding="cake2DetectedLabel">
+                <constraints>
+                  <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+              </component>
               <vspacer id="2ea18">
                 <constraints>
-                  <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+                  <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
                     <minimum-size width="-1" height="32"/>
                     <preferred-size width="-1" height="32"/>
                     <maximum-size width="-1" height="32"/>

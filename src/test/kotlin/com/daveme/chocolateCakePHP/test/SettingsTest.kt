@@ -255,6 +255,22 @@ class SettingsTest() : HeavyPlatformTestCase() {
         settings.loadState(Settings.getDefaults(project).state.copy())
     }
 
+    fun `test detected values do not depend on the enable flags`() {
+        val settings = Settings.getInstance(project)
+        assertFalse(settings.cake2Detected)
+        assertFalse(settings.cake3Detected)
+
+        val noAutoDetect = Settings.getDefaults(project).state.copy()
+        noAutoDetect.cake2AutoDetect = false
+        noAutoDetect.cake3Enabled = false
+        settings.loadState(noAutoDetect)
+        detectedFor("^2.10 || ^3.0")
+        assertTrue(settings.cake2Detected)
+        assertTrue(settings.cake3Detected)
+        assertFalse(settings.cake2Enabled)
+        assertFalse(settings.cake3Enabled)
+    }
+
     fun `test cakephp 2 force enable works without composer json`() {
         val settings = Settings.getInstance(project)
         val forced = Settings.getDefaults(project).state.copy()

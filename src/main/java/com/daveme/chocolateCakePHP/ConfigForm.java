@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.util.indexing.FileBasedIndex;
@@ -34,6 +35,8 @@ class ConfigForm implements SearchableConfigurable {
     private JPanel cake2Panel;
     private JLabel cakeThreePlusTitle;
     private JLabel cakeTwoTitle;
+    private JLabel cake3DetectedLabel;
+    private JLabel cake2DetectedLabel;
 
     public ConfigForm(Project project) {
         this.project = project;
@@ -42,16 +45,23 @@ class ConfigForm implements SearchableConfigurable {
     private void loadSettingsToUI(@NotNull Settings settings) {
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
         enableAutoDetectCake3CheckBox.setSelected(settings.getCake3AutoDetect());
+        showDetected(cake3DetectedLabel, settings.getCake3Detected());
         updateCake3SettingsVisibility();
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
         enableAutoDetectCake2CheckBox.setSelected(settings.getCake2AutoDetect());
+        showDetected(cake2DetectedLabel, settings.getCake2Detected());
         enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
+    }
+
+    private static void showDetected(JLabel label, boolean detected) {
+        label.setText(detected ? "Detected: yes" : "Detected: no");
+        label.setIcon(detected ? AllIcons.General.InspectionsOK : AllIcons.General.Error);
     }
 
     private void applyToSettings(@NotNull Settings settings) {

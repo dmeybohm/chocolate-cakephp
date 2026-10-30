@@ -319,3 +319,6 @@ feature because it depends on plugin identity, which this feature makes a single
   "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
   matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Checked in
   the instrumented class; not tried in a running IDE.
+- `ConfigForm` shows "Detected: yes" or "Detected: no", with a platform icon, next to each
+  auto-detect checkbox. Icons rather than emoji, so rendering does not depend on system fonts. It reports what composer.json says whether or not auto-detect is on. Not tried in a
+  running IDE.

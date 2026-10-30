@@ -287,10 +287,12 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     val cake2Enabled get() = cake2ForceEnabled ||
             (state.cake2AutoDetect && getAutoDetectedValues().cake2Present)
     val cake2AutoDetect get() = state.cake2AutoDetect
+    val cake2Detected get() = getAutoDetectedValues().cake2Present
     val cake2ForceEnabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3AutoDetect get() = state.cake3Enabled
+    val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 
     private fun getAutoDetectedValues(): CakeAutoDetectedValues =
