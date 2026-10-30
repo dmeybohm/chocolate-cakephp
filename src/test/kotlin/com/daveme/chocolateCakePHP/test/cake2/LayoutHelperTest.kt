@@ -23,8 +23,11 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             class OrphanHtmlHelper extends HtmlHelper {}
             class PostsHtmlHelper extends HtmlHelper {}
             class AdminPostsHtmlHelper extends HtmlHelper {}
+            class ReportsHtmlHelper extends HtmlHelper {}
+            class MonthlyReportsHtmlHelper extends HtmlHelper {}
         """.trimIndent())
-        addController("AppController", "Controller", "")
+        // A public method with no template does not make a base class render pages:
+        addController("AppController", "Controller", "public function isAuthorized(\$user) { return true; }")
         addController("MoviesController", "AppController", """
             public ${'$'}helpers = array('Html' => array('className' => 'BootstrapHtml'));
             public function index() {}
@@ -43,7 +46,10 @@ class LayoutHelperTest : Cake2BaseTestCase() {
             public ${'$'}helpers = array('Html' => array('className' => 'ArtistHtml'));
             public ${'$'}layout = 'artists';
         """)
-        addController("BackendController", "AppController", "public \$layout = 'backend';")
+        addController("BackendController", "AppController", """
+            public ${'$'}layout = 'backend';
+            public function isAuthorized(${'$'}user) { return true; }
+        """)
         addController("UsersController", "BackendController", """
             public ${'$'}helpers = array('Html' => array('className' => 'UsersHtml'));
         """)
@@ -73,6 +79,17 @@ class LayoutHelperTest : Cake2BaseTestCase() {
         """)
         addController("AdminPostsController", "PostsController", """
             public ${'$'}helpers = array('Html' => array('className' => 'AdminPostsHtml'));
+        """)
+        myFixture.addFileToProject("cake2/app/View/Posts/index.ctp", "<?php\n")
+        addController("ReportsController", "AppController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'ReportsHtml'));
+            public ${'$'}layout = 'reports';
+            public function export() {
+                ${'$'}this->render('summary');
+            }
+        """)
+        addController("MonthlyReportsController", "ReportsController", """
+            public ${'$'}helpers = array('Html' => array('className' => 'MonthlyReportsHtml'));
         """)
         myFixture.addFileToProject("cake2/app/Plugin/Foo/Controller/FooAppController.php", """
             <?php
@@ -146,9 +163,18 @@ class LayoutHelperTest : Cake2BaseTestCase() {
         assertEquals(setOf("\\HtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/orphan_area.ctp"))
     }
 
-    fun `test an extended controller does not render its layout itself`() {
-        // PostsController is AdminPostsController's base, so only the subclass's aliases apply:
-        assertEquals(setOf("\\AdminPostsHtmlHelper"), htmlTypeIn("cake2/app/View/Layouts/posts.ctp"))
+    fun `test an extended controller with a template of its own renders its layout`() {
+        assertEquals(
+            setOf("\\PostsHtmlHelper", "\\AdminPostsHtmlHelper"),
+            htmlTypeIn("cake2/app/View/Layouts/posts.ctp")
+        )
+    }
+
+    fun `test an extended controller with a render call of its own renders its layout`() {
+        assertEquals(
+            setOf("\\ReportsHtmlHelper", "\\MonthlyReportsHtmlHelper"),
+            htmlTypeIn("cake2/app/View/Layouts/reports.ctp")
+        )
     }
 
     fun `test the default layout gets the controllers that render it`() {

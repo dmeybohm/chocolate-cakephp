@@ -1023,7 +1023,7 @@ classes with no alias of their own added the convention type to the union.
   depends on the hierarchy only.
 - **Cost.** A concrete controller that another extends (`PostsController` under
   `AdminPostsController`) no longer counts for its layouts; the subclass usually shares its
-  configuration.
+  configuration. Review flagged this too; see Session #9.
 - In real mode, `default.ctp` also gets `\HtmlHelper`: CakePHP's own `CakeErrorController` is a
   leaf that renders error pages in the default layout (plus the bake skeleton's
   `PagesController`). The test expects that per mode (`BaseTestCase.usesRealVendor`).
@@ -1032,3 +1032,24 @@ New tests: an abstract base's helpers and layout reaching its subclass, a layout
 class names falling back to `AppController`, an extended controller not rendering its own layout,
 and `default.ctp` unioning a controller without the alias. `default.ctp`, its `json` variant,
 `backend.ctp` and the plugin's `default.ctp` lost the base classes' `\HtmlHelper`.
+
+### Session #9
+
+Review of the leaf rule: `PostsController` has a public `index()` and renders `posts.ctp`, but
+the rule dropped it because `AdminPostsController` extends it.
+
+- A controller with subclasses now still counts when it shows evidence of rendering pages
+  itself: one of its own public, non-`_` methods has an existing template under its own name
+  (`{Controller}/{action}`, in its plugin), or one of its own methods calls `$this->render()`.
+- That keeps the reason for the leaf rule: a public method alone, such as `isAuthorized()` on
+  `AppController`, changes nothing, since no `View/App/is_authorized.ctp` exists. A base class
+  only starts counting when a template for one of its actions appears, or it renders
+  explicitly, which is a real change in what it renders.
+- An action with no template of its own (JSON-only, redirect-only) on an extended controller
+  does not count, which matches that it renders no layout.
+- `viewFileExists()` replaces `pluginHasViewFile()`, so both checks use the same lookup.
+
+Tests: `posts.ctp` gets both `PostsHtmlHelper` and `AdminPostsHtmlHelper` with a
+`Posts/index.ctp` fixture; an extended `ReportsController` with a `render()` call counts for
+`reports.ctp`; `AppController` and `BackendController` gained a public `isAuthorized()` with no
+template and still do not count.
