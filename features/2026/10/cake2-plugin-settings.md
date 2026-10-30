@@ -300,3 +300,7 @@ feature because it depends on plugin identity, which this feature makes a single
   "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
   matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Checked in
   the instrumented class; not tried in a running IDE.
+- Added the checkbox left over from `version-aware-composer-detection`: `ConfigForm` has an
+  "Auto-detect CakePHP 2" box, and the existing box is relabelled "Force enable CakePHP 2",
+  matching the CakePHP 3+ pair. The CakePHP 2 panel shows when either is selected. Not tried in
+  a running IDE.
