@@ -44,7 +44,7 @@ Non-goals:
 
 - Cake 2. `ClassRegistry::init()` and `loadModel()` take a different path, and the table locator
   code is gated on `cake3Enabled`.
-- `fetchTable()` with no arguments, and callers other than controllers such as commands and cells.
+- `fetchTable()` with no arguments, and callers other than controllers and cells, such as commands.
 - `loadModel()` on Cake 3 and 4, `contain()` strings and association `className` values.
 - `getPossibleTableClasses` behavior for its other callers. See "Resolution" below.
 - Falling back to `Cake\ORM\Entity` for a table with no entity class. `tableToEntityClass()` builds
@@ -89,6 +89,8 @@ The `fetchTable()` tests apply to Cake 4 and 5 only, because Cake 3 does not hav
 | 19 | A plugin table with no plugin entity uses `Cake\ORM\Entity`, even if the app has one of that name | `testPluginTableDoesNotFallBackToAppEntity` | A plugin table never gets the app's entity type. The fallback to `Cake\ORM\Entity` is a non-goal |
 | 20 | `TableRegistry::get('Probe.Widgets')` on Cake 3 loads the plugin's class | `testStaticRegistryGetLoadsPluginTable` | Static form behaves the same; Cake 3 only |
 | 21 | `.Widgets`, with an empty plugin part, is a generic table and does not load the app's | `testEmptyPluginSegmentDoesNotLoadAppTable` | Decides rule 5 below |
+| 22 | A bare alias inside a plugin cell's `fetchTable()` still means the app's table | `testPluginCellBareFetchTableLoadsAppTable` | Cells follow the same rules as controllers; Cake 4 and 5 only |
+| 23 | `Other.Widgets` inside a `Probe` cell's `fetchTable()` loads only from `Other` | `testPluginCellLoadsOtherPluginTable` | No special case for cross-plugin calls in cells; Cake 4 and 5 only |
 
 ### Fixtures
 
@@ -220,6 +222,11 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
 - A plugin configured with an explicit `pluginName` different from its namespace's last segment
   resolves through the configured namespace. An unconfigured `Acme/Vendored.Things` resolves through
   the derived namespace.
+- Cells: in `CellFetchTableTest` on Cake 5 and `CellTest` on Cake 4, cells share the table locator
+  code, so cover it from both an app cell and a plugin cell under `TestPlugin\View\Cell`.
+  `TestPlugin.PluginItems` gives the plugin's type and navigates to it, bare `Ratings` gives only
+  the app's, and completion offers `TestPlugin.PluginItems`. On Cake 3, cover the same cases
+  through `$this->getTableLocator()->get()`, because its cells have no `fetchTable()`.
 - Malformed aliases give no type and don't throw: `TestPlugin.` and `A.B.C`. `.PluginItems` follows
   rule 5, so its expected result is set after test 21 runs.
 - Missing tables: `fetchTable('PluginItems')->` and `fetchTable('TestPlugin.Missing')->` offer generic
