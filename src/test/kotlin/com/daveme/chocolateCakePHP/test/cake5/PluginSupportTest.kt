@@ -71,6 +71,30 @@ class PluginSupportTest : Cake5BaseTestCase() {
         assertEmpty(targets!!)
     }
 
+    fun `test render of a plugin with no template directory goes nowhere`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(
+            CakeThreePluginConfig(pluginName = "NoTemplates", pluginPath = "plugins/NoTemplates")
+        )
+        settings.loadState(state)
+
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends AppController
+        {
+            public function artist() {
+                ${'$'}this->render('<caret>NoTemplates.TestController/index');
+            }
+        }
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(TemplateGotoDeclarationHandler())
+        assertNotNull(targets)
+        assertEmpty(targets!!)
+    }
+
     // ========== Asset Navigation Tests ==========
 
     fun `test can go to plugin css assets`() {

@@ -282,11 +282,14 @@ feature because it depends on plugin identity, which this feature makes a single
   locations: its element and its asset resolve, and only it is searched for `View`.
   `cake5/ContainCompletionTest` checks that a CakePHP 2 config no longer lets every `Table`
   subclass into contain completion.
-- Found, then fixed: `AllViewPaths` read `defaultViewPaths.first()` when constructed, so
-  `$this->element('Blog.teaser')` threw `NoSuchElementException` when a configured plugin had no
-  template directory, in any CakePHP version. `defaultViewPath` is now read on access, and an
-  empty result goes nowhere. Tests are in `cake2/ConfiguredPluginTest` and
-  `cake5/PluginSupportTest`.
+- Found, then fixed: `$this->element('Blog.teaser')` and `$this->render('Blog.foo')` threw
+  `NoSuchElementException` when a configured plugin had no template directory, in any CakePHP
+  version. `allViewPathsFromPluginTemplate()` and `allViewPathsFromPluginElementPath()` built an
+  `AllViewPaths` with no default, which it cannot represent. They now return null, and the goto
+  handlers find nothing. `AllViewPaths` still requires a default path when constructed. Every
+  other construction site has one, because `allTemplatePathsFromTopSourceDirectory()` returns
+  null when there is no main template path. The first attempt read `defaultViewPath` lazily,
+  which only moved the failure to whoever read it.
 - Step 5 done, replacing step 3's stopgap dialog: `EditPluginEntryDialog` has a "CakePHP
   Version" selector at the top of the `.form`, edited by hand with the rows below shifted
   down. Selecting CakePHP 2 hides the namespace and source path rows. An edited entry keeps its

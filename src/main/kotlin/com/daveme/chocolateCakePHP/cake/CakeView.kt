@@ -79,8 +79,8 @@ data class AllViewPaths(
     val otherViewPaths: List<ViewPath>,
     val dataViewPaths: List<ViewPath>,
 ) {
-    val defaultViewPath: ViewPath
-        get() = defaultViewPaths.first()
+    val defaultViewPath: ViewPath =
+        defaultViewPaths.first()
 
     val all: Sequence<ViewPath>
         get() = defaultViewPaths.asSequence() +
@@ -267,25 +267,21 @@ fun allViewPathsFromController(
  * @param settings Plugin settings
  * @param actionNames The action names (template paths) to resolve
  * @param pluginConfig The plugin configuration to filter to
- * @return AllViewPaths containing only paths from the specified plugin
+ * @return AllViewPaths containing only paths from the specified plugin, or null if it has no template paths
  */
 fun allViewPathsFromPluginTemplate(
     allTemplatePaths: AllTemplatePaths,
     settings: Settings,
     actionNames: ActionNames,
     pluginConfig: PluginConfig,
-): AllViewPaths {
+): AllViewPaths? {
     // Filter template paths to only include those from the specified plugin
     val pluginTemplatePaths = allTemplatePaths.pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
         templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
     }
 
     if (pluginTemplatePaths.isEmpty()) {
-        return AllViewPaths(
-            defaultViewPaths = listOf(),
-            otherViewPaths = listOf(),
-            dataViewPaths = listOf()
-        )
+        return null
     }
 
     // Use empty controller path since plugin templates use absolute paths
@@ -350,25 +346,21 @@ fun allViewPathsFromElementPath(
  * @param settings Plugin settings
  * @param elementPath The element path (without plugin prefix)
  * @param pluginConfig The plugin configuration to filter to
- * @return AllViewPaths containing only paths from the specified plugin
+ * @return AllViewPaths containing only paths from the specified plugin, or null if it has no template paths
  */
 fun allViewPathsFromPluginElementPath(
     allTemplatePaths: AllTemplatePaths,
     settings: Settings,
     elementPath: String,
     pluginConfig: PluginConfig,
-): AllViewPaths {
+): AllViewPaths? {
     // Filter template paths to only include those from the specified plugin
     val pluginTemplatePaths = allTemplatePaths.pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
         templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
     }
 
     if (pluginTemplatePaths.isEmpty()) {
-        return AllViewPaths(
-            defaultViewPaths = listOf(),
-            otherViewPaths = listOf(),
-            dataViewPaths = listOf()
-        )
+        return null
     }
 
     // Create a filtered AllTemplatePaths with only the plugin's template paths
