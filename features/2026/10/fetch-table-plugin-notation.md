@@ -63,8 +63,11 @@ names on each. Cake 2 has no equivalent. Add a section to the README catalogue, 
 `TableLocatorTypeProvider`, `TableLocatorGotoDeclarationHandler` and
 `TableLocatorCompletionContributor`.
 
-Each test calls the real locator and asserts on `get_class()`, `getAlias()` or `getRegistryAlias()`.
-The `fetchTable()` tests apply to Cake 4 and 5 only, because Cake 3 does not have the method.
+Each test asserts on `get_class()`, `getAlias()` or `getRegistryAlias()`. Most call the real locator
+directly. Tests 4, 6, 22 and 23 are about the caller, so a direct locator call can't establish them:
+they call a method on `Probe\Controller\ThingsController` or `Probe\View\Cell\GadgetCell`, and that
+method makes the call from inside the class. The `fetchTable()` tests apply to Cake 4 and 5 only,
+because Cake 3 does not have the method, so test 6 uses `$this->getTableLocator()->get()` on Cake 3.
 
 | # | Assumption | Test method | What the plugin does with it |
 |---|---|---|---|
@@ -103,6 +106,8 @@ In each version's app, in that version's layout:
 - `App\Model\Entity\Gadget`, for test 19
 - `Acme\Vendored`, a plugin at `plugins/Acme/Vendored`, loaded as `Acme/Vendored`, with `ThingsTable`
 - `Unloaded`, autoloaded by `composer.json` and never added, with `ThingsTable`
+- A method on the existing `ThingsController`, and on the existing `GadgetCell` on Cake 4 and 5, that
+  loads the alias it is given
 
 Each class has a distinct name in its namespace, so the assertion on `get_class()` is enough, and
 none needs a database table. Locators need a connection to attach, so each `tests/bootstrap.php`
@@ -226,7 +231,9 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
   code, so cover it from both an app cell and a plugin cell under `TestPlugin\View\Cell`.
   `TestPlugin.PluginItems` gives the plugin's type and navigates to it, bare `Ratings` gives only
   the app's, and completion offers `TestPlugin.PluginItems`. On Cake 3, cover the same cases
-  through `$this->getTableLocator()->get()`, because its cells have no `fetchTable()`.
+  through `$this->getTableLocator()->get()`, because its cells have no `fetchTable()`. The Cake 3
+  stub `Cell` (`cake3/vendor/cakephp.php:53`) lacks that method, so it gains `LocatorAwareTrait`, as
+  the real class has.
 - Malformed aliases give no type and don't throw: `TestPlugin.` and `A.B.C`. `.PluginItems` follows
   rule 5, so its expected result is set after test 21 runs.
 - Missing tables: `fetchTable('PluginItems')->` and `fetchTable('TestPlugin.Missing')->` offer generic
