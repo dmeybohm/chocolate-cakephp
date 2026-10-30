@@ -2,8 +2,6 @@ package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
-import com.daveme.chocolateCakePHP.effectivePluginName
-import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.daveme.chocolateCakePHP.getStringifiedClassOrNull
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
@@ -63,10 +61,7 @@ fun tableClassFqnFromAlias(settings: Settings, alias: String): String? {
     if (table.isEmpty() || table.contains('.')) {
         return null
     }
-    val namespace = when {
-        plugin.isEmpty() -> settings.appNamespace
-        else -> settings.findPluginConfigByName(plugin)?.namespace ?: plugin.replace('/', '\\')
-    }
+    val namespace = if (plugin.isEmpty()) settings.appNamespace else plugin.replace('/', '\\')
     return "${namespace.absoluteClassName()}\\Model\\Table\\${table.replace('/', '\\')}Table"
 }
 
@@ -92,15 +87,16 @@ fun tableClassFqnFromLocatorCall(settings: Settings, methodReference: MethodRefe
 
 /**
  * The table locator aliases that load a table class: its name in the app namespace, and its
- * `Plugin.Table` name in each configured plugin namespace.
+ * `Plugin.Table` name in each configured plugin namespace. CakePHP reads the plugin part as a
+ * namespace, so it comes from the namespace and not from the configured plugin name.
  */
 fun tableAliasesFromClassFqn(settings: Settings, classFqn: String): List<String> {
-    val namespaces = listOf(null to settings.appNamespace) +
-        settings.pluginConfigs.map { it.effectivePluginName() to it.namespace }
-    return namespaces.mapNotNull { (plugin, namespace) ->
-        val name = tableNameFromClassFqn(namespace, classFqn) ?: return@mapNotNull null
-        if (plugin == null) name else "${plugin}.${name}"
+    val appName = tableNameFromClassFqn(settings.appNamespace, classFqn)
+    val pluginAliases = settings.pluginConfigs.mapNotNull { pluginConfig ->
+        val name = tableNameFromClassFqn(pluginConfig.namespace, classFqn) ?: return@mapNotNull null
+        "${pluginConfig.namespace.trim('\\').replace('\\', '/')}.${name}"
     }
+    return listOfNotNull(appName) + pluginAliases
 }
 
 private fun tableNameFromClassFqn(namespace: String, classFqn: String): String? {

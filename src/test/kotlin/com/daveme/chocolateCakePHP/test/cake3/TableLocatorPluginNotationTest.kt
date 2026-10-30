@@ -103,15 +103,33 @@ class TableLocatorPluginNotationTest : Cake3BaseTestCase() {
         assertDoesntContain(result, "appRatingEntityMethod")
     }
 
-    fun `test configured plugin name resolves through the configured namespace`() {
+    private fun configurePlugin(pluginName: String, namespace: String, pluginPath: String) {
         val settings = Settings.getInstance(project)
         settings.loadState(settings.state.copy(pluginConfigs = listOf(PluginConfig(
-            pluginName = "Renamed",
-            namespace = "\\TestPlugin",
-            pluginPath = "vendor/test/test_plugin",
+            pluginName = pluginName,
+            namespace = namespace,
+            pluginPath = pluginPath,
         ))))
-        val result = tableCompletions("Renamed.Ratings")
-        assertContainsElements(result, "pluginRatingsMethod")
+    }
+
+    fun `test configured plugin name is not a table alias`() {
+        configurePlugin("Renamed", "\\TestPlugin", "vendor/test/test_plugin")
+        assertDoesntContain(tableCompletions("Renamed.Ratings"), "pluginRatingsMethod")
+    }
+
+    fun `test namespace of a renamed plugin is its table alias`() {
+        configurePlugin("Renamed", "\\TestPlugin", "vendor/test/test_plugin")
+        assertContainsElements(tableCompletions("TestPlugin.Ratings"), "pluginRatingsMethod")
+    }
+
+    fun `test last namespace segment of a vendor plugin is not a table alias`() {
+        configurePlugin("", "\\Acme\\Vendored", "vendor/acme/vendored")
+        assertDoesntContain(tableCompletions("Vendored.Things"), "vendoredThingsMethod")
+    }
+
+    fun `test goto declaration from the last namespace segment of a vendor plugin finds nothing`() {
+        configurePlugin("", "\\Acme\\Vendored", "vendor/acme/vendored")
+        assertEmpty(gotoTargets("\$this->getTableLocator()->get('<caret>Vendored.Things')"))
     }
 
     fun `test unconfigured vendor plugin resolves through the derived namespace`() {
@@ -329,16 +347,25 @@ class TableLocatorPluginNotationTest : Cake3BaseTestCase() {
         assertDoesntContain(result, "Things", "Acme/Vendored.Things")
     }
 
-    fun `test completion uses the configured plugin name`() {
-        val settings = Settings.getInstance(project)
-        settings.loadState(settings.state.copy(pluginConfigs = listOf(PluginConfig(
-            pluginName = "Renamed",
-            namespace = "\\TestPlugin",
-            pluginPath = "vendor/test/test_plugin",
-        ))))
+    fun `test completion ignores a configured plugin name`() {
+        configurePlugin("Renamed", "\\TestPlugin", "vendor/test/test_plugin")
         val result = aliasCompletions("\$this->getTableLocator()->get('<caret>')")
-        assertContainsElements(result, "Renamed.Ratings")
-        assertDoesntContain(result, "TestPlugin.Ratings")
+        assertContainsElements(result, "TestPlugin.Ratings")
+        assertDoesntContain(result, "Renamed.Ratings")
+    }
+
+    fun `test completion uses the full namespace of a vendor plugin with no plugin name`() {
+        configurePlugin("", "\\Acme\\Vendored", "vendor/acme/vendored")
+        val result = aliasCompletions("\$this->getTableLocator()->get('<caret>')")
+        assertContainsElements(result, "Acme/Vendored.Things")
+        assertDoesntContain(result, "Vendored.Things")
+    }
+
+    fun `test completion uses the full namespace of a vendor plugin with a short plugin name`() {
+        configurePlugin("Vendored", "\\Acme\\Vendored", "vendor/acme/vendored")
+        val result = aliasCompletions("\$this->getTableLocator()->get('<caret>')")
+        assertContainsElements(result, "Acme/Vendored.Things")
+        assertDoesntContain(result, "Vendored.Things")
     }
 
     fun `test completion after a plugin prefix offers only that plugins tables`() {

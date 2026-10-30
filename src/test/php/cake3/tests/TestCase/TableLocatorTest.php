@@ -71,6 +71,11 @@ class TableLocatorTest extends TestCase
         $this->assertSame(VendoredThings::class, get_class($this->locate('Acme/Vendored.Things')));
     }
 
+    public function testLastSegmentOfVendorPluginIsGenericTable()
+    {
+        $this->assertSame(Table::class, get_class($this->locate('Vendored.Things')));
+    }
+
     public function testUnloadedPluginTableResolvesByNamespace()
     {
         $this->assertSame(UnloadedThings::class, get_class($this->locate('Unloaded.Things')));

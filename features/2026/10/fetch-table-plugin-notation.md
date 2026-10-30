@@ -94,6 +94,7 @@ because Cake 3 does not have the method, so test 6 uses `$this->getTableLocator(
 | 21 | `.Widgets`, with an empty plugin part, loads the app's table | `testEmptyPluginSegmentLoadsAppTable` | Rule 5 below treats it as a bare alias |
 | 22 | A bare alias inside a plugin cell's `fetchTable()` still means the app's table | `testPluginCellBareFetchTableLoadsAppTable` | Cells follow the same rules as controllers; Cake 4 and 5 only |
 | 23 | `Other.Widgets` inside a `Probe` cell's `fetchTable()` loads only from `Other` | `testPluginCellLoadsOtherPluginTable` | No special case for cross-plugin calls in cells; Cake 4 and 5 only |
+| 24 | `Vendored.Things`, the last segment of a vendor-prefixed plugin, is a generic table | `testLastSegmentOfVendorPluginIsGenericTable` | The plugin part is a namespace, so aliases can't come from `effectivePluginName()` |
 
 ### Fixtures
 
@@ -131,17 +132,16 @@ above:
 1. Empty or too long: `null`.
 2. Contains `\`: the absolute class name (17).
 3. Split on the first `.` (11). Without a dot, the namespace is `settings.appNamespace` (2, 3, 4).
-4. With a dot, the namespace is the configured namespace from `findPluginConfigByName()` if there is
-   one, and otherwise the plugin part with `/` replaced by `\` (7, 8).
+4. With a dot, the namespace is the plugin part with `/` replaced by `\` (7, 8, 24). Settings are not
+   consulted, because `App::className()` reads the plugin part as a namespace.
 5. An empty plugin part is the bare alias, so `.Widgets` means `Widgets` (21).
 6. An empty table part, or a table part containing another `.` (11), returns `null`, so no dot ever
    reaches a signature.
 7. Replace `/` with `\` in the table part (10), and return
    `<namespace>\Model\Table\<table>Table`.
 
-A configured namespace wins over the derived one so that an explicit setting is respected, which
-matches `ConfiguredMemberService.resolveLoad`. Unlike that method, an unknown plugin does not fall
-back to searching every namespace (5).
+Unlike `ConfiguredMemberService.resolveLoad`, this does not use the configured plugin name, and an
+unknown plugin does not fall back to searching every namespace (5).
 
 `getPossibleTableClasses` stays as it is. `ContainGotoDeclarationHandler`,
 `ControllerFieldTypeProvider` and `AssociatedTableTypeProvider` use it for association and field
@@ -183,8 +183,9 @@ Build the lookup string from the class FQN, following `CellCompletionContributor
 
 - Match against the whole literal up to the caret with `withPrefixMatcher()`, because the default
   prefix stops at `.` and `/`.
-- App tables complete as `Widgets`, and configured plugin tables as `Probe.Widgets`, using
-  `effectivePluginName()`.
+- App tables complete as `Widgets`, and configured plugin tables with their namespace as the plugin
+  part, such as `Probe.Widgets` or `Acme/Vendored.Things`. The configured plugin name is not used,
+  because CakePHP would not load the table through it.
 - Tables in a sub-namespace complete as `Sub/Nested`.
 - Tables outside the app and configured plugin namespaces are left out, since a bare name would not
   load them and their plugin name is unknown. Cell completion does the same.
@@ -226,9 +227,8 @@ Add these on Cake 5 first, then 4 and 3, using `getTableLocator()->get()` where 
 - Types: `fetchTable('TestPlugin.PluginItems')->` completes the plugin table's methods.
   `->find()` and `->get()` chains keep the right type and entity, which also covers the signature
   corruption.
-- A plugin configured with an explicit `pluginName` different from its namespace's last segment
-  resolves through the configured namespace. An unconfigured `Acme/Vendored.Things` resolves through
-  the derived namespace.
+- A plugin's `pluginName` is not an alias, and neither is the last segment of a vendor namespace.
+  `Acme/Vendored.Things` resolves with or without settings, and completion always offers that form.
 - Cells: in `CellFetchTableTest` on Cake 5 and `CellTest` on Cake 4, cells share the table locator
   code, so cover it from both an app cell and a plugin cell under `TestPlugin\View\Cell`.
   `TestPlugin.PluginItems` gives the plugin's type and navigates to it, bare `Ratings` gives only
@@ -304,3 +304,14 @@ Steps 5 and 6 are done. `TableLocatorPluginNotationTest` now runs on Cake 3, 4 a
 `fetchTable()` calls written as `getTableLocator()->get()` on Cake 3, which also gets `TableRegistry::get()`
 cases. The Cake 3 stub `Cell` gained `LocatorAwareTrait`. The empty plugin tests in cake4 and cake5
 `FetchTableTest` and `cake3/GetTableLocatorTest` are removed, because the new tests assert the target.
+
+### Session #7
+
+Review of the PR found that completion could insert an alias that loads the wrong table. It used
+`effectivePluginName()`, so `\Acme\Vendored` completed as `Vendored.Things`, and a `Renamed` plugin
+name completed as `Renamed.Ratings`. CakePHP reads the plugin part as a namespace, so both load a
+generic table. Completion now derives the plugin part from the namespace.
+
+The resolver had the same flaw, because it looked up the configured plugin name first. That lookup is
+removed, which reverses the plan's earlier decision that a configured namespace wins. `Renamed.Ratings`
+no longer gets a type or navigation, and `testLastSegmentOfVendorPluginIsGenericTable` records why.

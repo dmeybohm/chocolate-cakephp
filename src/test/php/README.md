@@ -109,6 +109,7 @@ tests are 4 and 5 only.
 | A `Plugin.Table` alias missing from the plugin is a generic `Table`, with no fallback to the app | `testPluginAliasDoesNotFallBackToAppTable` | Same |
 | A plugin controller's alias of another plugin loads that plugin's table | `testPluginControllerLoadsOtherPluginTable` | Same |
 | A `Vendor/Plugin.Table` alias maps the slash to a namespace separator | `testVendorPrefixedAliasMapsSlashesToNamespace` | Same |
+| The last namespace segment of a vendor-prefixed plugin is a generic `Table`, because the plugin part is read as a namespace | `testLastSegmentOfVendorPluginIsGenericTable` | Same |
 | A table in an autoloadable plugin that was never loaded still resolves | `testUnloadedPluginTableResolvesByNamespace` | Same |
 | A lowercase plugin part in an alias | `testLowercasePluginAliasResolution` | 3: resolves, because the alias is camelized first. 4, 5: a generic `Table` |
 | A slash in the table part selects a sub-namespace, with or without a plugin | `testSlashInTableNameSelectsSubNamespace` | Same |
