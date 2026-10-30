@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.tableClassFqnFromAlias
 import com.daveme.chocolateCakePHP.controller.ControllerFieldTypeProvider
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -143,7 +144,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return when (parameters.size) {
             0 -> null
             1 -> getTableClassFromFirstParam(parameters, settings)
-            else -> getTableClassFromSecondParam(parameters) ?:
+            else -> getTableClassFromSecondParam(parameters, settings) ?:
                     getTableClassFromFirstParam(parameters, settings)
         }
     }
@@ -151,20 +152,20 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
     private fun getTableClassFromFirstParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
         val firstParam = parameters.firstOrNull()
                 as? StringLiteralExpression ?: return null
-        val contents = firstParam.contents
-        if (contents.length < 255) {
-            // sanity check
-            return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
-        }
-        return null
+        val tableClass = tableClassFqnFromAlias(settings, firstParam.contents) ?: return null
+        return PhpType().add(tableClass)
     }
 
-    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>): PhpType? {
+    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
         val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
         for (element in arrayCreationExpr.hashElements) {
             val key = element.key as? StringLiteralExpression ?: continue
             if (key.contents == "className") {
-                val contents = element.value?.getStringifiedClassOrNull() ?: continue
+                val value = element.value
+                val contents = when (value) {
+                    is StringLiteralExpression -> tableClassFqnFromAlias(settings, value.contents)
+                    else -> value?.getStringifiedClassOrNull()
+                } ?: continue
                 if (contents.length < 255) {
                     // sanity check
                     return PhpType().add(contents)

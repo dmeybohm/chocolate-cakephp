@@ -156,14 +156,16 @@ values keep using `getStringifiedClassOrNull()`. Entity typing does not change.
 
 The resolver is pure, so it still names a class for a table that does not exist: bare `Gadgets`
 (test 3), `Probe.AppOnly` (test 5) and misspelled names. The framework gives a generic table for
-these, if those tests hold. Whether generic `Table` methods still complete alongside the nonexistent
-class is unknown, and the plugin tests below establish it. Do not expand the type provider until
-they have run. If they fail, a separate step defers the existence check to `complete()`, because
-`getType()` can't use the index. That step also has to deal with `tableToEntityClass()`, which gives
-a bad entity class for `\Cake\ORM\Table`.
+these. Generic `Table` methods still complete alongside the nonexistent class, as the plugin tests
+show on Cake 5, so the type provider does not defer an existence check to `complete()`.
 
-Known limitation until then: if the app has `App\Model\Entity\Gadget`, then
-`fetchTable('Gadgets')->get(1)` is typed as that entity for a table that does not exist.
+Known limitation: if the app has `App\Model\Entity\Gadget`, then `fetchTable('Gadgets')->get(1)` is
+typed as that entity for a table that does not exist.
+
+Aliases are not camelized. Cake 3 camelizes an alias before resolving it, so `probe.Cased`, `appOnly`
+and `app_only` load tables there and generic tables on Cake 4 and 5. Matching this needs the plugin to
+tell Cake 3 from later versions, which the settings don't do, and camelizing on every version would
+give wrong answers on Cake 4 and 5. Those Cake 3 aliases get no accurate type or navigation.
 
 ### Go to declaration
 
@@ -272,3 +274,14 @@ The other assumptions held as written, including no fallback from a `Plugin.Tabl
 which differs from templates and elements. `CasedTable` was added because PHP matches an
 already-loaded class regardless of case, so reusing `WidgetsTable` would have made the test depend
 on order.
+
+### Session #3
+
+Step 2 is done. `tableClassFqnFromAlias` is in `cake/CakeModel.kt`, and `TableLocatorTypeProvider`
+uses it for the alias and for string `className` values. `TableLocatorPluginNotationTest` covers it on
+Cake 5. Go to declaration and completion still behave as before, and the Cake 3 and 4 plugin tests
+are still to come in step 5.
+
+- The missing-table tests pass, so nothing was added for `complete()`.
+- A `className` string the resolver rejects, such as `A.B.C`, falls through to the alias, as a
+  non-string `className` value already did.
