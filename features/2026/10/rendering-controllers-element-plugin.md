@@ -16,55 +16,50 @@ templates and `render()` calls whether a base class renders pages of its own.
 
 - **Templates and elements** keep the walk back to their rendering controllers, as
   `controller-side-helpers` plans to reuse it.
-- **A named layout** gets the controllers that name it and their subclasses.
-- **The default layout** gets every controller it resolves for. An element or template that a layout
-  includes follows the same rules, through the walk.
+- **Any layout** gets `AppController` and all its subclasses. The walk stops at a layout, so an
+  element or template that a layout includes gets them too.
 - **`AppController` aliases** need no new code. CakePHP merges them into every subclass with the
   subclass winning (`Controller::_mergeControllerVars`), and the convention type is dropped only
   when every receiver determines the alias. Tests pin this down.
-- **Base classes** that are never dispatched don't count: abstract controllers, `AppController` and
-  a plugin's `{Plugin}AppController`. Other base classes do count, so a base without an alias adds
-  the convention type next to its subclasses' aliases. That's accepted in exchange for removing the
-  heuristics.
+- **Base classes** get no special handling. With an alias on `AppController` they inherit it, and
+  without one the convention type is almost certainly in the union already.
+
+### What this gives up
+
+- `$this->Html` in a layout used by one controller, such as `admin.ctp`, offers every alias in the
+  project, and go-to-declaration may list several targets.
+- `HtmlHelper` stays in layout unions unless `AppController` sets the alias.
+- A controller extending `Controller` directly doesn't count towards layouts.
 
 ## Plugins
 
-Each controller a layout could apply to is checked on its own, with the existing
-`resolvesTo(reference.pluginPrefix ?: pluginOf(current, controller), current)`. Subclasses are
-checked individually because a subclass can be in a different plugin from the class that names the
-layout.
+Layouts have no plugin check: a plugin's layout also gets the app's aliases, and a plugin prefix on
+a layout name doesn't matter. This keeps a plugin's own aliases available in every layout, at the
+cost of the extra types above. Plugin controllers count through `{Plugin}AppController`, which
+extends `AppController`.
 
-| Layout | Controllers kept |
-|---|---|
-| The app's named layout | The naming controller and subclasses, except those in a plugin with its own layout of that name |
-| A plugin's named layout, or the app's override of it | Controllers in that plugin, and any controller naming it with the plugin's prefix |
-| The app's default layout | All controllers, except those in a plugin with its own default layout |
-| A plugin's default layout, or the app's override of it | That plugin's controllers |
-
-- **A prefix** such as `$this->layout = 'Foo.promo'` applies to the naming controller's subclasses
-  too, since they inherit the prefixed name.
-- **A plugin's aliases** need no new code: the class chain already passes through
-  `{Plugin}AppController` to `AppController`, matching `Controller::_mergeControllerVars`.
-- **CakePHP 3 to 5** have no plugin here, as `pluginOf` returns null for them. That arrives with
-  plugin-aware view keys and `controller-side-helpers`.
+Templates and elements keep `resolvesTo` as it is. CakePHP 3 to 5 have no plugin here, as `pluginOf`
+returns null for them. That arrives with plugin-aware view keys and `controller-side-helpers`.
 
 ### Known gap until the element fix
 
-Elements keep today's per-hop check, which uses the including file's plugin. The default layout
-doesn't avoid this: an app default layout that calls `element('shared')`, rendered by a `Blog`
+Elements keep today's per-hop check, which uses the including file's plugin. Stopping the walk at a
+layout doesn't avoid this: an app layout that calls `element('shared')`, rendered by a `Blog`
 controller, with `Blog` having its own `shared` element:
 
 - `Blog`'s element is dropped at the hop, so it falls back to `AppController`'s helpers.
-- The app's element keeps the hop and gets `Blog`'s controller, which doesn't render it.
+- The app's element keeps the hop, and so gets all controllers, including `Blog`'s, which doesn't
+  render it.
 
 The result is the same kind of slightly wrong type described above, so it's accepted until the rule
 moves over.
 
 ## Layout references
 
-The layout references stay in the view file index. "Go to related" and the toggle action read that
-index, and variable tracking in layouts could later start from it. That work would need to know
-which actions render a layout, so the class-level heuristics would not carry over.
+The CakePHP 2 layout references stay in the view file index. Helper lookup no longer reads them, but
+"go to related" and the toggle action read that index, and variable tracking in layouts could later
+start from it. That work would need to know which actions render a layout, so the removed
+class-level heuristics would not carry over.
 
 ## Element plugin fix moved
 
@@ -73,8 +68,7 @@ Fixing the walk for unprefixed elements moves to
 versions. The bug here needs a shared element name and differently aliased controllers on CakePHP 2,
 and its effect is limited to the type above. These notes carry over:
 
-- Check the carried references at each exit from the walk: a class reference, a layout's subclasses
-  and the default layout.
+- Check the carried references wherever the walk reaches a class.
 - A prefixed hop must not clear references already carried: in `element('Blog.a')` where `a` calls
   `element('b')`, `b` still follows the controller's plugin.
 - The walk also passes through `$this->layout` assignments and `render()` calls in view files. No
@@ -83,25 +77,31 @@ and its effect is limited to the type above. These notes carry over:
 - The shared helper takes the rendering class's plugin as input, as
   [elements in cell templates](cell-template-element-plugin.md) is still open.
 
-`controller-side-helpers` should follow the same layout rules when it next merges `main`. It still
-needs to index `setLayout()`, since a named layout is found through its references, but not layout
-paths or a controller's layout names across its class chain.
+## Controller-side helpers
+
+`controller-side-helpers` should follow the same layout rule when it next merges `main`. It would
+need to recognize layout files and take `AppController` from the configured app namespace, but no
+longer needs layout names, layout paths or `setLayout()` for helpers. Layout references on CakePHP 3
+to 5 would be their own change, for navigation.
 
 ## Plan
 
 1. Rewrite `LayoutHelperTest` around the rules above, and add tests for `AppController` aliases.
-2. Remove the heuristics from `RenderingControllers`, and `frameworkControllerClass`.
+2. Replace the layout handling in `RenderingControllers` with the rule above, and remove the
+   heuristics, `defaultLayoutKey` and `frameworkControllerClass`.
 3. Run the full suite.
 
 ## Tests
 
-- `AppController` aliases: the alias replaces the convention type in a template, a subclass's alias
-  wins in its template and the layout it names, the default layout unions the aliases without the
-  convention type, and a controller extending `Controller` directly keeps the convention type.
-- Layouts: named, inherited by subclasses, named only by an abstract class, default, and an element
-  in a named layout and in the default layout.
-- Plugins: each row of the table above. A plugin subclass of an app controller is dropped from the
-  app's named layout when the plugin has its own copy. A plugin without its own default layout is in
-  the app's default layout's union. `{Plugin}AppController` adds no convention type.
+- `AppController` aliases: the alias replaces the convention type in a template, and a subclass's
+  alias wins in its template. A layout unions the aliases without the convention type. A controller
+  extending `Controller` directly keeps the convention type in its template.
+- Layouts: a named layout, the default layout, a data view layout and a layout in a subdirectory all
+  get the same union. So does an element in a layout, and an element included from both a layout and
+  a template.
+- Templates: a template rendered by one controller still gets only that controller's helpers, and so
+  does an element only its templates include.
+- Plugins: a plugin's layout gets the union, including the plugin's aliases. A plugin controller's
+  template gets only that controller's helpers.
 
 ## Implementation Progress
