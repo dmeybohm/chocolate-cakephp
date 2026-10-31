@@ -236,3 +236,55 @@ private fun firstExpressionChild(node: ASTNode): ASTNode? {
 internal fun isExpressionNode(node: ASTNode): Boolean {
     return node.firstChildNode != null
 }
+
+/**
+ * The right-hand sides of the plain `$name = <expr>` assignments that precede a use of
+ * `$name` in the same scope, in document order. `$this` has none.
+ */
+internal fun assignedValueNodes(variableNode: ASTNode, ctx: TemplateNameContext): List<ASTNode> {
+    val name = variableNode.text.removePrefix("$")
+    if (name == "this") {
+        return emptyList()
+    }
+    val scope = scopeNodeOf(variableNode)
+    val assignmentsByName = ctx.assignmentsByScope.getOrPut(scope) { collectAssignmentsInScope(scope) }
+    val assignments = assignmentsByName[name] ?: return emptyList()
+    return assignments
+        .takeWhile { it.startOffset < variableNode.startOffset }
+        .mapNotNull { assignmentValueNode(it) }
+}
+
+/**
+ * The uses of `$name` after a plain `$name = <valueNode>` assignment in the same scope, in
+ * document order, or null when [valueNode] is not the right-hand side of one.
+ */
+internal fun laterUsesOfAssignedVariable(valueNode: ASTNode): List<ASTNode>? {
+    val assignment = valueNode.treeParent ?: return null
+    if (!assignment.isAssignmentExpression() || assignmentValueNode(assignment) != valueNode) {
+        return null
+    }
+    val target = firstExpressionChild(assignment)?.takeIf { it.isVariable() } ?: return null
+    if (target.text == "\$this") {
+        return null
+    }
+    val result = mutableListOf<ASTNode>()
+    collectVariableUses(scopeNodeOf(assignment), target.text, assignment.startOffset + assignment.textLength, result)
+    return result
+}
+
+private fun collectVariableUses(node: ASTNode, variableText: String, after: Int, result: MutableList<ASTNode>) {
+    if (node.isVariable()) {
+        // The variable's own token is also a VARIABLE, so stop at the outer node
+        if (node.text == variableText && node.startOffset >= after) {
+            result.add(node)
+        }
+        return
+    }
+    var child = node.firstChildNode
+    while (child != null) {
+        if (!child.isScopeNode()) {
+            collectVariableUses(child, variableText, after, result)
+        }
+        child = child.treeNext
+    }
+}

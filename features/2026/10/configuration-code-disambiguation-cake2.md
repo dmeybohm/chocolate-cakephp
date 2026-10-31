@@ -155,8 +155,9 @@ not of an alias:
 
 1. **Effective value of a property in a class:** the nearest declaration of that property
    in the class chain, framework classes included (PHP inheritance). This needs the index to
-   record which property a `PROPERTY_ARRAY` load came from, and to record a declaration even
-   when the array is empty or the value is `true`/`false`.
+   record which property a `PROPERTY_ARRAY` load came from, to record a declaration even
+   when the array is empty or the value is `true`/`false`, and to record whether it could read
+   the whole value (see Known below).
 2. **Controllers, `$components` and `$helpers`:** the controller's effective value, merged with
    `{Plugin}AppController`'s and `AppController`'s effective values, the child's entry winning
    for an alias. Option merging means a child entry without `className` inherits the parent's
@@ -199,6 +200,23 @@ not indexed, and if no application class declares the property either, its effec
 unknown. Then convention stays the fallback for that property, for type resolution and
 completion, as today.
 
+A declaration also has to be **complete** for the property to be known: the index read the
+whole value, so a parsed empty value is told apart from a value it could not read. A
+declaration is complete when its value is a form the reader understands (an array literal;
+`true`, `false` or `null` for `$uses`; a string for an association property) and every entry
+in it was read. `public $components = array(self::AUTH, 'Session')`, `public $uses = self::MODELS`
+or `array_merge(...)` are incomplete.
+
+- An incomplete declaration is still the nearest declaration: it hides the parents'
+  declarations of that property under PHP inheritance, and the loads it could read still
+  apply. But its kind is unknown, so convention stays the fallback for that kind, for type
+  resolution and completion.
+- The same goes for a single entry: an entry whose `className` is not a literal string or a
+  `::class` constant, `'Html' => array('className' => SOME_CONST)`, leaves that alias unknown.
+  It resolves to its loaded name unioned with convention, not to its loaded name alone.
+- For controllers, the merged effective value is unknown when any declaration that goes into
+  the merge (the controller's, `{Plugin}AppController`'s or `AppController`'s) is incomplete.
+
 `$this->loadModel('Name')` in an action adds a TABLE load outside the property, unioned as
 before, and is a model the controller has even when `$uses` does not list it. A `loadModel()`
 call in `beforeFilter()` (common in CakePHP 2) is unioned, not an override, matching the
@@ -214,7 +232,52 @@ controllers) that renders it, not `AppView`.
   `ViewFileIndexService.referencingElementsInSmartReadAction()` on the template's key, then the
   containing `PhpClass` of each referencing element. This is the mapping
   `ViewToControllerGotoRelatedProvider` uses.
-- Elements, layouts, and templates no controller references fall back to `AppController`.
+- Elements render in the including template's `View` instance, so they get that template's
+  rendering controllers. The view file index already records `$this->element('x')` calls in
+  templates and elements under the element's key (`ViewFileDataIndexer`), so walk back through
+  the includes: a reference in a controller is a rendering controller, and a reference in a
+  template or element (no containing `PhpClass`) means looking up that file's key in turn, with
+  a visited set since elements can include each other. The element's receivers are the union
+  of the controllers the walk reaches.
+- Templates and elements the walk reaches no controller from fall back to `AppController`.
+- Layouts get the controllers that render with them. Verified against 2.10: `Controller`
+  declares `public $layout = 'default'` and `public $layoutPath = null`, both are in
+  `View::$_passedVars`, and `View::_getLayoutFileName()` looks up
+  `Layouts/{layoutPath}/{layout}` (no `layoutPath` segment when it is null). A controller sets
+  the layout by declaring the property, by assigning it (in an action or `beforeFilter()`), or
+  through `render()`'s second argument. None of these is indexed today, so:
+  - A controller's **layout names** are the effective `$layout` property (the nearest
+    declaration in its class chain, PHP inheritance, `default` from `\Controller`, or
+    `default` when `\Controller` is not indexed), plus every literal value assigned to
+    `$this->layout` or passed as `render()`'s second argument in its chain. Assignments use
+    `findFieldAssignments()`, like the existing `$this->view` assignments, which already
+    collects every literal value the expression can take.
+  - A layout name maps to the key `Layouts/{name}`. A name may contain slashes itself
+    (`'admin/default'`) and may be plugin-dotted (`'TestPlugin.admin'`, which looks in the
+    plugin's `Layouts/`), through the same plugin-aware lookup as templates and elements.
+  - A layout's receivers are the controllers whose layout names include it. Index layout
+    names by name (so `default` and an inherited declaration need a walk over subclasses) or
+    resolve every controller's names once and cache the reverse map; choose during
+    implementation.
+  - With the union rules, `$this->Html` in `default.ctp` resolves to
+    `HtmlHelper|BootstrapHtmlHelper` when only some controllers that render it alias `Html`,
+    which matches what can render it.
+  - A layout no controller can render falls back to `AppController`.
+  - A template or element can also assign `$this->layout`, since `View::render()` renders the
+    template before it picks the layout (`$this->layout = 'ajax'` in a template is a common
+    CakePHP 2 idiom). Index those assignments in view files too, with the same
+    `findFieldAssignments()` call, and resolve a reference from a view file through the element
+    walk: the layout's receivers include that template's rendering controllers.
+  - **`$layoutPath` is not tracked**, neither the property nor assignments. Its main user is
+    `RequestHandlerComponent`, which sets it to a data view type, and
+    `canonicalizeFilenameToKey()` already drops a data view extension directory (`json`,
+    `xml`), so those layouts map onto the plain layout key. Apps rarely set it themselves:
+    separate admin layouts are usually `$this->layout = 'admin'` or `public $layout = 'admin'`.
+    Tracking it would need per-class inheritance like `$layout`, a product of names and paths,
+    and splitting keys into path and name at lookup. A layout in any other subdirectory falls
+    back to `AppController`, which still gives it the aliases apps usually configure there; it
+    misses only an alias configured solely on the controller that sets that layout path. See
+    Open questions.
 - The receiver list is a union, so the per-receiver rules from the union fix apply: an alias
   only loses its convention candidates when every rendering controller has an override load
   of it.
@@ -233,13 +296,15 @@ the view variable indexer) gives the templates directory, and
 - `getType()` encodes the template key in the deferred signature, for example
   `#<key>2<templateKey><key><fieldName>`, with a marker distinguishing it from the existing
   CakePHP 3 to 5 form. Keys are template paths and contain no provider key character.
-- `complete()` decodes the key, looks up the rendering controllers for it, and resolves the
-  field against them. Elements and layouts have keys that no controller references, which
-  gives the `AppController` fallback.
+- `complete()` decodes the key, looks up the rendering controllers for it (through the element
+  walk for elements, and each controller's layout keys for layouts), and resolves
+  the field against them. Unreferenced files reach no controller, which gives the
+  `AppController` fallback.
 - CakePHP 3 to 5 templates keep the current signature and the `viewType(settings)` receiver.
 
-`complete()` is called often, so cache the rendering controllers per template key with the
-same modification tracker the view variable cache uses.
+`complete()` is called often, so cache the rendering controllers per template key, including
+the result of the element walk and the layout receivers, with the same
+modification tracker the view variable cache uses.
 
 Completion in templates keeps the convention helper list, as for CakePHP 3 to 5: verified,
 `View::__get()` asks `HelperCollection::__isset()`, which loads any helper by name and, if that
@@ -257,6 +322,67 @@ controllers': a helper has no single rendering controller, so this would mean ev
 The same template-to-controller mapping is what the previous plan deferred for CakePHP 3 to 5
 controller-side helper configuration (`viewBuilder()->addHelper()`, Cake 3's
 `$this->helpers`). Building it here means that work can reuse it.
+
+CakePHP 3 to 5 need no layout mapping for now. Their templates, elements and layouts all
+resolve helpers against `AppView`, which is right for helpers loaded in
+`AppView::initialize()`. Layouts would need the same treatment only once the controller-side
+helper configuration above is supported, since a layout then has the helpers of whichever
+controller renders it. The layout is chosen with `$this->viewBuilder()->setLayout()` in 4 and 5,
+`viewBuilder()->layout()` or `$this->layout` in 3, and the view file index already reads
+`viewBuilder()` calls for `setTemplate()` and `setTemplatePath()`, so `setLayout()` would be a
+small addition there.
+
+### Plugin templates
+
+Verified against 2.10 `View::pluginSplit()`, `_getViewFileName()`, `_getElementFileName()`,
+`_getLayoutFileName()` and `_paths()` (CakePHP 5 works the same way, with
+`templates/plugin/{Name}/` for the override directory):
+
+- A view, element or layout name resolves in a plugin: the `Foo.` prefix when plugin `Foo` is
+  loaded, otherwise the current view's plugin (the rendering controller's request plugin),
+  otherwise none.
+- With a plugin, the search order is the app's override directory `View/Plugin/Foo/`, then the
+  plugin's own `View/`, then the app's `View/`. Without one, only the app's `View/`.
+
+So a template can be reached by more than one name:
+
+- A plugin file, `Plugin/Foo/View/Bars/index.ctp`, by the unprefixed `Bars/index` from plugin
+  `Foo`'s context, and by `Foo.Bars/index` from anywhere.
+- An app file, `View/Bars/index.ctp`, by the unprefixed name from app context, and from plugin
+  `Foo`'s context when `Foo` has no file of that name.
+- An app override, `View/Plugin/Foo/Bars/index.ctp`, counts as `Foo`'s file, ahead of the
+  plugin's own.
+
+The view file index keys a template relative to its templates directory, with no plugin, so a
+plugin's `Bars/index` and the app's share a key, and an app `BarsController` and a plugin
+`BarsController` both match either file. Make the lookup plugin-aware instead of storing plugin
+templates under two keys:
+
+- Index each reference by its unprefixed name, as now, and record the plugin it resolves in:
+  its `Foo.` prefix, or the plugin of the file that makes it (a plugin controller, or a template
+  or element in a plugin). This is a value format change for the view file index: bump its
+  version. Check how the index treats a `Foo.` prefix today first.
+- A plugin file's rendering controllers are the references with its unprefixed key and its
+  plugin.
+- An app file's are the references with no plugin, plus plugin-context references whose plugin
+  has no file of that name (a VFS existence check at lookup time, through the plugin's override
+  and own directories).
+- The same applies to element keys for the element walk and to layout keys (step 7):
+  `$this->element('Foo.sidebar')`, `$this->layout = 'Foo.admin'`, and a plugin's own
+  `Layouts/default.ctp` for its controllers.
+
+**Plugin identity** comes from the file path, without new settings: a file belongs to plugin
+`{Name}` when it is under `{app}/Plugin/{Name}/` or `{root}/plugins/{Name}/` (the default
+`CakePlugin::load()` paths), or under a configured plugin's `pluginPath` (named after its last
+segment). A template under `{app}/View/Plugin/{Name}/` belongs to `{Name}` too. The CakePHP 3
+`PluginConfig` namespace is not used. Proper CakePHP 2 plugin settings are the separate
+`cake2-plugin-settings` idea.
+
+**`{Plugin}AppController` in the resolver.** Step 3 treats any class in the chain named
+`...AppController`, other than `AppController`, as a plugin `AppController`. CakePHP merges
+`{Plugin}AppController` only for a controller in that plugin, so an app base class such as
+`AdminAppController` contributes through plain PHP inheritance only. Narrow the check to a class
+named `{Name}AppController` where `{Name}` is the plugin the controller's file belongs to.
 
 ### Plugins and same-named classes
 
@@ -367,8 +493,13 @@ prefer it unless it duplicates too much of the receiver-signature handling.
   regardless of the enclosing method; the source method name can serve, if the record keeps it.
 - Record the property name for `PROPERTY_ARRAY` loads, and record a declaration of a property
   even when it loads nothing (`array()`, `true`, `false`, `null`), since the effective-value
-  rule needs to know where a property is declared. This is a value format change: bump the
-  index version.
+  rule needs to know where a property is declared. Record with each declaration whether it is
+  complete: the value was a form the reader understands and no entry was skipped.
+  `readLoadArray()` skips unreadable entries silently today, and `readPropertyArrays()` ignores
+  a value that is not an array literal, so both need to report what they skipped. An entry
+  whose `className` could not be read also needs a marker, since `classNameOption()` returns
+  null for it, the same as for an entry with no `className`. This is a value format change:
+  bump the index version.
 - `$components` also exists on CakePHP 3 controllers. Indexing it is harmless there: CakePHP 3
   loads `$components` entries too, so reading them is correct, and the previous plan noted
   enabling it as a one-line change.
@@ -381,6 +512,8 @@ prefer it unless it duplicates too much of the receiver-signature handling.
   `\Controller` for its `$components` default instead of stopping before it; `\View`, `\Helper`
   and `\Model` declare only empty arrays and can be stop classes.
 - A child entry's missing `className` inherits the merged parent entry's.
+- An incomplete declaration makes its kind unknown, and an unreadable `className` makes its
+  alias unknown, as described under Known.
 - Telling CakePHP 2 classes from CakePHP 3+ ones: a chain that reaches `\Controller` (not
   `\Cake\Controller\Controller`) is CakePHP 2.
 
@@ -442,7 +575,9 @@ Tests:
 - Indexer: each property maps to its kind; the comma-separated association string; declarations
   of `$uses = true`, `false` and `array()`; `array()` and `[]` syntax; `with` in its string,
   dotted and array forms; `$this->bindModel()` leaves under each CakePHP 2 key, an unknown key
-  ignored, and `bindModel()` on a receiver other than `$this` not recorded.
+  ignored, and `bindModel()` on a receiver other than `$this` not recorded; a declaration with
+  a constant entry, a non-literal value, or a non-literal `className` is recorded as
+  incomplete, and `array()` as complete and empty.
 - Components: an aliased entry resolves to its `className` only; a plain entry resolves by name;
   an alias merged from `AppController` resolves in the child; completion lists only the loaded
   components; an alias the effective `$components` does not load gets no component type, even
@@ -455,8 +590,33 @@ Tests:
 - Unknown properties: with no `\Controller` stub in the fixture and no `$components` or `$uses`
   declared by any application class, component and model aliases fall back to convention for
   type resolution and completion.
-- Helpers: an aliased helper on the controller resolves in its template; an element falls back
-  to `AppController`; a helper's own `$helpers` still resolves.
+- Incomplete declarations: `$components = array(self::AUTH, 'Session')` resolves `Session` and
+  keeps convention for other component aliases; `$uses = self::MODELS` keeps convention for
+  models; `'Html' => array('className' => SOME_CONST)` resolves `$this->Html` to `HtmlHelper`
+  unioned with convention. Each still hides the parent's declaration of the same property.
+- Helpers: an aliased helper on the controller resolves in its template; an element included
+  from that template picks up the alias, including through a nested element; an element that
+  nothing includes falls back to `AppController`; a helper's own `$helpers` still resolves.
+- Plugin templates: same-named app and plugin elements each get only their own controllers
+  (not same-named controllers, which share a global FQN and so a configuration); an app override under
+  `View/Plugin/Foo/` takes the plugin controller's alias; `$this->element('Foo.sidebar')` from
+  an app template gives the plugin element the app controller's alias; an unprefixed element
+  in a plugin template that the plugin does not have falls back to the app's element and gives
+  it the plugin controller's alias; a plugin's own `Layouts/default.ctp` gets its controllers'
+  aliases.
+- `{Plugin}AppController`: a plugin controller merges its plugin's `AppController`, and an app
+  controller extending `AdminAppController` does not merge it (an `AdminAppController` entry the
+  child's `$components` redeclaration drops is gone).
+- Layouts: a layout a child controller assigns with `$this->layout`, one it passes as
+  `render()`'s second argument, and one it declares with `public $layout = 'admin'` each pick
+  up that controller's alias; a `$layout` declared on `AppController` applies to the
+  controllers that do not redeclare it; `default.ctp` unions the alias with the convention
+  class when only one controller aliases it, and not when that controller declares another
+  `$layout` and never assigns `default`; a `json` layout file maps onto the plain layout; a
+  layout in another subdirectory falls back to `AppController`; `$this->layout = 'print'` in
+  `Movie/view.ctp` makes `print.ctp` pick up `MovieController`'s alias, and the same through an
+  element; a layout no controller can render falls back to `AppController`. Indexer tests for
+  each layout source.
 - Associations: an aliased association resolves inside the model and through
   `$this->Movie->Alias` in a controller; a redeclared association property replaces the parent's.
 - Unlisted association, completion: a `Movie` model whose association properties do not list
@@ -501,27 +661,42 @@ Tests:
 
 1. Done: checked the CakePHP 2.10 merging and lazy-loading behaviour; see "Verified against
    CakePHP 2.10".
-2. Index: the new property sources and text needles, the comma-separated association string,
-   `with` join models, in-model `bindModel()`, the property name and empty declarations.
-   Indexer tests.
-3. Resolver: CakePHP 2 convention candidates and the property-level rules.
-4. Components and models on controllers. Component and model tests.
-5. Associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
+2. Done: index: the new property sources and text needles, the comma-separated association string,
+   `with` join models, in-model `bindModel()`, the property name, empty declarations and the
+   complete flag. Indexer tests.
+3. Done: resolver: CakePHP 2 convention candidates and the property-level rules.
+4. Done: components and models on controllers. Component and model tests.
+5. Done: associations: the receiver-carrying nested signature, `$this->Author` inside a model, nested
    completion for CakePHP 2 models, the by-name type fallback and strict completion. Association
    tests.
-6. Template helpers: the template key in the deferred signature, the rendering controllers,
-   caching. Helper tests.
-7. Optional: plugin path filtering for navigation, if step 1 or the fixtures show it is worth it.
-8. Run the full suite.
+6. Done: template helpers: plugin identity from file paths and the narrowed `{Plugin}AppController`
+   check in the resolver; the template key in the deferred signature, the rendering
+   controllers with the plugin-aware lookup, the element walk and caching. Helper and plugin
+   template tests.
+7. Done: layouts: index `$layout` declarations and assignments (in controllers and view files) and
+   `render()`'s second argument, layout receivers including `default`, the element walk for
+   view file assignments and plugin-aware layout keys. Layout tests.
+8. Moved to `cake2-plugin-settings`: plugin path filtering for navigation. It only changes which
+   of two same-named classes goto and completion type text pick, not inferred types, and it
+   builds on plugin identity, which that feature makes a single source.
+9. Done: run the full suite (1037 tests, 0 failures, as of Session #6).
 
 Commit after each step.
 
 ## Open questions
 
-- Is plugin-path filtering for same-named classes worth doing, given that types cannot
-  carry it? (Step 7.)
 - Is it worth resolving a helper's `$helpers` aliases through the rendering controllers, given
   the controller's alias wins at runtime?
+- `$layoutPath` is not tracked (see Helpers in templates), so a layout in a subdirectory other
+  than a data view type's falls back to `AppController`. Track it if an app turns out to
+  configure helper aliases only on the controller that sets a layout path.
+- CakePHP 3 to 5 have the same gap as incomplete declarations: `readLoadArray()` skips an entry
+  such as `protected $helpers = [self::X]`, and a helper with any other initialize load then
+  hides the convention list (`ViewHelperInViewHelperCompletionContributor`). The complete flag
+  added here could fix that too; out of scope for this feature.
+
+Resolved after step 7: plugin-path filtering for same-named classes is not worth doing here,
+since types cannot carry it; it moved to `cake2-plugin-settings` (step 8).
 
 Resolved by step 1: the merge rules (property-level, `AppController` only, recursive option
 merge; associations unmerged) and helper lazy-loading in views (yes, so template completion
@@ -530,3 +705,383 @@ keeps the convention list).
 Resolved in review: `with` join models are a source in the first pass; associations keep the
 by-name type fallback because external `bindModel()` calls cannot be indexed, while completion
 is limited to configured associations, `with` join models and in-model `bindModel()` loads.
+
+## Implementation Progress
+
+### Session #1
+
+Step 2, the index:
+
+- `ConfiguredMemberIndex` values are now a `ClassConfiguration`: the member loads plus a
+  `PropertyDeclaration` for every configuring property a class declares, with the form of its
+  value (`ARRAY`, `STRING`, `TRUE`, `FALSE`, `NULL`, `OTHER`) and whether every entry was read.
+  A property declared without a value is `NULL`. Index version 3.
+- `MemberLoad` gains `property` (the configuring property, or for `bindModel()` the association
+  property it adds to) and `hasUnreadClassName`.
+- New property sources `components`, `uses` and the four CakePHP 2 association properties. An
+  association property set to a string is read as a comma-separated list.
+- `with` on a `hasAndBelongsToMany` entry adds a load of the join model, in its string, dotted
+  and array forms. A `with` value that cannot be read makes the declaration incomplete.
+- `$this->bindModel()` is a `BIND_MODEL` source, read like `addAssociations()` with the CakePHP 2
+  key set. Its loads are never initialize loads.
+- A string-keyed entry whose value is not an array (`'Auth' => 'x'`) counts as unread, so it
+  makes the declaration incomplete. It is junk at runtime anyway.
+
+Indexing `$uses` broke `cake2/ControllerTest` model completion: the load resolved only to Cake 3+
+names, and as an initialize load it dropped the convention type. So the first part of step 3,
+CakePHP 2 global names in `conventionCandidates()` when CakePHP 2 is enabled, went in with this
+step. A plugin-dotted load whose plugin has a `PluginConfig` still resolves to the namespaced
+class only; telling CakePHP 2 chains apart is the rest of step 3.
+
+Full suite before that fix: 968 tests, 1 failure (the one above). After it, cake2 and the
+indexer tests pass (118); Cake 3 to 5 are unaffected, since the change applies only with CakePHP
+2 enabled.
+
+### Session #2
+
+Step 3, the resolver:
+
+- `CakeTwoChainResolver` resolves a chain that ends in a global `\Controller`, `\Model`,
+  `\Helper` or `\View` when CakePHP 2 is enabled. The base is found from the classes' own
+  FQNs or their `superFQN`, so it works when the framework classes are not indexed.
+- Controllers: `$components` and `$helpers` are the nearest declaration merged onto the plugin
+  `AppController`'s and `AppController`'s (each their own nearest declaration), the child's
+  entry winning and inheriting a missing `className`. `$uses` follows
+  `_mergeControllerVars()` as verified in step 1, with the default model from
+  `Inflector.singularize()` of the controller name, plus `loadModel()` calls in the chain.
+- Helpers: their own effective `$helpers`. Models: each association property's nearest
+  declaration plus the chain's `bindModel()` loads. Views resolve nothing, since the rendering
+  controller's helpers replace the view's.
+- A kind is known when its effective declaration, and every declaration merged into it, is
+  complete. Loads of a known kind are authoritative; of an unknown kind, convention is
+  unioned. An unread `className` makes its alias non-authoritative. Association loads from a
+  property are always authoritative, `bindModel()` loads never.
+- `ChainResolution` gains `excludesUnloaded`: the known kinds other than associations. When
+  every receiver excludes all requested kinds, `memberType()` returns an empty result that
+  counts as an initialize load, so callers stop adding convention. Associations stay out of it
+  for the by-name type fallback.
+- CakePHP 2 loads resolve to the global class name after the dot, so plugin loads no longer
+  resolve to a namespaced plugin class (the gap from Session #1).
+- The cake2 vendor stub declares the 2.10 defaults: `Controller::$uses = true`,
+  `$components = array('Session', 'Flash')`, `$helpers = array()`, the four association
+  properties on `Model`, and `$helpers` on `View` and a new `Helper`.
+
+`ConfiguredMemberResolutionTest` covers the rules at the service level, ahead of the provider
+changes in step 4: aliases, the `AppController` merge and inherited `className`, an
+intermediate controller's lost components, the `Controller` defaults, incomplete declarations,
+an unread `className`, the `$uses` cases (list, default model, `false`, appended and prepended
+`AppController` models, both `array()` cases, `loadModel()`), associations (nearest
+declaration, comma-separated string, redeclared property, unlisted association, in-model
+`bindModel()`), helpers, and the view not being a receiver.
+
+The rules already reach the providers through `hasInitializeLoad`, and two existing tests
+relied on members nothing loads: `$this->MovieMetadata` on a controller extending `Controller`
+with no `$components`, and `$this->ArtistFormatter` in a helper with no `$helpers`. Neither
+exists in CakePHP 2.10, so each test now declares the member it uses.
+
+Full suite: 988 tests, 0 failures.
+
+### Session #3
+
+Step 4, components and models on controllers:
+
+- `MemberTypeResult.excludedKinds`: the requested kinds that every receiver's configuration
+  knows and does not load the alias in. `memberType()` now also returns a result when only some
+  requested kinds are ruled out, with `hasInitializeLoad` false.
+- `ControllerFieldTypeProvider` and `ControllerFieldGotoDeclarationHandler` add the convention
+  part only for kinds that are not ruled out: with `$uses` known and `$components` incomplete,
+  `$this->Foo` is `\FooComponent`, not `\Foo|\FooComponent`. Only CakePHP 2 rules kinds out,
+  so the provider adds the CakePHP 2 global names in that case and the full
+  `componentOrModelTypeFromFieldName()` union otherwise.
+- The completion contributors needed no change: they already hide a kind's convention list when
+  it is in `initializeKinds`, which for CakePHP 2 means known.
+- `ControllerComponentsGotoDeclarationHandler`: a string that is an entry of a configuring
+  property array (`$components`, `$helpers`, `$uses`), or that entry's `className`, resolves
+  through `memberType()` for the declaring class. So an alias navigates to its `className`, a
+  child entry without one navigates to the `className` it inherits from `AppController`, and
+  `$uses` entries navigate. Other strings keep the previous by-name lookup.
+
+`ConfiguredControllerTest` covers these through the type provider, completion and both goto
+handlers: aliased, plain and `AppController`-merged components; an unloaded component with an
+existing class; completion of loaded components only; `$uses` entries, other models, completion,
+the default model, `$uses = false`, appended `AppController` models and `loadModel()`; an
+incomplete `$components` keeping only the component convention; convention without the
+framework classes; goto on an aliased field and on property array strings.
+
+Two things the tests ran into:
+
+- `$this->Foo` on a CakePHP 2 controller also has `\void`, from the stub's
+  `Controller::__get() {}`. It is the `__get` dilution `fix-magic-get-type-dilution` fixes for
+  CakePHP 3 to 5, which leaves CakePHP 2 out. The test helper ignores it here. Real CakePHP
+  2.10 documents `Controller::__get()` as `@return mixed`, so against the real framework the
+  dilution is `mixed` rather than `void`. That branch's open question on CakePHP 2 covers it.
+- Component convention completion lists subclasses of `\AppComponent`, so it lists nothing in
+  an app without one. That predates this feature.
+
+Full suite: 1003 tests, 0 failures.
+
+### Session #4
+
+Step 5, associations. The CakePHP 2 code stays in `ControllerFieldTypeProvider`, as the plan
+preferred:
+
+- **Chain signature.** With CakePHP 2 enabled, a nested chain such as
+  `$this->Movie->Director->Studio` gets `#<key>m<field names joined by '.'><key><types of the
+  chain's first receiver>`, and `$this->Author` inside a class that may be a model (`$this`,
+  in a class not named `...Controller`, `...Component`, `...Helper` or `...View`) gets the same
+  with one field name. `complete()` resolves the first receiver's types, then each link in
+  turn: a controller through its configured members (`configuredFieldType()`, the old
+  `completeConfiguredField()` body), a CakePHP 2 model through its associations.
+- This differs from the plan, which embedded the previous link's signature in each link, as
+  CakePHP 3's `v1` does. Those signatures join receiver types with `|`, so one embedded in
+  another cannot be split back apart. Encoding the field names and the first receiver instead
+  resolves every link in one `complete()` call, with no recursion through this provider. The
+  chain is capped at 10 links.
+- **Association links:** the model's configured association type, plus `\<Field>` when that is
+  a CakePHP 2 model and the configuration does not determine the alias, for associations bound
+  with `bindModel()` on another receiver.
+- `isCakeTwoModel()` recognises a model through its whole chain (`\AppModel` or `\Model` at
+  any depth). The existing `isCakeTwoModelClass()` only checks for a direct `\AppModel` parent.
+- The old `#<key><first><key><last>` signature is now emitted only with CakePHP 3 enabled, and
+  its CakePHP 2 branch (`getCakeTwoClass()`, by name for both fields) is gone.
+- **Completion:** `nestedLookup()` accepts CakePHP 2 model receivers, and a new provider in
+  `ControllerModelOrTableCompletionContributor` completes `$this->` inside a CakePHP 2 model.
+  Both offer the configured associations and, when the configuration is unknown, the
+  convention list.
+- `nestedLookup()` had a by-name fallback for receivers that did not resolve to a table class,
+  added because CakePHP 2 models were not recognised by type. With them recognised, reaching it
+  on CakePHP 2 means the receiver was ruled out or is not a model, so it is skipped unless
+  CakePHP 3 is enabled.
+- **Navigation:** `ControllerFieldGotoDeclarationHandler` treats CakePHP 2 model receivers like
+  tables, so an aliased association goes to its `className`.
+
+`ConfiguredAssociationTest` covers an alias inside the model and through a controller, a
+redeclared association property, a comma-separated property, completion offering only
+configured associations (nested and inside the model), an externally bound association
+(type, method completion and goto, but not offered), an in-model `bindModel()` with a
+`className`, `with` join models in string and array form, a chain resolving `Studio` against
+the aliased `Person`, a model the controller does not load (no nested type or completion),
+and goto on an aliased association.
+
+Full suite: 1014 tests, 0 failures.
+
+Follow-up: the `nestedLookup()` by-name fallback is removed for every version, not just skipped
+for CakePHP 2. In CakePHP 3 to 5 the receiver's type already carries the configured members,
+through the configured-field signature from #292 with convention unioned in, so the fallback
+was only reached when no existing table class was in the type: a component, a missing table, or
+an unresolvable receiver. It then offered every table whenever any model FQN contained
+`\<Field>`, which is loose (`$this->Art->` matched `ArticlesTable`). Now a receiver that resolves
+to no table or CakePHP 2 model offers no association completion. No test relied on the
+fallback; full suite still 1014 tests, 0 failures. No test exercises the removed case
+directly either, since it needs a receiver whose type does not resolve.
+
+### Session #5
+
+Step 6, part 1: plugin identity and the `{Plugin}AppController` check.
+
+- `cakeTwoPluginName()` (`cake/CakeTwoPlugins.kt`) gives the plugin a file belongs to: the
+  directory under the nearest `Plugin` or `plugins` ancestor (covering `{app}/Plugin/{Name}/`,
+  `{root}/plugins/{Name}/` and the `View/Plugin/{Name}/` override directory), or a configured
+  plugin whose `pluginPath` contains the file, named by `effectivePluginName()` or the path's last
+  segment.
+- `CakeTwoChainResolver` takes the receiver controller's plugin and only merges a class named
+  `{Plugin}AppController` for it. Before, any `...AppController` other than `AppController` in
+  the chain was merged.
+- Tests: a plugin controller merges `FooAppController`; an app `UsersController` extending
+  `AdminAppController` does not merge its `$components` (it redeclares its own). cake2 tests:
+  152, 0 failures.
+
+Step 6, part 2: template helper receivers.
+
+- `CakeTwoRenderingControllers` finds the controllers that render a CakePHP 2 view file from its
+  template key: references in a controller class are rendering controllers, and a reference in
+  a view file (an element include) walks on to that file's key, with a visited set and a limit
+  of 200 files. The result is cached per key against `PhpFilesModificationTracker`, as the
+  view variable cache is. A file that reaches no controller gets `AppController`.
+- `ViewHelperInViewTypeProvider` gives CakePHP 2 view files the signature
+  `#<key>2<templateKey><key><field>`; `complete()` resolves the field against the rendering
+  controllers. CakePHP 3 to 5 views keep `#<key><field>` and `AppView`.
+- `configuredHelperType()` takes `loadsAnyHelper`: in a CakePHP 2 view, a helper the controllers'
+  known `$helpers` does not list keeps its convention type, since `View::__get()` loads any
+  helper by name. Inside a helper it stays ruled out, as `Helper::__get()` only loads its own
+  `$helpers`.
+- `ViewHelperInViewCompletionContributor` and `ViewHelperGotoDeclarationHandler` use the same
+  receivers; goto also keeps the convention class for a helper the controllers do not list.
+
+`TemplateHelperTest`: a controller alias in its template, an `AppController` alias in a child's
+template, a helper no controller loads, an element and a nested element, an element nothing
+includes (`AppController`'s alias, and convention for the rest), completion, and goto. Full
+suite: 1023 tests, 0 failures.
+
+Step 6, part 3: plugin-aware lookup, behind a version-neutral facade.
+
+- The generic modules no longer call CakePHP 2 code. `ViewHelperReceivers` is the one entry
+  point: `viewFileOf()` (a `ViewFile`: template key, plugin and `TemplateDirStructure`),
+  `of()`/`ofFile()` for the receivers, and `encode()`/`decode()` for type signatures. The
+  per-version rules live in `TemplateDirStructure`, chosen by the `TemplatesDir` subtype: the
+  plugin of a file, the override directory prefix, how a view name resolves to a plugin, the
+  view-class receivers, whether rendering controllers count, and the fallback receivers.
+  `RenderingControllers` is the generic cached walk (part 2's `CakeTwoRenderingControllers`).
+- CakePHP 2: plugin from `cakeTwoPluginName()`, override prefix `Plugin/{Name}/`, no view-class
+  receivers, rendering controllers with an `AppController` fallback. CakePHP 3 to 5: `AppView`
+  only, no plugin and no prefix splitting yet; `controller-side-helpers` turns those on. Their
+  override prefixes are `Plugin/{Name}/` (3) and `plugin/{Name}/` (4 and 5).
+- `ViewHelperInViewTypeProvider` gives every view file `#<key>v<structure id><template key>
+  <key><plugin><key><field>`, so CakePHP 3 to 5 views get a per-file signature too.
+- View file index: `ViewReferenceData.plugin` records the plugin a reference resolves in,
+  through `ReferencePluginContext`, which asks the referencing file's structure
+  (`TemplateDirStructure.ofSourceFile()`: a view file's own, or for a controller CakePHP 2 when
+  only CakePHP 2 is enabled or the controller is under the app, CakePHP 3+ otherwise). A
+  `Foo.` prefix is split off the key into the plugin for CakePHP 2. Index version 20.
+- `RenderingControllers` keeps a reference for a plugin's file only when it resolves in that
+  plugin, and for an app file when it resolves in no plugin, or in a plugin that has no file
+  of that key (found with `FilenameIndex` and `viewFileOf()`).
+
+`PluginTemplateHelperTest`: same-named app and plugin elements, an app override of a plugin
+template, a `Foo.`-prefixed element from an app template, and an unprefixed element a plugin
+lacks falling back to the app's. Two things it ran into:
+
+- **Same-named controllers.** An app `BarsController` and a plugin `BarsController` are both
+  `\BarsController`, so the resolver merges their configurations; plugin awareness cannot
+  separate them. The plan's test for that became the same-named elements test.
+- **Element directory ordering.** Element references are only indexed when the element
+  directory exists as the including template is indexed (the bug in
+  `resolve-element-paths-at-lookup`), so the test creates both `Elements` directories first.
+
+Full suite: 1027 tests, 0 failures.
+
+### Session #6
+
+Step 7, layouts.
+
+- **Indexing.** For structures with a layout directory (`TemplateDirStructure.layoutDirectory`,
+  `Layouts` for CakePHP 2 only), the view file index records under `Layouts/{name}`:
+  `render()`'s second argument (`MethodCallInfo.secondParameterValues`; a `render()` with only
+  a layout, as in `render(null, 'ajax')`, is kept now), `$this->layout = '...'` in controllers
+  and view files, and `public $layout = '...'` declarations in controllers, as a new
+  `ElementType.FIELD` that `referencingElementsInSmartReadAction()` maps to the `Field`.
+  Index version 21.
+- **Plugin context.** A layout name resolves in the plugin of the controller rendering it, not
+  the class naming it (an `AppController` assignment renders a plugin controller's own
+  `default.ctp`). So the index now records only an explicit `Foo.` prefix
+  (`ViewReferenceData.pluginPrefix`), and `RenderingControllers` works out the context: the
+  prefix, or the plugin of the candidate controller, or of the including view file. Templates
+  and elements behave as in Session #5.
+- **Receivers.** A layout reference in controller class `C` covers `C` and its controller
+  subclasses: all of them for an assignment or `render()`, those whose nearest `$layout`
+  declaration is `C`'s for a declaration. `default` also covers every app controller (from
+  `TemplateDirStructure.appControllerClass`) whose nearest declaration is `'default'` or absent,
+  so it does not depend on the framework's `Controller` being indexed, and a declaration in a
+  file not named like a controller still counts.
+- **Unions in views.** `ViewHelperReceivers.helperMemberType()` resolves each receiver of a view
+  separately, and only lets the configuration determine the type when every receiver loads the
+  helper. `configuredHelperType(loadsAnyHelper = true)` and the goto handler use it. Before,
+  `backend.ctp` rendered by an aliasing and a non-aliasing controller lost the convention class
+  that the non-aliasing one gets at runtime.
+- The cake2 vendor stub declares `Controller::$layout = 'default'`.
+
+`LayoutHelperTest`: a layout assigned in an action, passed to `render()`, declared, and declared
+on a base class (inherited by one subclass, redeclared by another); `default.ctp` as the union
+of the controllers that render it; a `json` data view layout; a layout in another subdirectory
+falling back to `AppController`; layouts assigned in a template and in an element; a plugin's
+own `default.ctp`; and a `Foo.`-prefixed layout named by an app controller.
+
+Full suite: 1037 tests, 0 failures.
+
+### Session #7
+
+Merged `main`, which brought the real CakePHP test mode (#294) and the `__get` fix (#295).
+
+- The new cake2 test classes loaded the stub with `copyFileToProject()` or
+  `myFixture.configureByFiles()`, which bypass real mode; they now use
+  `BaseTestCase.configureByFiles()`, which leaves the stub out when real CakePHP is attached.
+  The "without the framework" test in `ConfiguredControllerTest` is skipped in real mode, where
+  the framework is always attached.
+- Against real CakePHP 2.10, `Model::__get()` and `Controller::__get()` add their return types
+  to associations and to members the configuration rules out, because #295's
+  `ConfiguredMemberFieldTypeProvider` does not cover CakePHP 2 models, chained receivers or
+  ruled-out members. `ConfiguredControllerTest` and `ConfiguredAssociationTest` compare
+  `Cake2BaseTestCase.projectClassTypes()` (no pseudo-types, no framework-only classes) for now;
+  the proper fix is planned in `cake2-magic-get-type-dilution`.
+
+Full check: stub 1039 tests, 0 failures; real 1039 tests, 0 failures, 1 skipped.
+
+### Session #8
+
+Review of #299 found the `default` layout gaining `\HtmlHelper` from `AppController`, a base
+class that never renders it: layout references spread down the class hierarchy, and base
+classes with no alias of their own added the convention type to the union.
+
+- **Leaf rule.** When a layout reference spreads across the hierarchy (declarations,
+  assignments, `default`), only non-abstract controllers with no controller subclasses count
+  as rendering it. A class others extend, or an abstract one, is their base; its configuration
+  still reaches them through the class chain. Template and element references are unaffected,
+  since they come from specific action methods.
+- **Why not "has an action".** CakePHP 2 dispatches any public, non-`_` method a controller has
+  beyond `Controller`'s, so a rule following that would change which helpers a layout gets
+  whenever someone added a public method such as `isAuthorized()` to a base class. The leaf rule
+  depends on the hierarchy only.
+- **Cost.** A concrete controller that another extends (`PostsController` under
+  `AdminPostsController`) no longer counts for its layouts; the subclass usually shares its
+  configuration. Review flagged this too; see Session #9.
+- In real mode, `default.ctp` also gets `\HtmlHelper`: CakePHP's own `CakeErrorController` is a
+  leaf that renders error pages in the default layout (plus the bake skeleton's
+  `PagesController`). The test expects that per mode (`BaseTestCase.usesRealVendor`).
+
+New tests: an abstract base's helpers and layout reaching its subclass, a layout only an abstract
+class names falling back to `AppController`, an extended controller not rendering its own layout,
+and `default.ctp` unioning a controller without the alias. `default.ctp`, its `json` variant,
+`backend.ctp` and the plugin's `default.ctp` lost the base classes' `\HtmlHelper`.
+
+### Session #9
+
+Review of the leaf rule: `PostsController` has a public `index()` and renders `posts.ctp`, but
+the rule dropped it because `AdminPostsController` extends it.
+
+- A controller with subclasses now still counts when it shows evidence of rendering pages
+  itself: one of its own public, non-`_` methods has an existing template under its own name
+  (`{Controller}/{action}`, in its plugin), or one of its own methods calls `$this->render()`.
+- That keeps the reason for the leaf rule: a public method alone, such as `isAuthorized()` on
+  `AppController`, changes nothing, since no `View/App/is_authorized.ctp` exists. A base class
+  only starts counting when a template for one of its actions appears, or it renders
+  explicitly, which is a real change in what it renders.
+- An action with no template of its own (JSON-only, redirect-only) on an extended controller
+  does not count, which matches that it renders no layout.
+- `viewFileExists()` replaces `pluginHasViewFile()`, so both checks use the same lookup.
+
+Tests: `posts.ctp` gets both `PostsHtmlHelper` and `AdminPostsHtmlHelper` with a
+`Posts/index.ctp` fixture; an extended `ReportsController` with a `render()` call counts for
+`reports.ctp`; `AppController` and `BackendController` gained a public `isAuthorized()` with no
+template and still do not count.
+
+### Session #10
+
+Two more review findings on the evidence rule from Session #9:
+
+- **Inherited actions.** It checked only a controller's own methods, but CakePHP dispatches
+  inherited public methods too, so a `CatalogController` inheriting `index()` with its own
+  `Catalog/index.ctp` was dropped once another controller extended it. The actions are now every
+  public, non-`_` method in the chain below the framework controller
+  (`TemplateDirStructure.frameworkControllerClass`, `\Controller` for CakePHP 2), still matched
+  against templates under the controller's own name. A public method added to a base class still
+  changes nothing unless such a template exists.
+- **`render()` naming a layout.** Any `$this->render()` counted, but `render('summary', 'print')`
+  renders with `print`, which the index already records separately. Only calls without a layout
+  argument count now.
+
+Known limitation, not addressed: layout analysis is per controller, not per action. An action
+that assigns `$this->layout` before rendering still counts its template as evidence for the
+controller's declared layout, and a leaf controller that declares a layout counts for it even if
+every action overrides it. Fixing that means tracking the layout each action ends up with, across
+declarations, `beforeFilter()`, assignments and `render()` arguments.
+
+- **Overridden parent actions.** The chain walk kept every class's methods, so a parent's
+  `export()` that calls `render()` without a layout counted for a child whose own `export()`
+  renders with another layout. `actionsOf()` keeps only the nearest method for each name
+  (case-insensitively, as PHP does), then drops non-public and `_` ones, so a child overriding
+  a public action with a protected one removes it too.
+
+Tests: an extended controller whose template is for an inherited `index()`, an extended
+controller whose only action renders with another layout not counting for its declared one, and
+an overridden parent action not counting for the child. Stub mode: cake2 181 tests, 0 failures;
+real mode is left to CI.

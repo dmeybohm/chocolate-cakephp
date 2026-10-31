@@ -25,6 +25,8 @@ namespace Cake\Controller\Component {
 
 namespace Cake\View {
     class View {
+        use CellTrait;
+
         public function initialize(): void {}
 
         public function loadHelper(string $name, array $config = []): Helper {
@@ -35,8 +37,28 @@ namespace Cake\View {
             return $this;
         }
     }
-    class Helper {}
+    class Helper {
+        /**
+         * @var \Cake\View\View
+         */
+        protected $_View;
+    }
     class ViewBuilder {}
+    trait CellTrait {
+        protected function cell(string $cell, array $data = [], array $options = []): Cell {
+            return new Cell();
+        }
+    }
+    abstract class Cell {
+        use ViewVarsTrait;
+        use \Cake\ORM\Locator\LocatorAwareTrait;
+
+        public function initialize(): void {}
+
+        public function render(?string $template = null): string {
+            return '';
+        }
+    }
     trait ViewVarsTrait {
         /**
          * @return ViewBuilder

@@ -1,7 +1,9 @@
 package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.cake.cellNameFromCellFile
 import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
+import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.RenderPath
@@ -44,7 +46,11 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         }
 
         if (isCakeControllerFile(psiFile)) {
-            indexController(result, psiFile, virtualFile)
+            val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return result
+            indexActions(result, psiFile) { controllerMethodKey(controllerPath, it) }
+        } else if (settings.cake3Enabled && isCakeCellFile(virtualFile)) {
+            val cellName = cellNameFromCellFile(virtualFile) ?: return result
+            indexActions(result, psiFile) { cellActionKey(cellName, it) }
         } else {
             indexViewFile(result, inputData, psiFile, virtualFile, project, settings)
         }
@@ -132,12 +138,11 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         result.getOrPut(key) { ViewVariablesWithRawVars() }.calls.add(ViewVariableCall(callOffset, vars))
     }
 
-    private fun indexController(
+    private fun indexActions(
         result: MutableMap<String, ViewVariablesWithRawVars>,
         psiFile: PsiFile,
-        virtualFile: VirtualFile
+        actionKey: (String) -> ViewVariablesKey
     ) {
-        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
         val rootNode = psiFile.node ?: return
         
         // Find all public methods that can render views using AST
@@ -157,8 +162,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
                 if (entries.isNotEmpty()) variables.calls.add(ViewVariableCall(call.node.startOffset, entries))
             }
             
-            val filenameAndMethodKey = controllerMethodKey(controllerPath, method.name)
-            result[filenameAndMethodKey] = variables
+            result[actionKey(method.name)] = variables
         }
     }
 

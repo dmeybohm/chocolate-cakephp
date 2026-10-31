@@ -1,0 +1,29 @@
+{
+    "name": "chocolate-cakephp/assumptions-cake5",
+    "description": "CakePHP 5 app for the Chocolate CakePHP assumption tests",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "cakephp/cakephp": "5.4.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5.3 || ^12.1.3 || ^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/",
+            "Probe\\": "plugins/Probe/src/",
+            "Other\\": "plugins/Other/src/",
+            "Acme\\Vendored\\": "plugins/Acme/Vendored/src/",
+            "Unloaded\\": "plugins/Unloaded/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Test\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

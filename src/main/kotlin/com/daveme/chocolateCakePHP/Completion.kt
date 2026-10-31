@@ -88,20 +88,6 @@ fun CompletionResultSet.completeFromLoadedMembers(
     }
 }
 
-fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
-    classes: Collection<PhpClass>,
-    removeFromEnd: String = "",
-    advanceBeyondClosingParen: Boolean = false,
-) {
-    classes.map { klass ->
-        val targetName = klass.name.removeFromEnd(removeFromEnd, ignoreCase = true)
-        val lookupElement = LookupElementBuilder.create(targetName)
-            .withIcon(PhpIcons.FIELD)
-            .withTypeText(klass.type.toString().substring(1))
-            .withInsertHandler(CompleteStringParameter(advanceBeyondClosingParen))
-        this.addElement(lookupElement)
-    }
-}
 private fun hasFieldAlready(containingClasses: List<PhpClass>, propertyName: String): Boolean =
     containingClasses.any {
         val hasField = it.findFieldByName(propertyName, true) != null

@@ -1,0 +1,1 @@
+<?= $this->cell('Probe.Gadget::own')->render('elementinplugin') ?>

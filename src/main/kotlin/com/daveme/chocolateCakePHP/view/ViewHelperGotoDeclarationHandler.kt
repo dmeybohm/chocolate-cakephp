@@ -1,11 +1,9 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
-import com.daveme.chocolateCakePHP.viewType
 import com.daveme.chocolateCakePHP.viewHelperClassesFromFieldName
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
@@ -48,14 +46,14 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             val phpIndex = PhpIndex.getInstance(project)
             val helperTypes = classReference.type.lookupCompleteType(project, phpIndex, null).types
                 .filter { it.startsWith("\\") && it.contains("Helper") }
-            val receiverTypes = when {
-                helperTypes.isNotEmpty() -> helperTypes
-                isCakeViewFile(project, settings, psiElement.containingFile) -> viewType(settings).types.toList()
-                else -> emptyList()
-            }
-            val configured = ConfiguredMemberService.memberType(
-                project, receiverTypes, setOf(MemberKind.HELPER), fieldName
-            )
+            val viewReceivers = if (helperTypes.isEmpty())
+                ViewHelperReceivers.ofFile(project, settings, psiElement.containingFile)
+            else
+                null
+            val configured = if (viewReceivers != null)
+                ViewHelperReceivers.helperMemberType(project, viewReceivers, fieldName)
+            else
+                ConfiguredMemberService.memberType(project, helperTypes, setOf(MemberKind.HELPER), fieldName)
             val result = configured?.classes.orEmpty().toMutableList()
             if (configured == null || !configured.hasInitializeLoad) {
                 result += phpIndex.viewHelperClassesFromFieldName(settings, fieldName)

@@ -225,7 +225,7 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
             topSourceDirectory
         ) ?: return null
         val allViewPaths = allViewPathsFromController(
-            relatedLookupInfo.controllerPath,
+            relatedLookupInfo.ownerPath,
             allTemplatePaths,
             settings,
             actionNames
@@ -291,12 +291,12 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
         val file = element.containingFile ?: return
         val virtualFile = file.virtualFile ?: return
 
-        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
+        val ownerPath = viewOwnerPathFromFile(project, settings, virtualFile) ?: return
         val relatedLookupInfo = RelatedLookupInfo(
             project = project,
             file = file,
             settings = settings,
-            controllerPath = controllerPath
+            ownerPath = ownerPath
         )
 
         val allViewFilesMarker = markerForAllViewFilesInAction(project, relatedLookupInfo, element)

@@ -54,6 +54,12 @@ abstract class BaseTestCase : BasePlatformTestCase() {
     }
 
     /**
+     * Whether the real framework is attached instead of the stubs.
+     */
+    protected val usesRealVendor: Boolean
+        get() = realVendorDescriptor != null
+
+    /**
      * Skips the test when the real framework is attached instead of the stubs.
      */
     protected fun assumeStubVendor(reason: String) {

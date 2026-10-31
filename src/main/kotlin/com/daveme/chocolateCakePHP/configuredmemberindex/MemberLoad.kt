@@ -16,6 +16,7 @@ enum class MemberKind {
 enum class LoadSource {
     METHOD_CALL,
     PROPERTY_ARRAY,
+    BIND_MODEL,
 }
 
 /**
@@ -30,11 +31,45 @@ data class MemberLoad(
     val className: String?,
     val methodName: String?,
     val offset: Int,
+    val property: String? = null,
+    val hasUnreadClassName: Boolean = false,
 ) {
     val isInitializeLoad: Boolean
         get() = source == LoadSource.PROPERTY_ARRAY ||
-                methodName.equals("initialize", ignoreCase = true)
+                (source == LoadSource.METHOD_CALL && methodName.equals("initialize", ignoreCase = true))
 }
+
+/**
+ * The form of the value a configuring property is declared with.
+ */
+enum class DeclaredValue {
+    ARRAY,
+    STRING,
+    TRUE,
+    FALSE,
+    NULL,
+    OTHER,
+}
+
+/**
+ * A declaration of a property that configures members, such as `public $uses = array('Movie')`,
+ * whether or not it loads anything.
+ */
+data class PropertyDeclaration(
+    val property: String,
+    val kind: MemberKind,
+    val value: DeclaredValue,
+    val isComplete: Boolean,
+    val offset: Int,
+)
+
+/**
+ * The member loads and configuring property declarations of one class.
+ */
+data class ClassConfiguration(
+    val loads: List<MemberLoad>,
+    val declarations: List<PropertyDeclaration>,
+)
 
 internal val methodCallSources: Map<String, MemberKind> = mapOf(
     "loadcomponent" to MemberKind.COMPONENT,
@@ -55,6 +90,10 @@ internal val sourcesWithoutOptions: Set<String> = setOf(
 
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
+internal const val BIND_MODEL_METHOD = "bindmodel"
+
+internal const val HABTM_PROPERTY = "hasAndBelongsToMany"
+
 internal val associationTypeKeys: Set<String> = setOf(
     "belongsTo",
     "hasOne",
@@ -62,6 +101,15 @@ internal val associationTypeKeys: Set<String> = setOf(
     "belongsToMany",
 )
 
+internal val cakeTwoAssociationTypeKeys: Set<String> = setOf(
+    "belongsTo",
+    "hasOne",
+    "hasMany",
+    HABTM_PROPERTY,
+)
+
 internal val propertyArraySources: Map<String, MemberKind> = mapOf(
     "helpers" to MemberKind.HELPER,
-)
+    "components" to MemberKind.COMPONENT,
+    "uses" to MemberKind.TABLE,
+) + cakeTwoAssociationTypeKeys.associateWith { MemberKind.ASSOCIATION }

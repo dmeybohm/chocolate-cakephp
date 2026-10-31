@@ -1,0 +1,1 @@
+plugin:cell/Sprocket/inprobe

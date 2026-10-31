@@ -1,7 +1,9 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.componentAndModelClassesFromFieldName
+import com.daveme.chocolateCakePHP.cake.isCakeTwoModel
+import com.daveme.chocolateCakePHP.componentFieldClassesFromFieldName
+import com.daveme.chocolateCakePHP.modelFieldClassesFromFieldName
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.isAnyControllerClass
@@ -45,7 +47,9 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
             ?.filter { it.startsWith("\\") }
             .orEmpty()
         val controllerTypes = receiverTypes.filter { it.isAnyControllerClass() }
-        val tableTypes = receiverTypes.filter { it.isAnyTableClass() }
+        val tableTypes = receiverTypes.filter {
+            it.isAnyTableClass() || (settings.cake2Enabled && phpIndex.isCakeTwoModel(it))
+        }
         val configured = when {
             controllerTypes.isNotEmpty() -> ConfiguredMemberService.memberType(
                 project, controllerTypes, setOf(MemberKind.COMPONENT, MemberKind.TABLE), fieldName
@@ -58,7 +62,13 @@ class ControllerFieldGotoDeclarationHandler : GotoDeclarationHandler {
 
         val result = configured?.classes.orEmpty().toMutableList()
         if (configured == null || !configured.hasInitializeLoad) {
-            result += phpIndex.componentAndModelClassesFromFieldName(settings, fieldName)
+            val excludedKinds = configured?.excludedKinds.orEmpty()
+            if (MemberKind.COMPONENT !in excludedKinds) {
+                result += phpIndex.componentFieldClassesFromFieldName(settings, fieldName)
+            }
+            if (MemberKind.TABLE !in excludedKinds) {
+                result += phpIndex.modelFieldClassesFromFieldName(settings, fieldName)
+            }
         }
         return result.distinct().toTypedArray()
     }
