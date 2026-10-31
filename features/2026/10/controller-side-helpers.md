@@ -81,10 +81,16 @@ index, so the walk finds no controllers and falls back to `AppView` alone, and
 `readLoadArray()` skips entries it cannot read, such as `protected $helpers = [self::X]` on a
 helper. The helper then counts as having an initialize load of `HELPER`, so
 `ViewHelperInViewHelperCompletionContributor` hides the convention list without knowing what the
-helper loads. The CakePHP 2 feature added `isComplete` to property declarations
-(`MemberLoad`, read in `CakeTwoChainResolver`); use it here so an incomplete `$helpers` keeps the
-convention fallback. The same applies to a non-literal `className` in an `addHelper()` or
-`loadComponent()` options array.
+helper loads. The CakePHP 2 feature records the two cases separately, both read in
+`CakeTwoChainResolver`:
+
+- `PropertyDeclaration.isComplete` is false when a property array has an entry the indexer could
+  not read, such as `self::X`. Use it here so an incomplete `$helpers` keeps the convention
+  fallback.
+- `MemberLoad.hasUnreadClassName` is true when a load's `className` option is present but not a
+  literal, as in `addHelper('Foo', ['className' => $x])` or the same on `loadComponent()`. That
+  load is complete as a declaration but its class is unknown, so it should neither determine the
+  type nor rule out the convention class.
 
 ### 4. Plugin templates
 
@@ -155,7 +161,9 @@ fix. All three are merged.
    `ViewHelperInViewTypeProvider` already carries the `ViewFile` in its signature on every version,
    so the providers only need the structure to say `usesRenderingControllers`.
    Skip `CELL_RENDER` references in the `RenderingControllers` walk.
-4. The complete flag for CakePHP 3 to 5 property arrays and options.
+4. Honour `PropertyDeclaration.isComplete` for CakePHP 3 to 5 property arrays, and
+   `MemberLoad.hasUnreadClassName` for `addHelper()` and `loadComponent()` options, in the
+   CakePHP 3 to 5 resolution path.
 5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its template
    and in an element only that template includes, without other controllers' aliases; any layout,
    and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
