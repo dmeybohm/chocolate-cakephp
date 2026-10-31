@@ -274,10 +274,10 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   element and not in the app's, and the other way round.
 - One app template, rendered only by the app's controller, calls both
   `element('Blog.shared', ['blogOnly' => 1])` and `element('shared', ['appOnly' => 1])`. After
-  prefix splitting the two records share a key and a file, so only the offset tells them apart:
-  `Blog`'s element gets `blogOnly` alone and the app's gets `appOnly` alone. A single call would
-  show an offset mismatch, as missing data; the second call also catches a read that takes every
-  call under the shared key and file. The template must not be rendered by a `Blog` controller,
+  prefix splitting the two calls share one record for that key and file, so only the offset tells
+  them apart: `Blog`'s element gets `blogOnly` alone and the app's gets `appOnly` alone. A single
+  call would show an offset mismatch, as missing data; the second call also catches a read that
+  takes every call in the shared record. The template must not be rendered by a `Blog` controller,
   since by fallback its unprefixed call would then legitimately reach `Blog`'s element too.
 - The type provider gives a variable set by both classes under different types its own class's type
   in each template, which checks the signature carries the plugin through `complete()`.
