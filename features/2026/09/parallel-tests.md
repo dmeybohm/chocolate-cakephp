@@ -128,11 +128,28 @@ What the numbers say:
   needed. The `build/kover/errors/test.log` entry about `JitSuppressor` is a
   pre-existing instrumentation warning unrelated to forks.
 
-Decision: default `maxParallelForks` is `cores / 2` capped at 3 (3 here,
-2 on the 4-core CI runner). On this machine that is 286s → 207s, about 28%.
-A bigger win would need the per-test work itself to shrink, not more forks.
+First decision: default `maxParallelForks` of `cores / 2` capped at 3 (3
+here, 2 on the 4-core CI runner). On this machine that is 286s → 207s, about
+28%. A bigger win would need the per-test work itself to shrink, not more
+forks.
 
-CI was left as is (`./gradlew check`). If CI wall time matters later, a
-matrix split by package (`--tests 'com.daveme.chocolateCakePHP.test.cake5.*'`
-etc.) gives per-job isolation without containers; upload Kover per job with
-codecov flags.
+#### CI
+
+With that default the PR's CI runs were slower than main. Same 1519 tests,
+`:test` task duration from the job log timestamps:
+
+| Run | Forks | `:test` | First test passes at |
+|-----|-------|---------|----------------------|
+| main c1fd20b | 1 | 224s | +9s |
+| configured-associations cd4a0b1 | 1 | 178s | +7s |
+| parallel-tests 31dbd1c | 2 | 347s | +54s |
+
+On 4 cores a second fork has nothing spare to run on, and both forks build
+cold sandboxes at the same time before the first test starts (CI never gets
+the warm-slot reuse that helps locally). Revised default: one fork per four
+cores, `cores / 4` capped at 3, which is 1 on the runner and 2 here (2 and 3
+forks measured within noise of each other locally).
+
+If CI wall time matters later, a matrix split by package
+(`--tests 'com.daveme.chocolateCakePHP.test.cake5.*'` etc.) gives per-job
+isolation without containers; upload Kover per job with codecov flags.

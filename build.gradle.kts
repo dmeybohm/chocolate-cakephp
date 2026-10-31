@@ -171,11 +171,12 @@ tasks {
         // sandbox (system/config/log dirs) via ForkSandboxListener, otherwise
         // the forks contend on the shared index and cache storage and there is
         // no speedup. Override with -PtestForks=N. A single fork already keeps
-        // several cores busy and wants ~2 GB, so the gain flattens out at 3
-        // forks and reverses at 4 (see features/2026/09/parallel-tests.md).
+        // about four cores busy and wants ~2 GB, so the default is one fork
+        // per four cores: on the 4-core CI runner a second fork made the
+        // suite 1.5x slower (see features/2026/09/parallel-tests.md).
         maxParallelForks = providers.gradleProperty("testForks")
             .map(String::toInt)
-            .getOrElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3))
+            .getOrElse((Runtime.getRuntime().availableProcessors() / 4).coerceIn(1, 3))
         // Extra JVM flags for the test forks, e.g. -PtestJvmArgs=-Dcaches.indexerThreadsCount=2
         providers.gradleProperty("testJvmArgs").orNull?.let { jvmArgs(it.split(' ')) }
 
