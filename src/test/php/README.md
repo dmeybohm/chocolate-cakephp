@@ -69,6 +69,7 @@ Relied on by element navigation and element related usages.
 | A plugin template prefers the plugin's element | `testPluginTemplatePrefersPluginElement` | Same |
 | A plugin template falls back to the app's element | `testPluginTemplateFallsBackToAppElement` | Same |
 | An app template's unprefixed element does not reach a plugin | `testAppTemplateDoesNotReachPluginElementUnprefixed` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
+| An element in a wrongly-cased directory is not found, on a case-sensitive filesystem | `testWronglyCasedElementDirectoryIsNotFound` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
 | An app template's `Plugin.name` element finds the plugin's element | `testAppTemplateRendersPrefixedPluginElement` | Same |
 | A `Plugin.name` element missing from the plugin falls back to the app's element | `testPrefixedElementFallsBackToAppElement` | Same |
 | A plugin template's element of another plugin finds that plugin's element | `testPluginTemplateRendersOtherPluginElement` | Same |
@@ -117,6 +118,8 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | A view class's `loadHelper()` wins over a controller's helper of the same alias without options | `testViewLoadHelperWinsOverControllerHelperWithoutOptions` | Same |
 | A view class's `loadHelper()` raises an error when a controller gives the same alias another `className` | `testViewLoadHelperConflictsWithControllerClassName` | Same |
 | The builder's helpers replace a `$helpers` property declared on the view class | `testControllerBuilderReplacesViewHelpersProperty` | Same |
+| The controller's helpers replace a `$helpers` property declared on the view class | `testControllerHelpersReplaceViewHelpersProperty` | 2 only |
+| A view built by hand, with no helpers passed, keeps its `$helpers` property | `testViewBuiltByHandKeepsHelpersProperty` | Same, and 2 |
 | A controller's helper reaches a layout and an element in it | `testControllerHelperReachesLayoutAndItsElement` | Same |
 | A cell's own `viewBuilder()` helper reaches its template | `testCellOwnHelperReachesItsTemplate` | Same |
 | An app controller's helper reaches a plugin cell's template | `testControllerHelperReachesPluginCellTemplate` | Same |

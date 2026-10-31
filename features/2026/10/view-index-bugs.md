@@ -236,3 +236,12 @@ Behaviour that narrowed, both accepted as following from the plan:
   app directory.
 - A `*View` class whose chain does not reach `\Cake\View\View`, for example because its parent is not
   indexed, now has its `$helpers` property read.
+
+### Session #2
+
+Added assumption tests for the framework behaviour these fixes rely on. All of them pass, so the
+plan's claims hold on the pinned releases.
+
+- `testWronglyCasedElementDirectoryIsNotFound` on 2 to 5, for dropping the directory lookup.
+- `testViewBuiltByHandKeepsHelpersProperty` on 2 to 5, for the limitation in Bug 2.
+- `testControllerHelpersReplaceViewHelpersProperty` on 2, for the view rule in `CakeTwoChainResolver`.
