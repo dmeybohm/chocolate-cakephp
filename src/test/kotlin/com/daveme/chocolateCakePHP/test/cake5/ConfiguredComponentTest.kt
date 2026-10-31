@@ -8,6 +8,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import org.junit.Assume
 import java.io.File
 
 class ConfiguredComponentTest : Cake5BaseTestCase() {
@@ -134,6 +135,21 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
     fun `test flash resolves through the child controller`() {
         configureControllerWithBody("cake5/src5/Controller/ChildConfiguredController.php", "\$this->Fl<caret>ash;")
         assertEquals(setOf("\\Cake\\Controller\\Component\\FlashComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test an unloaded table property leaves out the framework's magic types`() {
+        configureConfiguredController("\$this->Mov<caret>ies;")
+        val types = fieldTypeAtCaret()
+        assertTrue(types.contains("\\App\\Model\\Table\\MoviesTable"))
+        for (magicType in listOf("\\null", "\\mixed", "\\Cake\\ORM\\Table", "\\Cake\\Controller\\Component")) {
+            assertFalse("Unexpected $magicType in $types", types.contains(magicType))
+        }
+    }
+
+    fun `test a field with no class by convention keeps its native type`() {
+        Assume.assumeTrue("The stub Controller declares no __get", usesRealVendor)
+        configureConfiguredController("\$this->Nonexist<caret>ent;")
+        assertTrue(fieldTypeAtCaret().contains("\\Cake\\ORM\\Table"))
     }
 
     fun `test load in beforeFilter is unioned with convention`() {

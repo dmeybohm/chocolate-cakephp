@@ -75,6 +75,7 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
         }
         val configured = ConfiguredMemberService.memberType(project, listOf(receiverClass), kinds, fieldName)
         val determined = configured != null && configured.hasInitializeLoad
+        val isView = receiverClass.isViewClassName()
         if (determined && configured!!.classFqns.isNotEmpty()) {
             return configured.type
         }
@@ -88,18 +89,32 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
                 }
                 result.takeUnless { it.isEmpty }
             }
-            // A view loads any helper by name, so its configuration rules nothing out:
-            receiverClass.isViewClassName() -> null
-            determined -> PhpType().add(PhpType.NULL)
-            !settings.cake2Enabled -> null
-            else -> PhpType().apply {
-                configured?.let { add(it.type) }
-                if (receiverClass.isAnyControllerClass()) {
-                    add(controllerConventionType(settings, fieldName, configured?.excludedKinds.orEmpty()))
-                } else {
-                    add(viewHelperTypeFromFieldName(settings, fieldName))
-                }
-            }
+            // A view loads any helper by name, so its configuration rules nothing out. CakePHP 2
+            // views get their helpers from the controllers rendering them, not from this class:
+            isView && settings.cake2Enabled -> null
+            determined && !isView -> PhpType().add(PhpType.NULL)
+            else -> conventionFieldType(settings, phpIndex, receiverClass, fieldName, configured)
+        }
+    }
+
+    private fun conventionFieldType(
+        settings: Settings,
+        phpIndex: PhpIndex,
+        receiverClass: String,
+        fieldName: String,
+        configured: MemberTypeResult?
+    ): PhpType? {
+        val convention = if (receiverClass.isAnyControllerClass())
+            controllerConventionType(settings, fieldName, configured?.excludedKinds.orEmpty())
+        else
+            viewHelperTypeFromFieldName(settings, fieldName)
+        // Without a class to show for it, the convention says less than the __get() type does:
+        if (settings.cake3Enabled && convention.types.none { phpIndex.getClassesByFQN(it).isNotEmpty() }) {
+            return null
+        }
+        return PhpType().apply {
+            configured?.let { add(it.type) }
+            add(convention)
         }
     }
 

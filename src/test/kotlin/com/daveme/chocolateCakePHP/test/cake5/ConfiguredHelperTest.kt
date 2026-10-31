@@ -75,6 +75,15 @@ class ConfiguredHelperTest : Cake5BaseTestCase() {
         assertTrue(helperTypesAtCaret().contains("\\App\\View\\Helper\\ArtistFormatterHelper"))
     }
 
+    fun `test helper the view does not load leaves out the framework's magic types`() {
+        configureTemplate("\$this->Ti<caret>me;")
+        val types = helperTypesAtCaret()
+        assertTrue(types.contains("\\Cake\\View\\Helper\\TimeHelper"))
+        for (magicType in listOf("\\null", "\\Cake\\View\\Helper")) {
+            assertFalse("Unexpected $magicType in $types", types.contains(magicType))
+        }
+    }
+
     fun `test aliased helper in a helper resolves through the helpers array`() {
         configureConfiguredHelper("\$this->Ali<caret>as;")
         assertEquals(setOf("\\App\\View\\Helper\\ArtistFormatterHelper"), helperTypesAtCaret())
