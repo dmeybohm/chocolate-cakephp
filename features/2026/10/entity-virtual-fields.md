@@ -37,9 +37,15 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
   registered under three keys built from `$field = lcfirst(substr($method, 4))`:
   `Inflector::underscore($field)`, `$field` itself, and `ucfirst($field)`. So `_getFullName()`
   answers `full_name`, `fullName` and `FullName`. Only the snake_case spelling is idiomatic.
-- `get_class_methods()` runs inside the class, so protected and private methods count, as do
-  methods inherited from a parent entity and methods brought in by a trait. The convention is
-  `protected`.
+- `get_class_methods()` filters by the calling scope, and that scope is the class the trait's
+  `_accessor()` was copied into: `Cake\ORM\Entity`, not the concrete entity. Public methods
+  always count. Protected methods count because the engine's protected check accepts any class
+  in the same hierarchy, so a protected accessor on the entity, on a parent entity, or brought
+  in by a trait is found. A private method counts only when its declaring class is the calling
+  scope itself, so a private `_getX()` on an entity that extends `Cake\ORM\Entity` is never
+  found, whether declared on the entity or on one of its parents. The one case where a private
+  accessor works is a class that uses `EntityTrait` directly and declares the accessor itself.
+  A PHP visibility probe confirmed this. The convention is `protected`.
 - `Cake\ORM\Entity` itself is skipped (`static::class === self::class` returns no accessor),
   and `EntityTrait` declares no `_get*` or `_set*` methods of its own, so there is nothing to
   filter out from the framework side.
@@ -105,24 +111,31 @@ bytecode first. The outcome decides the shape:
    such as `$this->Movies->get($id)->full_name`, or a variable typed by one of our providers in
    a template), goes on. The receiver encodings in those cases are unknown and are settled by
    the same real-mode probe the dilution work used, recorded in the progress log.
-3. **Resolve the receiver** to classes with `lookupCompleteType` and keep the ones that are
-   entities: a subclass of `\Cake\ORM\Entity`, or a class implementing
+3. **Resolve the receiver** to classes with `lookupCompleteType`, dropping primitive types
+   such as `null` the way the configured-member provider does. Every remaining class must be
+   an entity: a subclass of `\Cake\ORM\Entity`, or a class implementing
    `\Cake\Datasource\EntityInterface`, which covers an entity that uses `EntityTrait`
-   directly. Plugin entities (`TestPlugin\Model\Entity\PluginItem`) qualify by hierarchy, not
-   by namespace.
+   directly. One class that is not an entity leaves the whole receiver to native resolution,
+   since answering for `Movie` alone on a `Movie|Other` receiver would drop `Other`'s type and
+   claim more than is known. Plugin entities (`TestPlugin\Model\Entity\PluginItem`) qualify
+   by hierarchy, not by namespace.
 4. **Skip declared fields.** If any receiver class declares the field (`findFieldByName`, which
    walks the hierarchy and sees `@property` tags), return `null` so PhpStorm's exact type
    stands. As in the configured-member provider, one class without an answer leaves them all
    to native resolution.
 5. **Find the getter.** Build the accessor table for the class the way `_accessor()` does:
    walk the class, its traits and its parents up to but excluding `Cake\ORM\Entity`, take every
-   method named `_get…` or `_set…`, and key it under the three spellings. The table is per
-   class and cached on `PhpFilesModificationTracker`, the project's tracker for PHP changes.
-   Nearest declaration wins, as `get_class_methods()` reports the overriding method.
+   public or protected method named `_get…` or `_set…`, and key it under the three spellings.
+   A private method is taken only when its declaring class uses `EntityTrait` directly, which
+   matches the scope rule above. The table is per class and cached on
+   `PhpFilesModificationTracker`, the project's tracker for PHP changes. Nearest declaration
+   wins, as `get_class_methods()` reports the overriding method.
 6. **Answer with the getter's type.** The declared or `@return` type when there is one, else
    the inferred type completed through `lookupCompleteType`. A getter that reads other virtual
    fields of the same entity recurses through `doCompleteType`'s guard, which the dilution work
    confirmed is safe for index lookups in `complete()`.
+   On a union of entities, every class must provide a getter; the answer is the union of
+   their types, and one class without a getter leaves them all to native resolution.
 7. **No getter, no answer.** A setter-only field, or a field with no accessor at all, returns
    `null` and keeps today's `mixed`.
 
@@ -220,8 +233,9 @@ load call in the table (the `MemberLoad.offset` in the table's file, as the conf
 navigation does for controller fields) and to the target entity class when it exists, so the
 chooser shows both.
 
-Nested access needs nothing extra: `$movie->reviews[0]->author` types the element as `Review`
-through PhpStorm's own array handling and then resolves `author` on it.
+Nested access needs nothing extra: `$user->reviews[0]->author` types the element as `Review`
+through PhpStorm's own array handling and then resolves `author` on it. `MoviesTable` stays
+without associations, so `$movie->reviews` is deliberately not an example.
 
 ## Out of scope
 
@@ -241,7 +255,8 @@ through PhpStorm's own array handling and then resolves `author` on it.
 
 - **Entities.** Extend `cake5/src5/Model/Entity/Movie.php` (then cake4 and cake3) with
   `protected function _getFullTitle(): string`, a `/** @return float */ _getRuntimeHours($value)`
-  with no declared type, and a setter-only `_setTitle($title)`. Add a `MovieAccessorsTrait` and
+  with no declared type, a setter-only `_setTitle($title)`, and a
+  `private function _getSecret(): string` that the framework never reaches. Add a `MovieAccessorsTrait` and
   a `BaseMovie` parent that each contribute one accessor, to cover inherited and trait methods.
   Give `MoviesTable` a `protected function _getLabel()` so a non-entity receiver with an
   accessor-shaped method proves the receiver check. The existing tests that use
@@ -296,6 +311,10 @@ assertion.
     present on `$movie->not_a_field`.
 13. `StringsTest`: `camelCaseToUnderscore` agrees with `Inflector::underscore` on
     `fullName`, `uRLSlug`, `name2` and `a`.
+13a. `$movie->secret` is neither typed nor completed: the private `_getSecret()` is invisible
+    to `_accessor()`'s scope.
+13b. A receiver typed `Movie|Rating`, where only `Movie` has `_getFullTitle()`, keeps native
+    resolution for `full_title`; a receiver typed `Movie|MoviesTable` keeps it too.
 
 Association properties, in `cake5/EntityAssociationFieldTest`, with `$review` a `Review`
 parameter unless stated:
@@ -311,7 +330,8 @@ parameter unless stated:
     or completed; `$post->comments` is not typed or completed either, because the option is
     unreadable, and neither is `$post->remarks`.
 18. `$this->Reviews->get($id)->author` has type `User` (a method-call receiver), and
-    `$movie->reviews[0]->author` resolves to `User` through the array element.
+    `$user->reviews[0]->author` resolves to `User` through the array element (`UsersTable` has
+    `hasMany('Reviews')`, and `Review` reaches `User` through `Authors`).
 19. An entity with an accessor `_getAuthor(): string` on `Review` types `$review->author` as
     `string`, not `User`. Use a separate fixture entity or a test-local class so the other
     tests keep the association type.
@@ -386,6 +406,7 @@ provider, field completion, field navigation) do not meet. What the merge settle
   irregular and uncountable lists at the time it was written. An entity whose plural the port
   gets wrong resolves to no table and silently gets no associations. The `StringsTest` cases
   pin the common shapes; a mismatch found later is an `Inflector` fix, not a provider one.
-- **Union receivers.** `$movie` typed `Movie|Article` answers only when every class resolves,
-  consistent with the configured-member provider. A field present on one and not the other
-  falls back to native resolution.
+- **Union receivers.** `$movie` typed `Movie|Article` answers only when every class is an
+  entity and every class provides the field, consistent with the configured-member provider.
+  A field present on one and not the other, or a union with a non-entity class, falls back to
+  native resolution. Steps 3 and 6 of the accessor resolution state the rule.
