@@ -93,6 +93,12 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | A plugin template's unprefixed `cell()` finds the app's cell | `testPluginTemplateRendersAppCellUnprefixed` | Same |
 | A plugin template's `cell()` of another plugin finds that plugin's cell | `testPluginTemplateRendersOtherPluginCell` | Same |
 | Another plugin's cell does not fall back to the calling plugin's template | `testOtherPluginCellDoesNotFallBackToCallingPlugin` | Same |
+| An unprefixed element in a plugin cell's template is the cell plugin's | `testElementInPluginCellTemplateResolvesInCellPlugin` | Same |
+| An unprefixed element in a plugin cell's template found in the app is the cell plugin's | `testElementInFallbackCellTemplateResolvesInCellPlugin` | Same |
+| An unprefixed element in a plugin cell called from another plugin's template, under an app controller, is the cell plugin's | `testElementInCellCalledFromOtherPluginTemplateResolvesInCellPlugin` | Same |
+| An unprefixed element in an app cell called under a plugin controller is the app's | `testElementInAppCellCalledFromPluginResolvesInApp` | Same |
+| An unprefixed element in a cell template named with `render()` is the cell plugin's | `testElementInNamedCellTemplateResolvesInCellPlugin` | Same |
+| An element missing from a plugin cell's plugin falls back to the app's | `testElementInPluginCellFallsBackToAppElement` | Same |
 
 ### `TableLocatorTest`
 

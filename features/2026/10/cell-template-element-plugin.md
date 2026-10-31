@@ -50,3 +50,20 @@ and 5?
 This is an investigation of the framework. Any plugin code change belongs to the plugin-aware work.
 
 ## Implementation Progress
+
+### Session #1
+
+An unprefixed element in a cell's template follows the cell on CakePHP 3.10.5, 4.6.5 and 5.4.3. All
+the assumptions passed as first written:
+
+| Test | Result |
+|---|---|
+| `testElementInPluginCellTemplateResolvesInCellPlugin` | `Probe`'s element |
+| `testElementInFallbackCellTemplateResolvesInCellPlugin` | `Probe`'s element, from a cell template in the app |
+| `testElementInCellCalledFromOtherPluginTemplateResolvesInCellPlugin` | `Probe`'s element, under an app controller and `Other`'s template |
+| `testElementInAppCellCalledFromPluginResolvesInApp` | The app's element, under a `Probe` controller and template |
+| `testElementInNamedCellTemplateResolvesInCellPlugin` | `Probe`'s element |
+| `testElementInPluginCellFallsBackToAppElement` | The app's `app_only` element |
+
+The plugin-aware plan's rule holds as written, so `forEachContributingSource` needs no special case
+beyond treating the cell as the class the walk reaches. The plan now cites these tests.

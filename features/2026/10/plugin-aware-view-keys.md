@@ -85,8 +85,12 @@ plugin the including template lives in. All three cases hold on all four version
 | The app | `Blog`'s, by `render('Blog.x')` | The app's | `testElementInPrefixedTemplateResolvesInControllerPlugin` |
 | Plugin `Blog` | `Other`'s, by `render('Other.x')` | `Blog`'s | `testElementInOtherPluginTemplateResolvesInControllerPlugin` |
 
-Whether an element in a cell's template follows the cell is untested, and tracked in
-[its own log](cell-template-element-plugin.md).
+An unprefixed element in a cell's template follows the cell, not the controller or the template that
+called `cell()`, on CakePHP 3, 4 and 5, as recorded in [its own log](cell-template-element-plugin.md)
+(`testElementInFallbackCellTemplateResolvesInCellPlugin`,
+`testElementInCellCalledFromOtherPluginTemplateResolvesInCellPlugin`,
+`testElementInAppCellCalledFromPluginResolvesInApp`). So a walk reaching a cell checks these
+references against the cell's plugin.
 
 So the rule above can't be checked one hop at a time when a walk passes through an including file.
 An unprefixed reference from a template or element has no plugin of its own until the walk reaches
