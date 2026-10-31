@@ -3,8 +3,10 @@ package com.daveme.chocolateCakePHP.test
 import org.junit.platform.launcher.LauncherSession
 import org.junit.platform.launcher.LauncherSessionListener
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 
 /**
  * Gives each Gradle test fork its own IDE sandbox so that `maxParallelForks > 1`
@@ -34,7 +36,7 @@ class ForkSandboxListener : LauncherSessionListener {
         System.getProperty("org.gradle.test.worker") ?: return
 
         val systemDir = System.getProperty("idea.system.path")?.let(::File) ?: return
-        val slot = claimSlot(systemDir.parentFile) ?: return
+        val slot = claimSlot(systemDir.parentFile)
 
         redirect("idea.system.path", slot)
         redirect("idea.log.path", slot)
@@ -48,15 +50,21 @@ class ForkSandboxListener : LauncherSessionListener {
         }
     }
 
-    private fun claimSlot(sandboxRoot: File): Int? {
+    private fun claimSlot(sandboxRoot: File): Int {
         sandboxRoot.mkdirs()
         for (slot in 0 until MAX_SLOTS) {
             val lockFile = File(sandboxRoot, "fork-$slot.lock")
             val channel = RandomAccessFile(lockFile, "rw").channel
+            // A null lock or an overlapping lock means another fork holds the
+            // slot. Any other failure means locking itself is broken here, and
+            // is reported rather than treated as an occupied slot.
             val lock: FileLock? = try {
                 channel.tryLock()
-            } catch (e: Exception) {
+            } catch (e: OverlappingFileLockException) {
                 null
+            } catch (e: IOException) {
+                channel.close()
+                throw IllegalStateException("Could not lock $lockFile for the test fork sandbox", e)
             }
             if (lock != null) {
                 heldLock = lock // keep the lock (and channel) alive until the JVM exits
@@ -64,7 +72,10 @@ class ForkSandboxListener : LauncherSessionListener {
             }
             channel.close()
         }
-        return null
+        throw IllegalStateException(
+            "No free test fork sandbox slot under $sandboxRoot (all $MAX_SLOTS are locked). " +
+                "Run with -PtestForks=1 or stop the other test JVMs using this build directory."
+        )
     }
 
     private fun redirect(
