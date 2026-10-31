@@ -212,6 +212,15 @@ PhpStorm's own icon and documentation popup work.
 Inside the entity class itself, `$this->full_name` completes the same way, since the receiver
 is `#C` of the entity.
 
+On a union receiver, completion offers the accessor fields of every entity class in the union
+and ignores the non-entity classes, so `Movie|Rating` and `Movie|MoviesTable` both offer
+`full_title`, and the latter does not offer `label`. This is deliberately looser than the type
+provider's all-classes rule. A type is a claim about every value the expression can hold, so
+one class without the field makes the claim wrong; a completion item is an offer that is right
+for the `Movie` case and harmless otherwise, which is how PhpStorm itself completes a union of
+declared classes: with the union of their members. Requiring every class would offer nothing
+on `Movie|Rating` for a field the platform would list if it were declared.
+
 ### 3. Navigation from the field to the accessor
 
 An `EntityVirtualFieldGotoDeclarationHandler`, like `ControllerFieldGotoDeclarationHandler`,
@@ -219,6 +228,12 @@ on the name leaf of a `FieldReference` whose receiver resolves to an entity. The
 the `_get…` method and the `_set…` method when both exist, so the chooser shows both. On a
 plain read, PhpStorm already resolves the reference to `__get` when the class has one; the
 handler's targets are added alongside, and the test asserts the accessor is among them.
+
+Navigation follows completion, not the type provider: on a union receiver the targets are the
+accessors of every entity class that has one, and non-entity classes contribute nothing. For
+`Movie|MoviesTable`, `full_title` reaches `_getFullTitle()` on `Movie`, which is the only
+declaration that can be meant, while the type provider leaves the same field to native
+resolution because it cannot say what the `MoviesTable` branch holds.
 
 ### 4. The undefined-field inspection
 
@@ -382,7 +397,11 @@ assertion.
 13a. `$movie->secret` is neither typed nor completed: the private `_getSecret()` is invisible
     to `_accessor()`'s scope.
 13b. A receiver typed `Movie|Rating`, where only `Movie` has `_getFullTitle()`, keeps native
-    resolution for `full_title`; a receiver typed `Movie|MoviesTable` keeps it too.
+    resolution for `full_title`; a receiver typed `Movie|MoviesTable` keeps it too. On both
+    receivers completion still offers `full_title` with type text `string`, and on
+    `Movie|MoviesTable` it does not offer `label`; goto declaration on `full_title` reaches
+    `_getFullTitle()` on both. The three assertions on one receiver pin the asymmetry between
+    the type provider and the on-demand features described under scope items 2 and 3.
 
 Association properties, in `cake5/EntityAssociationFieldTest`, with `$review` a `Review`
 parameter unless stated:
@@ -407,9 +426,12 @@ properties as exactly the array type.
 19. With `$critique` a `Critique` parameter, `$critique->author` has type exactly `string`,
     from `_getAuthor(): string`, with no `User` and no `null` in it, while `$critique->movie`
     has type `\App\Model\Entity\Movie` or `null`. The second assertion is the control: it shows
-    `CritiquesTable` was found and its `Authors` load was there to lose, so the first proves
-    the accessor wins rather than that no association existed. Completion on
-    `$critique-><caret>` offers `author` once, with type text `string`.
+    `CritiquesTable` was found, so the first proves the accessor wins rather than that no
+    table existed. The test also calls `ConfiguredMemberService.associationLoads()` for
+    `\App\Model\Table\CritiquesTable` directly and asserts a `BELONGS_TO` load with alias
+    `Authors` whose derived property is `author`, so the load the accessor beat is shown to
+    exist and resolve, not inferred from a sibling. Completion on `$critique-><caret>` offers
+    `author` once, with type text `string`.
 20. Completion on `$review-><caret>` offers `movie`, `author`, `editor`, `comments` and
     `ratings` with the entity's type text, next to the accessor fields; it does not offer
     `authors` or `Authors`. Completion on `$movie-><caret>` offers nothing from associations when
@@ -495,4 +517,7 @@ provider, field completion, field navigation) do not meet. What the merge settle
 - **Union receivers.** `$movie` typed `Movie|Article` answers only when every class is an
   entity and every class provides the field, consistent with the configured-member provider.
   A field present on one and not the other, or a union with a non-entity class, falls back to
-  native resolution. Steps 3 and 6 of the accessor resolution state the rule.
+  native resolution. Steps 3 and 6 of the accessor resolution state the rule. Completion and
+  navigation do not share it: they work per entity class in the union, as scope items 2 and 3
+  say and test 13b pins. The split is the difference between a claim and an offer, and it is
+  the one place the three features intentionally disagree on a receiver.
