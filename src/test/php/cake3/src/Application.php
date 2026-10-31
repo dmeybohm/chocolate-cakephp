@@ -16,6 +16,7 @@ class Application extends BaseApplication
         parent::bootstrap();
         $this->addPlugin('Probe');
         $this->addPlugin('Other');
+        $this->addPlugin('Acme/Vendored');
     }
 
     public function middleware($middlewareQueue)

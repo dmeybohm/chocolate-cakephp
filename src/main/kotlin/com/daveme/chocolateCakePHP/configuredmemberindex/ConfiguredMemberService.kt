@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.configuredmemberindex
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
 import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
@@ -210,7 +211,7 @@ object ConfiguredMemberService {
         if (dotIndex > 0) {
             val shortName = name.substring(dotIndex + 1)
             val pluginConfig = settings.findPluginConfigByName(name.substring(0, dotIndex))
-            if (pluginConfig != null) {
+            if (pluginConfig is CakeThreePluginConfig) {
                 return listOf(classFqn(pluginConfig.namespace, load.kind, shortName))
             }
             return conventionCandidates(phpIndex, settings, load.kind, shortName)
@@ -239,7 +240,7 @@ object ConfiguredMemberService {
             namespaces += "\\Cake"
         }
         namespaces += settings.appNamespace
-        settings.pluginConfigs.mapTo(namespaces) { it.namespace }
+        settings.cakeThreePluginConfigs.mapTo(namespaces) { it.namespace }
 
         val candidates = namespaces.map { classFqn(it, kind, name) }.toMutableList()
         if (settings.cake2Enabled) {

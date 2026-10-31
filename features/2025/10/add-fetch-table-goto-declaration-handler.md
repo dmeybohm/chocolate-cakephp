@@ -108,6 +108,10 @@ Add the following line in the extensions section:
 
 ## Enhanced Plugin Support
 
+**Correction:** this work stayed on `origin/fetch-table-goto-declaration-in-plugins` and never reached
+`main`. Plugin notation was added later by
+[fetch-table-plugin-notation](../../2026/10/fetch-table-plugin-notation.md).
+
 ✅ **Added plugin table navigation support:**
 - Created `TestPlugin\Model\Table\DirectorsTable.php` fixture
 - Enhanced handler to parse plugin notation like `"TestPlugin.Directors"`

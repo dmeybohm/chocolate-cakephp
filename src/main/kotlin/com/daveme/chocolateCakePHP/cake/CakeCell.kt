@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.cake
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
@@ -38,12 +39,12 @@ fun parseCellName(cell: String): CellName? {
  */
 fun cellNamespaces(settings: Settings): List<Pair<String?, String>> =
     listOf(null to settings.appNamespace) +
-        settings.pluginConfigs.map { it.effectivePluginName() to it.namespace }
+        settings.cakeThreePluginConfigs.map { it.effectivePluginName() to it.namespace }
 
 fun cellClassFqn(settings: Settings, cellName: CellName): String {
     val namespace = when (val plugin = cellName.plugin) {
         null -> settings.appNamespace
-        else -> settings.findPluginConfigByName(plugin)?.namespace
+        else -> (settings.findPluginConfigByName(plugin) as? CakeThreePluginConfig)?.namespace
             ?: ("\\" + plugin.replace('/', '\\'))
     }
     return "${namespace}\\View\\Cell\\${cellName.name.replace('/', '\\')}Cell"

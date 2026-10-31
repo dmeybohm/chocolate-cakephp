@@ -25,19 +25,21 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
      * @param settings Plugin settings
      * @param controllerPath The controller path for non-plugin lookups
      * @param allTemplatesPaths All available template paths
+     * @return The resolution, or null if the path names a plugin with no template paths
      */
     private fun resolveTemplateViewPaths(
         path: String,
         settings: Settings,
         controllerPath: ControllerPath,
         allTemplatesPaths: AllTemplatePaths
-    ): TemplatePathResolution {
+    ): TemplatePathResolution? {
         val result = parseAndLookupPlugin(path, settings)
         val allViewPaths = when (result) {
             is PluginLookupResult.PluginFound -> {
                 val pluginActionName = actionNameFromPath(result.resourcePath)
                 val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
                 allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, result.pluginConfig)
+                    ?: return null
             }
             is PluginLookupResult.NoPlugin -> {
                 val actionNames = ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
@@ -144,7 +146,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             settings,
             controllerPath,
             allTemplatesPaths
-        )
+        ) ?: return PsiElement.EMPTY_ARRAY
         return resolution.toFiles(psiElement.project, allTemplatesPaths).toTypedArray()
     }
 
@@ -295,7 +297,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
                 controllerPath,
                 allTemplatesPaths
             )
-            resolution.toFiles(psiElement.project, allTemplatesPaths)
+            resolution?.toFiles(psiElement.project, allTemplatesPaths).orEmpty()
         }.distinct().toTypedArray()
     }
 
