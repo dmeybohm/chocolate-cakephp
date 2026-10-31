@@ -1,10 +1,13 @@
 package com.daveme.chocolateCakePHP.configuredmemberindex
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
+import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FileBasedIndex
 import com.jetbrains.php.PhpIndex
@@ -12,13 +15,15 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 /**
- * The resolved type of one configured member, and whether an `initialize()` load (or a
- * property array) in the receiver's chain determined it.
+ * The resolved type of one configured member, whether an `initialize()` load (or a property
+ * array) in the receiver's chain determined it, and the kinds the member cannot be because
+ * every receiver's configuration of them is known and does not load it.
  */
 data class MemberTypeResult(
     val classFqns: Set<String>,
     val classes: List<PhpClass>,
     val hasInitializeLoad: Boolean,
+    val excludedKinds: Set<MemberKind> = emptySet(),
 ) {
     val type: PhpType
         get() = PhpType().apply { classFqns.forEach { add(it) } }
@@ -33,6 +38,16 @@ data class LoadedMembers(
     val initializeKinds: Set<MemberKind>,
 )
 
+/**
+ * The members one receiver's class chain configures, by alias, with whether the configuration
+ * determined each one, and the kinds it determines completely.
+ */
+internal class ChainResolution(
+    val members: Map<String, Pair<Set<String>, Boolean>>,
+    val initializeKinds: Set<MemberKind>,
+    val excludesUnloaded: Set<MemberKind> = emptySet(),
+)
+
 object ConfiguredMemberService {
 
     private val frameworkBaseClasses = setOf(
@@ -41,11 +56,6 @@ object ConfiguredMemberService {
         "\\Cake\\View\\Helper",
         "\\Cake\\ORM\\Table",
     ).map { it.lowercase() }.toSet()
-
-    private class ChainResolution(
-        val members: Map<String, Pair<Set<String>, Boolean>>,
-        val initializeKinds: Set<MemberKind>,
-    )
 
     /**
      * The type of [alias] on receivers of type [classFqns], or null when no class in any
@@ -58,7 +68,7 @@ object ConfiguredMemberService {
         alias: String
     ): MemberTypeResult? {
         val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, alias) }
-        return combine(project, resolutions, alias)
+        return combine(project, resolutions, kinds, alias)
     }
 
     fun loadedMembers(
@@ -69,7 +79,7 @@ object ConfiguredMemberService {
         val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, null) }
         val aliases = resolutions.flatMap { it.members.keys }.toSet()
         val members = aliases.mapNotNull { alias ->
-            combine(project, resolutions, alias)?.let { alias to it }
+            combine(project, resolutions, kinds, alias)?.let { alias to it }
         }.toMap()
         // A receiver without initialize loads of a kind still has that kind's members by convention:
         val initializeKinds = resolutions.map { it.initializeKinds }
@@ -91,15 +101,25 @@ object ConfiguredMemberService {
     private fun specificReceivers(classFqns: Collection<String>): List<String> =
         classFqns.filter { it.lowercase() !in frameworkBaseClasses }
 
-    // A receiver whose chain does not load the alias falls back to convention, so the result
-    // only counts as an initialize load when every receiver had one.
+    // A receiver whose chain does not load the alias falls back to convention, unless its
+    // configuration rules the alias out, so the result only counts as an initialize load when
+    // every receiver had one or ruled it out.
     private fun combine(
         project: Project,
         resolutions: List<ChainResolution>,
+        kinds: Set<MemberKind>,
         alias: String
     ): MemberTypeResult? {
         val perReceiver = resolutions.map { it.members[alias] }
-        if (perReceiver.all { it == null }) {
+        val excluded = resolutions.map { it.excludesUnloaded.containsAll(kinds) }
+        val excludedKinds = if (perReceiver.all { it == null }) {
+            resolutions.map { it.excludesUnloaded intersect kinds }
+                .reduceOrNull { all, other -> all intersect other }
+                .orEmpty()
+        } else {
+            emptySet()
+        }
+        if (perReceiver.all { it == null } && excludedKinds.isEmpty()) {
             return null
         }
         val fqns = perReceiver.filterNotNull().flatMap { it.first }.toSet()
@@ -107,7 +127,10 @@ object ConfiguredMemberService {
         return MemberTypeResult(
             classFqns = fqns,
             classes = fqns.flatMap { phpIndex.getClassesByFQN(it) },
-            hasInitializeLoad = perReceiver.all { it != null && it.second },
+            hasInitializeLoad = perReceiver.indices.all { index ->
+                perReceiver[index]?.second ?: excluded[index]
+            },
+            excludedKinds = excludedKinds,
         )
     }
 
@@ -123,10 +146,22 @@ object ConfiguredMemberService {
         val scope = GlobalSearchScope.allScope(project)
 
         // Most-derived class first:
-        val loadsByClass = classChain(phpIndex, classFqn).map { fqn ->
-            fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
-                .flatten()
-                .filter { it.kind in kinds && (alias == null || it.alias == alias) }
+        val chain = classChain(phpIndex, classFqn)
+        val configurations = chain.map { fqn ->
+            val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
+            ClassConfiguration(values.flatMap { it.loads }, values.flatMap { it.declarations })
+        }
+        val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
+        if (cakeTwoBase != null) {
+            val pluginName = if (cakeTwoBase == CakeTwoBase.CONTROLLER)
+                cakeTwoPluginOfClass(project, phpIndex, settings, classFqn)
+            else
+                null
+            return CakeTwoChainResolver(cakeTwoBase, chain, configurations, pluginName)
+                .resolve(kinds, alias) { resolveCakeTwoLoad(it) }
+        }
+        val loadsByClass = configurations.map { configuration ->
+            configuration.loads.filter { it.kind in kinds && (alias == null || it.alias == alias) }
         }
         val allLoads = loadsByClass.flatten()
 
@@ -176,13 +211,23 @@ object ConfiguredMemberService {
         if (dotIndex > 0) {
             val shortName = name.substring(dotIndex + 1)
             val pluginConfig = settings.findPluginConfigByName(name.substring(0, dotIndex))
-            if (pluginConfig != null) {
+            if (pluginConfig is CakeThreePluginConfig) {
                 return listOf(classFqn(pluginConfig.namespace, load.kind, shortName))
             }
             return conventionCandidates(phpIndex, settings, load.kind, shortName)
         }
         return conventionCandidates(phpIndex, settings, load.kind, name)
     }
+
+    private fun cakeTwoPluginOfClass(project: Project, phpIndex: PhpIndex, settings: Settings, classFqn: String): String? {
+        val projectDir = project.guessProjectDir()
+        return phpIndex.getClassesByFQN(classFqn).firstNotNullOfOrNull { phpClass ->
+            phpClass.containingFile?.virtualFile?.let { cakeTwoPluginName(it, projectDir, settings) }
+        }
+    }
+
+    private fun resolveCakeTwoLoad(load: MemberLoad): List<String> =
+        listOf(cakeTwoClassFqn(load.kind, (load.className ?: load.loadedName).substringAfterLast('.')))
 
     private fun conventionCandidates(
         phpIndex: PhpIndex,
@@ -195,12 +240,24 @@ object ConfiguredMemberService {
             namespaces += "\\Cake"
         }
         namespaces += settings.appNamespace
-        settings.pluginConfigs.mapTo(namespaces) { it.namespace }
+        settings.cakeThreePluginConfigs.mapTo(namespaces) { it.namespace }
 
-        val candidates = namespaces.map { classFqn(it, kind, name) }.distinct()
-        val existing = candidates.filter { phpIndex.getClassesByFQN(it).isNotEmpty() }
-        return existing.ifEmpty { candidates }
+        val candidates = namespaces.map { classFqn(it, kind, name) }.toMutableList()
+        if (settings.cake2Enabled) {
+            candidates += cakeTwoClassFqn(kind, name)
+        }
+        val distinct = candidates.distinct()
+        val existing = distinct.filter { phpIndex.getClassesByFQN(it).isNotEmpty() }
+        return existing.ifEmpty { distinct }
     }
+
+    // CakePHP 2 classes are global, whichever plugin they come from.
+    private fun cakeTwoClassFqn(kind: MemberKind, name: String): String =
+        when (kind) {
+            MemberKind.COMPONENT -> "\\${name}Component"
+            MemberKind.HELPER -> "\\${name}Helper"
+            MemberKind.TABLE, MemberKind.ASSOCIATION -> "\\$name"
+        }
 
     private fun classFqn(namespace: String, kind: MemberKind, name: String): String {
         val path = when (kind) {

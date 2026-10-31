@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.tableClassFqnFromLocatorCall
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -70,31 +70,21 @@ class TableLocatorGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        // For fetchTable(), verify it's called on a Controller
+        // For fetchTable(), verify it's called on a Controller or a Cell
         if (isFetchTable) {
             val classReference = methodReference.classReference ?: return PsiElement.EMPTY_ARRAY
             val type = classReference.type
-            val isControllerContext = type.isProbablyControllerClass()
+            val isControllerContext = type.isProbablyControllerClass() || type.isProbablyCellClass()
             if (!isControllerContext) {
                 return PsiElement.EMPTY_ARRAY
             }
         }
 
-        // Get the table name from the string literal
-        val tableName = stringLiteral.contents
-        if (tableName.isEmpty() || tableName.length > 255) {
-            return PsiElement.EMPTY_ARRAY
-        }
-
-        // Look up the table class
-        val phpIndex = PhpIndex.getInstance(sourceElement.project)
-        val tableClasses = phpIndex.getPossibleTableClasses(settings, tableName)
-
-        return if (tableClasses.isNotEmpty()) {
-            tableClasses.toTypedArray()
-        } else {
-            PsiElement.EMPTY_ARRAY
-        }
+        val tableClass = tableClassFqnFromLocatorCall(settings, methodReference)
+            ?: return PsiElement.EMPTY_ARRAY
+        return PhpIndex.getInstance(sourceElement.project)
+            .getClassesByFQN(tableClass)
+            .toTypedArray()
     }
 
     override fun getActionText(context: DataContext): String? {

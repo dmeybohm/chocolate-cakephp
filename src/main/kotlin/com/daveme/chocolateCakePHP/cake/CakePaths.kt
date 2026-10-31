@@ -31,9 +31,27 @@ data class AllTemplatePaths(
     val mainTemplatePaths: List<TemplatesDirWithPath>,
     val pluginAndThemeTemplatePaths: PluginAndThemeTemplatePaths = PluginAndThemeTemplatePaths(),
 ) {
+    init {
+        require(mainTemplatePaths.isNotEmpty()) { "At least one main template path is required" }
+    }
+
     val allPaths: Sequence<TemplatesDirWithPath>
         get() = mainTemplatePaths.asSequence() + pluginAndThemeTemplatePaths.paths.asSequence()
+
+    fun pluginTemplatePaths(pluginConfig: PluginConfig): PluginTemplatePaths? {
+        val paths = pluginAndThemeTemplatePaths.paths.filter { templateDirWithPath ->
+            templateDirWithPath.templatesPath.startsWith(pluginConfig.pluginPath + "/")
+        }
+        return if (paths.isEmpty()) null else PluginTemplatePaths(paths)
+    }
 }
+
+/**
+ * The template directories of a single plugin, of which there is at least one.
+ */
+class PluginTemplatePaths internal constructor(
+    val paths: List<TemplatesDirWithPath>,
+)
 
 data class CakeFourTemplatesDir(override val directory: VirtualFile): TemplatesDir
 {
@@ -230,7 +248,7 @@ private fun pluginAndThemeTemplatePaths(
     // todo: optimize the filesystem traversals here, as they are doing extra work
     val resultPaths = settings.pluginAndThemeConfigs.flatMap { pluginOrThemeConfig ->
         val results = mutableListOf<TemplatesDirWithPath>()
-        if (hasCakeThree) {
+        if (hasCakeThree && pluginOrThemeConfig !is CakeTwoPluginConfig) {
             val cakeFourTemplatesPath = "${pluginOrThemeConfig.pluginPath}/templates"
             val cakeFourTemplateDir = findRelativeFile(appRootDir.directory, cakeFourTemplatesPath)
             if (cakeFourTemplateDir != null) {
@@ -242,7 +260,7 @@ private fun pluginAndThemeTemplatePaths(
                 results.add(templatesDir)
             }
             when (pluginOrThemeConfig) {
-                is PluginConfig -> {
+                is CakeThreePluginConfig -> {
                     val cake3PluginTemplatePath = "${pluginOrThemeConfig.pluginPath}/${pluginOrThemeConfig.srcPath}/Template"
                     val cakeThreePluginTemplateDir = findRelativeFile(appRootDir.directory, cake3PluginTemplatePath)
                     if (cakeThreePluginTemplateDir != null) {
@@ -278,7 +296,7 @@ private fun pluginAndThemeTemplatePaths(
                         results.add(templatesDir)
                     }
                 }
-                is PluginConfig -> {
+                is CakeTwoPluginConfig -> {
                     val viewPath = "${pluginOrThemeConfig.pluginPath}/View"
                     val cakeTwoPluginTemplateDir = findRelativeFile(appRootDir.directory, viewPath)
                     if (cakeTwoPluginTemplateDir != null) {

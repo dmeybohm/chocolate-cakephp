@@ -28,6 +28,9 @@ fun String.removeFromStart(start: String, ignoreCase: Boolean = false): String =
 fun String.isAnyControllerClass(): Boolean =
     this.endsWith("Controller", ignoreCase = true)
 
+fun String.isAnyCellClass(): Boolean =
+    this.endsWith("Cell", ignoreCase = true)
+
 fun String.isAnyTableClass(): Boolean =
     this.endsWith("Table", ignoreCase = true)
 

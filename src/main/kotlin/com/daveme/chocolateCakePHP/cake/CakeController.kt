@@ -174,6 +174,30 @@ private fun templateNamesFromExpression(
 }
 
 /**
+ * The plain `$name = <expr>` assignments that textually precede a use of `$name` in the same
+ * scope (method, function, closure, or file), in source order. `$this` has none.
+ */
+fun precedingAssignments(variable: Variable): List<AssignmentExpression> {
+    val name = variable.name
+    if (name == "this") {
+        return emptyList()
+    }
+    val scope: PsiElement = PsiTreeUtil.getParentOfType(variable, Function::class.java)
+        ?: variable.containingFile
+        ?: return emptyList()
+    val useOffset = variable.textRange.startOffset
+
+    return PsiTreeUtil.findChildrenOfType(scope, AssignmentExpression::class.java)
+        .filter { assignment ->
+            assignment !is SelfAssignmentExpression &&
+                (assignment.variable as? Variable)?.name == name &&
+                assignment.textRange.startOffset < useOffset &&
+                PsiTreeUtil.getParentOfType(assignment, Function::class.java) == (scope as? Function)
+        }
+        .sortedBy { it.textRange.startOffset }
+}
+
+/**
  * Resolve a `$name` use to the template names of every plain `$name = <expr>` assignment
  * that textually precedes the use in the same scope (method, function, closure, or file).
  * All preceding assignments count, so both branches of an if/else are found; a stale
@@ -193,26 +217,8 @@ private fun templateNamesFromVariable(
     variable: Variable,
     visited: MutableSet<AssignmentExpression>
 ): List<String> {
-    val name = variable.name
-    if (name == "this") {
-        return emptyList()
-    }
-    val scope: PsiElement = PsiTreeUtil.getParentOfType(variable, Function::class.java)
-        ?: variable.containingFile
-        ?: return emptyList()
-    val useOffset = variable.textRange.startOffset
-
-    val assignments = PsiTreeUtil.findChildrenOfType(scope, AssignmentExpression::class.java)
-        .filter { assignment ->
-            assignment !is SelfAssignmentExpression &&
-                (assignment.variable as? Variable)?.name == name &&
-                assignment.textRange.startOffset < useOffset &&
-                PsiTreeUtil.getParentOfType(assignment, Function::class.java) == (scope as? Function)
-        }
-        .sortedBy { it.textRange.startOffset }
-
     val result = mutableListOf<String>()
-    for (assignment in assignments) {
+    for (assignment in precedingAssignments(variable)) {
         if (!visited.add(assignment)) {
             continue
         }

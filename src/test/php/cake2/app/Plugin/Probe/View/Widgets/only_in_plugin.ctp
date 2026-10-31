@@ -1,0 +1,1 @@
+plugin:Widgets/only_in_plugin

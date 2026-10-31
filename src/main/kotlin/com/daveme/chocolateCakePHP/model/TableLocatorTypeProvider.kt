@@ -2,15 +2,14 @@ package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.tableClassFqnFromLocatorCall
 import com.daveme.chocolateCakePHP.controller.ControllerFieldTypeProvider
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.PhpIndex
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpNamedElement
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import com.jetbrains.php.lang.psi.resolve.types.PhpTypeProvider4
 
@@ -43,7 +42,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             val classReference = psiElement.classReference ?: return null
             val referenceType = classReference.type.filterUnknown()
             for (type in referenceType.types) {
-                if (type.isAnyControllerClass()) {
+                if (type.isAnyControllerClass() || type.isAnyCellClass()) {
                     val tableClass = getTableClass(psiElement, settings)
                     if (tableClass != null) {
                         return tableClass
@@ -139,39 +138,8 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
     }
 
     private fun getTableClass(methodRef: MethodReference, settings: Settings): PhpType? {
-        val parameters = methodRef.parameters
-        return when (parameters.size) {
-            0 -> null
-            1 -> getTableClassFromFirstParam(parameters, settings)
-            else -> getTableClassFromSecondParam(parameters) ?:
-                    getTableClassFromFirstParam(parameters, settings)
-        }
-    }
-
-    private fun getTableClassFromFirstParam(parameters: Array<out PsiElement>, settings: Settings): PhpType? {
-        val firstParam = parameters.firstOrNull()
-                as? StringLiteralExpression ?: return null
-        val contents = firstParam.contents
-        if (contents.length < 255) {
-            // sanity check
-            return PhpType().add("${settings.appNamespace}\\Model\\Table\\${contents}Table")
-        }
-        return null
-    }
-
-    private fun getTableClassFromSecondParam(parameters: Array<out PsiElement>): PhpType? {
-        val arrayCreationExpr = parameters[1] as? ArrayCreationExpression ?: return null
-        for (element in arrayCreationExpr.hashElements) {
-            val key = element.key as? StringLiteralExpression ?: continue
-            if (key.contents == "className") {
-                val contents = element.value?.getStringifiedClassOrNull() ?: continue
-                if (contents.length < 255) {
-                    // sanity check
-                    return PhpType().add(contents)
-                }
-            }
-        }
-        return null
+        val tableClass = tableClassFqnFromLocatorCall(settings, methodRef) ?: return null
+        return PhpType().add(tableClass)
     }
 
     override fun complete(expression: String, project: Project): PhpType {

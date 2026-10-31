@@ -2,6 +2,13 @@ package com.daveme.chocolateCakePHP.view.viewfileindex
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
+import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
+import com.daveme.chocolateCakePHP.cake.isCakeCellFile
+import com.daveme.chocolateCakePHP.cake.parseCellName
+import com.daveme.chocolateCakePHP.view.TemplateDirStructure
+import com.intellij.openapi.project.Project
+import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.daveme.chocolateCakePHP.*
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
@@ -39,7 +46,8 @@ data class MethodCallInfo(
     val methodName: String,
     val receiverText: String?,
     val firstParameterValues: List<String>,  // All literal values the first parameter can take
-    val offset: Int
+    val offset: Int,
+    val secondParameterValues: List<String> = emptyList()
 )
 
 data class MethodInfo(
@@ -62,6 +70,32 @@ data class ViewBuilderCallInfo(
     val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
 )
 
+data class CellReferenceInfo(
+    val methodName: String,            // "cell" or "render"
+    val cellNames: List<String>,       // All literal cell strings, such as "Plugin.Name::action"
+    val templates: List<String>?,      // The render() templates, or null for the action's own template
+    val offset: Int                    // Offset of the method name, so the reference resolves to this call
+)
+
+
+/**
+ * How the view names in one file resolve, by the conventions of its template directory structure.
+ */
+class ReferencePluginContext(val structure: TemplateDirStructure) {
+
+    /**
+     * A view name without its plugin prefix, and the plugin the prefix names.
+     */
+    fun split(name: String): Pair<String, String?> = structure.resolveName(name)
+}
+
+private fun referencePluginContext(
+    project: Project,
+    settings: Settings,
+    file: VirtualFile,
+    isController: Boolean
+): ReferencePluginContext? =
+    TemplateDirStructure.ofSourceFile(project, settings, file, isController)?.let { ReferencePluginContext(it) }
 
 object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileContent> {
     val logger = this.thisLogger()
@@ -104,6 +138,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         var receiverName: String? = null
         var methodName: String? = null
         var parameterValues: List<String> = emptyList()
+        var secondParameterValues: List<String> = emptyList()
         
         // Parse structure based on AST: VARIABLE -> arrow -> identifier -> (...) - avoid toList()
         var child = node.firstChildNode
@@ -116,14 +151,18 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     methodName = child.text
                 }
                 child.isParameterList() -> {
-                    // Extract the first parameter, ignoring additional parameters
-                    // Both element() and render() accept optional parameters - we only need the first one
+                    // The first parameter names the view or element, and render()'s second the layout:
+                    var parameterIndex = 0
                     var paramChild = child.firstChildNode
-                    while (paramChild != null) {
-                        // Skip whitespace and commas to find the first actual parameter
+                    while (paramChild != null && parameterIndex < 2) {
+                        // Skip whitespace and commas to find the actual parameters
                         if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
-                            parameterValues = extractTemplateNames(paramChild, ctx)
-                            break
+                            if (parameterIndex == 0) {
+                                parameterValues = extractTemplateNames(paramChild, ctx)
+                            } else {
+                                secondParameterValues = extractTemplateNames(paramChild, ctx)
+                            }
+                            parameterIndex++
                         }
                         paramChild = paramChild.treeNext
                     }
@@ -134,12 +173,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         
         // Only return if method name matches target and we have all required parts
         if (methodName?.equals(targetMethodName, ignoreCase = true) == true && 
-            receiverName != null && parameterValues.isNotEmpty()) {
+            receiverName != null && (parameterValues.isNotEmpty() || secondParameterValues.isNotEmpty())) {
             return MethodCallInfo(
                 methodName = methodName,
                 receiverText = receiverName,
                 firstParameterValues = parameterValues,
-                offset = node.startOffset
+                offset = node.startOffset,
+                secondParameterValues = secondParameterValues
             )
         }
         
@@ -459,6 +499,151 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         return receiverVariable == "this" && methodName == "viewBuilder"
     }
 
+    private fun findCellReferences(node: ASTNode, ctx: TemplateNameContext): List<CellReferenceInfo> {
+        val result = mutableListOf<CellReferenceInfo>()
+        findCellReferencesRecursive(node, result, ctx)
+        return result
+    }
+
+    private fun findCellReferencesRecursive(
+        node: ASTNode,
+        result: MutableList<CellReferenceInfo>,
+        ctx: TemplateNameContext
+    ) {
+        if (node.isMethodReference()) {
+            val cellReference = parseCellReference(node, ctx)
+            if (cellReference != null) {
+                result.add(cellReference)
+            }
+        }
+        var child = node.firstChildNode
+        while (child != null) {
+            findCellReferencesRecursive(child, result, ctx)
+            child = child.treeNext
+        }
+    }
+
+    private fun parseCellReference(node: ASTNode, ctx: TemplateNameContext): CellReferenceInfo? {
+        // Look for:
+        //   1. $this->cell('Name') or $this->_View->cell('Name')
+        //   2. $this->cell('Name')->render('template')
+        //   3. $cell = $this->cell('Name'); $cell->render('template')
+        // A render() with no template renders the action's own template, so it is indexed like
+        // a bare cell() call. The cell() call itself is left out when an indexed render() stands
+        // for it: chained directly, or as the only later use of the variable it is assigned to.
+        val methodName = getMethodName(node) ?: return null
+        val offset = getMethodNameOffset(node) ?: return null
+        if (methodName.equals("cell", ignoreCase = true)) {
+            if (!isCellCall(node) || isReceiverOfIndexedRender(node, ctx) || isOnlyRenderedThroughVariable(node, ctx)) {
+                return null
+            }
+            val cellNames = firstParameterValues(node, ctx)
+            if (cellNames.isEmpty()) {
+                return null
+            }
+            return CellReferenceInfo(methodName, cellNames, null, offset)
+        }
+        if (!methodName.equals("render", ignoreCase = true)) {
+            return null
+        }
+        val receiver = node.firstChildNode ?: return null
+        val cellCalls = when {
+            receiver.isMethodReference() -> listOf(receiver)
+            receiver.isVariable() -> assignedValueNodes(receiver, ctx)
+            else -> emptyList()
+        }.filter { it.isMethodReference() && isCellCall(it) }
+        val cellNames = cellCalls.flatMap { firstParameterValues(it, ctx) }.distinct()
+        val templates = renderTemplates(node, ctx)
+        if (cellNames.isEmpty() || templates == null) {
+            return null
+        }
+        return CellReferenceInfo(methodName, cellNames, templates.ifEmpty { null }, offset)
+    }
+
+    /**
+     * The templates a render() call names: empty when it has no template argument, and null
+     * when the argument does not resolve to any template name.
+     */
+    private fun renderTemplates(renderNode: ASTNode, ctx: TemplateNameContext): List<String>? {
+        val argument = firstParameterNode(renderNode) ?: return emptyList()
+        return extractTemplateNames(argument, ctx).ifEmpty { null }
+    }
+
+    private fun isCellCall(node: ASTNode): Boolean {
+        if (getMethodName(node)?.equals("cell", ignoreCase = true) != true) {
+            return false
+        }
+        val receiver = node.firstChildNode ?: return false
+        return when {
+            receiver.isVariable() -> receiver.text == "\$this"
+            receiver.isFieldReference() -> {
+                val fieldReceiver = receiver.firstChildNode
+                fieldReceiver != null && fieldReceiver.isVariable() && fieldReceiver.text == "\$this" &&
+                    getIdentifierText(receiver) == "_View"
+            }
+            else -> false
+        }
+    }
+
+    private fun isReceiverOfIndexedRender(node: ASTNode, ctx: TemplateNameContext): Boolean {
+        val parent = node.treeParent ?: return false
+        return parent.isMethodReference() &&
+            parent.firstChildNode == node &&
+            getMethodName(parent)?.equals("render", ignoreCase = true) == true &&
+            renderTemplates(parent, ctx) != null
+    }
+
+    // $cell = $this->cell('Name'), where every later use of $cell is an indexed $cell->render()
+    private fun isOnlyRenderedThroughVariable(node: ASTNode, ctx: TemplateNameContext): Boolean {
+        val uses = laterUsesOfAssignedVariable(node) ?: return false
+        return uses.isNotEmpty() && uses.all { isReceiverOfIndexedRender(it, ctx) }
+    }
+
+    private fun firstParameterValues(node: ASTNode, ctx: TemplateNameContext): List<String> {
+        val parameter = firstParameterNode(node) ?: return emptyList()
+        return extractTemplateNames(parameter, ctx)
+    }
+
+    private fun firstParameterNode(node: ASTNode): ASTNode? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.isParameterList()) {
+                var paramChild = child.firstChildNode
+                while (paramChild != null) {
+                    if (paramChild.elementType != TokenType.WHITE_SPACE && paramChild.elementType != PhpTokenTypes.opCOMMA) {
+                        return paramChild
+                    }
+                    paramChild = paramChild.treeNext
+                }
+                return null
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun getMethodNameOffset(node: ASTNode): Int? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.IDENTIFIER) {
+                return child.startOffset
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
+    private fun getIdentifierText(node: ASTNode): String? {
+        var child = node.firstChildNode
+        while (child != null) {
+            if (child.elementType == PhpTokenTypes.IDENTIFIER) {
+                return child.text
+            }
+            child = child.treeNext
+        }
+        return null
+    }
+
     override fun map(inputData: FileContent): MutableMap<String, List<ViewReferenceData>> {
         val result = mutableMapOf<String, List<ViewReferenceData>>()
         val psiFile = inputData.psiFile
@@ -479,10 +664,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val rootNode = psiFile.node ?: return result
         val ctx = TemplateNameContext()
         val astRenderCalls = findMethodCallsByName(rootNode, "render", ctx)
-            .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
+            .filter { it.receiverText == "this" }
         val astElementCalls = findMethodCallsByName(rootNode, "element", ctx)
             .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
         val astViewFieldAssignments = findFieldAssignments(rootNode, "view", ctx)
+            .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
+        val astLayoutAssignments = findFieldAssignments(rootNode, "layout", ctx)
             .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
 
         // Early bailout: Quick text scan before AST traversal for viewBuilder calls
@@ -494,28 +681,40 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 .filter { it.parameterValues.isNotEmpty() }
         }
 
-        val isController = isCakeControllerFile(virtualFile)
+        val astCellReferences = if (!settings.cake3Enabled || !inputData.contentAsText.contains("cell", ignoreCase = true)) {
+            emptyList()
+        } else {
+            findCellReferences(rootNode, ctx)
+        }
+
+        val isController = isCakeControllerFile(virtualFile) ||
+            (settings.cake3Enabled && isCakeCellFile(virtualFile))
         if (
             astRenderCalls.isEmpty() &&
             astElementCalls.isEmpty() &&
             astViewFieldAssignments.isEmpty() &&
+            astLayoutAssignments.isEmpty() &&
             astViewBuilderCalls.isEmpty() &&
+            astCellReferences.isEmpty() &&
             !isController
         ) {
             return result
         }
 
-        indexRenderCalls(result, projectDir, astRenderCalls, virtualFile)
-        indexElementCalls(result, projectDir, astElementCalls, virtualFile)
-        indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile)
+        val pluginContext = referencePluginContext(project, settings, virtualFile, isController)
+        indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, isController, pluginContext)
+        indexRenderCalls(result, projectDir, astRenderCalls, virtualFile, pluginContext)
+        indexElementCalls(result, projectDir, astElementCalls, virtualFile, pluginContext)
+        indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile, pluginContext)
         indexViewBuilderCalls(result, projectDir, astViewBuilderCalls, virtualFile)
+        indexCellReferences(result, projectDir, astCellReferences, virtualFile)
 
         if (isController) {
             // Use AST traversal instead of PSI for method declarations
             val astMethods = findMethodDeclarations(rootNode)
                 .filter { it.isPublic && !cakeSkipRenderingMethods.contains(it.name.lowercase()) }
             
-            indexImplicitRender(result, projectDir, settings, astMethods, virtualFile)
+            indexImplicitRender(result, projectDir, settings, astMethods, virtualFile, pluginContext)
         }
 
         return result
@@ -525,7 +724,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         renderCalls: List<MethodCallInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (renderCalls.isEmpty()) {
             return
@@ -534,14 +734,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(renderCalls, viewPathPrefix, result)
+        setViewPath(renderCalls, viewPathPrefix, result, pluginContext)
     }
 
     private fun indexElementCalls(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         elementCalls: List<MethodCallInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (elementCalls.isEmpty()) {
             return
@@ -550,14 +751,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(elementCalls, viewPathPrefix, result)
+        setViewPath(elementCalls, viewPathPrefix, result, pluginContext)
     }
 
     private fun indexViewFieldAssignments(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         fieldAssignments: List<FieldAssignmentInfo>,
-        virtualFile: VirtualFile
+        virtualFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         if (fieldAssignments.isEmpty()) {
             return
@@ -568,7 +770,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         for (assignment in fieldAssignments) {
             for (assignedValue in assignment.assignedValues) {
-                val renderPath = RenderPath(assignedValue)
+                val (path, plugin) = pluginContext?.split(assignedValue) ?: (assignedValue to null)
+                val renderPath = RenderPath(path)
 
                 if (renderPath.path.isEmpty()) {
                     continue
@@ -578,7 +781,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 addViewReference(result, fullViewPath, ViewReferenceData(
                     methodName = assignment.fieldName,
                     elementType = ElementType.FIELD_ASSIGNMENT,
-                    offset = assignment.offset
+                    offset = assignment.offset,
+                    pluginPrefix = plugin
                 ))
             }
         }
@@ -649,12 +853,44 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     }
 
 
+    private fun indexCellReferences(
+        result: MutableMap<String, List<ViewReferenceData>>,
+        projectDir: VirtualFile,
+        cellReferences: List<CellReferenceInfo>,
+        virtualFile: VirtualFile
+    ) {
+        if (cellReferences.isEmpty()) {
+            return
+        }
+
+        val cellDirName = cellDirNameFromSourceFile(projectDir, virtualFile)
+
+        for (reference in cellReferences) {
+            for (cellString in reference.cellNames) {
+                val cellName = parseCellName(cellString) ?: continue
+                val templates = reference.templates
+                    ?: listOf(cellName.actionOrDefault.camelCaseToUnderscore())
+                for (template in templates) {
+                    if (template.isEmpty() || template.startsWith("/")) {
+                        continue
+                    }
+                    addViewReference(result, "${cellDirName}/${cellName.name}/${template}", ViewReferenceData(
+                        methodName = reference.methodName,
+                        elementType = ElementType.CELL_RENDER,
+                        offset = reference.offset
+                    ))
+                }
+            }
+        }
+    }
+
     private fun indexImplicitRender(
         result: MutableMap<String, List<ViewReferenceData>>,
         projectDir: VirtualFile,
         settings: Settings,
         methods: List<MethodInfo>,
-        controllerFile: VirtualFile
+        controllerFile: VirtualFile,
+        pluginContext: ReferencePluginContext?
     ) {
         // todo check for $this->autoRender = false
         if (methods.isEmpty()) {
@@ -676,7 +912,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             val newViewReferenceData = ViewReferenceData(
                 methodName = method.name,
                 elementType = ElementType.METHOD,
-                offset = method.offset
+                offset = method.offset,
+                pluginPrefix = null
             )
             val newList = oldList + listOf(newViewReferenceData)
             result[fullViewPath] = newList
@@ -686,11 +923,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
     private fun setViewPath(
         methodCalls: List<MethodCallInfo>,
         viewPathPrefix: ViewPathPrefix,
-        result: MutableMap<String, List<ViewReferenceData>>
+        result: MutableMap<String, List<ViewReferenceData>>,
+        pluginContext: ReferencePluginContext?
     ) {
         for (methodCall in methodCalls) {
             for (parameterText in methodCall.firstParameterValues) {
-                val content = RenderPath(parameterText)
+                val (path, plugin) = pluginContext?.split(parameterText) ?: (parameterText to null)
+                val content = RenderPath(path)
 
                 if (content.path.isEmpty()) {
                     continue
@@ -702,9 +941,46 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                 addViewReference(result, fullViewPath, ViewReferenceData(
                     methodName = methodCall.methodName,
                     elementType = ElementType.METHOD_REFERENCE,
-                    offset = methodCall.offset
+                    offset = methodCall.offset,
+                    pluginPrefix = plugin
                 ))
             }
+        }
+    }
+
+    // Layout names are relative to the layout directory, whatever file names them:
+    private fun indexLayoutReferences(
+        result: MutableMap<String, List<ViewReferenceData>>,
+        psiFile: PsiFile,
+        renderCalls: List<MethodCallInfo>,
+        layoutAssignments: List<FieldAssignmentInfo>,
+        isController: Boolean,
+        pluginContext: ReferencePluginContext?
+    ) {
+        val layoutDirectory = pluginContext?.structure?.layoutDirectory ?: return
+        fun addLayout(name: String, data: (String?) -> ViewReferenceData) {
+            val (layoutName, pluginPrefix) = pluginContext.split(name)
+            if (layoutName.isNotEmpty() && !layoutName.startsWith("/")) {
+                addViewReference(result, "$layoutDirectory/$layoutName", data(pluginPrefix))
+            }
+        }
+        for (call in renderCalls) {
+            for (name in call.secondParameterValues) {
+                addLayout(name) { ViewReferenceData(call.methodName, ElementType.METHOD_REFERENCE, call.offset, it) }
+            }
+        }
+        for (assignment in layoutAssignments) {
+            for (name in assignment.assignedValues) {
+                addLayout(name) { ViewReferenceData(assignment.fieldName, ElementType.FIELD_ASSIGNMENT, assignment.offset, it) }
+            }
+        }
+        if (!isController) {
+            return
+        }
+        for (phpClass in PsiTreeUtil.findChildrenOfType(psiFile, PhpClass::class.java)) {
+            val field = phpClass.findOwnFieldByName("layout", false) ?: continue
+            val name = field.defaultValue?.node?.stringLiteralValue() ?: continue
+            addLayout(name) { ViewReferenceData("layout", ElementType.FIELD, field.textOffset, it) }
         }
     }
 
