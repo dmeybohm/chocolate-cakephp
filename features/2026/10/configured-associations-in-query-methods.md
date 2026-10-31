@@ -344,3 +344,15 @@ Where the implementation differs from the plan:
   unchanged.
 - **Fixtures.** `UsersTable` gained `hasMany('Reviews')` and `hasOne('Profiles')`, and
   `ProfilesTable` is new, in cake5, cake4 and cake3. No existing assertion needed changing.
+
+### Session #2
+
+Merged `remove-stub-vendor` (#310), which also brought in the controller-side helpers from `main`.
+The stub vendor files are gone, so this log's notes about the stubs and both vendor modes no longer
+apply: every test runs against the real framework.
+
+The merge needed two changes git could not flag:
+
+- `readViewBuilderHelpers()` from the helper work now passes a null association type.
+- `ConfiguredMemberIndex.getVersion()` is 5. `main` and this branch had each moved it from 3 to 4
+  with different formats, so an index built by `main` would otherwise have been reused.
