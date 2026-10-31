@@ -263,3 +263,36 @@ association property names and entity and table class names
 | `singularize()` handles the irregular, special and uncountable plurals: `People` is `Person`, `Movies` is `Movie`, `Categories` is `Category`, `Statuses` is `Status`, `Sheep` stays | `testSingularizeIrregularAndSpecialPlurals` | Same |
 | `pluralize()` inverts them | `testPluralizeIrregularAndSpecialSingulars` | Same |
 | A table's default entity class is the singularized alias, so `PeopleTable` has `Person` | `testTableEntityClassIsTheSingularizedAlias` | Same |
+
+### `BehaviorTest`
+
+Relied on by behavior method and finder completion, types and navigation, and by the
+associations behaviors add. CakePHP 2 attaches behaviors through `$actsAs` and maps methods by
+other rules, so it has its own `BehaviorTest` with its own rows.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A bare name loads the app's behavior before the core one of the same name | `testBareNameLoadsAppBehaviorBeforeCore` | 3, 4, 5 |
+| A bare name does not reach a plugin's behavior | `testBareNameDoesNotReachPluginBehavior` | 3, 4, 5. 2: `testBareNameOfAnUnloadedClassDoesNotReachPluginBehavior`, only while the class is not loaded |
+| A `Plugin.Name` loads the plugin's behavior under the short alias | `testPluginNameLoadsPluginBehavior` | 3, 4, 5 |
+| A `Plugin.Name` missing from the plugin does not fall back to the app's behavior | `testPluginNameDoesNotFallBackToAppBehavior` | 3, 4, 5. 2: `testPluginNameOfAnUnloadedClassDoesNotFallBackToAppBehavior`, only while the class is not loaded |
+| Any name of a behavior class that is already loaded uses that class, whichever app or plugin it came from, since behavior class names are global | `testAnyNameOfALoadedClassUsesItWhateverItsOrigin` | 2 |
+| The `className` option accepts a plain name, plugin notation and an FQN, and the first argument is the alias | `testClassNameOptionAcceptsPlainPluginAndFqnAndKeepsAlias` | 3, 4, 5. 2: `testClassNameOptionKeepsAliasAndLoadsClass`, plain name only |
+| `addBehaviors()` accepts a plain string and an alias with options | `testAddBehaviorsAcceptsPlainAndKeyedEntries` | 3, 4, 5 |
+| Reflection mixes in the public methods, keys `find*` methods as finders by `lcfirst`, and skips protected methods, callbacks and base-class methods | `testReflectionMixesInPublicMethodsAndFinders` | 3, 4, 5 |
+| Reflection includes a parent behavior's public methods | `testReflectionIncludesParentBehaviorMethods` | 3, 4, 5 |
+| `$_defaultConfig` maps restrict the mixed-in methods and finders to the listed aliases, for app and core behaviors | `testDefaultConfigMapsRestrictMixedInMethods` | 3, 4, 5 |
+| `implementedMethods` in the load options merges with the defaults by method name, custom alias winning, and `[]` disables them | `testLoadOptionsMergeWithDefaultMapsByMethodName` | 3, 4, 5 |
+| `implementedMethods` in the load options with no defaults replaces reflection for that key only | `testLoadOptionsWithoutDefaultsReplaceReflection` | 3, 4, 5 |
+| The table's own method and own `findX()` win over a behavior's of the same name, although the registry still maps them | `testTableOwnMethodAndFinderWinOverBehavior` | 3, 4, 5. 2: `testModelOwnMethodWinsOverBehavior` |
+| Two behaviors providing the same method name throw `LogicException` on load | `testTwoBehaviorsProvidingTheSameMethodThrow` | 3, 4, 5. 2: `testFirstBehaviorKeepsADuplicateMethodName`, the first keeps it |
+| A behavior finder is callable on the table and on a query built from it | `testBehaviorFinderIsCallableOnTableAndQuery` | 3, 4, 5 |
+| A behavior attached outside `initialize()` mixes in once that method runs | `testBehaviorAttachedOutsideInitializeMixesInOnceCalled` | 3, 4, 5. 2: `testBehaviorsLoadAttachesAtRuntime` |
+| A child table inherits its parent's `initialize()` behaviors | `testChildTableInheritsParentBehaviors` | 3, 4, 5 |
+| `getBehavior()` returns the loaded instance and throws `InvalidArgumentException` for an unloaded alias | `testGetBehaviorReturnsLoadedInstanceAndThrowsForUnloaded` | 3, 4, 5 |
+| A behavior method called on the table raises a deprecation | `testBehaviorMethodCalledOnTableIsDeprecated` | 5 (since 5.3). 3, 4: `testBehaviorMethodCalledOnTableIsNotDeprecated` |
+| A behavior method called on its instance raises no deprecation | `testBehaviorMethodCalledOnItsInstanceIsNotDeprecated` | 3, 4, 5 |
+| An association a behavior adds through `$this->_table` or `$this->table()` (`getTable()` on 3) is an association of the table, reachable by `contain()` and as an entity property | `testAssociationAddedByBehaviorBelongsToTable` | 3, 4, 5 |
+| `$actsAs` loads behaviors plain, with settings and plugin-prefixed, in order | `testActsAsLoadsPlainConfiguredAndPluginBehaviors` | 2 |
+| Mapped methods exclude `_`-prefixed names, callbacks and `ModelBehavior` methods | `testMappedMethodsExcludeUnderscoredCallbacksAndModelBehaviorMethods` | 2 |
+| A mapped method is called without its `Model` parameter | `testMappedMethodIsCalledWithoutTheModelParameter` | 2 |

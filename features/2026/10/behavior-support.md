@@ -138,6 +138,11 @@ the property.
 `['Containable', 'Tree' => ['scope' => ...], 'Plugin.Name']`, the same shape as `$components`.
 The class is the global `{Name}Behavior`, found in `app/Model/Behavior/`, a plugin's
 `Model/Behavior/` or `lib/Cake/Model/Behavior/` (`Acl`, `Containable`, `Translate`, `Tree`).
+Because the names are global, the plugin prefix only says where to look when the class is not
+loaded yet: once `AuditBehavior` has been loaded from the app, `Probe.Audit` attaches that same
+instance, and a bare `Hashable` attaches a plugin's class that something else loaded. So the
+plugin resolves every CakePHP 2 behavior name to `\{Name}Behavior` regardless of prefix, as it
+already does for components and helpers.
 
 `BehaviorCollection::load()` maps every method `get_class_methods()` returns for the instance
 that `ModelBehavior` does not have, whose name does not start with `_`, and that is not one of
@@ -150,38 +155,41 @@ reading can offer. CakePHP 2 behaviors do not add finders; `find()` types come f
 
 ## Assumption tests
 
-Written first, in `src/test/php`, as `BehaviorTest` on 3, 4 and 5 and `BehaviorTest` under
-`cake2/app/Test/Case`, run with `scripts/run-cakephp-assumption-tests.sh test -- --filter Behavior`,
-and each given a row in the README catalogue. The fixtures are `SluggableBehavior` (reflection:
-a public `slug()`, a public `findSlugged()`, a protected helper, a `beforeSave()` callback and
-an `initialize()`), `AuditBehavior` (`$_defaultConfig` with `implementedMethods` and
-`implementedFinders`, plus a public method left out of the map), `ChildSluggableBehavior
-extends SluggableBehavior` with one more method, `TaggableBehavior` adding `belongsToMany('Tags')`
-through `$this->_table` in `initialize()`, a plugin `SluggableBehavior` in `TestPlugin` with a
-method of its own name, and the tables that attach them.
+The framework behaviour above is pinned in the
+[CakePHP assumption suite](../../../src/test/php/README.md), run with
+`scripts/run-cakephp-assumption-tests.sh test -- --filter Behavior`, so the plugin is built on
+verified behaviour and a moved pin fails a test before a feature does. The catalogue in that
+README has one row per assumption.
 
-| Behavior | Versions |
-|---|---|
-| A bare name loads the app's behavior when one exists, else the core one, and never a plugin's | 3, 4, 5 |
-| A `Plugin.Name` loads the plugin's behavior and does not fall back to the app's | 3, 4, 5 |
-| The `className` option accepts a plain name, plugin notation and an FQN, and the alias is the first argument | 3, 4, 5 |
-| `addBehaviors()` accepts a plain string and an alias with options | 3, 4, 5 |
-| Reflection mixes in public non-callback methods, keys `find*` methods as finders by `lcfirst`, and skips protected methods, callbacks and base-class methods | 3, 4, 5 |
-| Reflection includes a parent behavior's public methods | 3, 4, 5 |
-| `$_defaultConfig` maps restrict the mixed-in methods to the listed aliases | 3, 4, 5 |
-| `implementedMethods` in the load options merges with the defaults, custom alias winning, and `[]` disables them | 3, 4, 5 |
-| `implementedMethods` in the load options with no defaults replaces reflection | 3, 4, 5 |
-| The table's own method and own `findX()` win over a behavior's of the same name | 3, 4, 5 |
-| Two behaviors providing the same method name throw `LogicException` on load | 3, 4, 5 |
-| A behavior finder is callable on a query (`$table->find()->find('slugged')`) | 3, 4, 5 |
-| `getBehavior('Alias')` returns the loaded instance of the resolved class and throws for an unloaded alias | 3 (3.6+), 4, 5 |
-| A behavior method called on the table raises a deprecation | 5 only; 3 and 4 raise nothing |
-| An association a behavior adds through `$this->_table` is a table association, reachable by `contain()`, as a property and on the entity | 3, 4, 5 |
-| `$actsAs` plain, with options and plugin-prefixed loads the global behavior class | 2 |
-| Mapped methods exclude `_`-prefixed names, callbacks and `ModelBehavior` methods, and are called without the `Model` parameter | 2 |
-| `$this->Behaviors->load()` attaches a behavior at runtime | 2 |
+- **`BehaviorTest`** (3, 4, 5): class resolution for bare, plugin-dotted and `className` loads;
+  `addBehaviors()`; the reflection map and its exclusions; a parent behavior's methods;
+  `$_defaultConfig` maps on an app behavior and on the core `Tree`; the three merge cases for
+  `implementedMethods` in the load options; the table's own method and finder winning; the
+  duplicate-method `LogicException`; a finder on a query; a behavior attached outside
+  `initialize()`; a child table's inherited behaviors; `getBehavior()`; the 5.3 deprecation
+  (and its absence on 3 and 4); and an association added through `$this->_table` and
+  `$this->table()` (`getTable()` on 3) reaching `contain()` and the entity.
+- **`BehaviorTest`** (2): `$actsAs` plain, with settings and plugin-prefixed; the mapped-method
+  exclusions; the dropped `Model` parameter; the first behavior keeping a duplicate name; the
+  model's own method winning; `Behaviors->load()` at runtime, with a `className` alias; the two
+  missing-class cases for a class not yet loaded; and an already-loaded class answering to any
+  name.
 
-Writing them may correct this log; corrections go in the sections above and in the progress log.
+Fixtures are `SluggableBehavior`, `ChildSluggableBehavior`, `AuditBehavior`,
+`CounterCacheBehavior` (an app behavior named like a core one) and `TaggableBehavior` under each
+version's `src/Model/Behavior`, `SluggableBehavior` and `HashableBehavior` under the `Probe`
+plugin, and `PagesTable`, `ChildPagesTable`, `PluginPagesTable`, `PhotosTable`, `TagsTable` and
+the `Tag` entity. The CakePHP 2 app gained `AppModel`, `Page`, `SluggableBehavior`,
+`AuditBehavior`, `StampableBehavior`, `Note` and the plugin's `HashableBehavior` and
+`TrackableBehavior`.
+
+Writing them corrected two readings. The first is the CakePHP 2 class resolution above: the
+first draft expected a plugin prefix to isolate the lookup as it does on 3 to 5, and the
+framework showed the class name alone decides once it is loaded. The second is the merge rule: `_resolveMethodAliases()` merges by
+*method name*, so a custom alias for a method a default already maps replaces the default alias
+rather than adding a second one. `['trail' => 'writeAudit']` over `['audit' => 'writeAudit']`
+gives `trail` only; `['extra' => 'notMixedIn']` gives `extra` and `audit`. The fixture and test
+descriptions below follow that.
 
 ## What PhpStorm does today
 
@@ -411,10 +419,9 @@ feature's tables untouched since their tests assert exact lists:
 
 - `PagesTable`: `initialize()` calls `addBehavior('Timestamp')`, `addBehavior('Sluggable')`,
   `addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']])` and declares its
-  own `public function findSlugged(...)` and `public function touch(): void`, so `slugged` and
-  `touch` are the table's, `slug` and `trail` and `audited` are mixed in, `audit` and
-  `timestamp` show the merge rule (`audit` stays, since custom plus unmentioned defaults), and
-  `notMixedIn` is absent. A `public function enableTree(): void` calls `addBehavior('Tree')`
+  own `public function findSlugged(...)` and `public function touch(...)`, so `slugged` and
+  `touch` are the table's, `slug`, `trail`, `timestamp` and the `audited` finder are mixed in,
+  `audit` is not (the `trail` alias replaced it, by the merge rule), and `notMixedIn` is absent. A `public function enableTree(): void` calls `addBehavior('Tree')`
   outside `initialize()`, so `recover` and the `children` finder are offered as a union.
 - `ChildPagesTable extends PagesTable` with no `initialize()`.
 - `PluginPagesTable`: `addBehaviors(['TestPlugin.Sluggable', 'Audit' => ['implementedMethods' => []]])`,
@@ -451,8 +458,8 @@ Finders, with `$this->Pages` in a controller unless stated:
 
 Methods:
 
-5. `$this->Pages-><caret>` offers `slug`, `trail`, `audit`, `timestamp`, `recover`, `moveUp` and
-   the rest of `Tree`'s map, not `notMixedIn`, not `writeAudit` under its own name, not
+5. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `recover`, `moveUp` and the
+   rest of `Tree`'s map, not `audit`, not `notMixedIn`, not `writeAudit` under its own name, not
    `touch` from the behavior (the table's own `touch` is PhpStorm's), not `_normalize`, not
    `beforeSave`, not `getConfig`.
 6. `$this->PluginPages-><caret>` offers `pluginSlug` and `slug` from the plugin class and no
@@ -566,3 +573,16 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
   declaration wins, which matches PHP property redeclaration. A child that merges with
   `parent::$_defaultConfig + [...]` in its constructor is not readable and gets the reflection
   map; a note in the progress log if a real behavior does this.
+
+## Implementation Progress
+
+### Session #1
+
+Plan step 1, the assumption tests, is done on all four versions: 20 tests each on 3, 4 and 5,
+and 10 on 2, all passing, with the catalogue rows added. Two things the first drafts got wrong
+were the tests' own doing, not the framework's: a `className` test that loaded the app and the
+plugin `Sluggable` on one table tripped the duplicate-method rule that the next test pins, and
+the CakePHP 2 app had no `AppModel`, so one was added beside its `AppController`. The CakePHP 2
+test base's `expectException()` wrapper also asserts an empty message on PHPUnit 5.7, so the
+missing-class cases use `try`/`catch`. The two framework corrections, the global CakePHP 2
+class names and the merge rule, are recorded under the assumption tests.
