@@ -11,15 +11,19 @@ layouts have no references at all.
 [The `RenderingControllers` simplification](rendering-controllers-element-plugin.md) (#305) stopped
 helper lookup from reading the layout references, so navigation is now their main use, which is why
 this is its own change. [Plugin-aware view keys](plugin-aware-view-keys.md) (#307) has since merged
-and settles most of the plugin questions the first draft of this log raised; the notes below are
-from reading the code after that merge.
+and settles most of the plugin questions the first draft of this log raised. [Controller-side
+helpers](controller-side-helpers.md) (#309) then gave `CakeThreeAndLater` the per-version layout and
+cell directories, ran `RenderingControllers` on every version, counting cells, and added
+`indexesLayoutReferences` to keep layout indexing off on 3 to 5 until this feature. The notes below
+are from reading the code after those merges.
 
 ## What exists today
 
 ### CakePHP 2 layout references
 
-`ViewFileDataIndexer.indexLayoutReferences` runs for any file whose structure has a
-`layoutDirectory`, which only `TemplateDirStructure.CakeTwo` sets (`Layouts`). It stores:
+`ViewFileDataIndexer.indexLayoutReferences` runs for any file whose structure sets
+`indexesLayoutReferences`, which only `TemplateDirStructure.CakeTwo` does, and keys the names under
+its `layoutDirectory` (`Layouts`). It stores:
 
 | Form | Where it is read | Reference type |
 |---|---|---|
@@ -40,7 +44,8 @@ The consumers are the ones templates have:
   `CELL_RENDER` references, and shows "No related file found" when nothing is left.
 - `ContributingSourceWalk` reads the same references for variables. See
   [Effects on variables](#effects-on-variables).
-- `RenderingControllers` stops at a layout and takes all controllers, so it no longer reads them.
+- `RenderingControllers` stops at a layout and takes all controllers, on every version since #309,
+  so it no longer reads them.
 
 `directReferencesTo` filters by plugin through `ViewFileResolution.directlyReaches`, so the
 collision this log worried about before #307 is handled: an app `admin` layout and a `Blog` `admin`
@@ -60,8 +65,10 @@ Two details of the current output:
 
 ### CakePHP 3 to 5
 
-`CakeThreeAndLater` leaves `layoutDirectory` null, so `indexLayoutReferences` returns at once and
-`isLayoutKey` is always false. The viewBuilder parser, `parseViewBuilderCall`, recognizes only
+Since #309 `CakeThreeAndLater` has a `layoutDirectory` (`Layout` for `cakeThree`, `layout` for
+`cakeFour`), so `isLayoutKey` tells a layout apart and `RenderingControllers` stops at one for
+helpers. `indexesLayoutReferences` is false there, so `indexLayoutReferences` returns at once and
+no layout has references. The viewBuilder parser, `parseViewBuilderCall`, recognizes only
 `setTemplate` and `setTemplatePath`, and the only chain it follows is
 `setTemplatePath()->setTemplate()`. A `setTemplate()` chained after any other setter, such as
 `setLayout('admin')->setTemplate('view')`, is dropped today.
@@ -71,7 +78,7 @@ the `cakeFour` structure. The layout directory is `Layout` in CakePHP 3 (`src/Te
 `layout` in CakePHP 4 and 5 (`templates/layout/`), and `isLayoutKey` compares case-sensitively, so a
 Cake 3 controller indexed through the `cakeFour` structure would store `layout/admin` while the
 layout file's key is `Layout/admin`. Templates are not affected, since a view file's structure comes
-from its templates directory.
+from its templates directory. The helpers log left this to this feature.
 
 ## The framework's layout API
 
@@ -110,14 +117,12 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
    driving the action. The fixtures have `cake2/app/View/Layouts/{default,ajax,error,flash}.ctp` but
    no controller names a layout, so the tests add controllers with `addFileToProject`, as
    `PluginAwareViewKeysTest` does. Include the plugin cases below.
-2. **Per-version layout directory.** Give `CakeThreeAndLater` a `layoutDirectory` constructor
-   argument (`Layout` for `cakeThree`, `layout` for `cakeFour`). Then make `ofSourceFile` tell a
-   CakePHP 3 controller from a CakePHP 4 one: walk up to the `Controller` directory and return
-   `cakeThree` when its parent has a `Template` child, the way `isCakeTwoController` already checks
-   for `templates` and `Template` siblings. The alternative, storing a controller's layout reference
-   under both keys, avoids the detection but leaves a wrong key in the index for every reference,
-   so prefer the fix. `controller-side-helpers` needs the same constructor argument; whichever lands
-   first adds it.
+2. **Controller structure.** `CakeThreeAndLater` has its per-version `layoutDirectory` since #309.
+   Make `ofSourceFile` tell a CakePHP 3 controller from a CakePHP 4 one: walk up to the
+   `Controller` directory and return `cakeThree` when its parent has a `Template` child, the way
+   `isCakeTwoController` already checks for `templates` and `Template` siblings. The alternative,
+   storing a controller's layout reference under both keys, avoids the detection but leaves a wrong
+   key in the index for every reference, so prefer the fix.
 
    The same check decides CakePHP 2 with both versions enabled, and gets a Cake 2 plugin controller
    wrong today: `isCakeTwoController` wants the directory above `Controller` to be the Cake 2 app
@@ -128,22 +133,30 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
    Cake 2 app directory, or a configured Cake 2 plugin path, as `cakeTwoPluginName` finds them.
    CakePHP 3+ plugins have `src` between the plugin and `Controller`, so they do not match. No test
    runs with both versions enabled yet, so add one for this.
-3. **CakePHP 3 to 5 forms.** With `layoutDirectory` set, the render second argument and
-   `$this->layout` assignments are indexed by the existing code. Add:
+3. **CakePHP 3 to 5 forms.** Set `indexesLayoutReferences` on `CakeThreeAndLater`. It then holds on
+   every structure, so drop the flag and let `layoutDirectory` alone gate the indexer again, as it
+   did before #309. The render second argument and `$this->layout` assignments are then indexed by
+   the existing code. Add:
    - `viewBuilder()->setLayout()` on 3 to 5 and `viewBuilder()->layout()` with an argument on 3.
      Extend `parseViewBuilderCall` and `ViewBuilderCallInfo`, and pass the calls to
      `indexLayoutReferences` as `VIEW_BUILDER` references. Generalize the chain check to "the
      receiver chain ends at `$this->viewBuilder()`, through any setters", which also fixes
      `setTemplate()` chained after `setLayout()`. `indexViewBuilderCalls` ignores method names it
-     does not know, so the new calls pass through it unchanged.
+     does not know, so the new calls pass through it unchanged. The assumption suite's
+     `HelpersController` already names its layout this way, as
+     `enableAutoLayout(true)->setLayout('helper')->addHelper(...)`.
    - `$this->setLayout()` and `$this->layout()` with a string argument, from view files.
    - Every form requires `$this` as the receiver, or `$this->viewBuilder()` at the root of the
      chain. `map()` already filters the render calls and the layout assignments to `$this`, and
      `isViewBuilderMethodCall` checks the chain root, so the new forms follow the same rule. A
      mailer or view object in a controller, as in `$email->viewBuilder()->setLayout('x')` or
      `$view->render('x', 'y')`, must not produce a layout reference.
-   - Limit the `$layout` field form to CakePHP 2 and 3, where it has an effect, and to controller
-     files, not cells.
+   - Limit the `$layout` field form to CakePHP 2 and 3, where it has an effect, with a structure
+     flag like the `readsHelpersProperty` #309 added for the `$helpers` property, which Cake 3 reads
+     the same way.
+   - Skip cells. A cell renders with the layout off on 3 to 5 (`Cell::render()` turns it off before
+     rendering), so a `setLayout()` in a cell class or a cell template names nothing. The
+     structure's `cellDirectory` and `isCellKey`, from #309, tell a cell template apart.
    - Stop `ContributingSourceWalk` at a layout, by the [isolation rule](#effects-on-variables).
    - Bump `ViewFileIndex.getVersion()` from 24 to 25.
 4. **Grouping.** In `ViewToControllerGotoRelatedProvider`, put references from view files under
@@ -183,10 +196,11 @@ and the whole rendering path of each action, not the explicit references this fe
 is its own feature. Completion could show the union with a weaker presentation while the inspection
 used the intersection.
 
-`RenderingControllers` stops at a layout and is unaffected. The `layoutDirectory` coupling noted by
-`controller-side-helpers`, that setting it switches on indexing as well as `isLayoutKey`, is what
-this feature wants, so there is nothing to split; both features need the per-version directories
-from step 2.
+`RenderingControllers` stops at a layout on every version and is unaffected: it takes all
+controllers there without reading the layout's references, so adding them changes no helper. #309
+split indexing from `isLayoutKey` with `indexesLayoutReferences` to land its layout directories
+without switching the indexer on; step 3 ends that split, since this feature indexes on every
+version.
 
 ## Plugins
 
@@ -215,6 +229,9 @@ from step 2.
 - **Non-literal names** are skipped, as for templates.
 
 ## Tests
+
+Every test attaches the real framework since #310, through `myFixture.configureByFiles` with no
+stub file, so a controller fixture extends the real `Controller` class on each version.
 
 CakePHP 2 first, then cake5, then 3 and 4:
 
