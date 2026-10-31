@@ -150,6 +150,18 @@ the warm-slot reuse that helps locally). Revised default: one fork per four
 cores, `cores / 4` capped at 3, which is 1 on the runner and 2 here (2 and 3
 forks measured within noise of each other locally).
 
+With `cores / 4` the PR run (b96cd25) ran one fork: the class order in the
+log is sequential again, `:test` took 325s and the "Run Tests" step 558s.
+That is still above main's 347s to 426s earlier in the day, but the runner
+pool was slower in that window: `view-index-bugs` (same 1519 tests, no
+listener) took 530s at the same time, and the compile and prepare tasks were
+1.6x slower too. Across the day the step ranges from 347s to 538s on
+branches without this change, so the one-fork result is within runner
+variance. The first test now passes at +33s instead of +9s only because the
+`core` move changed the class order: the suite now opens with a cake2 test
+that has to index the framework, where before it opened with
+`ASTParsingDebugTest`.
+
 If CI wall time matters later, a matrix split by package
 (`--tests 'com.daveme.chocolateCakePHP.test.cake5.*'` etc.) gives per-job
 isolation without containers; upload Kover per job with codecov flags.
