@@ -53,12 +53,10 @@ The two lookups are always combined, with no fallback branch, so results don't d
 first found anything.
 
 Whether `getAllSubclasses("\\Controller")` needs the framework class to be indexed is unknown, as it
-may only read the `extends` name. A test settles it:
-
-- If the alias is found without the framework class, use the `\Controller` lookup alone.
-- If not, keep both lookups and accept the limitation: when the framework isn't indexed, a controller
-  extending `Controller` directly isn't found for layouts, so its alias is missing there. This needs
-  both conditions at once, and finding those controllers would mean scanning all class names.
+may only read the `extends` name. A test documents the answer, and doesn't change the lookups. If the
+framework class does have to be indexed, this limitation is accepted: when it isn't, a controller
+extending `Controller` directly isn't found for layouts, so its alias is missing there. This needs
+both conditions at once, and finding those controllers would mean scanning all class names.
 
 ### Known gap until the element fix
 
@@ -104,7 +102,7 @@ and its effect is limited to the type above. These notes carry over:
 
 `controller-side-helpers` should follow the same layout rule when it next merges `main`. It would
 need to recognize layout files, use the version's framework controller class, and take
-`AppController` from the configured app namespace if both lookups are kept, but no
+`AppController` from the configured app namespace, but no
 longer needs layout names, layout paths or `setLayout()` for helpers. Layout references on CakePHP 3
 to 5 would be their own change, for navigation.
 
@@ -121,9 +119,10 @@ to 5 would be their own change, for navigation.
 - `AppController` aliases: the alias replaces the convention type in a template, and a subclass's
   alias wins in its template. A controller extending `Controller` directly keeps the convention type
   in its template.
-- Layout unions, with separate fixtures: when every controller inherits from `AppController`, a
-  layout unions the aliases without the convention type. With a direct `Controller` subclass without
-  an alias, it unions the aliases plus `HtmlHelper`.
+- Layout unions, with isolated fixtures, so a direct `Controller` subclass in shared setup can't add
+  `HtmlHelper` to the first case: when every controller inherits from `AppController`, a layout
+  unions the aliases without the convention type. With a direct `Controller` subclass without an
+  alias, it unions the aliases plus `HtmlHelper`.
 - Layouts: a named layout, the default layout, a data view layout and a layout in a subdirectory all
   get the same union. So does an element in a layout, and an element included from both a layout and
   a template.
@@ -133,8 +132,9 @@ to 5 would be their own change, for navigation.
   template gets only that controller's helpers. An app override of a plugin layout still counts as a
   layout. A plugin whose base class extends `Controller` keeps its alias in layouts.
 - Framework not indexed: a plugin controller extending `Controller`, with no `Controller` class in
-  the fixture, and whether its alias reaches a layout. The result decides between the lookups above,
-  and the test stays to record it.
+  the fixture, and whether its alias reaches a layout. Find the behavior while implementing, then
+  assert that one result, so the test guards against a later change. Record the result under
+  [Plugins](#plugins-that-dont-extend-appcontroller).
 - Existing tests that change: `test a plugin's default layout gets the plugin's controllers` and
   `test a plugin prefixed layout gets the app controller that names it` now expect the union.
 
