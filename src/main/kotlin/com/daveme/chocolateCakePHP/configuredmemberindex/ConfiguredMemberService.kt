@@ -48,6 +48,13 @@ internal class ChainResolution(
     val excludesUnloaded: Set<MemberKind> = emptySet(),
 )
 
+/**
+ * The rule for which members a receiver's class chain configures.
+ */
+internal interface ChainResolver {
+    fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution
+}
+
 object ConfiguredMemberService {
 
     private val frameworkBaseClasses = setOf(
@@ -160,24 +167,7 @@ object ConfiguredMemberService {
             return CakeTwoChainResolver(cakeTwoBase, chain, configurations, pluginName)
                 .resolve(kinds, alias) { resolveCakeTwoLoad(it) }
         }
-        val loadsByClass = configurations.map { configuration ->
-            configuration.loads.filter { it.kind in kinds && (alias == null || it.alias == alias) }
-        }
-        val allLoads = loadsByClass.flatten()
-
-        val members = allLoads.map { it.alias }.distinct().associateWith { eachAlias ->
-            // A later initialize() load replaces the instance an ancestor loaded:
-            val initializeLoads = loadsByClass.firstNotNullOfOrNull { loads ->
-                loads.filter { it.alias == eachAlias && it.isInitializeLoad }.ifEmpty { null }
-            } ?: emptyList()
-            val otherLoads = allLoads.filter { it.alias == eachAlias && !it.isInitializeLoad }
-            val fqns = (initializeLoads + otherLoads)
-                .flatMap { resolveLoad(phpIndex, settings, it) }
-                .toSet()
-            fqns to initializeLoads.isNotEmpty()
-        }
-        val initializeKinds = allLoads.filter { it.isInitializeLoad }.map { it.kind }.toSet()
-        return ChainResolution(members, initializeKinds)
+        return InitializeChainResolver(configurations).resolve(kinds, alias) { resolveLoad(phpIndex, settings, it) }
     }
 
     private fun classChain(phpIndex: PhpIndex, classFqn: String): List<String> {
