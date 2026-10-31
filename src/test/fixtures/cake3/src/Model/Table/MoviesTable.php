@@ -11,4 +11,8 @@ class MoviesTable extends Table
     {
     }
 
+    protected function _getLabel(): string
+    {
+        return 'not an entity accessor';
+    }
 }
