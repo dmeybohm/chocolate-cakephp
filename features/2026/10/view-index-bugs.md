@@ -223,6 +223,8 @@ Both bugs are fixed as planned, and the full suite passes.
   base classes, so only the `superFQN` check is needed. Dropping the name-based ignore in
   `ConfiguredMemberFieldTypeProvider` does not change CakePHP 2, where `CakeTwoChainResolver` returns
   nothing for a view chain.
+- `cake2/ViewVariableCallsTest` put its elements in `View/Element/`, which only worked because the
+  old lookup accepted any spelling. CakePHP 2's directory is `Elements`, so the test now uses that.
 - No new complete-array helper test: `ConfiguredHelperTest` already has
   `test helper completion in a helper lists only the helpers array`.
 
