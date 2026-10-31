@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.configuredmemberindex
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeTwoModel
 import com.daveme.chocolateCakePHP.controllerConventionType
+import com.daveme.chocolateCakePHP.entity.EntityVirtualFieldTypes
 import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
@@ -29,7 +30,9 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
     override fun getType(psiElement: PsiElement): PhpType? = null
 
     override fun complete(expression: String, project: Project): PhpType? {
-        val (receiver, fieldName) = parseFieldSignature(expression) ?: return null
+        // PhpStorm reports an error for two providers sharing a key, so this one answers for entities too:
+        val (receiver, fieldName) = parseFieldSignature(expression)
+            ?: return EntityVirtualFieldTypes.complete(expression, project)
         val receiverClass = classOfReceiver(receiver)
         val settings = Settings.getInstance(project)
         if (receiverClass == null && !(settings.cake2Enabled && isChainWithinBounds(expression))) {
