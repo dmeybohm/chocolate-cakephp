@@ -70,9 +70,10 @@ reach it are stored under `Articles/index`: `Blog`'s controller's implicit rende
 `render('Blog.Articles/index')` with `pluginPrefix` `Blog`. Only `ViewHelperReceivers.viewFileOf`
 strips the prefix, and only when `pluginOf` knows the plugin. So helper lookup finds the plugin's
 controllers for an override template on CakePHP 2, and nothing else does, on any version: "go to
-related", the toggle action, completion, the type provider and the inspection suppressor all query
-the literal key, and so does the walk in `forEachContributingSource` when it expands an override
-template as an ancestor.
+related" from a template and from an element, the toggle action, completion, the type provider, the
+inspection suppressor and the lookup that resolves a passed value as a variable of its own file all
+query the literal key, and so does the walk in `forEachContributingSource` when it expands an
+override template as an ancestor.
 
 #299 put the rule in `viewFileOf` because helper lookup was its scope; its log calls
 `ViewHelperReceivers` the one entry point for helpers, and nothing there decides that the other entry
@@ -81,6 +82,19 @@ file has, and that is what every entry point needs. So `ViewFile` and `viewFileO
 `ViewHelperReceivers` into their own file, as a pure move, and each entry point builds a `ViewFile`
 from the file and uses its `templateKey` to find references and its `plugin` for the filter below.
 The `view-set:` key can stay literal, since a view-set source is read from its own file.
+
+### The type provider's signature
+
+`ViewVariableTypeProvider` defers its lookup to `complete()` through a signature of the CakePHP
+version, the literal template key and the variable name. Once an app and a plugin template both have
+the key `Articles/index`, the signature can't tell them apart, and the lookup it makes has no plugin
+to filter by. #299 solved this for helpers: `ViewHelperInViewTypeProvider` encodes the `ViewFile`
+through `ViewHelperReceivers.encode` and decodes it in `complete()`. The variable provider should
+carry the `ViewFile` the same way, through the same `encode` and `decode`, which move with
+`ViewFile`. The structure id replaces the version field, and a signature in the old format decodes to
+null, since `v` is no structure id. The recursion key in
+`lookupVariableTypeFromViewPathInSmartReadAction` is the key and variable name, and becomes the
+`ViewFile` and variable name.
 
 ## How element data came to be keyed this way
 
@@ -187,18 +201,25 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    location.
 2. **Filter references by plugin (step 1).** Where `referencingElements` results are consumed for
    controllers and cells (`ViewVariableIndexService.forEachContributingSource`, the toggle action,
-   `ViewToControllerGotoRelatedProvider`), keep a reference by the rule above, using the
+   `ViewToControllerGotoRelatedProvider` and `ElementToUsagesGotoRelatedProvider`), keep a
+   reference by the rule above, using the
    referencing file's plugin (or its `pluginPrefix`). The plugins do not have to match: a plain
    match would drop the fallback. Reuse `resolvesTo`, and prefer a shared helper next to
    `ViewFile` over copying the rule. Every entry point, including the walk's ancestor expansion,
    gets its key and plugin from a `ViewFile` built from the file, as
    [above](#the-override-directorys-key), so an override template is found by the references stored
-   under its plugin key. For `CELL_RENDER` references, store the cell's plugin in
+   under its plugin key. The variable lookups take a `ViewFile` in place of the key string, and the
+   type provider carries it in its signature, as [above](#the-type-providers-signature). For
+   `CELL_RENDER` references, store the cell's plugin in
    `pluginPrefix` and treat no prefix as the app, not the calling file's plugin. That is the one
    change here that needs a view file index version bump. When the walk in
    `forEachContributingSource` passes through an including file, carry its unprefixed references
    along and check them against the plugin of the class it reaches, as
-   [above](#unprefixed-elements-follow-the-rendering-class) requires. Move `RenderingControllers`
+   [above](#unprefixed-elements-follow-the-rendering-class) requires. The three navigation entry
+   points list direct references and don't walk, so they check each reference at its hop only. From
+   an element, that lists an unprefixed `element('shared')` in an app template under the app's
+   element even when a plugin controller renders that template by fallback. Following each usage to
+   its controller would need a walk per usage, and is left out. Move `RenderingControllers`
    to the same helper, following
    [the notes from its simplification](rendering-controllers-element-plugin.md#element-plugin-fix-moved).
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
@@ -251,6 +272,11 @@ different variable, plus an app and a plugin cell of the same name. For each pai
 - Data passed by `element('shared', [...])` in a `Blog` template is offered in `Blog`'s `shared`
   element and not in the app's, and the other way round. `element('Blog.shared', [...])` from an
   app template passes its data to `Blog`'s element.
+- The type provider gives a variable set by both classes under different types its own class's type
+  in each template, which checks the signature carries the plugin through `complete()`.
+- From `Blog`'s `shared` element, element usages list `element('Blog.shared')` calls from anywhere
+  and `element('shared')` calls from `Blog`'s templates, and not those from the app's templates;
+  from the app's `shared`, the reverse. An element in the override directory finds its usages.
 - A `render('Other.x')` from a plugin controller links to `Other`'s template or the app's, and
   never to the calling plugin's.
 - An element in an app template that a plugin controller renders by fallback gets the plugin
