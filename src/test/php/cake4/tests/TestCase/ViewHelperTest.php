@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase;
 
+use App\Controller\LegacyHelpersController;
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingHelperException;
@@ -81,5 +83,44 @@ class ViewHelperTest extends TestCase
         $this->expectWarning();
         $this->expectWarningMessage('Support for loading helpers using $helpers property is removed');
         $this->get('/legacy-helpers/index');
+    }
+
+    public function testCellInitializeHelperReachesItsTemplate(): void
+    {
+        $this->get('/widgets/showcell?name=Configuring::own');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCallerHelperWinsOverCellInitializeHelper(): void
+    {
+        $this->get('/widgets/helpercell?name=Configuring::caller');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCellActionHelperWinsOverCallerHelper(): void
+    {
+        $this->get('/widgets/helpercell?name=Configuring::action');
+        $this->assertResponseEquals('App\\View\\Helper\\ViewMarkerHelper');
+    }
+
+    public function testCellHelpersPropertyIsIgnored(): void
+    {
+        $this->expectException(MissingHelperException::class);
+        $this->expectExceptionMessage('ByCellPropertyHelper');
+        $this->get('/widgets/showcell?name=Configuring::property');
+    }
+
+    public function testControllerHelpersPropertyIsNotLoadedPastTheWarning(): void
+    {
+        set_error_handler(static fn () => true, E_USER_WARNING);
+        try {
+            $controller = new LegacyHelpersController(new ServerRequest());
+            $this->assertSame([], $controller->viewBuilder()->getHelpers());
+            $this->expectException(MissingHelperException::class);
+            $this->expectExceptionMessage('AliasedHelper');
+            $controller->createView()->Aliased;
+        } finally {
+            restore_error_handler();
+        }
     }
 }

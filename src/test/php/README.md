@@ -125,6 +125,12 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | A controller's `$helpers` property reaches its template, merged with its parent's | `testControllerHelpersPropertyReachesTemplateMerged` | 3 |
 | A controller's `$helpers` property raises a warning | `testControllerHelpersPropertyRaisesWarning` | 4 |
 | A controller's `$helpers` property is ignored | `testControllerHelpersPropertyIsIgnored` | 5 |
+| A controller's `$helpers` property is not loaded once its warning is past | `testControllerHelpersPropertyIsNotLoadedPastTheWarning` | 4 |
+| A cell's `initialize()` helper reaches its template | `testCellInitializeHelperReachesItsTemplate` | Same |
+| The caller's helper wins over a cell's `initialize()` helper of the same alias | `testCallerHelperWinsOverCellInitializeHelper` | Same |
+| A cell action's helper wins over the caller's of the same alias | `testCellActionHelperWinsOverCallerHelper` | Same |
+| A `$helpers` property on a cell reaches its template | `testCellHelpersPropertyReachesItsTemplate` | 3 |
+| A `$helpers` property on a cell is ignored | `testCellHelpersPropertyIsIgnored` | 4, 5 |
 
 ### `TableLocatorTest`
 

@@ -75,4 +75,28 @@ class ViewHelperTest extends TestCase
         $this->get('/legacy-helpers/index');
         $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper|App\\View\\Helper\\MarkerHelper');
     }
+
+    public function testCellInitializeHelperReachesItsTemplate()
+    {
+        $this->get('/widgets/showcell?name=Configuring::own');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCallerHelperWinsOverCellInitializeHelper()
+    {
+        $this->get('/widgets/helpercell?name=Configuring::caller');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCellActionHelperWinsOverCallerHelper()
+    {
+        $this->get('/widgets/helpercell?name=Configuring::action');
+        $this->assertResponseEquals('App\\View\\Helper\\ViewMarkerHelper');
+    }
+
+    public function testCellHelpersPropertyReachesItsTemplate()
+    {
+        $this->get('/widgets/showcell?name=Configuring::property');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
 }

@@ -82,4 +82,29 @@ class ViewHelperTest extends TestCase
         $this->expectExceptionMessage('AliasedHelper');
         $this->get('/legacy-helpers/index');
     }
+
+    public function testCellInitializeHelperReachesItsTemplate(): void
+    {
+        $this->get('/widgets/showcell?name=Configuring::own');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCallerHelperWinsOverCellInitializeHelper(): void
+    {
+        $this->get('/widgets/helpercell?name=Configuring::caller');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCellActionHelperWinsOverCallerHelper(): void
+    {
+        $this->get('/widgets/helpercell?name=Configuring::action');
+        $this->assertResponseEquals('App\\View\\Helper\\ViewMarkerHelper');
+    }
+
+    public function testCellHelpersPropertyIsIgnored(): void
+    {
+        $this->expectException(MissingHelperException::class);
+        $this->expectExceptionMessage('ByCellPropertyHelper');
+        $this->get('/widgets/showcell?name=Configuring::property');
+    }
 }
