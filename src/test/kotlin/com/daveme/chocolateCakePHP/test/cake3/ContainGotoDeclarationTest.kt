@@ -12,7 +12,11 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/AuthorsTable.php",
             "cake3/src/Model/Table/CommentsTable.php",
             "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
+            "cake3/src/Model/Table/ProfilesTable.php",
+            "cake3/src/Model/Table/ReviewsTable.php",
+            "cake3/src/Model/Table/UsersTable.php",
+            "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php",
+            "cake3/vendor/test/test_plugin/src/Model/Table/RatingsTable.php"
         )
     }
 
@@ -206,4 +210,85 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
         assertGotoDeclarationHandlerGoesToFilename(handler, "CommentsTable.php")
     }
 
+    private fun assertReviewsQueryGoesTo(call: String, filename: String) {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}this->getTableLocator()->get('Reviews')->find()->$call;
+            }
+        }
+        """.trimIndent())
+        assertGotoDeclarationHandlerGoesToFilename(ContainGotoDeclarationHandler(), filename)
+    }
+
+    private fun assertReviewsQueryGoesNowhere(call: String) {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}this->getTableLocator()->get('Reviews')->find()->$call;
+            }
+        }
+        """.trimIndent())
+        assertEmpty(gotoDeclarationHandlerTargets(ContainGotoDeclarationHandler()).orEmpty().toList())
+    }
+
+    fun `test undeclared association on a configured table navigates nowhere`() {
+        assertReviewsQueryGoesNowhere("contain('<caret>Articles')")
+    }
+
+    fun `test segment after an undeclared association navigates nowhere`() {
+        assertReviewsQueryGoesNowhere("contain('Articles.<caret>Authors')")
+    }
+
+    fun `test alias navigates to the table it resolves to`() {
+        assertReviewsQueryGoesTo("contain('<caret>Authors')", "UsersTable.php")
+    }
+
+    fun `test addAssociations alias navigates to the table it resolves to`() {
+        assertReviewsQueryGoesTo("contain('<caret>Editors')", "UsersTable.php")
+    }
+
+    fun `test plugin alias navigates to the plugin table`() {
+        assertReviewsQueryGoesTo("contain('<caret>Ratings')", "RatingsTable.php")
+    }
+
+    fun `test caret in the first segment navigates to the first hop`() {
+        assertReviewsQueryGoesTo("contain('Auth<caret>ors.Profiles')", "UsersTable.php")
+    }
+
+    fun `test caret in the second segment navigates by the second hop`() {
+        assertReviewsQueryGoesTo("contain('Authors.Prof<caret>iles')", "ProfilesTable.php")
+    }
+
+    fun `test caret at the start of the second segment navigates by the second hop`() {
+        assertReviewsQueryGoesTo("contain('Authors.<caret>Profiles')", "ProfilesTable.php")
+    }
+
+    fun `test matching navigates like contain`() {
+        assertReviewsQueryGoesTo("matching('<caret>Authors')", "UsersTable.php")
+    }
+
+    fun `test array key navigates to the table it resolves to`() {
+        assertReviewsQueryGoesTo("contain(['<caret>Authors' => ['Profiles']])", "UsersTable.php")
+    }
+
+    fun `test array under a key navigates by the key`() {
+        assertReviewsQueryGoesTo("contain(['Authors' => ['<caret>Profiles']])", "ProfilesTable.php")
+    }
+
+    fun `test dotted segment under a key navigates by the key`() {
+        assertReviewsQueryGoesTo("contain(['Authors' => ['Reviews.<caret>Editors']])", "UsersTable.php")
+    }
 }

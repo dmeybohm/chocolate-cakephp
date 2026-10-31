@@ -52,6 +52,11 @@ public methods as available on the Table instance. This is similar to how compon
 support works for controllers. Custom finders defined in behaviors (e.g.,
 `findThreaded()` from `TreeBehavior`) should also appear in `find()` completions.
 
+Associations a behavior adds through `$this->_table` should count as configured associations
+of the table that attaches it. Today the index cannot see them, so on a table that configures
+other associations in `initialize()`, query methods neither offer them nor navigate through
+them (`contain()`, `matching()` and friends, see feature 7).
+
 ---
 
 ### 3. Route Controller/Action String Completion

@@ -10,7 +10,6 @@ import com.jetbrains.php.PhpIndex
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.jetbrains.php.lang.psi.elements.*
-import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 class CustomFinderCompletionContributor : CompletionContributor() {
     init {
@@ -64,20 +63,7 @@ class CustomFinderCompletionContributor : CompletionContributor() {
 
             val project = methodReference.project
             val phpIndex = PhpIndex.getInstance(project)
-            val classReference = methodReference.classReference ?: return
-
-            val type = classReference.type.lookupCompleteType(project, phpIndex, null)
-            if (!hasRequiredType(type)) {
-                return
-            }
-            val tableClasses = type.types.filter {
-                it.startsWith("\\") && it.isAnyTableClass()
-            }
-            tableClasses.asSequence()
-                .map { className ->
-                    val replacedName = className.unwrapFromPluginSpecificTypeForQueryBuilder()
-                    replacedName
-                }
+            queryReceiverTables(methodReference).asSequence()
                 .flatMap { className ->
                     phpIndex.getClassesByFQN(className)
                 }
@@ -105,13 +91,6 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 }
                 .lastOrNull()
 
-        }
-
-        private fun hasRequiredType(type: PhpType): Boolean {
-            return type.types.any {
-                it.isAnyTableClass() ||
-                        it.isQueryObject()
-            }
         }
     }
 }
