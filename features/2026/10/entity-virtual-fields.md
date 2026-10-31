@@ -524,3 +524,47 @@ provider, field completion, field navigation) do not meet. What the merge settle
   navigation do not share it: they work per entity class in the union, as scope items 2 and 3
   say and test 13b pins. The split is the difference between a claim and an offer, and it is
   the one place the three features intentionally disagree on a receiver.
+
+## Implementation Progress
+
+### Session #1
+
+**Plan step 1, the bytecode check (232.8660.205): one dispatching provider.** The ambiguity
+branch is not the obstacle. In `doCompleteType`, a `null` from a provider continues the loop,
+and the `isAmbiguous()` branch is only reached when a same-key provider has
+`interceptsNativeSignature() == true`. The obstacle is `PhpIndexImpl.getTypeProviders()`, which
+calls `LOG.error("Duplicate type providers with key ...")` when two non-intercepting providers
+share a key. Registering a second `P` provider as an experiment failed the test with
+`Duplicate type providers with key 'P': ...ConfiguredMemberFieldTypeProvider,...DupProbe`, and it
+would report an error to users too. So `ConfiguredMemberFieldTypeProvider` stays the only `P`
+provider and hands lowercase fields to the entity resolver. An intercepting second provider is
+no alternative, since native resolution would still run and add `__get`'s `mixed`. The 263 jar
+is not in the local Gradle cache, so this was not rechecked there, but the dispatching shape
+does not depend on the check being absent.
+
+**Plan step 3, the receiver encodings** (Cake 5, raw `FieldReference.type`, each also wrapped in
+`#π(...)`):
+
+| Receiver | PhpStorm's own field signatures |
+|---|---|
+| `Movie $movie`, `new Movie()` | `#P#C\App\Model\Entity\Movie.full_title` |
+| `$this` in an entity | `#P#C\...\Probe.full_title`, `#P#S\...\Probe.full_title` |
+| `$this->fetchTable('Movies')->get(1)` | `#P#C\...\Movie.full_title`, `#P#M#C\...\MoviesTable.get.full_title`, `#P#M#M#C\...fetchTable.get.full_title`, `#P#π(#M#C\...\MoviesTable.get)(\int).full_title`, a `#l(...)(.(full_title))` chain and more |
+| `$this->Movies->get(1)` | `#P#M#P#C\...\ProbeController.Movies.get.full_title`, the `#S` and `#π` forms, and our own `#P#茖.get.#茒c\...\ProbeController茒Movies.full_title` |
+| A template's `$movie` | `#P#Vmovie.full_title`, `#P#茓4Probe/probe_action茀茀movie.full_title` |
+| `Movie\|Rating`, `Movie\|MoviesTable` | One `#P#C` signature per class |
+
+Two consequences for the plan:
+
+- **A union never reaches `complete()` as one receiver when the classes are known.** Each class
+  gets its own signature, so the provider answers for `Movie` and the `Rating` or `MoviesTable`
+  branch resolves natively beside it. `Movie|MoviesTable` gives `string`, `Association` and
+  `mixed`. That meets the rule's purpose, since `Other`'s type is not dropped, but test 13b asserts
+  those contents rather than "the provider does not answer". The all-classes rule still applies
+  when a single non-class signature completes to several classes.
+- **A field has many signatures, and each is completed.** One that falls through to `__get` puts
+  `mixed` back, so every signature whose receiver reaches the entity has to answer.
+
+The name rejection in `complete()` also needed a correction: an entity may legitimately be named
+`PageView` or `TimeTable`, so a class under an `Entity` namespace is not rejected by its suffix.
+
