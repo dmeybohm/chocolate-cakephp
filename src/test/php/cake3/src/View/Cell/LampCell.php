@@ -20,4 +20,12 @@ class LampCell extends Cell
     public function elementinapp()
     {
     }
+
+    public function helper()
+    {
+    }
+
+    public function helperelement()
+    {
+    }
 }

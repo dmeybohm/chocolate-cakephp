@@ -80,7 +80,8 @@ Relied on by element navigation and element related usages.
 
 ### `CellTest`
 
-Relied on by cell navigation, the cell action line marker and cell view variables. Cells do not
+Relied on by cell navigation, the cell action line marker, cell view variables and view helper
+resolution. Cells do not
 exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 
 | Behavior | Test method | Versions |
@@ -100,6 +101,10 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | An unprefixed element in an app cell called under a plugin controller is the app's | `testElementInAppCellCalledFromPluginResolvesInApp` | Same |
 | An unprefixed element in a cell template named with `render()` is the cell plugin's | `testElementInNamedCellTemplateResolvesInCellPlugin` | Same |
 | An element missing from a plugin cell's plugin falls back to the app's | `testElementInPluginCellFallsBackToAppElement` | Same |
+| A helper a controller adds through `viewBuilder()` reaches its template | `testControllerHelperReachesItsTemplate` | Same |
+| A controller's helper reaches the template of a cell called from its view | `testControllerHelperReachesCellTemplate` | Same |
+| A controller's helper reaches an element in that cell's template | `testControllerHelperReachesElementInCellTemplate` | Same |
+| A cell template lacks a helper its caller's controller did not add | `testCellTemplateHasNoHelperItsCallerLacks` | Same |
 
 ### `TableLocatorTest`
 

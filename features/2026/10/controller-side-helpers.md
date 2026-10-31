@@ -225,7 +225,8 @@ fix. All three are merged.
   are added later.
 - Cake 3 reads the controller's `$helpers` in `createView()`, merged up the class chain by
   `_mergeControllerVars()`. Cake 4 only warns about the property, and Cake 5 ignores it.
-- Cells inherit the calling view's helpers, which reversed section 5.
+- Cells inherit the calling view's helpers, which reversed section 5. `CellTest` in the assumption
+  suite confirms this at runtime on 3, 4 and 5, for a cell template and an element in it.
 
 **Decisions:**
 
