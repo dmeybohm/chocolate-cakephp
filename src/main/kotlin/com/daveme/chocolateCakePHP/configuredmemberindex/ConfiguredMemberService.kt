@@ -66,24 +66,31 @@ object ConfiguredMemberService {
 
     /**
      * The type of [alias] on receivers of type [classFqns], or null when no class in any
-     * receiver's chain loads it.
+     * receiver's chain loads it. [ignoredProperties] gives the configuring properties that have
+     * no effect on a receiver.
      */
     fun memberType(
         project: Project,
         classFqns: Collection<String>,
         kinds: Set<MemberKind>,
-        alias: String
+        alias: String,
+        ignoredProperties: (String) -> Set<String> = { emptySet() }
     ): MemberTypeResult? {
-        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, alias) }
+        val resolutions = specificReceivers(classFqns).map {
+            resolveChain(project, it, kinds, alias, ignoredProperties(it))
+        }
         return combine(project, resolutions, kinds, alias)
     }
 
     fun loadedMembers(
         project: Project,
         classFqns: Collection<String>,
-        kinds: Set<MemberKind>
+        kinds: Set<MemberKind>,
+        ignoredProperties: (String) -> Set<String> = { emptySet() }
     ): LoadedMembers {
-        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, null) }
+        val resolutions = specificReceivers(classFqns).map {
+            resolveChain(project, it, kinds, null, ignoredProperties(it))
+        }
         val aliases = resolutions.flatMap { it.members.keys }.toSet()
         val members = aliases.mapNotNull { alias ->
             combine(project, resolutions, kinds, alias)?.let { alias to it }
@@ -145,7 +152,8 @@ object ConfiguredMemberService {
         project: Project,
         classFqn: String,
         kinds: Set<MemberKind>,
-        alias: String?
+        alias: String?,
+        ignoredProperties: Set<String>
     ): ChainResolution {
         val phpIndex = PhpIndex.getInstance(project)
         val settings = Settings.getInstance(project)
@@ -156,7 +164,10 @@ object ConfiguredMemberService {
         val chain = classChain(phpIndex, classFqn)
         val configurations = chain.map { fqn ->
             val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
-            ClassConfiguration(values.flatMap { it.loads }, values.flatMap { it.declarations })
+            ClassConfiguration(
+                values.flatMap { it.loads }.filter { it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignoredProperties },
+                values.flatMap { it.declarations }.filter { it.property !in ignoredProperties }
+            )
         }
         val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
         if (cakeTwoBase != null) {

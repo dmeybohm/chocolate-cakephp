@@ -51,4 +51,28 @@ class ControllerSideHelperTest : Cake3BaseTestCase() {
         controller("public function beforeRender(\\Cake\\Event\\Event ${'$'}event) { \$this->viewBuilder()->setHelpers(['Fmt' => ['className' => 'MovieFormatter']]); }")
         assertTrue(fmtTypesIn("cake3/src/Template/Movie/index.ctp").contains(movieHelper))
     }
+
+    fun `test a helpers property on the view class is ignored`() {
+        myFixture.addFileToProject("cake3/src/View/AppView.php", """
+            <?php
+            namespace App\View;
+            class AppView extends \Cake\View\View {
+                protected ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            }
+        """.trimIndent())
+        controller("")
+        assertFalse(fmtTypesIn("cake3/src/Template/Movie/index.ctp").contains(movieHelper))
+    }
+
+    fun `test a helpers property on a cell resolves in its template`() {
+        myFixture.addFileToProject("cake3/src/View/Cell/WidgetCell.php", """
+            <?php
+            namespace App\View\Cell;
+            class WidgetCell extends \Cake\View\Cell {
+                public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+                public function display() {}
+            }
+        """.trimIndent())
+        assertEquals(setOf(movieHelper), fmtTypesIn("cake3/src/Template/Cell/Widget/display.ctp"))
+    }
 }

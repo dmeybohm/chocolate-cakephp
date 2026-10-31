@@ -57,6 +57,22 @@ sealed class TemplateDirStructure(val id: Char) {
         layoutDirectory?.let { templateKey.startsWith("$it/") } ?: false
 
     /**
+     * The directory cell templates are in, under the templates directory, on versions with cells.
+     */
+    open val cellDirectory: String? = null
+
+    /**
+     * Whether [templateKey] is the key of a cell's template.
+     */
+    fun isCellKey(templateKey: String): Boolean =
+        cellDirectory?.let { templateKey.startsWith("$it/") } ?: false
+
+    /**
+     * Whether a `$helpers` property on the class rendering a view supplies its helpers.
+     */
+    abstract val readsHelpersProperty: Boolean
+
+    /**
      * The class every application controller extends, when layouts are tracked.
      */
     open val appControllerClass: String? = null
@@ -98,6 +114,8 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override val indexesLayoutReferences = true
 
+        override val readsHelpersProperty = true
+
         override val appControllerClass = "\\AppController"
 
         override val frameworkControllerClass = "\\Controller"
@@ -107,6 +125,8 @@ sealed class TemplateDirStructure(val id: Char) {
         id: Char,
         private val overrideDirectory: String,
         override val layoutDirectory: String,
+        override val cellDirectory: String,
+        override val readsHelpersProperty: Boolean,
     ) : TemplateDirStructure(id) {
         override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
             cakeThreePluginName(file, projectDir, settings, overrideDirectory)
@@ -123,8 +143,8 @@ sealed class TemplateDirStructure(val id: Char) {
     }
 
     companion object {
-        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout")
-        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout")
+        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell", readsHelpersProperty = true)
+        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell", readsHelpersProperty = false)
 
         fun of(templatesDir: TemplatesDir): TemplateDirStructure = when (templatesDir) {
             is CakeTwoTemplatesDir -> CakeTwo

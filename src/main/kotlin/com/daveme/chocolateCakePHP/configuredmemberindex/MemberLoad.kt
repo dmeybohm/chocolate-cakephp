@@ -99,6 +99,8 @@ internal val viewBuilderHelperArrayMethods: Set<String> = setOf(
     "helpers",
 )
 
+internal const val HELPERS_PROPERTY = "helpers"
+
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
 internal const val BIND_MODEL_METHOD = "bindmodel"
@@ -120,7 +122,7 @@ internal val cakeTwoAssociationTypeKeys: Set<String> = setOf(
 )
 
 internal val propertyArraySources: Map<String, MemberKind> = mapOf(
-    "helpers" to MemberKind.HELPER,
+    HELPERS_PROPERTY to MemberKind.HELPER,
     "components" to MemberKind.COMPONENT,
     "uses" to MemberKind.TABLE,
 ) + cakeTwoAssociationTypeKeys.associateWith { MemberKind.ASSOCIATION }

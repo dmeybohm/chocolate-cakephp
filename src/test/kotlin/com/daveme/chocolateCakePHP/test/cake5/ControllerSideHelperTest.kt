@@ -70,11 +70,11 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         myFixture.editor.caretModel.moveToOffset(text.indexOf("<caret>"))
     }
 
-    private fun fmtTypesIn(path: String, templates: String = "cake5/templates"): Set<String> {
-        val code = "<?php\n\$this->Fmt;\n"
+    private fun fmtTypesIn(path: String, templates: String = "cake5/templates", field: String = "Fmt"): Set<String> {
+        val code = "<?php\n\$this->$field;\n"
         myFixture.addFileToProject("$templates/$path.php", code)
         myFixture.configureFromTempProjectFile("$templates/$path.php")
-        myFixture.editor.caretModel.moveToOffset(code.indexOf("Fmt") + 1)
+        myFixture.editor.caretModel.moveToOffset(code.indexOf(field) + 1)
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
@@ -279,5 +279,117 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         template("Movie/index", "echo \$this->cell('Blog.Widget');")
         myFixture.addFileToProject("$blogTemplates/cell/Widget/display.php", "<?php echo \$this->element('in_cell');")
         assertTrue(fmtTypesIn("element/in_cell", blogTemplates).contains(movieHelper))
+    }
+
+    private fun cell(body: String) {
+        myFixture.addFileToProject("cake5/src5/View/Cell/WidgetCell.php", """
+            <?php
+            namespace App\View\Cell;
+            class WidgetCell extends \Cake\View\Cell {
+                $body
+            }
+        """.trimIndent())
+    }
+
+    private fun completionsIn(path: String): List<String> {
+        configureWithCaret("cake5/templates/$path.php", "<?php\n\$this-><caret>\n")
+        myFixture.completeBasic()
+        return myFixture.lookupElementStrings.orEmpty()
+    }
+
+    fun `test a helper a cell action adds resolves in the cell's template`() {
+        appView()
+        cell("public function display() { \$this->viewBuilder()->addHelper('Fmt', ['className' => 'MovieFormatter']); }")
+        val types = fmtTypesIn("cell/Widget/display")
+        assertTrue("$types", types.containsAll(listOf(movieHelper, conventionHelper)))
+    }
+
+    fun `test a helper a cell's initialize adds settles the type in its template`() {
+        appView()
+        controller("Movie", "public function index() {}")
+        template("Movie/index", "echo \$this->cell('Widget');")
+        cell("""
+            public function initialize(): void { ${'$'}this->viewBuilder()->addHelper('Fmt', ['className' => 'MovieFormatter']); }
+            public function display() {}
+        """)
+        assertEquals(setOf(movieHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test a helper a cell's initialize adds does not settle the type in a shared element`() {
+        appView()
+        controller("Movie", "public function index() {}")
+        template("Movie/index", "echo \$this->element('shared');")
+        template("cell/Widget/display", "echo \$this->element('shared');")
+        cell("""
+            public function initialize(): void { ${'$'}this->viewBuilder()->addHelper('Fmt', ['className' => 'MovieFormatter']); }
+            public function display() {}
+        """)
+        val types = fmtTypesIn("element/shared")
+        assertTrue("$types", types.containsAll(listOf(movieHelper, conventionHelper)))
+    }
+
+    fun `test a cell's helper stays out of other templates`() {
+        appView()
+        controller("Movie", "public function index() {}")
+        cell("public function display() { \$this->viewBuilder()->addHelper('Fmt', ['className' => 'MovieFormatter']); }")
+        assertFalse(fmtTypesIn("Movie/index").contains(movieHelper))
+    }
+
+    fun `test a helpers property on the view class is ignored`() {
+        myFixture.addFileToProject("cake5/src5/View/AppView.php", """
+            <?php
+            namespace App\View;
+            class AppView extends \Cake\View\View {
+                protected array ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            }
+        """.trimIndent())
+        controller("Movie", "public function index() {}")
+        assertFalse(fmtTypesIn("Movie/index").contains(movieHelper))
+        assertFalse(completionsIn("Movie/other").contains("Fmt"))
+    }
+
+    fun `test a helpers property on a controller is ignored`() {
+        appView()
+        controller("Movie", """
+            public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            public function index() {}
+            public function other() {}
+        """)
+        assertFalse(fmtTypesIn("Movie/index").contains(movieHelper))
+        assertFalse(completionsIn("Movie/other").contains("Fmt"))
+    }
+
+    fun `test a helpers property on a cell is ignored`() {
+        appView()
+        cell("""
+            public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            public function display() {}
+        """)
+        assertFalse(fmtTypesIn("cell/Widget/display").contains(movieHelper))
+    }
+
+    fun `test a controller's alias of an existing helper's name settles the type`() {
+        appView()
+        controller("Movie", """
+            public function initialize(): void {
+                ${'$'}this->viewBuilder()->addHelper('ArtistFormatter', ['className' => 'MovieFormatter']);
+            }
+            public function index() {}
+        """)
+        assertEquals(setOf(movieHelper), fmtTypesIn("Movie/index", field = "ArtistFormatter"))
+    }
+
+    fun `test a helper only an action adds has no magic get type`() {
+        appView()
+        controller("Movie", fmtIn("MovieFormatter"))
+        val types = fmtTypesIn("Movie/index")
+        assertFalse("$types", types.contains("\\null"))
+        assertFalse("$types", types.contains("\\Cake\\View\\Helper"))
+    }
+
+    fun `test a helper nothing configures keeps its convention type`() {
+        appView()
+        controller("Movie", "public function index() {}")
+        assertTrue(fmtTypesIn("Movie/index", field = "ArtistFormatter").contains(artistHelper))
     }
 }
