@@ -178,10 +178,10 @@ fix. All three are merged.
      implements, beside `CakeTwoChainResolver`. Both implement an internal `ChainResolver` with
      one method, `resolve(kinds, alias, resolveLoad): ChainResolution`, and `resolveChain` picks
      the implementation.
-   - Share the one rule both need as a function in `MemberLoad.kt`: a load is authoritative when
-     `!hasUnreadClassName` and the declaration it comes from, if any, `isComplete`.
-     `CakeTwoChainResolver` already says this in its `isAuthoritative` branch; the new resolver
-     gets the same answer from the same function. The new resolver also has to look at
+   - Each resolver decides for itself whether a load determines its member. `CakeTwoChainResolver`
+     already does, from the merged declarations and its association rule, and is not changed. The
+     new resolver treats a load with `hasUnreadClassName` as not determining, and a property-array
+     load as determining only when its `PropertyDeclaration` `isComplete`, which means reading
      `ClassConfiguration.declarations`, which the inline block ignores.
    - `CakeTwoChainResolver` keeps its name, as it is CakePHP 2 specific, matching the
      `CakeTwo`/`CakeThreeAndLater` pairing in `TemplateDirStructure`.
