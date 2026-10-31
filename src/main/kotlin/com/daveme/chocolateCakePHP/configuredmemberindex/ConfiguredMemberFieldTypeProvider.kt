@@ -1,8 +1,12 @@
 package com.daveme.chocolateCakePHP.configuredmemberindex
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.isCakeTwoModel
+import com.daveme.chocolateCakePHP.controllerConventionType
 import com.daveme.chocolateCakePHP.isAnyControllerClass
+import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldName
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -24,25 +28,79 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
     override fun getType(psiElement: PsiElement): PhpType? = null
 
     override fun complete(expression: String, project: Project): PhpType? {
-        val (receiverClass, fieldName) = parseClassFieldSignature(expression) ?: return null
-        val kinds = memberKindsForReceiver(receiverClass) ?: return null
-        if (DumbService.getInstance(project).isDumb) {
+        val (receiver, fieldName) = parseFieldSignature(expression) ?: return null
+        val receiverClass = classOfReceiver(receiver)
+        val settings = Settings.getInstance(project)
+        if (receiverClass == null && !(settings.cake2Enabled && isChainWithinBounds(expression))) {
             return null
         }
-        if (!Settings.getInstance(project).enabled) {
+        if (DumbService.getInstance(project).isDumb || !settings.enabled) {
             return null
         }
-        val configured = ConfiguredMemberService.memberType(project, listOf(receiverClass), kinds, fieldName)
-        if (configured == null || !configured.hasInitializeLoad) {
+        val phpIndex = PhpIndex.getInstance(project)
+        val receiverClasses = if (receiverClass != null)
+            listOf(receiverClass)
+        else
+            resolveReceiverClasses(project, phpIndex, receiver)
+        if (receiverClasses.isEmpty()) {
             return null
         }
-        val declaresField = PhpIndex.getInstance(project).getClassesByFQN(receiverClass)
+        // A non-null result here stops PhpStorm from resolving the field natively, for every
+        // receiver class, so one class without an answer leaves them all to native resolution:
+        val result = PhpType()
+        for (each in receiverClasses) {
+            result.add(fieldTypeOnClass(project, settings, phpIndex, each, fieldName) ?: return null)
+        }
+        return result
+    }
+
+    private fun resolveReceiverClasses(project: Project, phpIndex: PhpIndex, receiver: String): List<String> =
+        PhpType().add(receiver).lookupCompleteType(project, phpIndex, null).types
+            .filter { it.startsWith("\\") && !PhpType.isPrimitiveType(it) }
+
+    // The type of the field on one class, or null if native resolution should provide it.
+    private fun fieldTypeOnClass(
+        project: Project,
+        settings: Settings,
+        phpIndex: PhpIndex,
+        receiverClass: String,
+        fieldName: String
+    ): PhpType? {
+        val isModel = settings.cake2Enabled && phpIndex.isCakeTwoModel(receiverClass)
+        val kinds = if (isModel) setOf(MemberKind.ASSOCIATION) else memberKindsForReceiver(receiverClass) ?: return null
+        val declaresField = phpIndex.getClassesByFQN(receiverClass)
             .any { it.findFieldByName(fieldName, false) != null }
         if (declaresField) {
             return null
         }
-        // A non-null result here stops PhpStorm from resolving the field natively:
-        return configured.type
+        val configured = ConfiguredMemberService.memberType(project, listOf(receiverClass), kinds, fieldName)
+        val determined = configured != null && configured.hasInitializeLoad
+        if (determined && configured!!.classFqns.isNotEmpty()) {
+            return configured.type
+        }
+        return when {
+            // A model can bind an association from anywhere, so one found by name still resolves:
+            isModel -> {
+                val result = PhpType()
+                configured?.let { result.add(it.type) }
+                if (phpIndex.isCakeTwoModel("\\$fieldName")) {
+                    result.add("\\$fieldName")
+                }
+                result.takeUnless { it.isEmpty }
+            }
+            // A view loads any helper by name, so its configuration rules nothing out:
+            receiverClass.isViewClassName() -> null
+            determined -> PhpType().add(PhpType.NULL)
+            !settings.cake2Enabled -> null
+            else -> PhpType().apply {
+                configured?.let { add(it.type) }
+                if (receiverClass.isAnyControllerClass()) {
+                    add(controllerConventionType(settings, fieldName, configured?.excludedKinds.orEmpty()))
+                } else {
+                    add(viewHelperTypeFromFieldName(settings, fieldName))
+                }
+            }
+        }
     }
 
     override fun getBySignature(
@@ -59,30 +117,50 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
             PhpTypeSignatureKey.POLYMORPHIC_CLASS.key,
         )
 
+        private const val MAX_CHAIN_LENGTH = 10
+
         /**
-         * The receiver class and field name of a native field signature on a class receiver,
-         * such as `#P#C\App\Controller\MoviesController.Movies`.
+         * The receiver signature and field name of a native field signature, such as
+         * `#C\\App\\Controller\\MoviesController` and `Movies` for
+         * `#P#C\\App\\Controller\\MoviesController.Movies`.
          */
-        fun parseClassFieldSignature(expression: String): Pair<String, String>? {
-            if (expression.length < 6 || expression[2] != '#' || expression[3] !in CLASS_RECEIVER_KEYS) {
+        fun parseFieldSignature(expression: String): Pair<String, String>? {
+            if (expression.length < 6 || expression[2] != '#') {
                 return null
             }
             val separator = expression.lastIndexOf('.')
             if (separator < 5) {
                 return null
             }
-            val receiverClass = expression.substring(4, separator)
             val fieldName = expression.substring(separator + 1)
-            if (!receiverClass.startsWith("\\") || !fieldName.startsWithUppercaseCharacter()) {
+            if (!fieldName.startsWithUppercaseCharacter()) {
                 return null
             }
-            return receiverClass to fieldName
+            return expression.substring(2, separator) to fieldName
         }
+
+        private fun classOfReceiver(receiver: String): String? {
+            if (receiver[1] !in CLASS_RECEIVER_KEYS || receiver.getOrNull(2) != '\\') {
+                return null
+            }
+            return receiver.substring(2)
+        }
+
+        private fun isChainWithinBounds(expression: String): Boolean {
+            val prefix = "#${PhpTypeSignatureKey.FIELD.key}"
+            var depth = 0
+            while (expression.startsWith(prefix, depth * prefix.length)) {
+                depth++
+            }
+            return depth <= MAX_CHAIN_LENGTH
+        }
+
+        private fun String.isViewClassName(): Boolean = endsWith("View", ignoreCase = true)
 
         private fun memberKindsForReceiver(receiverClass: String): Set<MemberKind>? =
             when {
                 receiverClass.isAnyControllerClass() -> setOf(MemberKind.COMPONENT, MemberKind.TABLE)
-                receiverClass.endsWith("View", ignoreCase = true) ||
+                receiverClass.isViewClassName() ||
                     receiverClass.endsWith("Helper", ignoreCase = true) -> setOf(MemberKind.HELPER)
                 else -> null
             }
