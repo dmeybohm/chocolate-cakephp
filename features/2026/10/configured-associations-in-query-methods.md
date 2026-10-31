@@ -31,7 +31,9 @@ loses its table (see [Queries from association chains](#queries-from-association
 
 ## Scope
 
-Lookup side only. No index change: the records #299 writes already carry everything needed.
+Lookup side, plus one small index extension that the lookups here do not need but the
+entity-side follow-up does (see [Index extension](#index-extension-association-type-and-property-name)).
+The records #299 writes already carry everything the query methods need.
 
 1. Resolve the receiver table of the query, or of the table the method is called on.
 2. Offer the receiver's configured association aliases in `contain()`, `matching()`,
@@ -47,7 +49,11 @@ Out of scope, recorded for later:
   named arguments, and `find('all', ['contain' => ...])` in 3 and 4).
 - Associations behaviours add through `$this->_table`. That needs `addBehavior()` indexing and
   belongs with behaviour support (idea 2).
-- Narrowing the four `\Cake\ORM\Association` classes to the one the call implies.
+- Narrowing the four `\Cake\ORM\Association` classes to the one the call implies. The index
+  extension below records the type, so this becomes a small lookup-side change later.
+- Association properties on entities (`$movie->reviews`, `$review->author`). The index
+  extension is what makes them possible; the lookup belongs with
+  [entity virtual fields](entity-virtual-fields.md).
 - CakePHP 2. `contain()` there is the Containable behaviour and takes model names from
   `$belongsTo` arrays; the `CakeTwoChainResolver` can resolve them, but the patterns and tests
   are a separate piece of work.
@@ -192,6 +198,44 @@ assertion list.
 `TableLocatorTypeProviderTest` or the nearest existing type test: the query from
 `$this->Movies->Reviews->find()` carries `ReviewsTable` in its wrapped type.
 
+## Index extension: association type and property name
+
+The entity side of associations needs two facts the index does not record. The property an
+association adds to an entity is derived from the alias and the association type:
+`hasMany('Reviews')` gives `$movie->reviews`, `belongsTo('Authors')` gives `$review->author`
+(underscored and singularized), and `hasOne` singularizes like `belongsTo`. Its type is the
+target entity for `belongsTo` and `hasOne` and an array of them for `hasMany` and
+`belongsToMany`. The `propertyName` option overrides the derived name. None of that is in a
+`MemberLoad` today: the four method names all map to kind `ASSOCIATION` and are forgotten, and
+only the `className` option is read.
+
+Record both at index time, where the information is free:
+
+- `AssociationType { BELONGS_TO, HAS_ONE, HAS_MANY, BELONGS_TO_MANY }` in `MemberLoad.kt`, and
+  `associationType: AssociationType?` on `MemberLoad`, null for every other kind.
+  - Direct calls: from the method name in `methodCallSources`.
+  - `addAssociations()`: from the top-level key `readAssociationsByType()` is iterating.
+  - CakePHP 2 `$belongsTo`, `$hasOne`, `$hasMany`, `$hasAndBelongsToMany` arrays and
+    `bindModel()`: from the property or key, with `hasAndBelongsToMany` as `BELONGS_TO_MANY`.
+    `LoadReader.property` already carries the key for the array forms (the HABTM join-model
+    check reads it), so the type is derived from what the reader already has; confirm that
+    when implementing rather than threading a new parameter through.
+- `propertyName: String?` on `MemberLoad`, read with `optionValue(options, "propertyName")`
+  next to `className`, kept as written. The CakePHP 2 equivalent is not read; CakePHP 2 has no
+  entities.
+- `ConfiguredMemberExternalizer`: write the type as an ordinal with a sentinel for null, and the
+  property name through the existing nullable-string writer. Bump
+  `ConfiguredMemberIndex.getVersion()`.
+- `MemberTypeResult` does not change. The entity follow-up reads the loads themselves through
+  `loadedMembers()` or a new accessor; whichever it needs is its call. The one lookup-side use
+  here is none: the query methods list aliases and resolve tables, and are not changed by the
+  new fields.
+
+Tests, in `ConfiguredMemberIndexTest` or wherever #299 pins the index records: each of the four
+direct calls records its type; each `addAssociations()` key records its type; a `propertyName`
+option is recorded and absent when not given; a component or helper load has a null type. For
+CakePHP 2, each property array and `bindModel()` key records its type.
+
 ## Interaction with entity virtual fields
 
 [Entity virtual fields](entity-virtual-fields.md) is planned on a sibling worktree at the same
@@ -228,10 +272,11 @@ type-provider key. The points of contact are files and test discipline, not beha
   list. Do the same here, as a separate line, and expect a trivial conflict if both land close
   together.
 - **Later synergy.** The entity log leaves association properties on entities
-  (`$movie->articles`) to "a separate feature". The per-table association records this log
-  reads, plus the path walk it adds, are the natural input for that: an entity's association
-  property is the alias on its table, underscored. Not planned here; noted so the walk is
-  written as a reusable function rather than inline in the contributor.
+  (`$movie->articles`) to "a separate feature". The index extension above, the per-table
+  association records, and the path walk this log adds are the input for that. What is left for
+  the entity side is an entity-to-table helper (the reverse of `tableToEntityClass()`), the
+  name derivation from alias and type, and the lookup element itself. The walk is written as a
+  reusable function rather than inline in the contributor for the same reason.
 
 ## Steps
 
@@ -243,6 +288,8 @@ type-provider key. The points of contact are files and test discipline, not beha
 5. Dotted paths in completion, prefix matcher. Nested completion tests.
 6. Goto handler on the walk. Navigation tests.
 7. Hash-key pattern and the enclosing-key segments. Tests for both completion and navigation.
-8. Mirror tests to cake4 and cake3. Full suite.
+8. Index extension: `AssociationType` and `propertyName` on `MemberLoad`, the indexer, the
+   externalizer, the version bump. Index tests for CakePHP 3+ and 2.
+9. Mirror tests to cake4 and cake3. Full suite in both vendor modes.
 
 Commit after each step.
