@@ -130,4 +130,27 @@ class EntityAssociationPropertyTest extends TestCase
         $this->assertSame('accessor:' . User::class, $this->review(1, ['Editors'])->reviewer);
         $this->assertSame('accessor:NULL', $this->review(2, ['Editors'])->reviewer);
     }
+
+    private function notes()
+    {
+        ConnectionManager::get('default')->execute(
+            'CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, label_id INTEGER, comment_id INTEGER)'
+        );
+
+        return TableRegistry::getTableLocator()->get('Notes');
+    }
+
+    public function testChildInitializeReplacesParentAssociationOfSameAlias(): void
+    {
+        $this->assertSame('label', $this->notes()->getAssociation('Labels')->getProperty());
+    }
+
+    public function testQueryMethodReplacesAssociationOfSameAliasWhenItRuns(): void
+    {
+        $notes = $this->notes();
+        $this->assertSame('comment', $notes->getAssociation('Comments')->getProperty());
+
+        $notes->configureComments();
+        $this->assertSame('comments', $notes->getAssociation('Comments')->getProperty());
+    }
 }

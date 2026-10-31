@@ -138,22 +138,23 @@ object ConfiguredMemberService {
     }
 
     /**
-     * The associations configured by the chains of [tableFqns], where an `initialize()` load
-     * replaces an ancestor's load of the same alias.
+     * The associations configured by the chains of [tableFqns]. As in [InitializeChainResolver],
+     * the nearest class's `initialize()` loads of an alias replace its ancestors', and loads
+     * outside `initialize()` are kept from every class.
      */
     fun associationLoads(project: Project, tableFqns: Collection<String>): List<TableAssociationLoad> {
         val phpIndex = PhpIndex.getInstance(project)
         val fileBasedIndex = FileBasedIndex.getInstance()
         val scope = GlobalSearchScope.allScope(project)
         return tableFqns.flatMap { tableFqn ->
-            val initializeAliases = mutableSetOf<String>()
+            val nearestInitialize = mutableMapOf<String, String>()
             classChain(phpIndex, tableFqn).flatMap { fqn ->
                 val loads = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
                     .flatMap { it.loads }
                     .filter { it.kind == MemberKind.ASSOCIATION && it.associationType != null }
-                val kept = loads.filter { it.alias !in initializeAliases }
-                loads.filter { it.isInitializeLoad }.mapTo(initializeAliases) { it.alias }
-                kept.map { TableAssociationLoad(fqn, it) }
+                loads.filter { it.isInitializeLoad }.forEach { nearestInitialize.putIfAbsent(it.alias, fqn) }
+                loads.filter { !it.isInitializeLoad || nearestInitialize[it.alias] == fqn }
+                    .map { TableAssociationLoad(fqn, it) }
             }
         }
     }

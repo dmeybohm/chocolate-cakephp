@@ -5,6 +5,7 @@ namespace App\Test\TestCase;
 
 use App\Model\Entity\Review;
 use App\Model\Entity\User;
+use Cake\Core\Exception\CakeException;
 use Cake\Datasource\ConnectionManager;
 use Cake\ORM\Entity;
 use Cake\ORM\TableRegistry;
@@ -129,5 +130,34 @@ class EntityAssociationPropertyTest extends TestCase
     {
         $this->assertSame('accessor:' . User::class, $this->review(1, ['Editors'])->reviewer);
         $this->assertSame('accessor:NULL', $this->review(2, ['Editors'])->reviewer);
+    }
+
+    private function notes()
+    {
+        ConnectionManager::get('default')->execute(
+            'CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, label_id INTEGER, comment_id INTEGER)'
+        );
+
+        return TableRegistry::getTableLocator()->get('Notes');
+    }
+
+    public function testChildInitializeWithoutParentCallSkipsParentAssociation(): void
+    {
+        $this->assertSame('label', $this->notes()->getAssociation('Labels')->getProperty());
+    }
+
+    public function testConfiguringAnAliasTwiceInInitializeThrows(): void
+    {
+        $this->expectException(CakeException::class);
+        TableRegistry::getTableLocator()->get('ConflictingNotes');
+    }
+
+    public function testQueryMethodConfiguringAnExistingAliasThrows(): void
+    {
+        $notes = $this->notes();
+        $this->assertSame('comment', $notes->getAssociation('Comments')->getProperty());
+
+        $this->expectException(CakeException::class);
+        $notes->configureComments();
     }
 }

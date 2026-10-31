@@ -599,3 +599,21 @@ What changed from the plan while building them:
   checks and index lookups.
 
 **Full suite:** 1713 tests, 0 failed, before any PR was opened.
+
+### Session #2
+
+A review of #315 found that `associationLoads()` dropped an ancestor's loads outside
+`initialize()` once a child had an `initialize()` load of the alias, while
+`InitializeChainResolver` keeps them. It now follows the resolver's rule.
+
+The new `EntityAssociationPropertyTest` cases show that the framework differs by version. On 3.x
+and 4.x, `AssociationCollection::add()` overwrites an alias, so a child's `initialize()` replaces
+its parent's association, and a query method's replaces the existing one once it runs: `comment`
+and `comments` can both be real, depending on what has run. On 5.x, `add()` throws `Association
+alias ... is already set` for both cases, so the second load can only run where the first did
+not, such as a child that does not call `parent::initialize()`. The plugin has one rule for all
+three versions, so on 5.x it may offer a property from a query method that would throw if it ran
+after the child's load. It does not report the conflict. It also does not read whether
+`initialize()` calls its parent's, so a parent's load of an alias the child does not configure is
+kept even if the child skips the parent.
+

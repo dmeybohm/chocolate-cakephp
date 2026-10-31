@@ -243,6 +243,11 @@ connection, because `getProperty()` reads the source table's schema.
 | A `hasOne` property holds the target entity, or `null` when nothing matched | `testHasOnePropertyHoldsTargetEntityOrNull` | Same |
 | A `hasMany` property holds an array of target entities, empty when nothing matched | `testHasManyPropertyHoldsArrayOfTargetEntities` | Same |
 | An accessor named for an association property receives the association's value | `testAccessorReceivesAssociationValue` | Same |
+| A child's `initialize()` replaces its parent's association of the same alias, so only the child's property exists | `testChildInitializeReplacesParentAssociationOfSameAlias` | 3, 4 |
+| A query method's association replaces the one of the same alias only once it runs, so either property can exist | `testQueryMethodReplacesAssociationOfSameAliasWhenItRuns` | 3, 4 |
+| A child's `initialize()` that does not call its parent's has only its own association of the alias | `testChildInitializeWithoutParentCallSkipsParentAssociation` | 5 |
+| Configuring an alias a second time during `initialize()` throws | `testConfiguringAnAliasTwiceInInitializeThrows` | 5 |
+| A query method configuring an alias that already exists throws | `testQueryMethodConfiguringAnExistingAliasThrows` | 5 |
 
 ### `InflectorTest`
 

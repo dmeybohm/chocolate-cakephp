@@ -147,6 +147,55 @@ class EntityAssociationFieldTest : Cake3BaseTestCase() {
         assertEquals("string", typeTextOf("author"))
     }
 
+    private fun configureNotesTables() {
+        myFixture.addFileToProject(
+            "cake3/src/Model/Entity/Note.php",
+            "<?php\nnamespace App\\Model\\Entity;\nuse Cake\\ORM\\Entity;\nclass Note extends Entity {}\n"
+        )
+        myFixture.addFileToProject(
+            "cake3/src/Model/Table/BaseNotesTable.php",
+            "<?php\nnamespace App\\Model\\Table;\nuse Cake\\ORM\\Table;\nclass BaseNotesTable extends Table {\n" +
+                "    public function initialize(array \$config) { \$this->hasMany('Labels'); }\n" +
+                "    public function configureComments() { \$this->hasMany('Comments'); }\n}\n"
+        )
+        myFixture.addFileToProject(
+            "cake3/src/Model/Table/NotesTable.php",
+            "<?php\nnamespace App\\Model\\Table;\nclass NotesTable extends BaseNotesTable {\n" +
+                "    public function initialize(array \$config) {\n" +
+                "        parent::initialize(\$config);\n" +
+                "        \$this->belongsTo('Labels');\n" +
+                "        \$this->belongsTo('Comments');\n    }\n}\n"
+        )
+    }
+
+    fun `test inherited query method keeps its association beside the child's initialize`() {
+        configureNotesTables()
+        assertFieldType("Note", "comment", "\\Cake\\ORM\\Entity", "\\null")
+        assertFieldType("Note", "comments", "\\Cake\\ORM\\Entity[]")
+    }
+
+    fun `test child's initialize replaces the parent's initialize association`() {
+        configureNotesTables()
+        assertFieldType("Note", "label", "\\Cake\\ORM\\Entity", "\\null")
+        assertFieldType("Note", "labels", "\\mixed")
+    }
+
+    fun `test completion follows the inherited association rule`() {
+        configureNotesTables()
+        configureEntityParameter("Note", "\$entity-><caret>;")
+        val result = completeStrings()
+        assertContainsElements(result, "comment", "comments", "label")
+        assertDoesntContain(result, "labels")
+    }
+
+    fun `test goto declaration reaches the inherited query method's call`() {
+        configureNotesTables()
+        configureEntityParameter("Note", "\$entity->comm<caret>ents;")
+        val call = gotoDeclarationHandlerTargets(EntityVirtualFieldGotoDeclarationHandler())!!
+            .single { it !is PhpClass }
+        assertEquals("BaseNotesTable.php", call.containingFile.name)
+    }
+
     fun `test completion offers association properties`() {
         configureEntityParameter("Review", "\$entity-><caret>;")
         val result = completeStrings()
