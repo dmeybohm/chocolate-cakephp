@@ -192,6 +192,47 @@ assertion list.
 `TableLocatorTypeProviderTest` or the nearest existing type test: the query from
 `$this->Movies->Reviews->find()` carries `ReviewsTable` in its wrapped type.
 
+## Interaction with entity virtual fields
+
+[Entity virtual fields](entity-virtual-fields.md) is planned on a sibling worktree at the same
+time. The two designs do not overlap: it adds a `#P`-keyed type provider, a field completion
+contributor and a goto handler in a new `entity` package, and it does not touch
+`ConfiguredMemberService`, the contain code or `TableLocatorTypeProvider`. This log adds no
+type-provider key. The points of contact are files and test discipline, not behaviour:
+
+- **The stubs.** The stub `SelectQuery` in `cake5/vendor/cakephp.php` (and the cake4 and cake3
+  stubs) declares `find`, `where` and `contain` only. `matching()`, `notMatching()`,
+  `innerJoinWith()` and `leftJoinWith()` have to be added, returning `static` (or `$this` with
+  a `@return` tag on 3 and 4) so the query-builder wrapper survives a chain such as
+  `find()->matching('Authors')->contain(...)`, which `TableLocatorTypeProvider.complete()` only
+  keeps for methods whose return type contains `Query`. The entity log adds `Entity`,
+  `EntityTrait` and `EntityInterface` to the same three files. Both edits are additive in
+  different classes, so whichever branch merges second rebases and resolves a textual conflict
+  at worst. Keep the new methods inside the existing `SelectQuery` and `Query` classes rather
+  than appending at the end of the file, to stay clear of the entity additions.
+- **Both vendor modes.** The entity log's rule applies here too: every new test passes with the
+  stubs and with `./gradlew test -PcakeVendor=real`. In real mode the framework's own
+  `SelectQuery` already has every method, so the stub additions above are what make the two
+  modes agree. The `src/test/php/*/vendor` directories are untracked and absent in this
+  worktree until the real-mode run fetches them.
+- **`TableLocatorTypeProvider`.** The entity feature's second test types
+  `$this->Movies->get($id)->full_title` and relies on the `get` branch returning the entity
+  class. The change in [Queries from association chains](#queries-from-association-chains)
+  touches the `find` branch and the way `complete()` splits its expression. Keep the `get`
+  path byte-for-byte in behaviour and keep `GetTableLocatorTest` green, so the entity tests do
+  not depend on merge order.
+- **Fixtures.** The entity log changes `Movie.php` and adds `_getLabel()` to `MoviesTable`.
+  This log changes `UsersTable` or adds a new table fixture, and never the entities, so the
+  fixture edits are disjoint.
+- **README.** The entity log ends by adding its feature to the README's supported-features
+  list. Do the same here, as a separate line, and expect a trivial conflict if both land close
+  together.
+- **Later synergy.** The entity log leaves association properties on entities
+  (`$movie->articles`) to "a separate feature". The per-table association records this log
+  reads, plus the path walk it adds, are the natural input for that: an entity's association
+  property is the alias on its table, underscored. Not planned here; noted so the walk is
+  written as a reusable function rather than inline in the contributor.
+
 ## Steps
 
 1. `queryReceiverTables()` helper; switch `CustomFinderCompletionContributor` to it. Run the
