@@ -160,8 +160,10 @@ ones land cleanly.
 
 - **Column fields.** Columns come from the database schema. Bake writes `@property` tags for
   them, and PhpStorm handles those natively.
-- **Association properties** (`$movie->articles`) are typed by the Table's associations, which
-  is behavior-level work and a separate feature.
+- **Association properties** (`$movie->articles`) are typed by the Table's associations and are
+  a separate feature. See
+  [Interaction with configured associations in query methods](#interaction-with-configured-associations-in-query-methods)
+  for what that feature would build on.
 - **`$entity->get('full_name')` and `set()`** calls with string arguments. Possible later via
   the same accessor table, but the property form is what the idea asks for.
 - **CakePHP 2.** No accessors exist.
@@ -239,6 +241,49 @@ the time).
 8. **Cake 4 and Cake 3**: stubs, fixtures and the test copies.
 9. **Step 5** if time allows.
 10. **Full suite in both modes.** Then add the feature to the README's supported-features list.
+
+## Interaction with configured associations in query methods
+
+[Configured associations in query methods](configured-associations-in-query-methods.md) is
+planned on a sibling worktree at the same time. Its lookups (contain completion and
+navigation, the query-builder wrapper) and this feature's (a `#P`-keyed provider, field
+completion, field navigation) do not meet. The points of contact:
+
+- **The stubs.** Both plans edit `cake5/vendor/cakephp.php` and the cake4 and cake3 stubs. That
+  branch adds `matching()`, `notMatching()`, `innerJoinWith()` and `leftJoinWith()` inside the
+  existing `SelectQuery` and `Query` classes. This one adds `EntityInterface`, `EntityTrait` and
+  `Entity` as new classes. Add them in a block of their own, not inside or adjacent to the
+  query classes, so the second branch to merge gets a clean or trivially resolved rebase.
+- **`TableLocatorTypeProvider`.** Test 2 (`$this->Movies->get($id)->full_title`) relies on the
+  `get` branch returning the entity class. That branch changes the `find` branch and the
+  expression split in `complete()`, and commits to keeping the `get` path's behaviour and
+  `GetTableLocatorTest` green, so merge order does not matter for this test.
+- **Fixtures.** That branch edits `UsersTable` or adds a table fixture. This one edits
+  `Movie.php` and adds `_getLabel()` to `MoviesTable`. Disjoint.
+- **README.** Both append to the supported-features list. Expect a trivial adjacent-line
+  conflict.
+
+### Association properties, later
+
+That branch also extends the configured-member index with what association properties on
+entities need: `associationType` (one of the four, null for the CakePHP 2 HABTM join-model
+load), `propertyName` and `hasUnreadPropertyName`, mirroring `className` and its unread flag.
+Once it lands, association properties become a possible further step of this feature, built
+from:
+
+- An entity-to-table helper, the reverse of `tableToEntityClass()`, through the `Inflector`.
+- An accessor on `ConfiguredMemberService` returning the `ASSOCIATION` loads of a receiver
+  chain with the most-derived-wins rule of `resolveChain()`. `loadedMembers()` returns resolved
+  types, not loads, so the new fields are not reachable through it.
+- The property name: `propertyName` when present; nothing when `hasUnreadPropertyName`; else
+  the alias underscored, singularized for `BELONGS_TO` and `HAS_ONE`.
+- The type: the target table's entity through `tableToEntityClass()`, as an array for
+  `HAS_MANY` and `BELONGS_TO_MANY`.
+- The same `#P` provider, completion contributor and goto handler as the accessor fields, with
+  the association load as the navigation target.
+
+Not planned in this log. Recorded so the provider's receiver resolution (step 3 of
+`complete()`) is written to hand back entity classes in a form a second resolver can reuse.
 
 ## Open questions
 
