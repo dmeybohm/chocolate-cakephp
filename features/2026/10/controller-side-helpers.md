@@ -13,10 +13,11 @@ renders a template:
 > piece of work.
 
 `configuration-code-disambiguation-cake2` builds that mapping for CakePHP 2, where helpers are
-always configured on the controller: rendering controllers per template, a walk back through
-`$this->element()` includes for elements, and layouts through `$this->layout` assignments (with
-`default` meaning every controller). This feature reuses it for CakePHP 3 to 5, and picks up
-the CakePHP 3 to 5 side of two gaps that review of the CakePHP 2 plan found.
+always configured on the controller: rendering controllers per template, and a walk back through
+`$this->element()` includes for elements. Every layout gets all controllers, as #305 simplified
+it (see `rendering-controllers-element-plugin.md`, on `main` once #305 merges). This feature
+reuses that for CakePHP 3 to 5, and picks up the CakePHP 3 to 5 side of two gaps that review of
+the CakePHP 2 plan found.
 
 ## Scope
 
@@ -40,18 +41,27 @@ builder's earlier helpers.
 ### 2. Layouts
 
 CakePHP 3 to 5 layouts resolve against `AppView` today, which is right while only `AppView`
-configures helpers. With controller-side helpers, a layout has the helpers of whichever
-controller renders it, so it needs the CakePHP 2 layout mapping:
+configures helpers. With controller-side helpers, a layout could have the helpers of any
+controller, so it follows the CakePHP 2 rule: any layout, and anything it includes, gets all
+controllers plus `AppView`. A wrong answer only means an extra type in a union or a missing alias,
+so this doesn't track which controllers name a layout. It needs no `setLayout()` indexing, layout
+paths, or layout names across a class chain.
 
-- `$this->viewBuilder()->setLayout('name')` in 3.4+, 4 and 5, `layout('name')` in 3, and the
-  deprecated `$this->layout` property in 3. The view file index already reads `viewBuilder()`
-  calls for `setTemplate()` and `setTemplatePath()`, so `setLayout()` goes there.
-- The layout path changes the key, as with CakePHP 2's `$layoutPath`: `setLayoutPath()` in 3.4+,
-  4 and 5, and the deprecated `$this->layoutPath` in 3.
-- A controller's layout names and paths come from its whole class chain, including calls in
-  `AppController`, and `default` is always one of its names, since a `setLayout()` call in one
-  action does not change what another action renders.
-  Reuse the CakePHP 2 layout receiver lookup.
+`CakeThreeAndLater` needs its own values for this:
+
+- `frameworkControllerClass` of `\Cake\Controller\Controller`.
+- The layout directory for each version.
+- `appControllerClass`, from the configured `appNamespace`, unless the lookup below makes it
+  unnecessary. It's a fixed value today, with no access to settings.
+
+**Check first:** CakePHP 2's `FrameworkNotIndexedHelperTest` shows `getAllSubclasses("\\Controller")`
+works without the framework class being indexed. If `\Cake\Controller\Controller` behaves the same,
+these versions can use that lookup alone and skip `appControllerClass`. In that case, also remove the
+redundant `AppController` lookup from CakePHP 2 as a follow-up.
+
+**Watch out:** `layoutDirectory` controls both layout indexing and `isLayoutKey`, so setting it here
+also switches on the existing indexing. Split the two uses, or coordinate with
+`layout-navigation-references`, which adds CakePHP 3 to 5 layout references for navigation.
 
 ### 3. Incomplete `$helpers` declarations
 
@@ -70,7 +80,13 @@ picks the plugin, and the search order is the app's `templates/plugin/Foo/`, the
 `templates/`, then the app's `templates/`. Template keys carry no plugin, so an app controller
 and a plugin controller with the same name both match either template. Reuse the plugin-aware
 lookup from the CakePHP 2 feature, with the plugin taken from the configured `PluginConfig` a
-file is under, and a template under `templates/plugin/{Name}/` belonging to `{Name}`.
+file is under, and a template under `templates/plugin/{Name}/` belonging to `{Name}`. Layouts need
+no plugin check, as a plugin's layout also gets the app's controllers.
+
+Unprefixed elements follow the plugin of the rendering controller, not the including file, which
+`RenderingControllers` doesn't handle yet. Once `pluginOf` works on CakePHP 3 to 5, that gap applies
+here too. The fix belongs to `plugin-aware-view-keys`, so land it first, or record the gap as
+accepted.
 
 ### Facade from the CakePHP 2 feature
 
@@ -90,24 +106,27 @@ does not split `Foo.` prefixes. This feature mostly changes that structure:
 ## Dependencies
 
 Builds on `configuration-code-disambiguation-cake2`, for the rendering-controller mapping, the
-element walk, layout indexing and the complete flag. Start once that branch is merged, or
-branch from it.
+element walk and the complete flag, and on #305 for the layout rule. Start once #305 is merged,
+ideally after the element fix in `plugin-aware-view-keys`.
 
 ## Plan
 
 1. Check the merge and precedence behaviour in the real CakePHP 3, 4 and 5 source: controller
    helpers against `AppView::initialize()` loads, `setHelpers()` with and without merge, and
-   where the deprecated Cake 3 `$helpers` property and `$this->layout` are read.
-2. Index: `viewBuilder()` helper calls in controllers as HELPER loads on the controller, Cake 3's
-   controller `$helpers` property, and `setLayout()`/`layout()` in the view file index.
-3. Resolver and providers: CakePHP 3 to 5 templates, elements and layouts use `AppView` plus
-   the rendering controllers as helper receivers. This changes the deferred signature from
-   `#<key><fieldName>` to the template-carrying form the CakePHP 2 feature adds.
+   where the deprecated Cake 3 `$helpers` property is read.
+2. Index: `viewBuilder()` helper calls in controllers as HELPER loads on the controller, and Cake
+   3's controller `$helpers` property.
+3. Resolver and providers: CakePHP 3 to 5 templates and elements use `AppView` plus the rendering
+   controllers as helper receivers, and layouts use `AppView` plus all controllers. This changes
+   the deferred signature from `#<key><fieldName>` to the template-carrying form the CakePHP 2
+   feature adds.
 4. The complete flag for CakePHP 3 to 5 property arrays and options.
-5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its
-   template, in an element it includes and in a layout it sets; `default.ctp` unions it; an
-   `AppView` helper still resolves everywhere; an incomplete `$helpers` on a helper keeps
-   convention completion. Then Cake 4 and 3, including the deprecated property.
+5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its template
+   and in an element only that template includes, without other controllers' aliases; any layout,
+   and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
+   keeps its alias in layouts; an `AppView` helper still resolves everywhere; an incomplete
+   `$helpers` on a helper keeps convention completion. Then Cake 4 and 3, including the deprecated
+   property.
 6. Run the full suite.
 
 ## Open questions
