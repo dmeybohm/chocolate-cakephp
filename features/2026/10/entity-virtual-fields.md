@@ -156,14 +156,69 @@ getter, are small once steps 1 to 3 exist. `$_hidden` and `$_accessible` take co
 too, which the plugin cannot know, so they are not covered. This step ships only if the earlier
 ones land cleanly.
 
+### 6. Association properties
+
+Depends on [configured associations in query methods](configured-associations-in-query-methods.md)
+having merged: it extends the configured-member index with `associationType`, `propertyName`
+and `hasUnreadPropertyName` on each association load. If that branch has not landed when this
+step is reached, rebase onto it or defer the step; do not re-implement the index change here.
+
+A table's associations become properties of its entity: `hasMany('Reviews')` on `MoviesTable`
+makes `$movie->reviews` an array of `Review`, and `belongsTo('Authors', ['className' =>
+'Users'])` on `ReviewsTable` makes `$review->author` a `User`. CakePHP derives the property
+name from the alias and the association type (`Association::_propertyName()`:
+`Inflector::underscore($alias)`, singularized first for `belongsTo` and `hasOne`), and the
+`propertyName` option overrides it. The value comes through `__get` like any other field, so
+PhpStorm types it `mixed` today for the same reason as an accessor field.
+
+Resolution, inside the same `#P` provider and after the accessor check, since an accessor
+named for the property (`_getAuthor()`) runs on the stored association value and its return
+type is the field's type:
+
+1. **Receiver entity classes**, from step 3 of the accessor resolution. The receiver must be
+   an entity; the same name rejection applies first.
+2. **Entity to table.** `App\Model\Entity\Review` to `App\Model\Table\ReviewsTable`: replace
+   `Model\Entity` with `Model\Table`, pluralize the short name through the `Inflector`, append
+   `Table`. Add `entityToTableClass()` next to `tableToEntityClass()` in `Strings.kt`, with a
+   `StringsTest` case for an irregular plural (`Person` to `PeopleTable`) and a plugin
+   namespace. When no such class exists, the entity has no associations and the provider
+   returns null.
+3. **The association loads** of that table's chain, through a new
+   `ConfiguredMemberService.associationLoads(project, tableFqns)` that returns the resolved
+   `MemberLoad` records with the most-derived-wins rule of `resolveChain()`, since
+   `loadedMembers()` returns resolved types without the new fields. Loads with a null
+   `associationType` (the CakePHP 2 HABTM join model) are skipped.
+4. **The property name** of each load: `propertyName` when set; nothing for that load when
+   `hasUnreadPropertyName`; else the alias through `camelCaseToUnderscore()`, singularized
+   first for `BELONGS_TO` and `HAS_ONE`. The field in the signature is matched against that,
+   so `$review->author` finds the `Authors` load.
+5. **The type:** the target table's entity through `tableToEntityClass()` on each class the
+   load resolves to (`ConfiguredMemberService.loadClasses()` gives them; `Authors` with
+   `className` `Users` gives `UsersTable`, so `User`). When the entity class does not exist,
+   `\Cake\ORM\Entity`, which is what the framework instantiates. As an array (`User[]`) for
+   `HAS_MANY` and `BELONGS_TO_MANY`.
+6. **Declared fields win**, as for accessors: a `@property` tag for the name leaves native
+   resolution alone.
+
+Completion offers one element per association property with the entity type as type text,
+alongside the accessor fields, skipping declared fields. Navigation goes to the association
+load call in the table (the `MemberLoad.offset` in the table's file, as the configured-member
+navigation does for controller fields) and to the target entity class when it exists, so the
+chooser shows both.
+
+Nested access needs nothing extra: `$movie->reviews[0]->author` types the element as `Review`
+through PhpStorm's own array handling and then resolves `author` on it.
+
 ## Out of scope
 
 - **Column fields.** Columns come from the database schema. Bake writes `@property` tags for
   them, and PhpStorm handles those natively.
-- **Association properties** (`$movie->articles`) are typed by the Table's associations and are
-  a separate feature. See
-  [Interaction with configured associations in query methods](#interaction-with-configured-associations-in-query-methods)
-  for what that feature would build on.
+- **A table's `setEntityClass()` or `$_entityClass`** override. The target entity of an
+  association is found by convention from the target table's name. An overridden entity class
+  is rare and would need its own index record.
+- **Whether an association property is loaded.** `$review->author` is only populated when the
+  query contained `Authors`. The plugin offers and types it regardless, as `@property` tags
+  from bake do.
 - **`$entity->get('full_name')` and `set()`** calls with string arguments. Possible later via
   the same accessor table, but the property form is what the idea asks for.
 - **CakePHP 2.** No accessors exist.
@@ -184,6 +239,19 @@ ones land cleanly.
   accessor-shaped method proves the receiver check. The existing tests that use
   `Movie.php` complete `someMovieMethod` and assert containment, not an exact list, so adding
   protected methods does not disturb them.
+- **Association entities.** `ReviewsTable` already configures `Movies`, `Authors` (className
+  `Users`), `Editors` (className `Users`, through `addAssociations()`), `Comments` and
+  `TestPlugin.Ratings`. Add the entities those resolve to and that are missing:
+  `cake5/src5/Model/Entity/Review.php`, `User.php`, `Comment.php`, and the plugin's
+  `vendor/test/test_plugin/src/Model/Entity/Rating.php`. Leave one target without an entity
+  class to cover the `\Cake\ORM\Entity` fallback; `Movies` already has `Movie.php`, so pick
+  `Comments` and do not add `Comment.php` if no other test wants it. For the `propertyName`
+  cases, add to `UsersTable` (whose entity `User.php` is new here) `hasMany('Reviews',
+  ['propertyName' => 'written'])` and `hasMany('Comments', ['propertyName' => self::REMARKS])`
+  with the constant declared on the class, after checking that no test asserts an exact
+  association list on `UsersTable`. The query-methods branch may also give `UsersTable` a
+  `hasMany('Reviews')` for its nested-path test; if it has, reuse that load and only add the
+  option. Then cake4 and cake3 copies.
 - **Real mode.** `./gradlew test -PcakeVendor=real` fetches the pinned releases into
   `build/cakephp-vendor/<major>`; the `src/test/php/*/vendor` directories are untracked and are
   not present in a fresh worktree. Every new test is written to pass in both modes, and the
@@ -222,6 +290,32 @@ assertion.
 13. `StringsTest`: `camelCaseToUnderscore` agrees with `Inflector::underscore` on
     `fullName`, `uRLSlug`, `name2` and `a`.
 
+Association properties, in `cake5/EntityAssociationFieldTest`, with `$review` a `Review`
+parameter unless stated:
+
+14. `$review->movie` has type exactly `\App\Model\Entity\Movie` (`belongsTo`, singularized).
+15. `$review->author` and `$review->editor` have type `\App\Model\Entity\User`: the alias is
+    not the class, and the `addAssociations()` record works like a direct call.
+16. `$review->comments` has type `\Cake\ORM\Entity[]` when no `Comment` entity exists, and
+    `$review->ratings` has type `\TestPlugin\Model\Entity\Rating[]` (plugin target).
+17. `$user->written` has type `\App\Model\Entity\Review[]` (the `propertyName` option), and
+    `$user->reviews` is not typed or completed. `$user->comments` is not typed or completed
+    either, because the option is unreadable, and neither is `$user->remarks`.
+18. `$this->Reviews->get($id)->author` has type `User` (a method-call receiver), and
+    `$movie->reviews[0]->author` resolves to `User` through the array element.
+19. An entity with an accessor `_getAuthor(): string` on `Review` types `$review->author` as
+    `string`, not `User`. Use a separate fixture entity or a test-local class so the other
+    tests keep the association type.
+20. Completion on `$review-><caret>` offers `movie`, `author`, `editor`, `comments` and
+    `ratings` with entity type text, next to the accessor fields; it does not offer `authors`
+    or `Authors`. Completion on `$movie-><caret>` offers nothing from associations when
+    `MoviesTable` configures none.
+21. Goto declaration on `$review->author` reaches the `belongsTo('Authors', ...)` call in
+    `ReviewsTable.php` and `User.php`; on `$review->editor` it reaches the `addAssociations()`
+    entry.
+22. `StringsTest`: `entityToTableClass()` on an app entity, a plugin entity and an irregular
+    singular.
+
 The full suite runs in both modes at the end, as the dilution work did (961 tests in each at
 the time).
 
@@ -240,7 +334,12 @@ the time).
 7. **Step 4 check**, then the suppressor and test 12 or a note that it is unnecessary.
 8. **Cake 4 and Cake 3**: stubs, fixtures and the test copies.
 9. **Step 5** if time allows.
-10. **Full suite in both modes.** Then add the feature to the README's supported-features list.
+10. **Step 6, association properties,** once the query-methods branch has merged: the
+    `entityToTableClass()` helper and test 22; the `associationLoads()` accessor; the resolver
+    inside the `#P` provider with tests 14 to 19; completion and navigation with tests 20
+    and 21; then the cake4 and cake3 copies. If the branch has not merged, ship steps 1 to 5
+    and leave step 6 as the next feature log's starting point.
+11. **Full suite in both modes.** Then add the feature to the README's supported-features list.
 
 ## Interaction with configured associations in query methods
 
@@ -263,27 +362,12 @@ completion, field navigation) do not meet. The points of contact:
 - **README.** Both append to the supported-features list. Expect a trivial adjacent-line
   conflict.
 
-### Association properties, later
+### Association properties
 
-That branch also extends the configured-member index with what association properties on
-entities need: `associationType` (one of the four, null for the CakePHP 2 HABTM join-model
-load), `propertyName` and `hasUnreadPropertyName`, mirroring `className` and its unread flag.
-Once it lands, association properties become a possible further step of this feature, built
-from:
-
-- An entity-to-table helper, the reverse of `tableToEntityClass()`, through the `Inflector`.
-- An accessor on `ConfiguredMemberService` returning the `ASSOCIATION` loads of a receiver
-  chain with the most-derived-wins rule of `resolveChain()`. `loadedMembers()` returns resolved
-  types, not loads, so the new fields are not reachable through it.
-- The property name: `propertyName` when present; nothing when `hasUnreadPropertyName`; else
-  the alias underscored, singularized for `BELONGS_TO` and `HAS_ONE`.
-- The type: the target table's entity through `tableToEntityClass()`, as an array for
-  `HAS_MANY` and `BELONGS_TO_MANY`.
-- The same `#P` provider, completion contributor and goto handler as the accessor fields, with
-  the association load as the navigation target.
-
-Not planned in this log. Recorded so the provider's receiver resolution (step 3 of
-`complete()`) is written to hand back entity classes in a form a second resolver can reuse.
+That branch also extends the configured-member index with `associationType`, `propertyName`
+and `hasUnreadPropertyName` on each association load, which is what
+[scope item 6](#6-association-properties) builds on. Step 6 therefore waits for that branch
+to merge.
 
 ## Open questions
 
@@ -296,6 +380,14 @@ Not planned in this log. Recorded so the provider's receiver resolution (step 3 
 - **Accessor methods on an entity that are not meant as fields.** A helper such as
   `_getFormattedDate()` used internally becomes a virtual field in CakePHP too, so listing it is
   faithful to the framework. No filtering is planned.
+- **Accessor and association with the same name.** Step 6 checks accessors first, matching the
+  framework, which hands the stored association value to the accessor. A `_getAuthor()` with
+  no declared return type infers from its body, so the type may still end up `User` through
+  PhpStorm's inference on the parameter; that is correct, not a conflict.
+- **Pluralization in `entityToTableClass()`.** The `Inflector` port covers the framework's
+  irregular and uncountable lists at the time it was written. An entity whose plural the port
+  gets wrong resolves to no table and silently gets no associations. The `StringsTest` cases
+  pin the common shapes; a mismatch found later is an `Inflector` fix, not a provider one.
 - **Union receivers.** `$movie` typed `Movie|Article` answers only when every class resolves,
   consistent with the configured-member provider. A field present on one and not the other
   falls back to native resolution.
