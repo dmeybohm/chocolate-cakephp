@@ -55,6 +55,14 @@ internal interface ChainResolver {
     fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution
 }
 
+/**
+ * An association configured on a table class, with the class in the table's chain that configures it.
+ */
+data class TableAssociationLoad(
+    val declaringClassFqn: String,
+    val load: MemberLoad,
+)
+
 object ConfiguredMemberService {
 
     private const val CAKE_VIEW_CLASS = "\\Cake\\View\\View"
@@ -127,6 +135,27 @@ object ConfiguredMemberService {
         val phpIndex = PhpIndex.getInstance(project)
         return resolveLoad(phpIndex, Settings.getInstance(project), load)
             .flatMap { phpIndex.getClassesByFQN(it) }
+    }
+
+    /**
+     * The associations configured by the chains of [tableFqns], where an `initialize()` load
+     * replaces an ancestor's load of the same alias.
+     */
+    fun associationLoads(project: Project, tableFqns: Collection<String>): List<TableAssociationLoad> {
+        val phpIndex = PhpIndex.getInstance(project)
+        val fileBasedIndex = FileBasedIndex.getInstance()
+        val scope = GlobalSearchScope.allScope(project)
+        return tableFqns.flatMap { tableFqn ->
+            val initializeAliases = mutableSetOf<String>()
+            classChain(phpIndex, tableFqn).flatMap { fqn ->
+                val loads = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
+                    .flatMap { it.loads }
+                    .filter { it.kind == MemberKind.ASSOCIATION && it.associationType != null }
+                val kept = loads.filter { it.alias !in initializeAliases }
+                loads.filter { it.isInitializeLoad }.mapTo(initializeAliases) { it.alias }
+                kept.map { TableAssociationLoad(fqn, it) }
+            }
+        }
     }
 
     // The framework base classes say nothing about which members a receiver has.

@@ -568,3 +568,33 @@ Two consequences for the plan:
 The name rejection in `complete()` also needed a correction: an entity may legitimately be named
 `PageView` or `TimeTable`, so a class under an `Entity` namespace is not rejected by its suffix.
 
+**Scope items 1 to 4 and 6** are implemented in the `entity` package on Cake 5, 4 and 3, with
+`EntityVirtualFieldTest` and `EntityAssociationFieldTest` on each version. Scope item 5 (strings
+inside `$_virtual`) is optional and not done.
+
+What changed from the plan while building them:
+
+- **`mixed` from `Table::get()`.** The native `#P#M#C\\...\\MoviesTable.get.full_title` signature has
+  a receiver completing only to `EntityInterface`, and it resolved to `mixed` beside the `string`
+  from the signature that reaches `Movie`. When a non-class receiver completes only to
+  `EntityInterface` or `Cake\\ORM\\Entity` and they do not declare the field, `complete()` now
+  answers with the unresolvable signature the configured-member provider uses. The cost is that a
+  field on such a receiver with no entity behind it, such as `$table->get($id)->title` for a table
+  with no entity class, has no type instead of `mixed`. `id`, which `EntityInterface` declares with
+  `@property`, keeps its type, and a test pins that.
+- **Getter types.** `Method.getType()` merges inference into a `@return` tag, so `@return float`
+  on `$value / 60` gave `float|int`. The stated types (return type and `@return`) are now used
+  when there are any, and inference only when there are none.
+- **The inspection applies.** The weak warning is "Property accessed via magic method" (not "Field
+  accessed ..."), and it appeared on `$movie->full_title`, with a class lacking `__get` as the
+  control. `EntityVirtualFieldInspectionSuppressor` removes it for accessor and association
+  fields, on any entity class in the receiver.
+- **Navigation to a load.** No existing handler went to a `MemberLoad.offset`, despite the plan's
+  wording, so `ConfiguredMemberService.associationLoads()` returns each load with the class
+  that configures it, to find the file.
+- **Unread `className`.** A load with `hasUnreadClassName` gives no property, since the alias would
+  be a guess at the target. The plan did not cover this.
+- **Cost of non-class receivers.** There is no timing run, so the open question is not measured.
+  Native resolution completes the same receivers anyway, so the provider adds only its own class
+  checks and index lookups.
+

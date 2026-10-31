@@ -58,8 +58,13 @@ object EntityVirtualFieldTypes {
             if (entity.findFieldByName(fieldName, false) != null) {
                 return null
             }
-            val getter = EntityAccessors.tableOf(project, entity).getter(entity, fieldName) ?: return null
-            result.add(getterType(project, phpIndex, getter))
+            // An accessor named for an association receives the association's value:
+            val getter = EntityAccessors.tableOf(project, entity).getter(entity, fieldName)
+            val type = if (getter != null)
+                getterType(project, phpIndex, getter)
+            else
+                EntityAssociations.propertiesOf(project, phpIndex, entity)[fieldName]?.type
+            result.add(type ?: return null)
         }
         return result.takeUnless { it.isEmpty }
     }

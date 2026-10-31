@@ -18,11 +18,15 @@ class EntityVirtualFieldGotoDeclarationHandler : GotoDeclarationHandler {
         if (!settings.enabled || !settings.cake3Enabled || DumbService.getInstance(project).isDumb) {
             return PsiElement.EMPTY_ARRAY
         }
-        val targets = EntityAccessors.entitiesOfReceiver(PhpIndex.getInstance(project), fieldReference)
+        val phpIndex = PhpIndex.getInstance(project)
+        val targets: List<PsiElement> = EntityAccessors.entitiesOfReceiver(phpIndex, fieldReference)
             .filter { it.findFieldByName(fieldName, false) == null }
             .flatMap { entity ->
                 val table = EntityAccessors.tableOf(project, entity)
-                listOfNotNull(table.getter(entity, fieldName), table.setter(entity, fieldName))
+                val accessors = listOfNotNull(table.getter(entity, fieldName), table.setter(entity, fieldName))
+                val association = EntityAssociations.propertiesOf(project, phpIndex, entity)[fieldName]
+                    ?.takeIf { table.getter(entity, fieldName) == null }
+                accessors + association?.targets(project, phpIndex).orEmpty()
             }
         return targets.toTypedArray()
     }

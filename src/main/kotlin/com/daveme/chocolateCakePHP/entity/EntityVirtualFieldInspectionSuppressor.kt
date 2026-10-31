@@ -22,9 +22,11 @@ class EntityVirtualFieldInspectionSuppressor : InspectionSuppressor {
         }
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java, false) ?: return false
         val fieldName = fieldReference.name ?: return false
-        return EntityAccessors.entitiesOfReceiver(PhpIndex.getInstance(project), fieldReference).any { entity ->
+        val phpIndex = PhpIndex.getInstance(project)
+        return EntityAccessors.entitiesOfReceiver(phpIndex, fieldReference).any { entity ->
             val table = EntityAccessors.tableOf(project, entity)
-            table.getter(entity, fieldName) != null || table.setter(entity, fieldName) != null
+            table.getter(entity, fieldName) != null || table.setter(entity, fieldName) != null ||
+                fieldName in EntityAssociations.propertiesOf(project, phpIndex, entity)
         }
     }
 

@@ -4,6 +4,8 @@ import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.substringOrNull
 import com.daveme.chocolateCakePHP.removeImmediateParentDir
 import com.daveme.chocolateCakePHP.joinViewPath
+import com.daveme.chocolateCakePHP.camelCaseToUnderscore
+import com.daveme.chocolateCakePHP.entityToTableClass
 import junit.framework.TestCase
 
 class StringsTest : BaseTestCase() {
@@ -110,5 +112,19 @@ class StringsTest : BaseTestCase() {
     fun `test joinViewPath all empty`() {
         val result = joinViewPath("", "", "")
         assertEquals("", result)
+    }
+
+    fun `test camelCaseToUnderscore agrees with the framework's underscore`() {
+        assertEquals("full_name", "fullName".camelCaseToUnderscore())
+        assertEquals("u_r_l_slug", "uRLSlug".camelCaseToUnderscore())
+        assertEquals("name2", "name2".camelCaseToUnderscore())
+        assertEquals("a", "a".camelCaseToUnderscore())
+    }
+
+    fun `test entityToTableClass`() {
+        assertEquals("\\App\\Model\\Table\\ReviewsTable", "\\App\\Model\\Entity\\Review".entityToTableClass())
+        assertEquals("\\TestPlugin\\Model\\Table\\RatingsTable", "\\TestPlugin\\Model\\Entity\\Rating".entityToTableClass())
+        assertEquals("\\App\\Model\\Table\\PeopleTable", "\\App\\Model\\Entity\\Person".entityToTableClass())
+        assertNull("\\App\\Model\\Review".entityToTableClass())
     }
 }

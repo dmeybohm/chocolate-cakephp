@@ -11,6 +11,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.util.ProcessingContext
+import com.jetbrains.php.PhpIcons
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.FieldReference
 
@@ -53,6 +54,16 @@ class EntityVirtualFieldCompletionContributor : CompletionContributor() {
                         LookupElementBuilder.create(method, field)
                             .withIcon(method.getIcon(0))
                             .withTypeText(typeText)
+                    )
+                }
+                for ((field, property) in EntityAssociations.propertiesOf(project, phpIndex, entity)) {
+                    if (entity.findFieldByName(field, false) != null || !offered.add(field)) {
+                        continue
+                    }
+                    result.addElement(
+                        LookupElementBuilder.create(field)
+                            .withIcon(PhpIcons.FIELD)
+                            .withTypeText(property.type.toString())
                     )
                 }
             }
