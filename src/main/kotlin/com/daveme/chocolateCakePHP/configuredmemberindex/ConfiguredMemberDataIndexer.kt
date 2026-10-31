@@ -53,7 +53,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
             val field = phpClass.findOwnFieldByName(fieldName, false) ?: continue
             val defaultValue = field.defaultValue?.node
             val value = declaredValue(defaultValue)
-            val reader = LoadReader(kind, LoadSource.PROPERTY_ARRAY, null, fieldName, out)
+            val reader = LoadReader(kind, LoadSource.PROPERTY_ARRAY, null, fieldName, out, associationTypes[fieldName.lowercase()])
             val isComplete = when {
                 defaultValue == null -> true
                 value == DeclaredValue.ARRAY -> reader.readArray(defaultValue)
@@ -132,8 +132,9 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val kind = methodCallSources[calledName] ?: return
         val loadedName = literalString(firstParam) ?: return
         val options = if (calledName in sourcesWithoutOptions) null else call.parameters.getOrNull(1)
-        out += LoadReader(kind, LoadSource.METHOD_CALL, methodName, null, out)
-            .memberLoad(loadedName, options, firstParam.startOffset)
+        val associationType = associationTypes[calledName]
+        out += LoadReader(kind, LoadSource.METHOD_CALL, methodName, null, out, associationType)
+            .memberLoad(loadedName, options, firstParam.startOffset, associationType)
     }
 
     /**
@@ -158,7 +159,8 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 if (typeKey != null && value != null && value.isArrayCreationExpression()) {
                     // bindModel() adds to the model's association property of the same name:
                     val property = if (source == LoadSource.BIND_MODEL) typeKey else null
-                    LoadReader(MemberKind.ASSOCIATION, source, methodName, property, out).readArray(value)
+                    LoadReader(MemberKind.ASSOCIATION, source, methodName, property, out, associationTypes[typeKey.lowercase()])
+                        .readArray(value)
                 }
             }
             child = child.treeNext
@@ -174,6 +176,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val methodName: String?,
         val property: String?,
         val out: MutableList<MemberLoad>,
+        val associationType: AssociationType?,
     ) {
 
         /**
@@ -188,7 +191,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 if (child.isArrayValue()) {
                     val loadedName = child.firstChildNode?.let { literalString(it) }
                     if (loadedName != null) {
-                        out += memberLoad(loadedName, null, child.startOffset)
+                        out += memberLoad(loadedName, null, child.startOffset, associationType)
                     } else {
                         isComplete = false
                     }
@@ -198,7 +201,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                     if (loadedName != null && loadedName.isNotEmpty() &&
                         options != null && options.isArrayCreationExpression()
                     ) {
-                        out += memberLoad(loadedName, options, child.startOffset)
+                        out += memberLoad(loadedName, options, child.startOffset, associationType)
                         if (property == HABTM_PROPERTY && !readJoinModel(options)) {
                             isComplete = false
                         }
@@ -219,7 +222,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
             value.split(',')
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
-                .forEach { out += memberLoad(it, null, stringNode.startOffset) }
+                .forEach { out += memberLoad(it, null, stringNode.startOffset, associationType) }
             return true
         }
 
@@ -229,7 +232,8 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
             val loadedName = literalString(with)
                 ?: firstStringKey(with)
                 ?: return false
-            out += memberLoad(loadedName, null, with.startOffset)
+            // A model reachable as a property, not an association of its own:
+            out += memberLoad(loadedName, null, with.startOffset, associationType = null)
             return true
         }
 
@@ -250,12 +254,22 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
             return null
         }
 
-        fun memberLoad(loadedName: String, options: ASTNode?, offset: Int): MemberLoad {
+        fun memberLoad(
+            loadedName: String,
+            options: ASTNode?,
+            offset: Int,
+            associationType: AssociationType?
+        ): MemberLoad {
             val classNameNode = options?.let { optionValue(it, "className") }
             // A string is kept as written; it is not necessarily an FQN.
             val className = classNameNode?.let {
                 literalString(it) ?: (it.psi as? ClassConstantReference)?.getStaticClassRefOrNull()
             }
+            // CakePHP 2 has no such option; its associations come from property arrays and bindModel():
+            val propertyNameNode = options
+                ?.takeIf { associationType != null && source == LoadSource.METHOD_CALL }
+                ?.let { optionValue(it, "propertyName") }
+            val propertyName = propertyNameNode?.let { literalString(it) }
             return MemberLoad(
                 kind = kind,
                 source = source,
@@ -266,6 +280,9 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 offset = offset,
                 property = property,
                 hasUnreadClassName = classNameNode != null && className == null,
+                associationType = associationType,
+                propertyName = propertyName,
+                hasUnreadPropertyName = propertyNameNode != null && propertyName == null,
             )
         }
     }

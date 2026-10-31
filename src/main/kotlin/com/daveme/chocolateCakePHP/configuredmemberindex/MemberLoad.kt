@@ -20,6 +20,16 @@ enum class LoadSource {
 }
 
 /**
+ * The type of association a configured member is.
+ */
+enum class AssociationType {
+    BELONGS_TO,
+    HAS_ONE,
+    HAS_MANY,
+    BELONGS_TO_MANY,
+}
+
+/**
  * One load of a dynamic property, such as `$this->loadComponent('Alias', [...])`, as it is
  * written in the source file.
  */
@@ -33,6 +43,9 @@ data class MemberLoad(
     val offset: Int,
     val property: String? = null,
     val hasUnreadClassName: Boolean = false,
+    val associationType: AssociationType? = null,
+    val propertyName: String? = null,
+    val hasUnreadPropertyName: Boolean = false,
 ) {
     val isInitializeLoad: Boolean
         get() = source == LoadSource.PROPERTY_ARRAY ||
@@ -80,6 +93,15 @@ internal val methodCallSources: Map<String, MemberKind> = mapOf(
     "hasone" to MemberKind.ASSOCIATION,
     "hasmany" to MemberKind.ASSOCIATION,
     "belongstomany" to MemberKind.ASSOCIATION,
+)
+
+// By lowercase method name, array key or property name:
+internal val associationTypes: Map<String, AssociationType> = mapOf(
+    "belongsto" to AssociationType.BELONGS_TO,
+    "hasone" to AssociationType.HAS_ONE,
+    "hasmany" to AssociationType.HAS_MANY,
+    "belongstomany" to AssociationType.BELONGS_TO_MANY,
+    "hasandbelongstomany" to AssociationType.BELONGS_TO_MANY,
 )
 
 // Source methods whose second argument is not an options array, so cannot alias:
