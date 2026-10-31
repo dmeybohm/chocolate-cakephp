@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.daveme.chocolateCakePHP.cake.CELL_PARENT_CLASS
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -265,6 +266,24 @@ fun viewHelperTypeFromFieldName(settings: Settings, fieldName: String): PhpType 
         for (pluginConfig in settings.cakeThreePluginConfigs) {
             result = result.add("${pluginConfig.namespace}\\View\\Helper\\${fieldName}Helper")
         }
+    }
+    return result
+}
+
+/**
+ * The type a controller field has by convention, leaving out [excludedKinds]. Only CakePHP 2
+ * configuration rules kinds out, and its classes are global.
+ */
+fun controllerConventionType(settings: Settings, fieldName: String, excludedKinds: Set<MemberKind>): PhpType {
+    if (excludedKinds.isEmpty()) {
+        return componentOrModelTypeFromFieldName(settings, fieldName)
+    }
+    val result = PhpType()
+    if (MemberKind.COMPONENT !in excludedKinds) {
+        result.add("\\${fieldName}Component")
+    }
+    if (MemberKind.TABLE !in excludedKinds) {
+        result.add("\\$fieldName")
     }
     return result
 }

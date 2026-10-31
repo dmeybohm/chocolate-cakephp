@@ -2,6 +2,8 @@ package com.daveme.chocolateCakePHP.test.cake3
 
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.view.TemplateDirStructure
+import com.daveme.chocolateCakePHP.view.ViewFile
 import com.daveme.chocolateCakePHP.view.viewvariableindex.*
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import java.io.*
@@ -20,11 +22,12 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
     // The PHP plugin namespaces primitives and can retain an unknown marker alongside inferred types.
     private fun PhpType.concreteTypeNames() = types.map { it.removePrefix("\\") }.filterNot { it == "?" }.toSet()
 
+    private fun view(key: String) = ViewFile(TemplateDirStructure.ofId('3')!!, key, null)
     private fun caller(code: String) = myFixture.addFileToProject("$root/Movie/review.$extension", "<?php " + code)
     private fun variables(key: String = elementKey) =
-        ViewVariableIndexService.lookupVariablesFromViewPathInSmartReadAction(project, settings, key)
+        ViewVariableIndexService.lookupVariablesFromViewPathInSmartReadAction(project, settings, view(key))
     private fun exists(name: String) =
-        ViewVariableIndexService.variableExistsInViewPath(project, settings, elementKey, name)
+        ViewVariableIndexService.variableExistsInViewPath(project, settings, view(elementKey), name)
 
     fun `test reused array container retains both calls`() {
         caller("""
@@ -85,7 +88,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         assertEquals(setOf("first", "second"), vars.keys)
         assertEquals(setOf("int", "string"), vars["first"]!!.phpType.concreteTypeNames())
         assertEquals(setOf("int", "string"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "first").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "first").concreteTypeNames())
     }
 
     fun `test set merges expanded entries in call order`() {
@@ -104,13 +107,13 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         assertEquals(setOf("string"), vars["title"]!!.phpType.concreteTypeNames())
         assertEquals(setOf("string"), vars["first"]!!.phpType.concreteTypeNames())
         assertEquals(setOf("string"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "title").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "title").concreteTypeNames())
     }
 
     fun `test set reaches rendered elements but not the setting file`() {
         caller("${'$'}this->set('title', 1); ${'$'}this->element('review');")
         assertFalse(variables("Movie/review").containsKey("title"))
-        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, "Movie/review", "title"))
+        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, view("Movie/review"), "title"))
         assertTrue(variables().containsKey("title"))
     }
 
@@ -121,7 +124,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         """)
         assertTrue(exists("title"))
         assertEquals(setOf("int"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "fromSet").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "fromSet").concreteTypeNames())
     }
 
     private fun controller(body: String) {
@@ -149,7 +152,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         controller("${'$'}this->set('movie', 42);")
         caller("${'$'}this->element('review', compact('movie'));")
         assertEquals(setOf("int"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "movie").concreteTypeNames())
     }
 
     fun `test compact ignores same-named variable inside a closure`() {
@@ -159,7 +162,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
             ${'$'}this->element('review', compact('movie'));
         """)
         assertEquals(setOf("int"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "movie").concreteTypeNames())
     }
 
     fun `test compact ignores same-named assignment after the call`() {
@@ -169,7 +172,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
             ${'$'}movie = new \\DateTime();
         """)
         assertEquals(setOf("int"), ViewVariableIndexService
-            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, elementKey, "movie").concreteTypeNames())
+            .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(elementKey), "movie").concreteTypeNames())
     }
 
     fun `test indirect compact name is case insensitive`() {
@@ -195,7 +198,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
     }
 
     private fun typeOf(name: String, key: String = elementKey) = ViewVariableIndexService
-        .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, key, name).concreteTypeNames()
+        .lookupVariableTypeFromViewPathInSmartReadAction(project, settings, view(key), name).concreteTypeNames()
 
     fun `test set after element call is not visible`() {
         caller("${'$'}this->set('early', 1); ${'$'}this->element('review'); ${'$'}this->set('late', 2);")
@@ -209,7 +212,7 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
         myFixture.addFileToProject("$root/Movie/other.$extension", "<?php echo 1;")
         caller("${'$'}this->set('early', 1); ${'$'}this->render('other'); ${'$'}this->set('late', 2);")
         assertEquals(setOf("early"), variables("Movie/other").keys)
-        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, "Movie/other", "late"))
+        assertFalse(ViewVariableIndexService.variableExistsInViewPath(project, settings, view("Movie/other"), "late"))
         assertEquals(emptySet<String>(), typeOf("late", "Movie/other"))
     }
 

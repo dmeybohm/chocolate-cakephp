@@ -40,6 +40,7 @@ data class ViewReferenceData(
 
 data class PsiElementAndPath(
     val path: String,
+    val file: VirtualFile,
     val elementPointer: SmartPsiElementPointer<PsiElement>,
     val offset: Int,
     val elementType: ElementType,
@@ -49,6 +50,7 @@ data class PsiElementAndPath(
     val cellName: String? by lazy { cellNameFromPath(path) }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
     val psiElement: PsiElement? get() = elementPointer.element
+    val isCellRender: Boolean get() = elementType == ElementType.CELL_RENDER
 
     private fun controllerPathFromPsiElementAndPath(): ControllerPath? {
         val parts = path.split("/")
@@ -180,7 +182,7 @@ object ViewFileIndexService {
                         ElementType.FIELD -> PsiTreeUtil.getParentOfType(leaf, Field::class.java, false)
                         ElementType.CELL_RENDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element), data.offset, data.elementType, data.pluginPrefix)
+                    result += PsiElementAndPath(indexedFile.path, indexedFile, spm.createSmartPsiElementPointer(element), data.offset, data.elementType, data.pluginPrefix)
                 }
                 true
             },

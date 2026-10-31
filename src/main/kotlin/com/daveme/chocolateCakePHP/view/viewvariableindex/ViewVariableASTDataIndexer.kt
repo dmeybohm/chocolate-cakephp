@@ -6,6 +6,8 @@ import com.daveme.chocolateCakePHP.cake.controllerPathFromControllerFile
 import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.view.TemplateDirStructure
+import com.daveme.chocolateCakePHP.view.viewfileindex.ReferencePluginContext
 import com.daveme.chocolateCakePHP.view.viewfileindex.RenderPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.TemplateNameContext
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
@@ -47,10 +49,12 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
 
         if (isCakeControllerFile(psiFile)) {
             val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return result
-            indexActions(result, psiFile) { controllerMethodKey(controllerPath, it) }
+            val plugin = TemplateDirStructure.pluginOfClassFile(project, settings, virtualFile)
+            indexActions(result, psiFile) { controllerMethodKey(controllerPath, it, plugin) }
         } else if (settings.cake3Enabled && isCakeCellFile(virtualFile)) {
             val cellName = cellNameFromCellFile(virtualFile) ?: return result
-            indexActions(result, psiFile) { cellActionKey(cellName, it) }
+            val plugin = TemplateDirStructure.pluginOfClassFile(project, settings, virtualFile)
+            indexActions(result, psiFile) { cellActionKey(cellName, it, plugin) }
         } else {
             indexViewFile(result, inputData, psiFile, virtualFile, project, settings)
         }
@@ -88,13 +92,14 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         val elementPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
         val rootNode = psiFile.node ?: return
         val ctx = TemplateNameContext()
+        val structure = TemplateDirStructure.of(templatesDir)
 
         val calls = rootNode.collectMethodCalls { it.isThisCall("element") || it.isThisCall("set") }
         for (call in calls) {
             if (call.isThisCall("set")) {
                 addAll(result, viewSetKey(ownKey), call.node.startOffset, parseSetCall(call))
             } else {
-                indexElementCall(result, call, elementPrefix, ctx)
+                indexElementCall(result, call, elementPrefix, ctx, structure)
             }
         }
     }
@@ -103,7 +108,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         result: MutableMap<String, ViewVariablesWithRawVars>,
         call: MethodCallParts,
         elementPrefix: ViewPathPrefix?,
-        ctx: TemplateNameContext
+        ctx: TemplateNameContext,
+        structure: TemplateDirStructure
     ) {
         if (elementPrefix == null || call.parameters.size < 2) {
             return
@@ -117,7 +123,7 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
             return
         }
         for (name in names) {
-            val renderPath = RenderPath(name)
+            val renderPath = RenderPath(ReferencePluginContext(structure).split(name).first)
             if (renderPath.path.isEmpty()) {
                 continue
             }

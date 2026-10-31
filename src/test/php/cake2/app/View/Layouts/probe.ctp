@@ -1,0 +1,1 @@
+layout:<?php echo $this->fetch('content'); ?>

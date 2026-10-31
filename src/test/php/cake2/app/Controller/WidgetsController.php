@@ -7,6 +7,10 @@ App::uses('AppController', 'Controller');
  */
 class WidgetsController extends AppController {
 
+	public function templatelayout() {
+		$this->autoLayout = true;
+	}
+
 	public function unprefixed() {
 		$this->render('only_in_plugin');
 	}

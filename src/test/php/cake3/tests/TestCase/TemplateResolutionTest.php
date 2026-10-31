@@ -99,4 +99,10 @@ class TemplateResolutionTest extends TestCase
         $this->get('/probe/things/crossoverride');
         $this->assertResponseEquals('override:Things/overridden_other');
     }
+
+    public function testLayoutNamedFromTemplateWraps()
+    {
+        $this->get('/widgets/templatelayout');
+        $this->assertResponseEquals('layout:app:Widgets/templatelayout');
+    }
 }

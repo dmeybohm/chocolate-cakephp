@@ -54,6 +54,32 @@ class TemplateHelperTest : Cake2BaseTestCase() {
             .toSet()
     }
 
+    fun `test a helper an AppView does not list keeps its convention type`() {
+        myFixture.addFileToProject("cake2/app/View/AppView.php", """
+            <?php
+            class AppView extends View {
+                public ${'$'}helpers = array('Form');
+            }
+        """.trimIndent())
+        configureView("Movies/index.ctp", "\$this->Ti<caret>me;")
+        val types = fieldTypeAtCaret()
+        assertTrue("Expected \\TimeHelper in $types", types.contains("\\TimeHelper"))
+        assertFalse("Unexpected \\null in $types", types.contains("\\null"))
+    }
+
+    fun `test a helper a helper does not list is null`() {
+        myFixture.configureByText("MovieHelper.php", """
+            <?php
+            class MovieHelper extends AppHelper {
+                public ${'$'}helpers = array('Form');
+                public function title() {
+                    ${'$'}this->Ti<caret>me;
+                }
+            }
+        """.trimIndent())
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
+    }
+
     fun `test an aliased controller helper resolves in its template`() {
         configureView("Movies/index.ctp", "echo \$this->element('sidebar');\n\$this->Ht<caret>ml;")
         assertEquals(setOf("\\BootstrapHtmlHelper"), fieldTypeAtCaret())

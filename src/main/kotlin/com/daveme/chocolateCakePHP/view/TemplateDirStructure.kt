@@ -5,13 +5,15 @@ import com.daveme.chocolateCakePHP.cake.CakeFourTemplatesDir
 import com.daveme.chocolateCakePHP.cake.CakeThreeTemplatesDir
 import com.daveme.chocolateCakePHP.cake.CakeTwoTemplatesDir
 import com.daveme.chocolateCakePHP.cake.TemplatesDir
+import com.daveme.chocolateCakePHP.cake.cakeThreePluginName
 import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.lookupControllerFileInfo
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 
-private val pluginPrefix = Regex("^([A-Z][A-Za-z0-9_]*)\\.(.+)$")
+private val pluginPrefix = Regex("^([A-Z][A-Za-z0-9_/]*)\\.(.+)$")
 
 /**
  * The conventions one CakePHP version uses for view files: which plugin a file belongs to, how
@@ -94,13 +96,11 @@ sealed class TemplateDirStructure(val id: Char) {
         override val frameworkControllerClass = "\\Controller"
     }
 
-    // Controller-side helpers, and with them plugins, are not resolved for CakePHP 3 to 5 yet:
     class CakeThreeAndLater(id: Char, private val overrideDirectory: String) : TemplateDirStructure(id) {
-        override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings): String? = null
+        override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
+            cakeThreePluginName(file, projectDir, settings, overrideDirectory)
 
         override fun overridePrefix(plugin: String) = "$overrideDirectory/$plugin/"
-
-        override fun resolveName(name: String): Pair<String, String?> = name to null
 
         override fun viewClassReceivers(settings: Settings) = listOf("${settings.appNamespace}\\View\\AppView")
 
@@ -120,6 +120,13 @@ sealed class TemplateDirStructure(val id: Char) {
         }
 
         fun ofId(id: Char): TemplateDirStructure? = listOf(CakeTwo, cakeThree, cakeFour).firstOrNull { it.id == id }
+
+        /**
+         * The plugin of a controller or cell class file, or null for the app.
+         */
+        fun pluginOfClassFile(project: Project, settings: Settings, file: VirtualFile): String? =
+            ofSourceFile(project, settings, file, isController = true)
+                ?.pluginOf(file, project.guessProjectDir(), settings)
 
         /**
          * The structure of a file that refers to views: a view file, or a controller.

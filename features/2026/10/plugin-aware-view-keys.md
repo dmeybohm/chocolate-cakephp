@@ -20,7 +20,8 @@ of variables (see [the fallback](#the-framework-falls-back-from-a-plugin-to-the-
 
 ## Where the keys collide
 
-A template's variables are found in two steps, and each step collides on its own:
+A template's variables are found in two steps, and each step collides on its own. Element data
+collides a third way:
 
 1. **View file index: template → referencing files.** `ViewFileDataIndexer` keys a reference by the
    template path relative to the referencing file's templates directory, so a plugin controller's
@@ -33,8 +34,18 @@ A template's variables are found in two steps, and each step collides on its own
    `set()` calls of both are stored under one key.
    - Effect: completion, variable types and undefined-variable suppression mix the two, even
      when step 1 returns only the right class.
+3. **View variable index: element → data passed to it.** `elementDataKey` gives
+   `element-data:element/shared` for the data array of every `element('shared', [...])` call in
+   the project, whichever plugin the call or the element is in. `lookupRawVars` reads that key
+   across the whole project, once, before the walk, so data passed to `Blog`'s `shared` element is
+   offered in the app's `shared` element, and the other way round.
+   - Effect: the same as step 2, for element data.
+   - Since #299 the two indexes also disagree on a prefixed name, on CakePHP 2: the view file index
+     stores `element('Blog.shared', [...])` under `element/shared` with `pluginPrefix` `Blog`, but
+     `ViewVariableASTDataIndexer` keys its data under `element-data:element/Blog.shared`, which no
+     lookup reads.
 
-Fixing step 1 alone isn't enough, because step 2 merges the variables again by key.
+Fixing step 1 alone isn't enough, because steps 2 and 3 merge the variables again by key.
 
 ## What #299 added
 
@@ -50,6 +61,63 @@ lookup, at query time rather than in the keys:
 - `ViewFile(structure, templateKey, plugin)` and `RenderingControllers.resolvesTo`, which decide
   whether a reference reaches a template, including the app's override directory for a plugin
   (`templates/plugin/Blog/...`).
+
+### The override directory's key
+
+`canonicalizeFilenameToKey` keeps the override directory in a template's key, so
+`templates/plugin/Blog/Articles/index.php` is `plugin/Blog/Articles/index`, while the references that
+reach it are stored under `Articles/index`: `Blog`'s controller's implicit render, and
+`render('Blog.Articles/index')` with `pluginPrefix` `Blog`. Only `ViewHelperReceivers.viewFileOf`
+strips the prefix, and only when `pluginOf` knows the plugin. So helper lookup finds the plugin's
+controllers for an override template on CakePHP 2, and nothing else does, on any version: "go to
+related" from a template and from an element, the toggle action, completion, the type provider, the
+inspection suppressor and the lookup that resolves a passed value as a variable of its own file all
+query the literal key, and so does the walk in `forEachContributingSource` when it expands an
+override template as an ancestor.
+
+#299 put the rule in `viewFileOf` because helper lookup was its scope; its log calls
+`ViewHelperReceivers` the one entry point for helpers, and nothing there decides that the other entry
+points stay literal. The rule isn't about helpers. A `ViewFile` is the template key and plugin a view
+file has, and that is what every entry point needs. So `ViewFile` and `viewFileOf` move out of
+`ViewHelperReceivers` into their own file, as a pure move, and each entry point builds a `ViewFile`
+from the file and uses its `templateKey` to find references and its `plugin` for the filter below.
+The `view-set:` key can stay literal, since a view-set source is read from its own file.
+
+### The type provider's signature
+
+`ViewVariableTypeProvider` defers its lookup to `complete()` through a signature of the CakePHP
+version, the literal template key and the variable name. Once an app and a plugin template both have
+the key `Articles/index`, the signature can't tell them apart, and the lookup it makes has no plugin
+to filter by. #299 solved this for helpers: `ViewHelperInViewTypeProvider` encodes the `ViewFile`
+through `ViewHelperReceivers.encode` and decodes it in `complete()`. The variable provider should
+carry the `ViewFile` the same way, through the same `encode` and `decode`, which move with
+`ViewFile`. The structure id replaces the version field, and a signature in the old format decodes to
+null, since `v` is no structure id. The recursion key in
+`lookupVariableTypeFromViewPathInSmartReadAction` is the key and variable name, and becomes the
+`ViewFile` and variable name.
+
+## How element data came to be keyed this way
+
+Element data was keyed by element path in September, in
+[support-element-data-variables](../09/support-element-data-variables.md) and
+[its second part](../09/support-element-data-variables-part2.md). The decisions since, in order:
+
+- `cd6d687` introduced the `element-data:` keys with no plugin, and the log listed prefixed element
+  calls being keyed verbatim as a known, pre-existing limitation.
+- `b3d2b28` narrowed element-data lookups from all scope to project scope, so that `element()` calls
+  in vendor plugins stopped leaking variables into same-named app elements. The comment on
+  `lookupRawVars` records that this matches the reverse walk.
+- The second part (`f78347b`) hit the same collision for `view-set:` keys and noted that project
+  scope was not enough, because an app and a project-local plugin are both project content. It fixed
+  view-set lookups by reading only the physical file the walk found each reference in, and left
+  element data as it was: its records are alternative calls to the same element, and
+  plugin-qualified element resolution was put out of scope, deferred to
+  [resolve-element-paths-at-lookup](../09/resolve-element-paths-at-lookup.md), which still lists
+  plugin-qualified names as a detail to settle.
+
+So nothing rules out plugin-aware element data. It was deferred, and the view-set fix is the
+precedent: element data belongs to one `element()` call, which the walk already visits as a
+reference with its file and offset.
 
 ## The framework falls back from a plugin to the app
 
@@ -101,6 +169,15 @@ failure, tracked in [its own log](rendering-controllers-element-plugin.md). It c
 `Blog` controller rendering an app template by fallback is not found as rendering `Blog`'s element
 from that template, and is found as rendering the app's element it does not use.
 
+#305 changed how `RenderingControllers` treats layouts: any layout gets all controllers, and its walk
+stops there. So when moving it to the shared helper:
+
+- Carried references filter that union. `Blog`'s `shared` element reached through a layout gets only
+  `Blog`'s controllers, and the app's gets all controllers except `Blog`'s. The union for the layout
+  itself stays unfiltered.
+- Share only the plugin rule, not the walk. `forEachContributingSource` doesn't stop at layouts, and
+  shouldn't for variables.
+
 ### `cell()` names do not follow the calling file
 
 Templates and elements look in the calling file's plugin first. Cell classes do not: an unprefixed
@@ -117,20 +194,32 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
 ## Plan
 
 1. **Plugin of a CakePHP 3+ file.** Implement `pluginOf` for the CakePHP 3+ structure from the
-   configured plugin paths (`settings.pluginConfigs`), covering `plugins/<Name>/` and vendor
-   plugins, and `resolveName` for `Plugin.name` strings. Tests first, cake5, for a controller, a
-   cell and a template in each location.
+   configured plugin paths (`settings.pluginConfigs`), covering `plugins/<Name>/`, vendor plugins
+   and the app's override directory (`templates/plugin/<Name>/`, `src/Template/Plugin/<Name>/` on
+   3), as `cakeTwoPluginName` already covers `View/Plugin/<Name>/`. Add `resolveName` for
+   `Plugin.name` strings. Tests first, cake5, for a controller, a cell and a template in each
+   location.
 2. **Filter references by plugin (step 1).** Where `referencingElements` results are consumed for
    controllers and cells (`ViewVariableIndexService.forEachContributingSource`, the toggle action,
-   `ViewToControllerGotoRelatedProvider`), keep a reference by the rule above, using the
+   `ViewToControllerGotoRelatedProvider` and `ElementToUsagesGotoRelatedProvider`), keep a
+   reference by the rule above, using the
    referencing file's plugin (or its `pluginPrefix`). The plugins do not have to match: a plain
    match would drop the fallback. Reuse `resolvesTo`, and prefer a shared helper next to
-   `ViewFile` over copying the rule. For `CELL_RENDER` references, store the cell's plugin in
+   `ViewFile` over copying the rule. Every entry point, including the walk's ancestor expansion,
+   gets its key and plugin from a `ViewFile` built from the file, as
+   [above](#the-override-directorys-key), so an override template is found by the references stored
+   under its plugin key. The variable lookups take a `ViewFile` in place of the key string, and the
+   type provider carries it in its signature, as [above](#the-type-providers-signature). For
+   `CELL_RENDER` references, store the cell's plugin in
    `pluginPrefix` and treat no prefix as the app, not the calling file's plugin. That is the one
    change here that needs a view file index version bump. When the walk in
    `forEachContributingSource` passes through an including file, carry its unprefixed references
    along and check them against the plugin of the class it reaches, as
-   [above](#unprefixed-elements-follow-the-rendering-class) requires. Move `RenderingControllers`
+   [above](#unprefixed-elements-follow-the-rendering-class) requires. The three navigation entry
+   points list direct references and don't walk, so they check each reference at its hop only. From
+   an element, that lists an unprefixed `element('shared')` in an app template under the app's
+   element even when a plugin controller renders that template by fallback. Following each usage to
+   its controller would need a walk per usage, and is left out. Move `RenderingControllers`
    to the same helper, following
    [the notes from its simplification](rendering-controllers-element-plugin.md#element-plugin-fix-moved).
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
@@ -140,8 +229,20 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    template, so the lookup must never take the plugin from the template: an app template reached
    by fallback would look up `Articles:index` and miss the plugin's variables. Bump the view
    variable index version. App keys stay unchanged.
-4. **CakePHP 3/4 coverage.** Port the cake5 tests.
-5. **CakePHP 2.** Check whether CakePHP 2 controllers collide the same way, since `pluginOf`
+4. **Element data per reference (step 3 of the collisions).** Read the data for an element
+   reference from the file and call offset the reference names, as `ViewSet` reads `set()` calls
+   from its file, instead of reading `elementDataKey` across the project once before the walk. The
+   data then follows its reference: it is kept or dropped with it by step 2's filter, including a
+   carried reference decided at the class. Each reference stays its own source, so alternative
+   calls still union. Both indexers record the call node's start offset, and a file's record for
+   one key is a list of calls with their offsets, so the read picks the call whose offset the
+   reference names. On the indexing side, split the `Plugin.` prefix in
+   `ViewVariableASTDataIndexer` through the same `ReferencePluginContext` the view file index uses,
+   so `element('Blog.shared', [...])` is stored under `element-data:element/shared` like its
+   reference. The view variable index version bump in step 3 covers this. Today's up-front read
+   counts against no lookup budget, and the per-reference read shouldn't either.
+5. **CakePHP 3/4 coverage.** Port the cake5 tests.
+6. **CakePHP 2.** Check whether CakePHP 2 controllers collide the same way, since `pluginOf`
    already works there. Include it if the fix is just the key change, otherwise leave it noted.
 
 The controller-side line marker goes from a class to its templates by path and doesn't use
@@ -167,10 +268,69 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   app's when the plugin has none. `cell('Widget')` in a plugin template is a usage of the app's
   cell template, even when the plugin has a template at the same path.
 - An app override template for a plugin (`templates/plugin/Blog/Articles/index.php`) resolves to
-  the plugin's controller.
+  the plugin's controller: "go to related", the toggle action and completion from it find `Blog`'s
+  controller and its variables, and not the app's. Today they find nothing, on every version.
+- Data passed by `element('shared', [...])` in a `Blog` template is offered in `Blog`'s `shared`
+  element and not in the app's, and the other way round.
+- One app template, rendered only by the app's controller, calls both
+  `element('Blog.shared', ['blogOnly' => 1])` and `element('shared', ['appOnly' => 1])`. After
+  prefix splitting the two calls share one record for that key and file, so only the offset tells
+  them apart: `Blog`'s element gets `blogOnly` alone and the app's gets `appOnly` alone. A single
+  call would show an offset mismatch, as missing data; the second call also catches a read that
+  takes every call in the shared record. The template must not be rendered by a `Blog` controller,
+  since by fallback its unprefixed call would then legitimately reach `Blog`'s element too.
+- The type provider gives a variable set by both classes under different types its own class's type
+  in each template, which checks the signature carries the plugin through `complete()`.
+- From `Blog`'s `shared` element, element usages list `element('Blog.shared')` calls from anywhere
+  and `element('shared')` calls from `Blog`'s templates, and not those from the app's templates;
+  from the app's `shared`, the reverse. An element in the override directory finds its usages.
 - A `render('Other.x')` from a plugin controller links to `Other`'s template or the app's, and
   never to the calling plugin's.
 - An element in an app template that a plugin controller renders by fallback gets the plugin
   controller's variables through the plugin's element, not through the app's element of that name.
+- On CakePHP 2, an element reached through a layout: the plugin's element gets only the plugin's
+  controllers, and the app's element of that name gets all controllers except the plugin's.
+- A prefixed hop keeps the references already carried: in `element('Blog.a')` where `a` calls
+  `element('b')`, `b` follows the controller's plugin.
+- An assumption test for a layout named from a template, which the walk passes through and no
+  assumption test covers yet.
 
 ## Implementation Progress
+
+### Session #1
+
+All six plan steps are implemented, with CakePHP 2 included since it only needed the key change.
+`ViewFile` and `viewFileOf` moved to `ViewFile.kt`, next to `ViewFileResolution`, which holds the
+plugin rule. The plugin lookups for both version families are in `cake/CakePlugins.kt`. The walk
+moved to `ContributingSourceWalk`.
+
+Decisions the plan left open:
+
+- **`pluginOf` on CakePHP 3+** also takes `plugins/<Name>/` by convention, as `cakeTwoPluginName`
+  does, so an unconfigured plugin in the default location works. Configured paths match as path
+  suffixes, as they are relative to an app root that may be nested in the project.
+- **The walk defers what a hop contributes.** A `set()` or element data on a path through an
+  unprefixed hop only counts if a class on that path accepts the hop, so the walk builds its nodes,
+  `(file, pending files)`, within the budget and collects the sources afterwards.
+- **A file nothing renders decides by its own plugin.** Without this, data passed from a template
+  with no known controller would be lost. CakePHP 3+ layouts have no references, so an element in
+  one is also decided this way, even though a plugin controller may render that layout.
+- **Past the budget**, direct calls still give their element data, decided by the calling file's
+  plugin, since the up-front read this replaces had no budget. View sets and actions stay in budget.
+- **`cellDirNameFromSourceFile`** now also looks in `src/Template`. A CakePHP 3 plugin cell with no
+  template directory otherwise got `cell/` rather than `Cell/`, which missed the fallback.
+
+Known limitations and dependencies:
+
+- The variable keys depend on the configured plugins. `PluginForm.apply` already rebuilds both view
+  indexes when they change, so this needs no new code.
+- With both CakePHP 2 and 3+ enabled, a CakePHP 2 plugin controller is keyed as the app's, as
+  `ofSourceFile` takes it for CakePHP 3+. The plugin rule still sees its plugin.
+- A plugin named with a slash isn't recognized in the override directory.
+- An element reference is only indexed when the calling file's templates directory has an element
+  directory. This predates this work.
+- An app override and the plugin's original template have the same `ViewFile`, so when both exist the
+  original, which CakePHP never renders, still gets the controller and its variables, and its own
+  `element()` and `set()` calls still count as sources. The override's results are right. Leaving the
+  original empty would lose its variables and go-to-related and add undefined-variable warnings.
+- The toggle action isn't tested end to end. The tests cover the `directReferencesTo` filter it calls.
