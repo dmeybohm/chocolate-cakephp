@@ -12,6 +12,17 @@ cannot navigate from the field to the accessor. Developers paper over this with 
 CakePHP 2 has nothing comparable. Its `$virtualFields` are SQL expressions on a model, so
 everything here is gated on `settings.cake3Enabled`.
 
+Two pieces merged to `main` after this plan was written, and `main` was merged in on
+2026-10-31:
+
+- **The stub vendor is gone** (#310, [remove-stub-vendor](remove-stub-vendor.md)). Every test
+  attaches the pinned real CakePHP release, so there is no second mode to keep in step and no
+  `Entity` stub to write.
+- **Configured associations in query methods** (#311,
+  [configured-associations-in-query-methods](configured-associations-in-query-methods.md))
+  landed the index extension step 6 depends on, and the `UsersTable` and `ProfilesTable`
+  fixtures it describes.
+
 ## How CakePHP resolves a virtual field
 
 From `Cake\Datasource\EntityTrait`, checked against the vendored 3.10.5, 4.6.5 and 5.4.3
@@ -53,12 +64,11 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
   `PhpTypeProvider4` on our own key can only add a type next to `mixed`. The precise type has
   to come through the native `#P` signature, the way `ConfiguredMemberFieldTypeProvider` does
   it, so that `doCompleteType` returns before the native fallback.
-- **The stubs have no `Entity` at all.** `cake5/vendor/cakephp.php`, and the cake4 and cake3
-  stubs, declare no `Cake\ORM\Entity`, `Cake\Datasource\EntityTrait` or `EntityInterface`, so
-  the fixture entities (`Movie extends Entity`) extend an unresolved class in stub mode. Stub
-  mode would therefore never see the `mixed` dilution. The stubs need an `Entity` that declares
-  `__get` and `__set` the way each version does, so both modes exercise the same path. This
-  was the lesson of the dilution work.
+- **The tests see the real `Entity`.** Since #310 every test attaches the pinned real release
+  (`build/cakephp-vendor/<major>`, fetched by the `test` task, or by `fetchCake<N>Vendor` for the
+  IDE's JUnit runner), so the fixture entities (`Movie extends Entity`) resolve against the
+  framework's `EntityTrait` and the `mixed` dilution shows in every run. An earlier draft of
+  this plan added an `Entity` stub to the hand-written vendor files; those files no longer exist.
 - **A declared field wins.** When an entity declares the property, or carries a `@property`
   tag for it, `findFieldsByName` succeeds and PhpStorm's type is exact. The plugin should leave
   those fields alone, as the configured-member provider leaves declared fields alone.
@@ -158,10 +168,14 @@ ones land cleanly.
 
 ### 6. Association properties
 
-Depends on [configured associations in query methods](configured-associations-in-query-methods.md)
-having merged: it extends the configured-member index with `associationType`, `propertyName`
-and `hasUnreadPropertyName` on each association load. If that branch has not landed when this
-step is reached, rebase onto it or defer the step; do not re-implement the index change here.
+Builds on [configured associations in query methods](configured-associations-in-query-methods.md),
+merged as #311: `MemberLoad` carries `associationType`, `propertyName` and
+`hasUnreadPropertyName` for each association load, `AssociationPathResolver.targetTables()`
+resolves an alias to its target tables, and `ConfiguredMemberService.loadClasses()` resolves one
+load. The CakePHP side below was checked against `Association::_propertyName()` and the
+`BelongsTo` and `HasOne` overrides in the vendored 3.10.5 and 5.4.3 sources; the alias has its
+plugin prefix removed with `pluginSplit()` before inflection, so `TestPlugin.Ratings` gives
+`ratings`.
 
 A table's associations become properties of its entity: `hasMany('Reviews')` on `MoviesTable`
 makes `$movie->reviews` an array of `Review`, and `belongsTo('Authors', ['className' =>
@@ -225,12 +239,6 @@ through PhpStorm's own array handling and then resolves `author` on it.
 
 ## Fixtures
 
-- **Stubs.** Add to `cake5/vendor/cakephp.php`, `cake4/vendor/cakephp.php` and
-  `cake3/vendor/cakephp.php`: `Cake\Datasource\EntityInterface`, `Cake\Datasource\EntityTrait`
-  with `__get` and `__set` declared as that version declares them (3.x `&__get($property)` with
-  `@return mixed`; 4.x `&__get(string $field)` with `@return mixed`; 5.x
-  `&__get(string $field): mixed`), and `Cake\ORM\Entity implements EntityInterface { use
-  EntityTrait; }`.
 - **Entities.** Extend `cake5/src5/Model/Entity/Movie.php` (then cake4 and cake3) with
   `protected function _getFullTitle(): string`, a `/** @return float */ _getRuntimeHours($value)`
   with no declared type, and a setter-only `_setTitle($title)`. Add a `MovieAccessorsTrait` and
@@ -242,26 +250,25 @@ through PhpStorm's own array handling and then resolves `author` on it.
 - **Association entities.** `ReviewsTable` already configures `Movies`, `Authors` (className
   `Users`), `Editors` (className `Users`, through `addAssociations()`), `Comments` and
   `TestPlugin.Ratings`. Add the entities those resolve to and that are missing:
-  `cake5/src5/Model/Entity/Review.php`, `User.php`, `Comment.php`, and the plugin's
-  `vendor/test/test_plugin/src/Model/Entity/Rating.php`. Leave one target without an entity
-  class to cover the `\Cake\ORM\Entity` fallback; `Movies` already has `Movie.php`, so pick
-  `Comments` and do not add `Comment.php` if no other test wants it. For the `propertyName`
-  cases, add to `UsersTable` (whose entity `User.php` is new here) `hasMany('Reviews',
-  ['propertyName' => 'written'])` and `hasMany('Comments', ['propertyName' => self::REMARKS])`
-  with the constant declared on the class, after checking that no test asserts an exact
-  association list on `UsersTable`. The query-methods branch may also give `UsersTable` a
-  `hasMany('Reviews')` for its nested-path test; if it has, reuse that load and only add the
-  option. Then cake4 and cake3 copies.
-- **Real mode.** `./gradlew test -PcakeVendor=real` fetches the pinned releases into
-  `build/cakephp-vendor/<major>`; the `src/test/php/*/vendor` directories are untracked and are
-  not present in a fresh worktree. Every new test is written to pass in both modes, and the
-  type tests are the ones that only mean something in real mode, where `__get` is in play.
+  `cake5/src5/Model/Entity/Review.php`, `User.php`, `Profile.php`, and the plugin's
+  `vendor/test/test_plugin/src/Model/Entity/Rating.php`. Leave `Comments` without a `Comment.php`
+  to cover the `\Cake\ORM\Entity` fallback. `UsersTable` arrived with #311 as
+  `hasMany('Reviews')` plus `hasOne('Profiles')`, and `ContainCompletionTest` asserts exactly
+  that pair for nested completion, so it gets no new association. The `propertyName` cases go
+  on a new `PostsTable` with a `Post` entity, which no other test loads:
+  `hasMany('Reviews', ['propertyName' => 'written'])` and
+  `hasMany('Comments', ['propertyName' => self::REMARKS])` with the constant declared on the
+  class. Then cake4 and cake3 copies; the three versions' table fixtures gained the same
+  `UsersTable` and `ProfilesTable` in #311.
+- **Framework.** The `test` task fetches the pinned releases into
+  `build/cakephp-vendor/<major>`. A fresh worktree has none until it runs, or until
+  `fetchCake5Vendor` is run for the IDE's JUnit runner.
 
 ## Tests
 
 `cake5/EntityVirtualFieldTest`, then the cake4 and cake3 copies with `src4`/`src` paths and
-`.ctp` templates on cake3. Exact types are asserted with the `fieldTypeAtCaret()` pattern from
-`ConfiguredComponentTest`, which keeps the `\`-prefixed entries so a leaked `\mixed` fails the
+`.ctp` templates on cake3. Exact types are asserted with the `fieldTypeAtCaret()` pattern the
+`Configured*` tests use, which keeps the `\`-prefixed entries so a leaked `\mixed` fails the
 assertion.
 
 1. `$movie->full_title` in a controller action where `$movie` is a `Movie` parameter has type
@@ -298,9 +305,11 @@ parameter unless stated:
     not the class, and the `addAssociations()` record works like a direct call.
 16. `$review->comments` has type `\Cake\ORM\Entity[]` when no `Comment` entity exists, and
     `$review->ratings` has type `\TestPlugin\Model\Entity\Rating[]` (plugin target).
-17. `$user->written` has type `\App\Model\Entity\Review[]` (the `propertyName` option), and
-    `$user->reviews` is not typed or completed. `$user->comments` is not typed or completed
-    either, because the option is unreadable, and neither is `$user->remarks`.
+17. `$user->reviews` has type `\App\Model\Entity\Review[]` and `$user->profile` has
+    `\App\Model\Entity\Profile` (`hasOne`, singularized). On `Post`, `$post->written` has type
+    `\App\Model\Entity\Review[]` (the `propertyName` option) and `$post->reviews` is not typed
+    or completed; `$post->comments` is not typed or completed either, because the option is
+    unreadable, and neither is `$post->remarks`.
 18. `$this->Reviews->get($id)->author` has type `User` (a method-call receiver), and
     `$movie->reviews[0]->author` resolves to `User` through the array element.
 19. An entity with an accessor `_getAuthor(): string` on `Review` types `$review->author` as
@@ -316,58 +325,47 @@ parameter unless stated:
 22. `StringsTest`: `entityToTableClass()` on an app entity, a plugin entity and an irregular
     singular.
 
-The full suite runs in both modes at the end, as the dilution work did (961 tests in each at
-the time).
+The full suite runs at the end (1,366 tests after #310).
 
 ## Plan
 
 1. **Bytecode check.** Read `PhpIndexImpl.doCompleteType` in the current PHP plugin for what
    happens when two providers share key `P` and one returns `null`. Decide between a second
    `P` provider and a dispatching one. Record the finding in the progress log.
-2. **Stubs and fixtures** for cake5: the `Entity` stub and the `Movie` accessors. Confirm that
-   `Movie extends Entity` now resolves in stub mode.
-3. **Probe the receiver encodings** for tests 1, 2, 3 and 11 in real mode and record them, as
-   the dilution log did for controllers and helpers.
+2. **Fixtures** for cake5: the `Movie` accessors and the `MoviesTable` decoy.
+3. **Probe the receiver encodings** for tests 1, 2, 3 and 11 and record them, as the dilution
+   log did for controllers and helpers.
 4. **Step 1, the type provider,** with tests 1 to 7 and 11 on cake5.
 5. **Step 2, completion,** with tests 8 and 9.
 6. **Step 3, navigation,** with test 10.
 7. **Step 4 check**, then the suppressor and test 12 or a note that it is unnecessary.
-8. **Cake 4 and Cake 3**: stubs, fixtures and the test copies.
-9. **Step 5** if time allows.
-10. **Step 6, association properties,** once the query-methods branch has merged: the
-    `entityToTableClass()` helper and test 22; the `associationLoads()` accessor; the resolver
-    inside the `#P` provider with tests 14 to 19; completion and navigation with tests 20
-    and 21; then the cake4 and cake3 copies. If the branch has not merged, ship steps 1 to 5
-    and leave step 6 as the next feature log's starting point.
-11. **Full suite in both modes.** Then add the feature to the README's supported-features list.
+8. **Cake 4 and Cake 3**: fixtures and the test copies.
+9. **Step 6, association properties:** the `entityToTableClass()` helper and test 22; the
+   `associationLoads()` accessor; the resolver inside the `#P` provider with tests 14 to 19;
+   completion and navigation with tests 20 and 21; then the cake4 and cake3 copies.
+10. **Step 5** if time allows.
+11. **Full suite.** Then add the feature to the README's supported-features list.
 
 ## Interaction with configured associations in query methods
 
-[Configured associations in query methods](configured-associations-in-query-methods.md) is
-planned on a sibling worktree at the same time. Its lookups (contain completion and
-navigation, the query-builder wrapper) and this feature's (a `#P`-keyed provider, field
-completion, field navigation) do not meet. The points of contact:
+[Configured associations in query methods](configured-associations-in-query-methods.md) was
+planned on a sibling worktree at the same time and merged first, as #311. Its lookups (contain
+completion and navigation, the query-builder wrapper) and this feature's (a `#P`-keyed
+provider, field completion, field navigation) do not meet. What the merge settled:
 
-- **The stubs.** Both plans edit `cake5/vendor/cakephp.php` and the cake4 and cake3 stubs. That
-  branch adds `matching()`, `notMatching()`, `innerJoinWith()` and `leftJoinWith()` inside the
-  existing `SelectQuery` and `Query` classes. This one adds `EntityInterface`, `EntityTrait` and
-  `Entity` as new classes. Add them in a block of their own, not inside or adjacent to the
-  query classes, so the second branch to merge gets a clean or trivially resolved rebase.
+- **The stubs** both plans expected to edit were deleted by #310 before either landed, so that
+  point of contact is gone.
 - **`TableLocatorTypeProvider`.** Test 2 (`$this->Movies->get($id)->full_title`) relies on the
-  `get` branch returning the entity class. That branch changes the `find` branch and the
-  expression split in `complete()`, and commits to keeping the `get` path's behaviour and
-  `GetTableLocatorTest` green, so merge order does not matter for this test.
-- **Fixtures.** That branch edits `UsersTable` or adds a table fixture. This one edits
-  `Movie.php` and adds `_getLabel()` to `MoviesTable`. Disjoint.
-- **README.** Both append to the supported-features list. Expect a trivial adjacent-line
-  conflict.
-
-### Association properties
-
-That branch also extends the configured-member index with `associationType`, `propertyName`
-and `hasUnreadPropertyName` on each association load, which is what
-[scope item 6](#6-association-properties) builds on. Step 6 therefore waits for that branch
-to merge.
+  `get` branch returning the entity class. #311 changed the `find` branch and the expression
+  split in `complete()` and kept the `get` path, which still answers with `tableToEntityClass()`.
+- **Fixtures.** #311 added `UsersTable` and `ProfilesTable` and left the entities alone. This
+  feature edits `Movie.php`, adds `_getLabel()` to `MoviesTable`, and adds the entity and
+  `PostsTable` fixtures listed above.
+- **The index extension** (`associationType`, `propertyName`, `hasUnreadPropertyName`) is in,
+  so [scope item 6](#6-association-properties) has what it needs. The accessor it adds to
+  `ConfiguredMemberService` is the one place this feature touches that service.
+- **README.** #311 added its line to the supported-features list. This feature's line goes
+  after it, with no conflict left to expect.
 
 ## Open questions
 
