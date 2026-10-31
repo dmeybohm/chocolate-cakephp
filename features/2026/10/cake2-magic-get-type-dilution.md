@@ -58,6 +58,17 @@ stay in one place:
    `#P#P#C\MoviesController.Movie.Director`: resolve the receiver part with `completeType()`, then
    apply the same rules to each resolved class. Bound the depth, as the model chain signature
    in `ControllerFieldTypeProvider` does.
+
+   A non-empty result replaces native resolution for the whole signature, so it has to account
+   for every resolved receiver. Answer only when every class among them is one the rules can
+   answer for: a controller, helper or CakePHP 2 model that does not declare the field. The answer
+   is the union of each class's type. If any other class is present, or a class declares the
+   field, return null, so native resolution and the additive providers keep that class's type and
+   the `__get()` types stay until a later fix. PHP pseudo-types such as `\null` and `\mixed` have
+   no fields, so they do not count as receivers. A framework class that `__get()` added to the
+   receiver does count, so a chain through a member that isn't determined yet (for example
+   `$this->Movie` with an incomplete `$uses`) stays diluted until step 5 of the plan fixes the
+   receiver.
 3. **Ruled-out members.** Decide what `$this->Unloaded` should be. At runtime
    `Controller::__get()` returns null for it, so `\null` is accurate; returning a non-empty
    `\null` type stops the `CakeRequest` methods from appearing. Check that PhpStorm treats a
@@ -80,10 +91,21 @@ view file.
 
 ## Plan
 
-1. Give the cake2 stub `Controller::__get()` and `Model::__get()` the real return types, and turn
-   the affected cake2 assertions back into complete types. Confirm they fail in both modes.
+1. Check that PhpStorm keeps a `\null`-only result from `complete()`, with a real-mode experiment
+   on `$this->Unloaded`. If it doesn't, decide on another result for ruled-out members before
+   going on. Then give the cake2 stub `Controller::__get()` and `Model::__get()` the real return
+   types, and turn the affected cake2 assertions back into complete types. Confirm they fail in
+   both modes. These assertions now expect `setOf("\\null")` instead of an empty set:
+   - `ConfiguredControllerTest`: `test an unloaded component gets no type even when its class
+     exists`, the `$this->Movie` case of `test uses entries resolve and other models do not
+     exist`, and `test uses false has no models`. The test names change to match.
+
+   `ConfiguredAssociationTest`'s `test a model the controller does not load has no nested type or
+   completion` keeps its empty set: its caret is on `Director`, on a `\null` receiver, which has no
+   fields. Confirm this when the test runs.
 2. Model receivers (1), with the association by-name fallback.
-3. Chained receivers (2).
+3. Chained receivers (2), with a test for a receiver that is both a model and another class: the
+   other class's field type must survive.
 4. Ruled-out members (3).
 5. Incomplete kinds (4), CakePHP 2 first, then CakePHP 3 to 5 after checking real mode.
 6. Remove `projectClassTypes()`; run the full suite in stub and real mode.
