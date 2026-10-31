@@ -1,0 +1,207 @@
+# Configured associations in query methods
+
+## Context
+
+Idea 7 in `features/ideas.md`. Follow-up to
+[configuration code disambiguation](configuration-code-disambiguation.md) (#299), which indexes
+the associations each table configures in `initialize()` (`belongsTo()`, `hasOne()`, `hasMany()`,
+`belongsToMany()`, `addAssociations()`) under the table's FQN, and resolves them through
+`ConfiguredMemberService` with kind `ASSOCIATION`.
+
+That work covered the property side: `$this->Movies->Articles` in a controller,
+`$this->Authors` inside a table, and the nested completion in
+`ControllerModelOrTableCompletionContributor`. The query side still guesses by name:
+
+- `ContainCompletionContributor` lists every `Table` subclass in the app and plugin namespaces,
+  whatever the receiver. On `ReviewsTable`, which configures `Authors` as an alias of
+  `UsersTable`, it offers `Users` and not `Authors`, and offers tables `Reviews` has no
+  association with.
+- `ContainGotoDeclarationHandler` takes the first dotted segment and resolves it by convention,
+  so `'Authors'` on a `Reviews` query goes to `AuthorsTable` when one exists and nowhere when
+  only `UsersTable` does.
+- Only `contain()` is matched. `matching()`, `notMatching()`, `innerJoinWith()` and
+  `leftJoinWith()` take the same association paths and get nothing.
+- Nothing follows a dotted path. `'Authors.Profiles'` is cut at the first dot.
+
+The chain walk the idea also lists, `$this->Movies->Reviews->Authors` one configured alias at a
+time, already works: #299 made `AssociatedTableTypeProvider` resolve each hop through the service
+(`v1` for the field before the caret, `v2` for inner hops, `v3` for `$this->X` inside a table).
+This log only adds a test that pins it and closes the gap where a query built from such a chain
+loses its table (see [Queries from association chains](#queries-from-association-chains)).
+
+## Scope
+
+Lookup side only. No index change: the records #299 writes already carry everything needed.
+
+1. Resolve the receiver table of the query, or of the table the method is called on.
+2. Offer the receiver's configured association aliases in `contain()`, `matching()`,
+   `notMatching()`, `innerJoinWith()` and `leftJoinWith()`, with the resolved table as type text.
+3. Follow dotted paths, one configured alias per segment, for completion and navigation.
+4. Navigate from an alias to the table it resolves to, not the table its name suggests.
+5. Fall back to the current all-tables list when the receiver is unknown or has no indexed
+   associations, as the property side does.
+
+Out of scope, recorded for later:
+
+- `find('all', contain: [...])` and the `contain` key of a finder options array (CakePHP 5
+  named arguments, and `find('all', ['contain' => ...])` in 3 and 4).
+- Associations behaviours add through `$this->_table`. That needs `addBehavior()` indexing and
+  belongs with behaviour support (idea 2).
+- Narrowing the four `\Cake\ORM\Association` classes to the one the call implies.
+- CakePHP 2. `contain()` there is the Containable behaviour and takes model names from
+  `$belongsTo` arrays; the `CakeTwoChainResolver` can resolve them, but the patterns and tests
+  are a separate piece of work.
+
+## How the receiver table is found
+
+`TableLocatorTypeProvider` already tags a query with the table it came from. `find()` on a
+table whose type is complete returns the `SelectQuery` type plus the table FQN wrapped in the
+`\Best\ChocolateCakePHP\QueryBuilder` prefix (`ChocolateCakeSpecificTypes.kt`), and each
+query-returning method called on that keeps the wrapper. `CustomFinderCompletionContributor`
+reads it back with `unwrapFromPluginSpecificTypeForQueryBuilder()`.
+
+So the receiver of a query method resolves as:
+
+1. `methodReference.classReference.type.lookupCompleteType(project, phpIndex, null)`.
+2. Keep the types that are table classes (`$table->find()` called on a `Table` directly, the
+   case `ContainMethodCondition` already accepts) and the wrapped query-builder types, unwrapped.
+3. Drop framework base classes; `ConfiguredMemberService.specificReceivers` does this already.
+
+Put this in one helper, `queryReceiverTables(methodReference)`, in `model/` and use it from
+the completion contributor, the goto handler and `CustomFinderCompletionContributor`, which does
+the same thing inline today.
+
+### Queries from association chains
+
+`$this->Movies->Reviews->find()->contain('<caret>')` has no table today. The receiver of
+`find()` is typed with an `AssociatedTableTypeProvider` signature, which is incomplete, and the
+`find` branch of `TableLocatorTypeProvider.getType()` returns null for incomplete types (the
+`TODO` there). It only defers `ControllerFieldTypeProvider` signatures.
+
+Extend that branch to defer `AssociatedTableTypeProvider` signatures the same way: emit
+`#{key}.find.{signature}` and in `complete()` resolve the signature with
+`PhpIndex.completeType()`, keep the table classes, and wrap each. The `get` branch already does
+this for `$this->Movies->Articles->get()`, so follow its shape. The signature contains dots
+(`v2.Articles.…`), so `complete()` cannot keep splitting the expression on `.` into three parts;
+split on the first two dots only.
+
+This is the one change outside the contain code, and it is what makes "walk the chain" and
+"query methods" compose.
+
+## Completion
+
+### Patterns
+
+`ContainMethodPatterns.ContainMethodCondition` accepts `contain` on a table or query type.
+Generalise it to a set of method names: `contain`, `matching`, `notMatching`, `innerJoinWith`,
+`leftJoinWith`. The pattern shapes stay as they are (string argument, string in an array
+argument). Rename the object to `AssociationPathPatterns` only if the diff stays small;
+otherwise keep the name and note it in the implementation progress.
+
+Array *keys* are the common form for nested contain, `contain(['Authors' => ['Profiles']])` and
+`contain(['Authors' => fn($q) => ...])`. The current `arrayForCompletion` pattern matches a
+string under an `ArrayElement`, and a key sits under an `ArrayHashElement`. Add a pattern for a
+string literal that is the key of a hash element whose array is the first argument. The value
+array of such a key (`['Profiles']` above) is a nested path: its receiver is the key's target
+table, not the query's. Handle the one-level case, key then value array, and leave deeper
+nesting of arrays inside arrays to the path walk by treating each enclosing key as a segment.
+Verify the PSI shape in a test before committing to the pattern; the goto-declaration log for
+#299 noted that `addAssociations()` leaves were left for "the dotted-path work in the
+query-method follow-up", and this is that work.
+
+### Provider
+
+Replace the body of `ContainCompletionProvider.addCompletions()`:
+
+1. Receiver tables via `queryReceiverTables()`. None found: keep the current all-tables list,
+   unchanged, so the `$query` parameter typed only as `SelectQuery` behaves as today.
+2. Path so far: the string's text before the caret (the completion dummy identifier marks it),
+   split on `.`. The last segment is the prefix being typed; the earlier segments are hops.
+   For a string that is the value inside a key's array, the enclosing keys come first.
+3. Walk the hops. For each, `ConfiguredMemberService.memberType(project, tables, {ASSOCIATION},
+   hop)`. Use its `classFqns` as the next receiver set; when it is null or has no initialize
+   load, add `phpIndex.getPossibleTableClasses(settings, hop)` by convention, as
+   `AssociatedTableTypeProvider.getBySignature()` does. A hop that resolves to nothing ends the
+   walk with no completions.
+4. At the final table set, `ConfiguredMemberService.loadedMembers(project, tables, {ASSOCIATION})`.
+   One lookup element per alias, type text the short name of the resolved table class, as
+   `completeFromLoadedMembers` renders it in `ControllerModelOrTableCompletionContributor`.
+   Reuse that helper if it can be shared without moving it; otherwise mirror it.
+5. When `ASSOCIATION` is not in `loaded.initializeKinds`, append the convention list minus the
+   loaded aliases, exactly as the nested lookup in the controller contributor does.
+6. Set `result.withPrefixMatcher(lastSegment)` before adding elements, so that typing
+   `Authors.Pro<caret>` matches `Profiles` against `Pro` and inserts only the last segment. The
+   default prefix is the whole string up to the caret, which would match nothing.
+
+Aliases come from `MemberLoad.alias`, which the indexer already strips of the plugin prefix
+(`hasMany('TestPlugin.Ratings')` is alias `Ratings`), so plugin associations list under the
+alias CakePHP uses in contain strings.
+
+## Navigation
+
+`ContainGotoDeclarationHandler` keeps its pattern checks and first-argument check and changes
+how it resolves:
+
+1. Receiver tables via `queryReceiverTables()`. None: fall back to the current convention
+   lookup on the first segment, unchanged.
+2. Find the segment under the caret by offset within the string contents. Walk the earlier
+   segments as hops exactly as completion does (share the walk in one function, say
+   `AssociationPathResolver.walk(tables, hops)`), then `memberType()` for the caret segment.
+3. Targets: the resolved table classes' files, plus the convention classes when there is no
+   initialize load, as `ControllerFieldGotoDeclarationHandler` combines them. Keep returning
+   files (through `virtualFilesToPsiFiles`) for consistency with the handler today.
+
+For a key of a hash element, the caret segment is the key's last dotted segment and the hops
+are the key's earlier segments plus any enclosing keys.
+
+## Tests
+
+CakePHP 5 first, then mirror to 4 and 3. The `ReviewsTable` fixture already configures the
+interesting cases: `Movies`, `Authors` (className `Users`), `TestPlugin.Ratings`, `Editors`
+(className `Users`, through `addAssociations()`), `Comments`. `UsersTable` has no
+associations, which gives the fallback case for the second hop. For a configured second hop,
+give `UsersTable` one association in the fixture (`hasMany('Reviews')` is natural) and check
+the tests that load it still pass; prefer adding a new fixture over changing an existing
+assertion list.
+
+`cake5/ContainCompletionTest.kt`, extend:
+
+- Reviews query via `fetchTable('Reviews')->find()`: offers `Authors`, `Editors`, `Ratings`,
+  `Movies`, `Comments`; does not offer `Users` or `Articles`; `Authors` has type text `UsersTable`.
+- Articles query (no configured associations): offers the convention list as today, so the
+  existing tests keep passing unchanged.
+- `$this->Reviews->find()->contain('<caret>')` with `Reviews` a configured controller table.
+- `$this->Movies->Reviews->find()->contain('<caret>')`: the association-chain receiver.
+- Nested: `contain('Authors.<caret>')` on Reviews offers `Users`' associations (or, with no
+  fixture change, the convention list), and inserting keeps the `Authors.` prefix.
+- Array key form `contain(['Authors' => ['<caret>']])` once the pattern is in.
+- `matching('<caret>')`, `innerJoinWith('<caret>')`, `notMatching`, `leftJoinWith` on Reviews.
+- Same string in a `$query` parameter typed only as `SelectQuery`: convention list, as today.
+
+`cake5/ContainGotoDeclarationTest.kt`, extend:
+
+- `'Authors'` on a Reviews query navigates to `UsersTable.php`, not `AuthorsTable.php`.
+- `'Editors'` navigates to `UsersTable.php` (the `addAssociations()` record).
+- `'Authors.Reviews'` with the caret in the second segment navigates by the second hop.
+- `'Ratings'` navigates to the plugin's `RatingsTable.php`.
+- `matching('Authors')` navigates like `contain`.
+
+`cake5/ConfiguredAssociationTest.kt`, add: `$this->Movies->Reviews->Authors` resolves to
+`UsersTable` through the fallback hop `Reviews` and the configured hop `Authors`.
+
+`TableLocatorTypeProviderTest` or the nearest existing type test: the query from
+`$this->Movies->Reviews->find()` carries `ReviewsTable` in its wrapped type.
+
+## Steps
+
+1. `queryReceiverTables()` helper; switch `CustomFinderCompletionContributor` to it. Run the
+   custom finder tests.
+2. Defer association-chain signatures in `TableLocatorTypeProvider.find`. Type test.
+3. Method-name set in `ContainMethodPatterns`. Pattern tests for `matching` and friends.
+4. Path walk + completion provider. Completion tests for the single-segment cases.
+5. Dotted paths in completion, prefix matcher. Nested completion tests.
+6. Goto handler on the walk. Navigation tests.
+7. Hash-key pattern and the enclosing-key segments. Tests for both completion and navigation.
+8. Mirror tests to cake4 and cake3. Full suite.
+
+Commit after each step.
