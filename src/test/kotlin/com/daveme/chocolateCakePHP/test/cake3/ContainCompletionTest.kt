@@ -254,6 +254,11 @@ class ContainCompletionTest : Cake3BaseTestCase() {
         assertEmpty(result)
     }
 
+    fun `test dotted path through an undeclared association offers nothing`() {
+        val result = completeInController("\$this->getTableLocator()->get('Reviews')->find()->contain('Articles.<caret>');")
+        assertEmpty(result)
+    }
+
     fun `test array key offers the aliases`() {
         assertOffersOnlyReviewsAssociations(
             completeInController("\$this->getTableLocator()->get('Reviews')->find()->contain(['<caret>' => ['fields' => ['id']]]);")

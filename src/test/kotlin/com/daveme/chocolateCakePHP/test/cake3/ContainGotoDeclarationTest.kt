@@ -227,6 +227,31 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
         assertGotoDeclarationHandlerGoesToFilename(ContainGotoDeclarationHandler(), filename)
     }
 
+    private fun assertReviewsQueryGoesNowhere(call: String) {
+        myFixture.configureByFilePathAndText("cake3/src/Controller/ArticleController.php", """
+        <?php
+        namespace App\Controller;
+
+        use Cake\Controller\Controller;
+
+        class ArticleController extends Controller
+        {
+            public function index() {
+                ${'$'}this->getTableLocator()->get('Reviews')->find()->$call;
+            }
+        }
+        """.trimIndent())
+        assertEmpty(gotoDeclarationHandlerTargets(ContainGotoDeclarationHandler()).orEmpty().toList())
+    }
+
+    fun `test undeclared association on a configured table navigates nowhere`() {
+        assertReviewsQueryGoesNowhere("contain('<caret>Articles')")
+    }
+
+    fun `test segment after an undeclared association navigates nowhere`() {
+        assertReviewsQueryGoesNowhere("contain('Articles.<caret>Authors')")
+    }
+
     fun `test alias navigates to the table it resolves to`() {
         assertReviewsQueryGoesTo("contain('<caret>Authors')", "UsersTable.php")
     }

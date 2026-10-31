@@ -74,12 +74,17 @@ object AssociationPathResolver {
 
     /**
      * The tables the association [alias] of [tables] resolves to, by convention when no
-     * configuration of [tables] determines it.
+     * configuration of [tables] determines it. An alias that [tables] are all configured
+     * without resolves to nothing.
      */
     fun targetTables(project: Project, tables: Collection<String>, alias: String): List<String> {
-        val configured = ConfiguredMemberService.memberType(
-            project, tables, setOf(MemberKind.ASSOCIATION), alias
-        )
+        val kinds = setOf(MemberKind.ASSOCIATION)
+        val configured = ConfiguredMemberService.memberType(project, tables, kinds, alias)
+        if (configured == null &&
+            MemberKind.ASSOCIATION in ConfiguredMemberService.loadedMembers(project, tables, kinds).initializeKinds
+        ) {
+            return emptyList()
+        }
         val result = configured?.classes.orEmpty().map { it.fqn }.toMutableList()
         if (configured == null || !configured.hasInitializeLoad) {
             PhpIndex.getInstance(project)
