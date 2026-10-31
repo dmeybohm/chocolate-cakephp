@@ -159,6 +159,7 @@ fun cellDirNameFromSourceFile(projectDir: VirtualFile, sourceFile: VirtualFile):
             currentDir
         else
             currentDir.findChild("templates") ?: currentDir.findChild("Template")
+                ?: currentDir.findChild("src")?.findChild("Template")
         if (templatesDir != null && templatesDir.isDirectory) {
             val cellDir = templatesDir.findChild("cell") ?: templatesDir.findChild("Cell")
             val defaultName = if (templatesDir.name == "Template") "Cell" else "cell"

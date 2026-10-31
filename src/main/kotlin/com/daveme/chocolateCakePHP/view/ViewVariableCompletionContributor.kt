@@ -56,19 +56,15 @@ class ViewVariableCompletionContributor : CompletionContributor() {
             }
             val psiFile = element.containingFile
                 ?: return
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile)
+            val file = psiFile.originalFile.virtualFile
+                ?: return
+            val viewFile = viewFileOf(project, settings, file)
                 ?: return
 
-            val path = psiFile.originalFile.virtualFile.path
-            val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-                templatesDir,
-                settings,
-                path
-            )
             val viewVarValues = ViewVariableIndexService.lookupVariablesFromViewPathInSmartReadAction(
                 project,
                 settings,
-                filenameKey
+                viewFile
             )
             val phpIndex = PhpIndex.getInstance(project)
             viewVarValues.forEach { (viewVarName, viewVarType) ->

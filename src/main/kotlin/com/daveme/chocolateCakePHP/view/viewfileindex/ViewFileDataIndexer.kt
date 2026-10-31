@@ -877,7 +877,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                     addViewReference(result, "${cellDirName}/${cellName.name}/${template}", ViewReferenceData(
                         methodName = reference.methodName,
                         elementType = ElementType.CELL_RENDER,
-                        offset = reference.offset
+                        offset = reference.offset,
+                        pluginPrefix = cellName.plugin
                     ))
                 }
             }

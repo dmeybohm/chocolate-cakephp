@@ -2,14 +2,11 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableCache
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.codeInspection.InspectionSuppressor
 import com.intellij.codeInspection.SuppressQuickFix
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.elements.Variable
 
@@ -34,12 +31,9 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
     ): Boolean {
         val psiFile = variable.containingFile
         val virtualFile = psiFile?.virtualFile ?: return false
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile) ?: return false
-        val templateDirVirtualFile = templatesDir.directory
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return false
+        val viewFile = viewFileOf(project, settings, virtualFile) ?: return false
 
         try {
-            val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
 
             // Use cache for variable lookup
             val cache = project.getService(ViewVariableCache::class.java)
@@ -51,17 +45,17 @@ class UndefinedViewVariableInspectionSuppressor : InspectionSuppressor {
 
             return cache.isVariableDefined(
                 psiFile,
-                filenameKey,
+                viewFile.encode(':'),
                 variable.name,
                 phpTracker
-            ) { key, varName ->
+            ) { _, varName ->
                 // Fast path: Check variable existence without type resolution
                 // Phase 1: Static patterns only (PAIR, ARRAY, COMPACT, TUPLE)
                 // Future phases will add dynamic pattern support
                 ViewVariableIndexService.variableExistsInViewPath(
                     project,
                     settings,
-                    key,
+                    viewFile,
                     varName
                 )
             }
