@@ -38,4 +38,12 @@ class GadgetCell extends Cell
     public function elementappfallback(): void
     {
     }
+
+    public function helper(): void
+    {
+    }
+
+    public function helperelement(): void
+    {
+    }
 }
