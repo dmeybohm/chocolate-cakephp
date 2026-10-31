@@ -101,7 +101,7 @@ failure, tracked in [its own log](rendering-controllers-element-plugin.md). It c
 `Blog` controller rendering an app template by fallback is not found as rendering `Blog`'s element
 from that template, and is found as rendering the app's element it does not use.
 
-#305 changes how `RenderingControllers` treats layouts: any layout gets all controllers, and its walk
+#305 changed how `RenderingControllers` treats layouts: any layout gets all controllers, and its walk
 stops there. So when moving it to the shared helper:
 
 - Carried references filter that union. `Blog`'s `shared` element reached through a layout gets only
