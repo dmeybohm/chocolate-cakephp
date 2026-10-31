@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
@@ -20,9 +21,6 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
             "cake5/src5/View/Helper/MovieFormatterHelper.php",
             "cake5/src5/View/Helper/ArtistFormatterHelper.php",
         )
-        // A file's element references are only indexed once the element directory exists:
-        myFixture.addFileToProject("cake5/templates/element/placeholder.php", "<?php echo 1;")
-        myFixture.addFileToProject("cake5/plugins/Blog/templates/element/placeholder.php", "<?php echo 1;")
     }
 
     private fun appView(initialize: String = "") {
@@ -116,6 +114,19 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         """)
         val types = fmtTypesIn("Movie/index")
         assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
+    }
+
+    fun `test an element created after the template calling it reaches the rendering controller`() {
+        appView()
+        controller("Movie", fmtIn("MovieFormatter"))
+        template("Movie/index", "echo \$this->element('nav');")
+        assertNull(myFixture.tempDirFixture.getFile("cake5/templates/element"))
+
+        val references = ViewFileIndexService.referencingElementsInSmartReadAction(project, "element/nav")
+        assertEquals(1, references.size)
+        assertTrue(references[0].path, references[0].path.endsWith("cake5/templates/Movie/index.php"))
+
+        assertTrue(fmtTypesIn("element/nav").contains(movieHelper))
     }
 
     fun `test an element only one template includes leaves out other controllers`() {
