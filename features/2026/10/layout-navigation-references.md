@@ -323,3 +323,15 @@ confirmed the table, the version limits and the plugin rules, and corrected two 
 
 A `render()` with a layout called from a template does name that layout, wrapped again by the outer
 one (`testRenderFromTemplateWrapsItsOutputAgainInTheOuterLayout`), so indexing it from any file stands.
+
+### Session #4
+
+Two review fixes:
+
+- **Navigation target.** A layout's `VIEW_BUILDER` reference stored the start of the chain, which
+  resolved to `viewBuilder()`. It now stores the offset of the method name, so "go to related" lands on
+  `setLayout()`. `setTemplate()` references have the same issue, which predates this feature and is left
+  for a separate change.
+- **Case-insensitive method names.** PHP method names are case insensitive. The view builder parser now
+  matches `viewBuilder()` and its methods ignoring case and keeps the canonical spelling, which also
+  covers `setTemplate()` and `setTemplatePath()`, and view layout calls keep the canonical spelling too.

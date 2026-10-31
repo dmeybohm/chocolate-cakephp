@@ -9,6 +9,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
@@ -31,6 +32,12 @@ class ViewNavigation(private val fixture: CodeInsightTestFixture) {
         ViewToControllerGotoRelatedProvider().getItems(file.firstChild)
             .map { "${it.group}: ${(it as CakeGotoRelatedItem).customName}" }
             .toSet()
+
+    /**
+     * The elements the "go to related" items of [file] navigate to.
+     */
+    fun relatedElements(file: PsiFile): List<PsiElement> =
+        ViewToControllerGotoRelatedProvider().getItems(file.firstChild).mapNotNull { it.element }
 
     /**
      * Performs the toggle action from [file] and waits for it to finish.

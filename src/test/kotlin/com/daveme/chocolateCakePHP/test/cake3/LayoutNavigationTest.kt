@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.view.viewFileOf
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.psi.PsiFile
+import com.jetbrains.php.lang.psi.elements.MethodReference
 
 class LayoutNavigationTest : Cake3BaseTestCase() {
 
@@ -76,6 +77,33 @@ class LayoutNavigationTest : Cake3BaseTestCase() {
 
         assertEquals(setOf("Controllers: ArticlesController::custom()"), navigation.related(layout))
         assertEquals(setOf("Controllers: ArticlesController::custom()"), navigation.related(other))
+    }
+
+    fun `test related item targets the setLayout call in a chain`() {
+        appController("Articles", """
+            public function custom() {
+                ${'$'}this->viewBuilder()
+                    ->setTemplate('other')
+                    ->setLayout('admin');
+            }
+        """.trimIndent())
+        val layout = template("$app/$layouts/admin")
+
+        val target = navigation.relatedElements(layout).single() as MethodReference
+        assertEquals("setLayout", target.name)
+    }
+
+    fun `test method names are case insensitive`() {
+        appController("Articles", "public function custom() { \$this->viewbuilder()->SetLayout('admin')->SETTEMPLATE('other'); }")
+        template("$app/Articles/index", "\$this->setlayout('admin');")
+        val layout = template("$app/$layouts/admin")
+        val other = template("$app/Articles/other")
+
+        assertEquals(
+            setOf("Controllers: ArticlesController::custom()", "Views: index.ctp"),
+            navigation.related(layout)
+        )
+        assertTrue(navigation.related(other).contains("Controllers: ArticlesController::custom()"))
     }
 
     fun `test templates naming the layout are listed under views`() {

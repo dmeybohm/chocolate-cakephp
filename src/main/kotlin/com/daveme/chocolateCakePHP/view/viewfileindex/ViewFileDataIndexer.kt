@@ -67,10 +67,11 @@ data class FieldAssignmentInfo(
 )
 
 data class ViewBuilderCallInfo(
-    val methodName: String,            // One of viewBuilderMethods
+    val methodName: String,            // One of viewBuilderMethods, as spelled there
     val parameterValues: List<String>, // All literal names or paths the parameter can take
     val offset: Int,
-    val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
+    val containingMethodStartOffset: Int,  // Offset of containing CLASS_METHOD node
+    val methodNameOffset: Int             // Offset of the method name, so a reference resolves to this call
 )
 
 data class CellReferenceInfo(
@@ -376,10 +377,9 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         //             -> receiver: VARIABLE ($this)
 
         // Quick check: get method name first for early rejection
-        val methodName = getMethodName(node)
-        if (methodName == null || methodName !in viewBuilderMethods) {
-            return null  // Early exit for non-target methods
-        }
+        val methodName = getMethodName(node)?.let { name ->
+            viewBuilderMethods.firstOrNull { it.equals(name, ignoreCase = true) }
+        } ?: return null  // Early exit for non-target methods
 
         // Now parse the rest of the structure
         var parameterValues: List<String> = emptyList()
@@ -413,13 +413,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         if (receiverMethodRef == null || !isViewBuilderChain(receiverMethodRef)) {
             return null
         }
+        val methodNameOffset = getMethodNameOffset(node) ?: return null
 
         // Use passed-in offset instead of walking up tree
         return ViewBuilderCallInfo(
             methodName = methodName,
             parameterValues = parameterValues,
             offset = node.startOffset,
-            containingMethodStartOffset = containingMethodOffset
+            containingMethodStartOffset = containingMethodOffset,
+            methodNameOffset = methodNameOffset
         )
     }
 
@@ -480,7 +482,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             child = child.treeNext
         }
 
-        return receiverVariable == "this" && methodName == "viewBuilder"
+        return receiverVariable == "this" && methodName.equals("viewBuilder", ignoreCase = true)
     }
 
     private fun findCellReferences(node: ASTNode, ctx: TemplateNameContext): List<CellReferenceInfo> {
@@ -654,8 +656,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val astViewLayoutCalls = if (!inputData.contentAsText.contains("layout", ignoreCase = true)) {
             emptyList()
         } else {
-            (findMethodCallsByName(rootNode, "setLayout", ctx) + findMethodCallsByName(rootNode, "layout", ctx))
-                .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
+            listOf("setLayout", "layout").flatMap { name ->
+                findMethodCallsByName(rootNode, name, ctx)
+                    .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
+                    .map { it.copy(methodName = name) }
+            }
         }
         val astViewFieldAssignments = findFieldAssignments(rootNode, "view", ctx)
             .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
@@ -663,7 +668,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
 
         // Early bailout: Quick text scan before AST traversal for viewBuilder calls
-        val astViewBuilderCalls = if (!inputData.contentAsText.contains("viewBuilder")) {
+        val astViewBuilderCalls = if (!inputData.contentAsText.contains("viewBuilder", ignoreCase = true)) {
             // Skip viewBuilder parsing entirely
             emptyList()
         } else {
@@ -980,7 +985,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
         for (call in viewBuilderCalls.filter { it.methodName in structure.layoutSetters }) {
             for (name in call.parameterValues) {
-                addLayout(name) { ViewReferenceData(call.methodName, ElementType.VIEW_BUILDER, call.offset, it) }
+                addLayout(name) { ViewReferenceData(call.methodName, ElementType.VIEW_BUILDER, call.methodNameOffset, it) }
             }
         }
         if (!isController) {
