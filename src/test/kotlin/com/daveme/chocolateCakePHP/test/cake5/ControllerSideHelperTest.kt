@@ -359,6 +359,56 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         assertFalse(completionsIn("Movie/other").contains("Fmt"))
     }
 
+    fun `test the service leaves out a helpers property on a view class`() {
+        myFixture.addFileToProject("cake5/src5/View/AppView.php", """
+            <?php
+            namespace App\View;
+            class AppView extends \Cake\View\View {
+                protected array ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            }
+        """.trimIndent())
+        assertNull(ConfiguredMemberService.memberType(
+            project, listOf("\\App\\View\\AppView"), setOf(MemberKind.HELPER), "Fmt"
+        ))
+    }
+
+    fun `test the service keeps a load in a view class's initialize`() {
+        appView("\$this->loadHelper('Fmt', ['className' => 'MovieFormatter']);")
+        val result = ConfiguredMemberService.memberType(
+            project, listOf("\\App\\View\\AppView"), setOf(MemberKind.HELPER), "Fmt"
+        )
+        assertNotNull(result)
+        assertEquals(setOf(movieHelper), result!!.classFqns)
+        assertTrue(result.hasInitializeLoad)
+    }
+
+    // A view built by hand keeps its property at runtime, but a receiver's type does not say how
+    // it was built, so a view class always resolves as the framework renders it.
+    fun `test a view built by hand also leaves out its helpers property`() {
+        myFixture.addFileToProject("cake5/src5/View/AppView.php", """
+            <?php
+            namespace App\View;
+            class AppView extends \Cake\View\View {
+                protected array ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            }
+        """.trimIndent())
+        configureWithCaret("cake5/src5/Shell/ProbeShell.php", """
+            <?php
+            namespace App\Shell;
+            class ProbeShell {
+                public function main() {
+                    ${'$'}view = new \App\View\AppView();
+                    ${'$'}view->F<caret>mt;
+                }
+            }
+        """.trimIndent())
+        val element = myFixture.file.findElementAt(myFixture.caretOffset)
+        val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
+        assertNotNull(fieldReference)
+        val types = fieldReference!!.type.lookupCompleteType(project, null).types
+        assertFalse("$types", types.contains(movieHelper))
+    }
+
     fun `test a helpers property on a controller is ignored`() {
         appView()
         controller("Movie", """
