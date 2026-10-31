@@ -165,6 +165,26 @@ fix. All three are merged.
    `MemberLoad.hasUnreadClassName` for `addHelper()` and `loadComponent()` options, in the
    CakePHP 3 to 5 resolution path. Today only `CakeTwoChainResolver` reads either flag;
    `ConfiguredMemberService.resolveChain` and `combine` mark every initialize load authoritative.
+
+   The CakePHP 3 to 5 rules stay in their own resolver rather than joining
+   `CakeTwoChainResolver`. That class encodes `Controller::_mergeControllerVars()`: nearest
+   declaration per property, merging onto `AppController` and `{Plugin}AppController`, the
+   `$uses` forms and default model, associations from five properties plus `bindModel()`, and
+   views getting nothing. CakePHP 3 to 5 share none of it: an `initialize()` load replaces per
+   alias with the most-derived class winning, and `AppView` is a plain receiver. A combined class
+   would branch on the version in every method. So:
+
+   - Move the inline block in `resolveChain` into `InitializeChainResolver`, named for the rule it
+     implements, beside `CakeTwoChainResolver`. Both implement an internal `ChainResolver` with
+     one method, `resolve(kinds, alias, resolveLoad): ChainResolution`, and `resolveChain` picks
+     the implementation.
+   - Share the one rule both need as a function in `MemberLoad.kt`: a load is authoritative when
+     `!hasUnreadClassName` and the declaration it comes from, if any, `isComplete`.
+     `CakeTwoChainResolver` already says this in its `isAuthoritative` branch; the new resolver
+     gets the same answer from the same function. The new resolver also has to look at
+     `ClassConfiguration.declarations`, which the inline block ignores.
+   - `CakeTwoChainResolver` keeps its name, as it is CakePHP 2 specific, matching the
+     `CakeTwo`/`CakeThreeAndLater` pairing in `TemplateDirStructure`.
 5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its template
    and in an element only that template includes, without other controllers' aliases; any layout,
    and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
