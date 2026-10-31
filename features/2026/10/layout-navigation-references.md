@@ -263,3 +263,26 @@ CakePHP 2 first, then cake5, then 3 and 4:
   and 5, and an element the layout includes still gets the data passed to it.
 
 ## Implementation Progress
+
+### Session #1
+
+All five plan steps are done and the full test suite passes. Layouts now link back to what names them
+on every version, and `ContributingSourceWalk` treats a layout as having no references.
+
+Where the implementation differs from the plan:
+
+- **Layout setters.** `TemplateDirStructure.layoutSetters` is one set of method names, empty on
+  CakePHP 2, instead of a flag for the deprecated `layout()` setters. It also keeps `setLayout()` from
+  being indexed on CakePHP 2, where the method does not exist.
+- **CakePHP 3 detection.** The plan checked for a `Template` directory beside `Controller`, which
+  misses a plugin with no templates of its own that falls back to the app's layout. `isCakeThreeController`
+  walks up instead: the nearest `Template`, or `Template` under the app directory, means CakePHP 3, and
+  the nearest `templates` means CakePHP 4 or later. An app with no `Template` directory at all still
+  reads as CakePHP 4.
+- **Chain order.** Calls in a chain share a start offset and the outer call was collected first, so
+  a `setTemplate()` chained after `setTemplatePath()` lost its path. Generalizing the chain check did not
+  cause this, but the `setLayout()->setTemplatePath()->setTemplate()` test found it.
+  `findViewBuilderCallsRecursive` now collects receivers first.
+
+The label of implicit-render references in "go to related" is a separate bug, tracked in
+[Go to related method names](goto-related-method-names.md).
