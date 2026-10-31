@@ -259,8 +259,6 @@ the builder's helpers replace a `$helpers` property on the view class.
 - A builder held in a variable, as in `$builder = $this->viewBuilder(); $builder->addHelper('X')`, is
   not indexed.
 - `setHelpers()` is treated as adding, so a replaced helper stays in the union.
-- Completion's type text unions `AppView` and controllers for an alias both configure, where the type
-  provider and go to declaration give `AppView` alone.
 - A prefix's layout directory, such as `templates/Admin/layout/`, is not taken as a layout.
 
 **Found along the way, not changed:**
@@ -296,3 +294,5 @@ Acted on what the assumption suite showed:
   the action a template belongs to. Elements in cell templates keep the union too, because the walk
   returns a flat list that can't tell a caller through the cell from a file including the element
   directly.
+- Completion's type text now comes from `helperMemberType` too, so it follows the same precedence as
+  the type provider and go to declaration, for a cell's callers and for the view class.

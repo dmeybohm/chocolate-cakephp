@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler
+import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
@@ -447,5 +448,28 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         template("cell/Widget/display", "echo \$this->element('in_cell');")
         cell(addFmtToArtistInInitialize + "\npublic function display() {}")
         assertTrue(fmtTypesIn("element/in_cell").containsAll(listOf(movieHelper, artistHelper)))
+    }
+
+    private fun completedFmtTypeIn(path: String): String? {
+        configureWithCaret("cake5/templates/$path.php", "<?php\n\$this-><caret>\n")
+        myFixture.completeBasic()
+        val element = myFixture.lookupElements!!.first { it.lookupString == "Fmt" }
+        val presentation = LookupElementPresentation()
+        element.renderElement(presentation)
+        return presentation.typeText
+    }
+
+    fun `test completion in a cell template shows the caller's helper over the cell's initialize`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        calledFromMovieIndex()
+        cell(addFmtToArtistInInitialize + "\npublic function display() {}")
+        assertEquals("App\\View\\Helper\\MovieFormatterHelper", completedFmtTypeIn("cell/Widget/display"))
+    }
+
+    fun `test completion shows the view class's helper over the controller's`() {
+        appView("\$this->loadHelper('Fmt', ['className' => 'ArtistFormatter']);")
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        assertEquals("App\\View\\Helper\\ArtistFormatterHelper", completedFmtTypeIn("Movie/index"))
     }
 }

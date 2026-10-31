@@ -65,10 +65,14 @@ object ViewHelperReceivers {
     /**
      * The helpers the receivers of [viewFile] load.
      */
-    fun loadedHelpers(project: Project, viewFile: ViewFile): LoadedMembers =
-        ConfiguredMemberService.loadedMembers(
+    fun loadedHelpers(project: Project, viewFile: ViewFile): LoadedMembers {
+        val loaded = ConfiguredMemberService.loadedMembers(
             project, of(project, viewFile), setOf(MemberKind.HELPER), ignoredProperties(project, viewFile)
         )
+        return loaded.copy(members = loaded.members.mapValues { (alias, member) ->
+            helperMemberType(project, viewFile, alias) ?: member
+        })
+    }
 
     /**
      * The configured type of helper [fieldName] in [viewFile]. A view loads any helper by name, so
