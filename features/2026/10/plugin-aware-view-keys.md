@@ -329,3 +329,8 @@ Known limitations and dependencies:
 - A plugin named with a slash isn't recognized in the override directory.
 - An element reference is only indexed when the calling file's templates directory has an element
   directory. This predates this work.
+- An app override and the plugin's original template have the same `ViewFile`, so when both exist the
+  original, which CakePHP never renders, still gets the controller and its variables, and its own
+  `element()` and `set()` calls still count as sources. The override's results are right. Leaving the
+  original empty would lose its variables and go-to-related and add undefined-variable warnings.
+- The toggle action isn't tested end to end. The tests cover the `directReferencesTo` filter it calls.
