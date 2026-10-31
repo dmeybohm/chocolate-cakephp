@@ -16,11 +16,11 @@ templates and `render()` calls whether a base class renders pages of its own.
 
 - **Templates and elements** keep the walk back to their rendering controllers, as
   `controller-side-helpers` plans to reuse it.
-- **Any layout** gets `AppController` and all its subclasses. The walk stops at a layout, so an
-  element or template that a layout includes gets them too.
-- **`AppController` aliases** need no new code. CakePHP merges them into every subclass with the
-  subclass winning (`Controller::_mergeControllerVars`), and the convention type is dropped only
-  when every receiver determines the alias. Tests pin this down.
+- **Any layout** gets all subclasses of `\Controller`. The walk stops at a layout, so an element or
+  template that a layout includes gets them too.
+- **`AppController` aliases** need no new code. CakePHP merges them into every subclass of
+  `AppController` with the subclass winning (`Controller::_mergeControllerVars`), and the convention
+  type is dropped only when every receiver determines the alias. Tests pin this down.
 - **Base classes** get no special handling. With an alias on `AppController` they inherit it, and
   without one the convention type is almost certainly in the union already.
 
@@ -28,27 +28,27 @@ templates and `render()` calls whether a base class renders pages of its own.
 
 - `$this->Html` in a layout used by one controller, such as `admin.ctp`, offers every alias in the
   project, and go-to-declaration may list several targets.
-- `HtmlHelper` stays in layout unions unless `AppController` sets the alias.
-- A controller extending `Controller` directly doesn't count towards layouts.
+- `HtmlHelper` stays in layout unions when any included controller lacks a determining alias.
+- A controller extending `Controller` directly without an alias keeps `HtmlHelper` in every layout's
+  union, even if `AppController` sets an alias. Templates still use their rendering controllers.
 
 ## Plugins
 
 Layouts have no plugin check: a plugin's layout also gets the app's aliases, and a plugin prefix on
 a layout name doesn't matter. This keeps a plugin's own aliases available in every layout, at the
-cost of the extra types above. Plugin controllers count through `{Plugin}AppController`, which
-extends `AppController`.
+cost of the extra types above. Plugin controllers count whether `{Plugin}AppController` extends
+`AppController` or `Controller` directly.
 
 Templates and elements keep `resolvesTo` as it is. CakePHP 3 to 5 have no plugin here, as `pluginOf`
 returns null for them. That arrives with plugin-aware view keys and `controller-side-helpers`.
 
-### Plugins that don't extend `AppController`
+### Why include all `Controller` subclasses
 
-Proposed, and not yet part of the decision above: collect all subclasses of `\Controller` instead of
-`AppController` and its subclasses. If `FooAppController extends Controller`, `BarsController`'s
-alias would otherwise disappear even from Foo's own layout, since a layout no longer looks at the
-controllers naming it. This is more likely with plugins than with app controllers, and the result is
-a missing alias, not an extra one. It keeps `frameworkControllerClass`. Check that it still works
-when the framework class isn't indexed.
+If `FooAppController extends Controller`, limiting the union to `AppController`'s subclasses would
+lose `BarsController`'s alias even in Foo's own layout, since a layout no longer looks at the
+controllers naming it. The wider union may add a convention type, but keeps that alias available.
+Check whether `getAllSubclasses("\\Controller")` works when the framework class isn't indexed; if it
+returns nothing, fall back to `AppController` and its subclasses.
 
 ### Known gap until the element fix
 
@@ -101,16 +101,17 @@ to 5 would be their own change, for navigation.
 
 1. Rewrite `LayoutHelperTest` around the rules above, and add tests for `AppController` aliases.
 2. Replace the layout handling in `RenderingControllers` with the rule above, and remove the
-   heuristics and `defaultLayoutKey`, and `frameworkControllerClass` unless the proposal under
-   [Plugins](#plugins-that-dont-extend-appcontroller) is taken.
+   heuristics and `defaultLayoutKey`. Keep `frameworkControllerClass` for the subclass query.
 3. Run the targeted tests, `LayoutHelperTest` and the other CakePHP 2 helper tests, then the full
    suite.
 
 ## Tests
 
 - `AppController` aliases: the alias replaces the convention type in a template, and a subclass's
-  alias wins in its template. A layout unions the aliases without the convention type. A controller
-  extending `Controller` directly keeps the convention type in its template.
+  alias wins in its template. With only `AppController` descendants in the fixture, a layout unions
+  the aliases without the convention type. In a separate fixture with a direct `Controller`
+  subclass that has no alias, a layout unions the aliases plus `HtmlHelper`; that controller's
+  template keeps the convention type.
 - Layouts: a named layout, the default layout, a data view layout and a layout in a subdirectory all
   get the same union. So does an element in a layout, and an element included from both a layout and
   a template.
@@ -118,8 +119,7 @@ to 5 would be their own change, for navigation.
   does an element only its templates include.
 - Plugins: a plugin's layout gets the union, including the plugin's aliases. A plugin controller's
   template gets only that controller's helpers. An app override of a plugin layout still counts as a
-  layout. If the proposal under Plugins is taken, a plugin whose base class extends `Controller`
-  keeps its alias in layouts.
+  layout. A plugin whose base class extends `Controller` directly keeps its alias in layouts.
 - Existing tests that change: `test a plugin's default layout gets the plugin's controllers` and
   `test a plugin prefixed layout gets the app controller that names it` now expect the union.
 
