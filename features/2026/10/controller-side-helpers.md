@@ -163,16 +163,20 @@ fix. All three are merged.
    Skip `CELL_RENDER` references in the `RenderingControllers` walk.
 4. Honour `PropertyDeclaration.isComplete` for CakePHP 3 to 5 property arrays, and
    `MemberLoad.hasUnreadClassName` for `addHelper()` and `loadComponent()` options, in the
-   CakePHP 3 to 5 resolution path.
+   CakePHP 3 to 5 resolution path. Today only `CakeTwoChainResolver` reads either flag;
+   `ConfiguredMemberService.resolveChain` and `combine` mark every initialize load authoritative.
 5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its template
    and in an element only that template includes, without other controllers' aliases; any layout,
    and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
    keeps its alias in layouts; a cell template and its elements don't get the helpers of the
    controller rendering the template that calls `cell()`; an `AppView` helper still resolves
    everywhere; an incomplete `$helpers` on a helper keeps convention completion; an
-   `addHelper('Foo', ['className' => $x])` with a non-literal class neither types `$this->Foo` as
-   a class it can't name nor hides `FooHelper` by convention. Then Cake 4 and 3, including the
-   deprecated property.
+   `addHelper('Foo', ['className' => $x])` with a non-literal class resolves `Foo` to `FooHelper`
+   with `hasInitializeLoad == false`, asserted on `ConfiguredMemberService.memberType` as the
+   CakePHP 2 `ConfiguredMemberResolutionTest` does with `authoritative = false`. The type alone
+   proves nothing: `resolveLoad` already falls back from a null `className` to the alias, so
+   `FooHelper` comes out either way, and only the flag shows that the load no longer counts as
+   determining the member. Then Cake 4 and 3, including the deprecated property.
 6. Run the full suite.
 
 ## Open questions
