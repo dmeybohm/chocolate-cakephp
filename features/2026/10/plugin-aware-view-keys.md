@@ -234,8 +234,9 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    from its file, instead of reading `elementDataKey` across the project once before the walk. The
    data then follows its reference: it is kept or dropped with it by step 2's filter, including a
    carried reference decided at the class. Each reference stays its own source, so alternative
-   calls still union. Both indexers record the call node's start offset; a test should confirm they
-   agree for one call. On the indexing side, split the `Plugin.` prefix in
+   calls still union. Both indexers record the call node's start offset, and a file's record for
+   one key is a list of calls with their offsets, so the read picks the call whose offset the
+   reference names. On the indexing side, split the `Plugin.` prefix in
    `ViewVariableASTDataIndexer` through the same `ReferencePluginContext` the view file index uses,
    so `element('Blog.shared', [...])` is stored under `element-data:element/shared` like its
    reference. The view variable index version bump in step 3 covers this. Today's up-front read
@@ -270,8 +271,12 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   the plugin's controller: "go to related", the toggle action and completion from it find `Blog`'s
   controller and its variables, and not the app's. Today they find nothing, on every version.
 - Data passed by `element('shared', [...])` in a `Blog` template is offered in `Blog`'s `shared`
-  element and not in the app's, and the other way round. `element('Blog.shared', [...])` from an
-  app template passes its data to `Blog`'s element.
+  element and not in the app's, and the other way round.
+- One app template calls both `element('Blog.shared', ['blogOnly' => 1])` and
+  `element('shared', ['appOnly' => 1])`. After prefix splitting the two records share a key and a
+  file, so only the offset tells them apart: `Blog`'s element gets `blogOnly` alone and the app's
+  gets `appOnly` alone. A single call can't show the offsets of the two indexes agree, since a
+  mismatch would then lose the data rather than pick the wrong call.
 - The type provider gives a variable set by both classes under different types its own class's type
   in each template, which checks the signature carries the plugin through `complete()`.
 - From `Blog`'s `shared` element, element usages list `element('Blog.shared')` calls from anywhere
