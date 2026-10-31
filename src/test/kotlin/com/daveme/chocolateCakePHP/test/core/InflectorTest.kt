@@ -1,5 +1,6 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.core
 
+import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.Inflector
 import com.daveme.chocolateCakePHP.pluralize
 import com.daveme.chocolateCakePHP.singularize

@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.core
 
 import com.intellij.lang.ASTNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
