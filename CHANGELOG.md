@@ -9,6 +9,7 @@
 - Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
 - Add a CakePHP version selector to the plugin settings dialog, and a version column to the plugin settings table
 - Support `Plugin.Table` aliases and the `className` option in `fetchTable()`, `getTableLocator()->get()` and `TableRegistry::get()`, for return types, navigation and completion
+- Resolve helpers configured from CakePHP 3 to 5 controllers, through `viewBuilder()` and CakePHP 3's `$helpers` property, in the templates and elements they render, in cells those call, and in layouts
 
 ### Changed
 - Keep the view variables and related items of app and plugin classes with the same name apart, following how CakePHP falls back from a plugin to the app, and support templates in the app's plugin override directory

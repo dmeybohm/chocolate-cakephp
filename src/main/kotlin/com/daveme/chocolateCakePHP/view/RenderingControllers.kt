@@ -72,6 +72,9 @@ object RenderingControllers {
                     val element = reference.psiElement ?: continue
                     val phpClass = PsiTreeUtil.getParentOfType(element, PhpClass::class.java, false)
                     if (phpClass != null) {
+                        if (reference.isCellRender) {
+                            continue
+                        }
                         val plugin = pluginOf(current, phpClass)
                         if (phpClass.fqn.isAnyControllerClass() &&
                             resolution.resolvesTo(reference.pluginPrefix ?: plugin, current) &&
@@ -87,7 +90,14 @@ object RenderingControllers {
                     if (prefix != null && !resolution.resolvesTo(prefix, current)) {
                         continue
                     }
-                    val next = Step(including, if (prefix == null) pending + current else pending)
+                    // A cell inherits the helpers of the view calling it, but renders in its own
+                    // plugin, and an unprefixed cell() name resolves in the app:
+                    val next = when {
+                        reference.isCellRender ->
+                            if (resolution.resolvesTo(prefix, current)) Step(including, emptySet()) else continue
+                        prefix == null -> Step(including, pending + current)
+                        else -> Step(including, pending)
+                    }
                     if (visited.add(next)) {
                         queue.add(next)
                     }

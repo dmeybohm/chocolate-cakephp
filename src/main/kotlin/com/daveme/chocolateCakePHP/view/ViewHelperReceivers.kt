@@ -36,22 +36,33 @@ object ViewHelperReceivers {
     }
 
     /**
-     * The configured type of helper [fieldName] in a view rendered by [receivers]. A view loads
-     * any helper by name, so the result only determines the type when every receiver loads it.
+     * The configured type of helper [fieldName] in [viewFile]. A view loads any helper by name, so
+     * the result only determines the type when the view class or every controller loads it.
      */
-    fun helperMemberType(project: Project, receivers: Collection<String>, fieldName: String): MemberTypeResult? {
-        val perReceiver = receivers.map {
-            ConfiguredMemberService.memberType(project, listOf(it), setOf(MemberKind.HELPER), fieldName)
+    fun helperMemberType(project: Project, viewFile: ViewFile, fieldName: String): MemberTypeResult? {
+        val settings = Settings.getInstance(project)
+        val viewClasses = viewFile.structure.viewClassReceivers(settings)
+        val viewClassType = helperType(project, viewClasses, fieldName)
+        // View::initialize() runs after the controller's helpers reach the view, so its load wins:
+        if (viewClassType != null && viewClassType.hasInitializeLoad) {
+            return viewClassType
         }
-        if (perReceiver.all { it == null || it.classFqns.isEmpty() }) {
+        val perController = (of(project, viewFile) - viewClasses.toSet()).map {
+            helperType(project, listOf(it), fieldName)
+        }
+        val fqns = viewClassType?.classFqns.orEmpty() + perController.flatMap { it?.classFqns.orEmpty() }
+        if (fqns.isEmpty()) {
             return null
         }
-        val fqns = perReceiver.flatMap { it?.classFqns.orEmpty() }.toSet()
         val phpIndex = PhpIndex.getInstance(project)
         return MemberTypeResult(
             classFqns = fqns,
             classes = fqns.flatMap { phpIndex.getClassesByFQN(it) },
-            hasInitializeLoad = perReceiver.all { it != null && it.classFqns.isNotEmpty() && it.hasInitializeLoad },
+            hasInitializeLoad = perController.isNotEmpty() && perController.all { it != null && it.hasInitializeLoad },
         )
     }
+
+    private fun helperType(project: Project, receivers: List<String>, fieldName: String): MemberTypeResult? =
+        ConfiguredMemberService.memberType(project, receivers, setOf(MemberKind.HELPER), fieldName)
+            ?.takeIf { it.classFqns.isNotEmpty() }
 }

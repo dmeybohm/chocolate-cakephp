@@ -46,6 +46,11 @@ sealed class TemplateDirStructure(val id: Char) {
     open val layoutDirectory: String? = null
 
     /**
+     * Whether the view file index stores references to layouts.
+     */
+    open val indexesLayoutReferences: Boolean = false
+
+    /**
      * Whether [templateKey] is the key of a layout.
      */
     fun isLayoutKey(templateKey: String): Boolean =
@@ -91,12 +96,18 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override val layoutDirectory = "Layouts"
 
+        override val indexesLayoutReferences = true
+
         override val appControllerClass = "\\AppController"
 
         override val frameworkControllerClass = "\\Controller"
     }
 
-    class CakeThreeAndLater(id: Char, private val overrideDirectory: String) : TemplateDirStructure(id) {
+    class CakeThreeAndLater(
+        id: Char,
+        private val overrideDirectory: String,
+        override val layoutDirectory: String,
+    ) : TemplateDirStructure(id) {
         override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
             cakeThreePluginName(file, projectDir, settings, overrideDirectory)
 
@@ -104,14 +115,16 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override fun viewClassReceivers(settings: Settings) = listOf("${settings.appNamespace}\\View\\AppView")
 
-        override val usesRenderingControllers = false
+        override val usesRenderingControllers = true
 
         override val fallbackReceivers = emptyList<String>()
+
+        override val frameworkControllerClass = "\\Cake\\Controller\\Controller"
     }
 
     companion object {
-        private val cakeThree = CakeThreeAndLater('3', "Plugin")
-        private val cakeFour = CakeThreeAndLater('4', "plugin")
+        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout")
+        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout")
 
         fun of(templatesDir: TemplatesDir): TemplateDirStructure = when (templatesDir) {
             is CakeTwoTemplatesDir -> CakeTwo

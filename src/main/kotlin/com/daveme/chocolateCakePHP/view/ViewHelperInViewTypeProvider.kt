@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberTypeResult
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -33,8 +34,8 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
                 ?: return null
             val fieldName = signature.substringAfterLast(key, "").ifEmpty { return null }
             // A view loads any helper by name, so one its receivers do not load keeps its convention type:
-            return configuredHelperType(
-                project, settings, ViewHelperReceivers.of(project, viewFile), fieldName, loadsAnyHelper = true
+            return withConventionType(
+                settings, ViewHelperReceivers.helperMemberType(project, viewFile, fieldName), fieldName
             )
         }
         return configuredHelperType(project, settings, viewType(settings).types, signature)
@@ -82,20 +83,20 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
 /**
  * The type of helper property [fieldName] on receivers of type [receiverClasses]: the helpers
  * they load, plus the helpers by convention unless an initialize load determined the type.
- * With [loadsAnyHelper], a helper any receiver does not load still has its convention type.
  */
 fun configuredHelperType(
     project: Project,
     settings: Settings,
     receiverClasses: Collection<String>,
-    fieldName: String,
-    loadsAnyHelper: Boolean = false
-): PhpType {
+    fieldName: String
+): PhpType = withConventionType(
+    settings,
+    ConfiguredMemberService.memberType(project, receiverClasses, setOf(MemberKind.HELPER), fieldName),
+    fieldName
+)
+
+private fun withConventionType(settings: Settings, configured: MemberTypeResult?, fieldName: String): PhpType {
     val result = PhpType()
-    val configured = if (loadsAnyHelper)
-        ViewHelperReceivers.helperMemberType(project, receiverClasses, fieldName)
-    else
-        ConfiguredMemberService.memberType(project, receiverClasses, setOf(MemberKind.HELPER), fieldName)
     if (configured != null) {
         result.add(configured.type)
     }
