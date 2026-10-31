@@ -64,7 +64,11 @@ class ForkSandboxListener : LauncherSessionListener {
                 null
             } catch (e: IOException) {
                 channel.close()
-                throw IllegalStateException("Could not lock $lockFile for the test fork sandbox", e)
+                throw IllegalStateException(
+                    "Could not lock $lockFile for the test fork sandbox. " +
+                        "The build directory must be on a filesystem that supports file locks.",
+                    e
+                )
             }
             if (lock != null) {
                 heldLock = lock // keep the lock (and channel) alive until the JVM exits
@@ -74,7 +78,7 @@ class ForkSandboxListener : LauncherSessionListener {
         }
         throw IllegalStateException(
             "No free test fork sandbox slot under $sandboxRoot (all $MAX_SLOTS are locked). " +
-                "Run with -PtestForks=1 or stop the other test JVMs using this build directory."
+                "Stop the other test JVMs using this build directory."
         )
     }
 
