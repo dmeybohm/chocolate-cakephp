@@ -61,12 +61,14 @@ stay in one place:
 
    A non-empty result replaces native resolution for the whole signature, so it has to account
    for every resolved receiver. Answer only when every class among them is one the rules can
-   answer for: a controller, helper or CakePHP 2 model that does not declare the field. The answer
-   is the union of each class's type. If any other class is present, or a class declares the
-   field, return null, so native resolution and the additive providers keep that class's type and
-   the `__get()` types stay until a later fix. PHP pseudo-types such as `\null` and `\mixed` have
-   no fields, so they do not count as receivers. A framework class that `__get()` added to the
-   receiver does count, so a chain through a member that isn't determined yet (for example
+   answer for: a controller, view, helper or CakePHP 2 model that does not declare the field. The
+   answer is the union of each class's type. If any other class is present, or a class declares
+   the field, return null, so native resolution and the additive providers keep that class's type
+   and the `__get()` types stay until a later fix. A view whose configuration does not list the
+   helper still never contributes `\null` (see 3). Until step 5 of the plan gives it a convention
+   type, it has no answer, so the whole signature returns null. PHP pseudo-types such as `\null`
+   and `\mixed` have no fields, so they do not count as receivers. A framework class that
+   `__get()` added to the receiver does count, so a chain through a member that isn't determined yet (for example
    `$this->Movie` with an incomplete `$uses`) stays diluted until step 5 of the plan fixes the
    receiver.
 3. **Ruled-out members.** Decide what `$this->Unloaded` should be. At runtime
