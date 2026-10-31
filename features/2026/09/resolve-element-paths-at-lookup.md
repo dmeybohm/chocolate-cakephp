@@ -93,3 +93,9 @@ A missing target should yield no navigation target, while leaving the caller's i
 This proposal addresses the external directory dependency found in the PR #290 review. The separate
 issues involving indirect data-entry collisions and container-name warning suppression remain
 follow-ups in [the original feature log](support-element-data-variables.md#pr-290-review-findings-2026-09-13).
+
+## Update 2026-10-31
+
+Superseded for the directory-existence problem by [view-index-bugs](../10/view-index-bugs.md),
+which derives the element directory name from the templates directory type at index time. Logical
+element names remain an option for the plugin and theme questions above.
