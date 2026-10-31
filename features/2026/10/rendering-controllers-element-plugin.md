@@ -52,11 +52,10 @@ as that controller does render with it.
 The two lookups are always combined, with no fallback branch, so results don't depend on whether the
 first found anything.
 
-Whether `getAllSubclasses("\\Controller")` needs the framework class to be indexed is unknown, as it
-may only read the `extends` name. A test documents the answer, and doesn't change the lookups. If the
-framework class does have to be indexed, this limitation is accepted: when it isn't, a controller
-extending `Controller` directly isn't found for layouts, so its alias is missing there. This needs
-both conditions at once, and finding those controllers would mean scanning all class names.
+`getAllSubclasses("\\Controller")` doesn't need the framework class to be indexed:
+`FrameworkNotIndexedHelperTest` finds a plugin controller extending `Controller` with no `Controller`
+class in the project. So no limitation applies there. The `AppController` lookup stays as well, as
+decided, and is redundant in that case.
 
 ### Known gap until the element fix
 
@@ -139,3 +138,10 @@ to 5 would be their own change, for navigation.
   `test a plugin prefixed layout gets the app controller that names it` now expect the union.
 
 ## Implementation Progress
+
+### Session #1
+
+- Replaced the layout handling in `RenderingControllers` with the union rule, and removed the
+  heuristics and `defaultLayoutKey`.
+- Rewrote `LayoutHelperTest`, and added `AppControllerHelperTest`, `DirectControllerHelperTest` and
+  `FrameworkNotIndexedHelperTest`, with their fixtures isolated through `HelperFixtureTestCase`.
