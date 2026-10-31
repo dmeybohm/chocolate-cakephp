@@ -46,10 +46,31 @@ sealed class TemplateDirStructure(val id: Char) {
     open val layoutDirectory: String? = null
 
     /**
+     * Whether the view file index stores references to layouts.
+     */
+    open val indexesLayoutReferences: Boolean = false
+
+    /**
      * Whether [templateKey] is the key of a layout.
      */
     fun isLayoutKey(templateKey: String): Boolean =
         layoutDirectory?.let { templateKey.startsWith("$it/") } ?: false
+
+    /**
+     * The directory cell templates are in, under the templates directory, on versions with cells.
+     */
+    open val cellDirectory: String? = null
+
+    /**
+     * Whether [templateKey] is the key of a cell's template.
+     */
+    fun isCellKey(templateKey: String): Boolean =
+        cellDirectory?.let { templateKey.startsWith("$it/") } ?: false
+
+    /**
+     * Whether a `$helpers` property on the class rendering a view supplies its helpers.
+     */
+    abstract val readsHelpersProperty: Boolean
 
     /**
      * The class every application controller extends, when layouts are tracked.
@@ -91,12 +112,22 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override val layoutDirectory = "Layouts"
 
+        override val indexesLayoutReferences = true
+
+        override val readsHelpersProperty = true
+
         override val appControllerClass = "\\AppController"
 
         override val frameworkControllerClass = "\\Controller"
     }
 
-    class CakeThreeAndLater(id: Char, private val overrideDirectory: String) : TemplateDirStructure(id) {
+    class CakeThreeAndLater(
+        id: Char,
+        private val overrideDirectory: String,
+        override val layoutDirectory: String,
+        override val cellDirectory: String,
+        override val readsHelpersProperty: Boolean,
+    ) : TemplateDirStructure(id) {
         override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
             cakeThreePluginName(file, projectDir, settings, overrideDirectory)
 
@@ -104,14 +135,16 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override fun viewClassReceivers(settings: Settings) = listOf("${settings.appNamespace}\\View\\AppView")
 
-        override val usesRenderingControllers = false
+        override val usesRenderingControllers = true
 
         override val fallbackReceivers = emptyList<String>()
+
+        override val frameworkControllerClass = "\\Cake\\Controller\\Controller"
     }
 
     companion object {
-        private val cakeThree = CakeThreeAndLater('3', "Plugin")
-        private val cakeFour = CakeThreeAndLater('4', "plugin")
+        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell", readsHelpersProperty = true)
+        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell", readsHelpersProperty = false)
 
         fun of(templatesDir: TemplatesDir): TemplateDirStructure = when (templatesDir) {
             is CakeTwoTemplatesDir -> CakeTwo

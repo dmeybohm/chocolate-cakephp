@@ -48,6 +48,13 @@ internal class ChainResolution(
     val excludesUnloaded: Set<MemberKind> = emptySet(),
 )
 
+/**
+ * The rule for which members a receiver's class chain configures.
+ */
+internal interface ChainResolver {
+    fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution
+}
+
 object ConfiguredMemberService {
 
     private val frameworkBaseClasses = setOf(
@@ -59,24 +66,47 @@ object ConfiguredMemberService {
 
     /**
      * The type of [alias] on receivers of type [classFqns], or null when no class in any
-     * receiver's chain loads it.
+     * receiver's chain loads it. [ignoredProperties] gives the configuring properties that have
+     * no effect on a receiver.
      */
     fun memberType(
         project: Project,
         classFqns: Collection<String>,
         kinds: Set<MemberKind>,
-        alias: String
+        alias: String,
+        ignoredProperties: (String) -> Set<String> = { emptySet() }
     ): MemberTypeResult? {
-        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, alias) }
+        val resolutions = specificReceivers(classFqns).map {
+            resolveChain(project, it, kinds, alias, ignoredProperties(it))
+        }
         return combine(project, resolutions, kinds, alias)
+    }
+
+    /**
+     * The type of [alias] on [classFqn], leaving out what the chain's `initialize()` methods load.
+     */
+    fun memberTypeOutsideInitialize(
+        project: Project,
+        classFqn: String,
+        kinds: Set<MemberKind>,
+        alias: String,
+        ignoredProperties: Set<String> = emptySet()
+    ): MemberTypeResult? {
+        val resolution = resolveChain(project, classFqn, kinds, alias, ignoredProperties) {
+            it.source == LoadSource.PROPERTY_ARRAY || !it.isInitializeLoad
+        }
+        return combine(project, listOf(resolution), kinds, alias)
     }
 
     fun loadedMembers(
         project: Project,
         classFqns: Collection<String>,
-        kinds: Set<MemberKind>
+        kinds: Set<MemberKind>,
+        ignoredProperties: (String) -> Set<String> = { emptySet() }
     ): LoadedMembers {
-        val resolutions = specificReceivers(classFqns).map { resolveChain(project, it, kinds, null) }
+        val resolutions = specificReceivers(classFqns).map {
+            resolveChain(project, it, kinds, null, ignoredProperties(it))
+        }
         val aliases = resolutions.flatMap { it.members.keys }.toSet()
         val members = aliases.mapNotNull { alias ->
             combine(project, resolutions, kinds, alias)?.let { alias to it }
@@ -138,7 +168,9 @@ object ConfiguredMemberService {
         project: Project,
         classFqn: String,
         kinds: Set<MemberKind>,
-        alias: String?
+        alias: String?,
+        ignoredProperties: Set<String>,
+        keepLoad: (MemberLoad) -> Boolean = { true }
     ): ChainResolution {
         val phpIndex = PhpIndex.getInstance(project)
         val settings = Settings.getInstance(project)
@@ -149,7 +181,10 @@ object ConfiguredMemberService {
         val chain = classChain(phpIndex, classFqn)
         val configurations = chain.map { fqn ->
             val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
-            ClassConfiguration(values.flatMap { it.loads }, values.flatMap { it.declarations })
+            ClassConfiguration(
+                values.flatMap { it.loads }.filter { (it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignoredProperties) && keepLoad(it) },
+                values.flatMap { it.declarations }.filter { it.property !in ignoredProperties }
+            )
         }
         val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
         if (cakeTwoBase != null) {
@@ -160,24 +195,7 @@ object ConfiguredMemberService {
             return CakeTwoChainResolver(cakeTwoBase, chain, configurations, pluginName)
                 .resolve(kinds, alias) { resolveCakeTwoLoad(it) }
         }
-        val loadsByClass = configurations.map { configuration ->
-            configuration.loads.filter { it.kind in kinds && (alias == null || it.alias == alias) }
-        }
-        val allLoads = loadsByClass.flatten()
-
-        val members = allLoads.map { it.alias }.distinct().associateWith { eachAlias ->
-            // A later initialize() load replaces the instance an ancestor loaded:
-            val initializeLoads = loadsByClass.firstNotNullOfOrNull { loads ->
-                loads.filter { it.alias == eachAlias && it.isInitializeLoad }.ifEmpty { null }
-            } ?: emptyList()
-            val otherLoads = allLoads.filter { it.alias == eachAlias && !it.isInitializeLoad }
-            val fqns = (initializeLoads + otherLoads)
-                .flatMap { resolveLoad(phpIndex, settings, it) }
-                .toSet()
-            fqns to initializeLoads.isNotEmpty()
-        }
-        val initializeKinds = allLoads.filter { it.isInitializeLoad }.map { it.kind }.toSet()
-        return ChainResolution(members, initializeKinds)
+        return InitializeChainResolver(configurations).resolve(kinds, alias) { resolveLoad(phpIndex, settings, it) }
     }
 
     private fun classChain(phpIndex: PhpIndex, classFqn: String): List<String> {
