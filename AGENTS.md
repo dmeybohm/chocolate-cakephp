@@ -53,7 +53,7 @@ running on in the typical locations for those.
 
 ### Test layout
 
-There are some generic tests under the top level, and then a
+The framework-independent tests live in the `core` directory, and then there is a
 breakdown by CakePHP version in `cake2`, `cake3`, etc directories.
 
 ### Targeted Tests

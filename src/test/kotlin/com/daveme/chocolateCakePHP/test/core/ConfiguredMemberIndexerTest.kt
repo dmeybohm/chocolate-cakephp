@@ -1,4 +1,4 @@
-package com.daveme.chocolateCakePHP.test
+package com.daveme.chocolateCakePHP.test.core
 
 import com.daveme.chocolateCakePHP.configuredmemberindex.AssociationType
 import com.daveme.chocolateCakePHP.configuredmemberindex.ClassConfiguration
