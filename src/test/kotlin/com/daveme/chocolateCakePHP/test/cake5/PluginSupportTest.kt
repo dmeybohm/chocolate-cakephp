@@ -10,7 +10,7 @@ import com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler
 class PluginSupportTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/MovieController.php",
             "cake5/src5/View/AppView.php",
@@ -25,7 +25,6 @@ class PluginSupportTest : Cake5BaseTestCase() {
             "cake5/plugins/TestPlugin/templates/TestController/index.php",
             "cake5/plugins/TestPluginExtra/templates/element/extra_sidebar.php",
             "cake5/plugins/TestPluginExtra/templates/TestController/index.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

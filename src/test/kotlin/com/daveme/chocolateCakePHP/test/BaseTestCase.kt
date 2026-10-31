@@ -16,7 +16,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import kotlin.collections.any
 import kotlin.reflect.KClass
-import org.junit.Assume
 import org.junit.runner.RunWith
 
 @RunWith(AssumptionAwareJUnit38Runner::class)
@@ -30,8 +29,13 @@ abstract class BaseTestCase : BasePlatformTestCase() {
      */
     protected open val cakeMajorVersion: Int? = null
 
+    /**
+     * Whether the CakePHP framework source is attached to the project as a library.
+     */
+    protected open val attachesFramework: Boolean = true
+
     private val realVendorDescriptor: RealCakeVendorProjectDescriptor?
-        get() = cakeMajorVersion?.takeIf { RealCakeVendorProjectDescriptor.isEnabled }
+        get() = cakeMajorVersion?.takeIf { attachesFramework }
             ?.let { RealCakeVendorProjectDescriptor.forVersion(it) }
 
     override fun getTestDataPath(): String {
@@ -51,32 +55,6 @@ abstract class BaseTestCase : BasePlatformTestCase() {
             RecursionManager.disableAssertOnRecursionPrevention(testRootDisposable)
         }
         super.setUp()
-    }
-
-    /**
-     * Whether the real framework is attached instead of the stubs.
-     */
-    protected val usesRealVendor: Boolean
-        get() = realVendorDescriptor != null
-
-    /**
-     * Skips the test when the real framework is attached instead of the stubs.
-     */
-    protected fun assumeStubVendor(reason: String) {
-        Assume.assumeTrue(reason, realVendorDescriptor == null)
-    }
-
-    /**
-     * Copies the fixture files into the project, leaving out the stub framework when the real
-     * framework is attached instead.
-     */
-    protected fun configureByFiles(vararg filePaths: String): Array<PsiFile> {
-        val paths = if (realVendorDescriptor != null) {
-            filePaths.filterNot { it.endsWith("/vendor/cakephp.php") }.toTypedArray()
-        } else {
-            filePaths
-        }
-        return if (paths.isNotEmpty()) myFixture.configureByFiles(*paths) else emptyArray()
     }
 
     fun calculateLineMarkers(element: PsiElement, klass: KClass<out LineMarkerProvider>): List<LineMarkerInfo<*>> {

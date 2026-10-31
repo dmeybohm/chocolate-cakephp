@@ -958,7 +958,8 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         isController: Boolean,
         pluginContext: ReferencePluginContext?
     ) {
-        val layoutDirectory = pluginContext?.structure?.layoutDirectory ?: return
+        val structure = pluginContext?.structure ?: return
+        val layoutDirectory = structure.layoutDirectory?.takeIf { structure.indexesLayoutReferences } ?: return
         fun addLayout(name: String, data: (String?) -> ViewReferenceData) {
             val (layoutName, pluginPrefix) = pluginContext.split(name)
             if (layoutName.isNotEmpty() && !layoutName.startsWith("/")) {

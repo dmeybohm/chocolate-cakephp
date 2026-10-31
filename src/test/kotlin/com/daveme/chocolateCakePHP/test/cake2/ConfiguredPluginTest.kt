@@ -12,12 +12,11 @@ import com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler
 class ConfiguredPluginTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/View/AppView.php",
             "cake2/app/View/Movie/artist.ctp",
             "cake2/app/webroot/css/movie.css",
-            "cake2/vendor/cakephp.php",
         )
         myFixture.addFileToProject("cake2/lib/Shop/View/Elements/promo.ctp", "")
         myFixture.addFileToProject("cake2/lib/Shop/webroot/css/shop_style.css", "")

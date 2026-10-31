@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.test
 
+import com.daveme.chocolateCakePHP.configuredmemberindex.AssociationType
 import com.daveme.chocolateCakePHP.configuredmemberindex.ClassConfiguration
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberExternalizer
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberDataIndexer
 import com.daveme.chocolateCakePHP.configuredmemberindex.DeclaredValue
 import com.daveme.chocolateCakePHP.configuredmemberindex.LoadSource
@@ -9,6 +11,10 @@ import com.daveme.chocolateCakePHP.configuredmemberindex.MemberLoad
 import com.daveme.chocolateCakePHP.configuredmemberindex.PropertyDeclaration
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.indexing.FileContentImpl
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 
 class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
 
@@ -403,5 +409,154 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
         assertTrue(loads.all {
             it.kind == MemberKind.ASSOCIATION && it.source == LoadSource.BIND_MODEL && !it.isInitializeLoad
         })
+    }
+
+    fun `test direct association calls record their type and other loads do not`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Foo;
+            class Configured {
+                public function initialize() {
+                    ${'$'}this->belongsTo('Authors');
+                    ${'$'}this->hasOne('Profiles');
+                    ${'$'}this->hasMany('Comments');
+                    ${'$'}this->belongsToMany('Tags');
+                    ${'$'}this->loadComponent('Flash');
+                    ${'$'}this->loadHelper('Html');
+                }
+            }
+        """, "\\App\\Foo\\Configured")
+
+        assertEquals(
+            listOf(
+                AssociationType.BELONGS_TO,
+                AssociationType.HAS_ONE,
+                AssociationType.HAS_MANY,
+                AssociationType.BELONGS_TO_MANY,
+                null,
+                null,
+            ),
+            loads.map { it.associationType }
+        )
+    }
+
+    fun `test addAssociations leaves record the type of their key`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Foo;
+            class Configured {
+                public function initialize() {
+                    ${'$'}this->addAssociations([
+                        'belongsTo' => ['Authors'],
+                        'hasOne' => ['Profiles'],
+                        'hasMany' => ['Comments' => ['propertyName' => 'notes']],
+                        'belongsToMany' => ['Tags'],
+                    ]);
+                }
+            }
+        """, "\\App\\Foo\\Configured")
+
+        assertEquals(
+            mapOf(
+                "Authors" to AssociationType.BELONGS_TO,
+                "Profiles" to AssociationType.HAS_ONE,
+                "Comments" to AssociationType.HAS_MANY,
+                "Tags" to AssociationType.BELONGS_TO_MANY,
+            ),
+            loads.associate { it.alias to it.associationType }
+        )
+        assertEquals("notes", loads.first { it.alias == "Comments" }.propertyName)
+    }
+
+    fun `test propertyName option literal, absent and unreadable`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Foo;
+            class Configured {
+                const WRITER = 'writer';
+                public function initialize() {
+                    ${'$'}this->belongsTo('Literal', ['propertyName' => 'writer']);
+                    ${'$'}this->belongsTo('Absent', ['className' => 'Users']);
+                    ${'$'}this->belongsTo('Unread', ['propertyName' => self::WRITER]);
+                    ${'$'}this->loadComponent('Flash', ['propertyName' => 'ignored']);
+                }
+            }
+        """, "\\App\\Foo\\Configured").associateBy { it.alias }
+
+        assertEquals("writer", loads["Literal"]!!.propertyName)
+        assertFalse(loads["Literal"]!!.hasUnreadPropertyName)
+        assertNull(loads["Absent"]!!.propertyName)
+        assertFalse(loads["Absent"]!!.hasUnreadPropertyName)
+        assertNull(loads["Unread"]!!.propertyName)
+        assertTrue(loads["Unread"]!!.hasUnreadPropertyName)
+        assertNull(loads["Flash"]!!.propertyName)
+        assertFalse(loads["Flash"]!!.hasUnreadPropertyName)
+    }
+
+    fun `test cake2 properties and bindModel record their type`() {
+        val loads = loadsOf("""
+            <?php
+            class Post extends AppModel {
+                public ${'$'}belongsTo = array('User');
+                public ${'$'}hasOne = array('Detail');
+                public ${'$'}hasMany = 'Comment';
+                public ${'$'}hasAndBelongsToMany = array('Tag');
+                public function bind() {
+                    ${'$'}this->bindModel(array(
+                        'belongsTo' => array('Boundbelongs'),
+                        'hasOne' => array('Boundone'),
+                        'hasMany' => array('Boundmany'),
+                        'hasAndBelongsToMany' => array('Boundhabtm'),
+                    ));
+                }
+            }
+        """, "\\Post")
+
+        assertEquals(
+            mapOf(
+                "User" to AssociationType.BELONGS_TO,
+                "Detail" to AssociationType.HAS_ONE,
+                "Comment" to AssociationType.HAS_MANY,
+                "Tag" to AssociationType.BELONGS_TO_MANY,
+                "Boundbelongs" to AssociationType.BELONGS_TO,
+                "Boundone" to AssociationType.HAS_ONE,
+                "Boundmany" to AssociationType.HAS_MANY,
+                "Boundhabtm" to AssociationType.BELONGS_TO_MANY,
+            ),
+            loads.associate { it.alias to it.associationType }
+        )
+    }
+
+    fun `test habtm join model has no association type`() {
+        val loads = loadsOf("""
+            <?php
+            class Post extends AppModel {
+                public ${'$'}hasAndBelongsToMany = array(
+                    'Tag' => array('with' => 'PostsTag'),
+                );
+            }
+        """, "\\Post").associateBy { it.alias }
+
+        assertEquals(AssociationType.BELONGS_TO_MANY, loads["Tag"]!!.associationType)
+        assertNull(loads["PostsTag"]!!.associationType)
+    }
+
+    fun `test the externalizer round trips the association fields`() {
+        val configuration = configurationOf("""
+            <?php
+            namespace App\Foo;
+            class Configured {
+                public function initialize() {
+                    ${'$'}this->belongsTo('Literal', ['propertyName' => 'writer']);
+                    ${'$'}this->hasMany('Unread', ['propertyName' => self::WRITER]);
+                    ${'$'}this->loadComponent('Flash');
+                }
+            }
+        """, "\\App\\Foo\\Configured")
+
+        val bytes = ByteArrayOutputStream()
+        ConfiguredMemberExternalizer.save(DataOutputStream(bytes), configuration)
+        val read = ConfiguredMemberExternalizer.read(DataInputStream(ByteArrayInputStream(bytes.toByteArray())))
+        assertEquals(configuration, read)
     }
 }

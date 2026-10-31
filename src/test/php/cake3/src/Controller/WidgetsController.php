@@ -63,4 +63,15 @@ class WidgetsController extends AppController
     public function cellnamedtemplate()
     {
     }
+
+    public function helpertemplate()
+    {
+        $this->viewBuilder()->setHelpers(['Aliased' => ['className' => 'Marker']]);
+    }
+
+    public function helpercell()
+    {
+        $this->viewBuilder()->setHelpers(['Aliased' => ['className' => 'Marker']]);
+        $this->set('name', $this->getRequest()->getQuery('name'));
+    }
 }

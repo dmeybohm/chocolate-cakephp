@@ -6,14 +6,13 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 class GetTableLocatorTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Controller/MovieController.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
             "cake4/src4/Model/Table/MoviesTable.php",
             "cake4/src4/Model/Entity/Article.php",
-            "cake4/src4/Model/Entity/Movie.php",
-            "cake4/vendor/cakephp.php"
+            "cake4/src4/Model/Entity/Movie.php"
         )
     }
 

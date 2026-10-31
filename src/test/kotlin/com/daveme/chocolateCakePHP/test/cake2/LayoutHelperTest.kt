@@ -17,7 +17,6 @@ class LayoutHelperTest : Cake2BaseTestCase() {
     )
 
     override fun setUpTestFiles() {
-        configureByFiles("cake2/vendor/cakephp.php")
         myFixture.addFileToProject("cake2/app/View/Helper/Helpers.php", """
             <?php
             class AppHelper extends Helper {}
