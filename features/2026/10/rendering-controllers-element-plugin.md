@@ -86,8 +86,9 @@ and its effect is limited to the type above. These notes carry over:
 - The walk also passes through `$this->layout` assignments and `render()` calls in view files. No
   assumption test covers a layout named from a template.
 - Track `(ViewFile, pending references)` as visited, and cache `resolvesTo` within a search.
-- The shared helper takes the rendering class's plugin as input, as
-  [elements in cell templates](cell-template-element-plugin.md) is still open.
+- The shared helper takes the rendering class's plugin as input, as elements in cell templates are
+  still an open question. That log is `features/2026/10/cell-template-element-plugin.md` on the
+  `cell-template-element-plugin` branch, and isn't on this branch until that one merges.
 
 ## Controller-side helpers
 
@@ -102,7 +103,8 @@ to 5 would be their own change, for navigation.
 2. Replace the layout handling in `RenderingControllers` with the rule above, and remove the
    heuristics and `defaultLayoutKey`, and `frameworkControllerClass` unless the proposal under
    [Plugins](#plugins-that-dont-extend-appcontroller) is taken.
-3. Run the full suite.
+3. Run the targeted tests, `LayoutHelperTest` and the other CakePHP 2 helper tests, then the full
+   suite.
 
 ## Tests
 
