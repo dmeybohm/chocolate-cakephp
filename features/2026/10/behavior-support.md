@@ -324,8 +324,8 @@ method for a name the tables do not declare. `TableLocatorTypeProvider` already 
   name. The answer is the union of the methods' stated return types, falling back to inference
   when none is stated, as the entity provider does. Anything else returns null and leaves native
   resolution alone. A receiver that completes only to `\Cake\ORM\Table` has no loads and is
-  left alone; the `mixed` from `__call` on that one signature is accepted if the probe shows it
-  diluting the answer, with the unresolvable-signature trick from the entity work as the fix.
+  left alone; the platform check below showed such a signature completes to `?`, which PhpStorm
+  filters, not to `mixed`, so nothing dilutes the answer.
 - **Navigation.** `BehaviorMethodGotoDeclarationHandler` on the name leaf, targets the mixed-in
   method on every attached behavior that has it, per class in the receiver union as the entity
   handler does.
@@ -473,8 +473,10 @@ Methods:
 10. Goto declaration on `slug` reaches `SluggableBehavior::slug()`; on `trail` reaches
     `AuditBehavior::writeAudit()`; on `reslug` in a table attaching `ChildSluggable` reaches the
     child class's method and `slug` reaches the parent's.
-11. If the inspection applies: the weak warning is absent on `$this->Pages->slug($e)` and
-    present on `$this->Pages->notAMethod()`.
+11. The weak warning "Method 'slug' not found in ..." is absent on `$table->slug($e)` for a
+    `PagesTable $table` parameter and on `$this->slug($e)` inside `PagesTable`, and present on
+    `$table->notAMethod()` on the same receivers. (`$this->Pages->slug($e)` gets no warning
+    either way, so it is not a test receiver.)
 
 Instance:
 
@@ -556,15 +558,6 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
 
 ## Open questions
 
-- **`M` key coexistence.** If the platform check in plan step 2 shows the duplicate-provider
-  error for an intercepting and a non-intercepting provider on `M`, the fallback is a provider
-  on the plugin's own key that answers from `getType()` for a `MethodReference` whose receiver is
-  a table, accepting the `mixed` beside it, and the log records which features that costs
-  (exact types in completion popups, chained calls).
-- **Receivers with many signatures.** If a method call on `$this->Articles` produces a
-  signature whose receiver completes only to `\Cake\ORM\Table`, that signature falls to `__call`
-  and adds `mixed`. The entity work answered the equivalent with the unresolvable signature; the
-  same applies here if the probe shows it.
 - **Cost of `complete()` on every method call.** Every `#M` signature reaches the provider. The
   cheap rejections come first (a receiver class whose name does not end in `Table` or `Model`
   conventions, a method the class declares), and the behavior resolution is cached, but there is
@@ -586,3 +579,56 @@ the CakePHP 2 app had no `AppModel`, so one was added beside its `AppController`
 test base's `expectException()` wrapper also asserts an empty message on PHPUnit 5.7, so the
 missing-class cases use `try`/`catch`. The two framework corrections, the global CakePHP 2
 class names and the merge rule, are recorded under the assumption tests.
+
+**Plan step 2, the platform checks** (232.8660.205, read from `php.jar` with `javap` and run as a
+throwaway probe test on the Cake 5 fixtures, not kept):
+
+- **An `M`-keyed non-intercepting provider is safe.** `PhpIndexImpl.getDuplicatedProvidersErrorMessage()`
+  groups the registered providers by key, but `getUniqueClassNames()` first drops every provider
+  whose `interceptsNativeSignature()` is true, so only non-intercepting providers count toward
+  "Duplicate type providers with key". The registered providers keyed `M` are
+  `PhpGenericsMethodExtendedWithGenericTypeProvider`, `ProphecyProphesizedMethodCallTypeProvider`
+  and `ProphecyRevealTypeProvider`, all intercepting (`PhpUnitMockBuilderTP` keys on lowercase
+  `m`). So `BehaviorMethodTypeProvider` will be the only non-intercepting `M` provider, exactly as
+  `ConfiguredMemberFieldTypeProvider` is the only non-intercepting `P` one beside the intercepting
+  `PhpGenericsFieldExtendedWithGenericTypeProvider`.
+- **The ambiguity branch.** In `doCompleteType`, after a non-intercepting provider returns a
+  non-empty type, native resolution is skipped unless some other provider with the same key is
+  intercepting (true for `M` and for `P`) *and* `PhpType.isAmbiguous()` holds, which means the
+  result is empty, contains `?`, or intersects `mixed`. So a behavior method declared `: mixed`
+  gets native resolution run beside the answer, which for a method the class lacks adds only `?`
+  (see the next point). Every other return type is taken as is. The provider must therefore
+  never answer with `?` or `mixed` on purpose; when it has nothing better it returns null.
+- **No `mixed` from `__call`.** Unlike fields, where native resolution falls back to `__get`'s
+  type, a `#M` signature for a method the class lacks completes to `?` (the branch after
+  `getBySignature()` finds nothing adds the unknown marker, and there is no `__call` fallback).
+  The probe's completed type for `touch` on every receiver was `?`. So the entity work's
+  unresolvable-signature trick is not needed here: the signatures the provider does not answer
+  contribute `?`, which PhpStorm filters, not `mixed`.
+- **Receiver encodings** for a method `touch` that `MoviesTable` does not declare (raw
+  `MethodReference.type`; each also appears wrapped in `#π(...)`, which has its own key and is
+  completed by PhpStorm recursively, reaching the provider with the inner signature):
+
+  | Receiver | Signatures with key `M` |
+  |---|---|
+  | `MoviesTable $table`, `$this` in the table | `#M#C\App\Model\Table\MoviesTable.touch` (and `#M#S...` for `$this`) |
+  | `$this->Movies` in a controller | `#M#P#C\...\MovieController.Movies.touch`, the `#S` form, `#M#π(#P#C...Movies).touch`, and our `#M#茒c\...\MovieController茒Movies.touch` |
+  | `$this->fetchTable('Movies')` | `#M#C\...\MoviesTable.touch` (from `TableLocatorTypeProvider`), `#M#M#C\...\MovieController.fetchTable.touch`, `#M#π(#M#C...fetchTable)("Movies").touch` |
+  | `$this->getTableLocator()->get('Movies')` | `#M#C\...\MoviesTable.touch`, `#M#M#M#C...getTableLocator.get.touch` and the `#π` forms |
+  | `$this->Reviews->Authors` | `#M#P#P#C...Reviews.Authors.touch`, our `#M#茒Reviews茒Authors.touch`, `#M#茗.v2.Authors.(...)茁.touch` and more |
+  | `$this->Movies->touch()->other()` | `#M#M#P#C...Movies.touch.other`: the chained call's receiver is itself an `#M` signature the provider answers first |
+
+  So `complete()` sees the receiver as a class (`#C`/`#S`) only for typed parameters and `$this`;
+  every other shape needs `lookupCompleteType` on the receiver part, which is what
+  `ConfiguredMemberFieldTypeProvider.resolveReceiverClasses()` does, and what the plan's step 4
+  says. The receiver part can contain dots (`#M#P#P#C...Reviews.Authors.touch`), so the method
+  name is the part after the *last* dot, as `parseFieldSignature()` already assumes.
+- **The undefined-method inspection applies, on some receivers.** `PhpUndefinedMethodInspection`
+  reports `$table->touch()` on a `MoviesTable $table` parameter and `$this->touch()` inside the
+  table as a *weak warning* "Method 'touch' not found in \App\Model\Table\MoviesTable" (the
+  `__call` on `Table` lowers it from the warning a class without `__call` gets, which the
+  controller's `$this->notAControllerMethod()` showed). It reports nothing on
+  `$this->Movies->touch()`, whose receiver type comes from a provider. So scope item 4's
+  suppressor stays, keyed on that description, and test 11 should use a typed parameter and
+  `$this` inside a table as its receivers, since the `$this->Movies` form is silent either way.
+
