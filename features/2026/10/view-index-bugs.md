@@ -85,13 +85,14 @@ directory path and does not depend on siblings. Not touched.
   `element/nav` and `ViewVariableASTDataIndexer` produces `elementDataKey("element/nav")`. Repeat
   for `cake3` (`Element/nav`) and `cake2` (`Elements/nav`).
 - An end-to-end test in `cake5/ControllerSideHelperTest` that reproduces the intermittent failure
-  deterministically: add the controller and the template with the element call, force the template
-  to be indexed by querying the index without touching the file, with
-  `ViewFileIndexService.referencingElementsInSmartReadAction(project, "Movie/index")` or
-  `FileBasedIndex.getInstance().ensureUpToDate(VIEW_FILE_INDEX_KEY, project, null)`, then create
-  the element file and assert the controller's helper type resolves in it. `fmtTypesIn` is not
-  usable for the forcing step: it writes its own content to the path it is given, which would
-  replace the template and lose the element call.
+  deterministically: add the controller and the template with the element call, then, before any
+  element file or directory exists, query
+  `ViewFileIndexService.referencingElementsInSmartReadAction(project, "element/nav")` and assert it
+  returns the template's call. The query forces the index update and directly proves the reference
+  was stored without an element directory. Then create the element file and assert the
+  controller's helper type resolves in it. `fmtTypesIn` is not usable for the forcing step: it
+  writes its own content to the path it is given, which would replace the template and lose the
+  element call.
 - The existing `ElementToUsagesGotoRelatedTest` and `ViewVariableTest` element cases keep covering
   the normal order.
 
