@@ -97,7 +97,7 @@ An unprefixed reference from a template or element has no plugin of its own unti
 the class. A prefixed reference can still be checked at its hop.
 
 `RenderingControllers` has this problem today, from reading the code and not from a reproduced
-failure. It checks `reference.pluginPrefix ?: including.plugin` at each hop, on CakePHP 2 only, so a
+failure, tracked in [its own log](rendering-controllers-element-plugin.md). It checks `reference.pluginPrefix ?: including.plugin` at each hop, on CakePHP 2 only, so a
 `Blog` controller rendering an app template by fallback is not found as rendering `Blog`'s element
 from that template, and is found as rendering the app's element it does not use.
 
@@ -131,7 +131,8 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    `forEachContributingSource` passes through an including file, carry its unprefixed references
    along and check them against the plugin of the class it reaches, as
    [above](#unprefixed-elements-follow-the-rendering-class) requires. Move `RenderingControllers`
-   to the same helper.
+   to the same helper, following
+   [the notes from its simplification](rendering-controllers-element-plugin.md#element-plugin-fix-moved).
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
    `cellActionKey`, such as `Blog.Articles:index` and `cell:Blog.Widget:display`, on both the
    indexing side (`ViewVariableASTDataIndexer`, from the source file) and the lookup side (from the
