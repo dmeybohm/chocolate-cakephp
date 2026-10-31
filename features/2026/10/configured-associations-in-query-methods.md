@@ -312,3 +312,35 @@ type-provider key. The points of contact are files and test discipline, not beha
 9. Mirror tests to cake4 and cake3. Full suite in both vendor modes.
 
 Commit after each step.
+
+## Implementation Progress
+
+### Session #1
+
+All nine steps are done. The full suite passes with the stubs and with `-PcakeVendor=real`.
+
+Where the implementation differs from the plan:
+
+- **`filterUnknown()` drops deferred signatures.** It removes both association signatures and
+  `ControllerFieldTypeProvider` configured-field signatures. The `find` branch now reads both
+  from the unfiltered type. This also fixes `$this->Reviews->find()` in a controller, whose query
+  had silently lost its table.
+- **One pattern instead of four.** `associationPathPosition()` walks up from a string through
+  array values, keys and enclosing keys to the call's first argument. A single pattern condition
+  uses it for all forms, at any nesting depth. `ContainMethodPatterns` keeps its name, since
+  renaming it would only add noise to the diff.
+- **The method condition falls back to the complete type.** The signature of a chain such as
+  `$this->Movies->Reviews->find()` need not mention a table or a query, so the quick text check
+  alone rejected it.
+- **Completion now checks the argument position.** A string in the second argument no longer
+  offers tables. Navigation already had this rule.
+- **Unknown receivers still follow dotted paths.** With no receiver table the first hop resolves
+  by convention, so `'Authors.Profiles'` on a plain `SelectQuery` parameter completes and
+  navigates by its last segment. A path with no dots behaves as before, except that navigation
+  from the second segment of a dotted path no longer goes to the first segment's table.
+- **Type text and the convention list.** Configured aliases use the short table name as planned.
+  The fallback entries keep the existing all-tables list with the type text `Table`, rather than
+  `getModelSubclasses()` as the controller contributor uses, so the existing plugin filtering is
+  unchanged.
+- **Fixtures.** `UsersTable` gained `hasMany('Reviews')` and `hasOne('Profiles')`, and
+  `ProfilesTable` is new, in cake5, cake4 and cake3. No existing assertion needed changing.
