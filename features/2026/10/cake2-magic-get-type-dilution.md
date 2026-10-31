@@ -143,3 +143,40 @@ has changed on this branch yet. Checked the plan against the merged code:
 
 Real mode, after the merge: `TemplateHelperTest`, `ConfiguredControllerTest` and
 `ConfiguredAssociationTest` pass. The full suite was not run.
+
+### Session #2
+
+Implemented the plan in `ConfiguredMemberFieldTypeProvider`. `conventionType()` moved from
+`ControllerFieldTypeProvider` to `controllerConventionType()` in `Classes.kt`, so both share it.
+`projectClassTypes()` is gone, and the cake2 stub `Controller`, `Model`, `View` and `Helper` all
+declare `__get()` with `@return mixed`.
+
+- **`\null` works.** PhpStorm keeps a `\null`-only result from `complete()`. On real CakePHP 2,
+  `$this->Unloaded` is exactly `\null`, and completion on it no longer offers
+  `CakeRequest::referer`. That completion test fails in real mode without the fix.
+- **Chained signatures.** Probing `$this->Movie->Director` and `$this->film()->Director` showed
+  `#P#P#C\…`, `#P#π(#P#C\…).Director`, `#P#π(#M#C\…).Director` and the plugin's own signature as
+  the receiver, so any receiver signature is accepted, on CakePHP 2 only for cost.
+- **Mixed receivers need a parent class to test.** A `@return Movie|Plain` method in the same
+  class also gives separate `#P#C\Movie.Director` and `#P#C\Plain.Director` signatures, so nothing
+  is lost and a test there passes even with the all-or-nothing rule removed. With the method in a
+  parent class only the chained signature exists: removing the rule gives `[\Person]`, losing
+  `\Review`. With the rule the type is `\Review` plus the `__get()` types, and without
+  `\Person`, which nothing added for a method receiver before this branch either.
+- **Convention guard, not in the plan.** On CakePHP 3 to 5 the provider answers for a convention
+  member only when a convention class exists. Otherwise an unknown `$this->Foo` would swap the
+  `__get()` types for class names that don't exist. CakePHP 2 keeps its existing convention type
+  either way, as `Controller::__get()` gives nothing useful there.
+- **CakePHP 2 views step aside when undetermined.** Every CakePHP 2 template has
+  `#P#C\AppView.Field`, so a convention answer there would add `\HtmlHelper` beside a controller's
+  aliased helper.
+
+Results:
+
+- CakePHP 2 work (`2b00065`): `cake2.*` passes in stub and real mode.
+- Full suite in stub mode at `91c4017`: 1300 passed, 0 failed, 1 skipped (the real-only test
+  `test a field with no class by convention keeps its native type`).
+
+**Not verified:** the CakePHP 3 to 5 convention change has not run in real mode, which the plan
+requires before deciding on it. The stubs for those versions declare no `__get()`, so its tests
+can't fail in stub mode for lack of the fix. Plan step 6's real-mode full run is also still open.
