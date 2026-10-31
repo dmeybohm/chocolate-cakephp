@@ -368,3 +368,15 @@ Unknown and unconfigured receivers keep the convention fallback. The property si
 so `$this->Articles` inside `ReviewsTable` still resolves by convention. Associations the index
 cannot see, such as those added by behaviors, lose navigation on a table that configures others;
 `features/ideas.md` records that under behavior support.
+
+### Session #3
+
+Changed the planned fallback after review. An association path segment no longer falls back to a
+same-named table when every receiver configures associations in `initialize()` and none loads that
+alias. `contain('Articles')` on Reviews used to navigate to `ArticlesTable`, and invalid dotted
+paths looked valid, although completion already hid the alias and CakePHP rejects the call.
+
+Unknown and unconfigured receivers keep the convention fallback. The property side keeps its own,
+so `$this->Articles` inside `ReviewsTable` still resolves by convention. Associations the index
+cannot see, such as those added by behaviors, lose navigation on a table that configures others;
+`features/ideas.md` records that under behavior support.

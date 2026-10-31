@@ -57,6 +57,11 @@ of the table that attaches it. Today the index cannot see them, so on a table th
 other associations in `initialize()`, query methods neither offer them nor navigate through
 them (`contain()`, `matching()` and friends, see feature 7).
 
+Associations a behavior adds through `$this->_table` should count as configured associations
+of the table that attaches it. Today the index cannot see them, so on a table that configures
+other associations in `initialize()`, query methods neither offer them nor navigate through
+them (`contain()`, `matching()` and friends, see feature 7).
+
 ---
 
 ### 3. Route Controller/Action String Completion
