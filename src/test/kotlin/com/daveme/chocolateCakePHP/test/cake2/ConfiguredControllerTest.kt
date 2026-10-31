@@ -49,8 +49,9 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
-        // The framework's __get() return types are not part of the configured type:
-        return projectClassTypes(fieldReference!!.type.lookupCompleteType(project, null).types)
+        return fieldReference!!.type.lookupCompleteType(project, null).types
+            .filter { it.startsWith("\\") }
+            .toSet()
     }
 
     private fun completions(): List<String> {
@@ -87,11 +88,20 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         assertEquals(setOf("\\MovieMetadataComponent"), fieldTypeAtCaret())
     }
 
-    fun `test an unloaded component gets no type even when its class exists`() {
+    fun `test an unloaded component is null even when its class exists`() {
         withFramework()
         appController()
         configureController("public \$components = array('MovieMetadata');", "\$this->Unlo<caret>aded;")
-        assertEquals(emptySet<String>(), fieldTypeAtCaret())
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
+    }
+
+    fun `test completion on a ruled-out member offers no request methods`() {
+        withFramework()
+        appController()
+        configureController("public \$components = array('MovieMetadata');", "\$this->Unloaded-><caret>")
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings.orEmpty()
+        assertFalse("Unexpected request methods in $result", result.contains("referer"))
     }
 
     fun `test component completion lists only the loaded components`() {
@@ -104,14 +114,14 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         assertFalse(result.contains("Unloaded"))
     }
 
-    fun `test uses entries resolve and other models do not exist`() {
+    fun `test uses entries resolve and other models are null`() {
         withFramework()
         appController()
         configureController("public \$uses = array('Artist');", "\$this->Art<caret>ist;")
         assertEquals(setOf("\\Artist"), fieldTypeAtCaret())
 
         configureController("public \$uses = array('Artist');", "\$this->Mo<caret>vie;")
-        assertEquals(emptySet<String>(), fieldTypeAtCaret())
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
     }
 
     fun `test model completion with uses hides other models`() {
@@ -131,11 +141,11 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         assertEquals(setOf("\\Movie"), fieldTypeAtCaret())
     }
 
-    fun `test uses false has no models`() {
+    fun `test uses false makes every model null`() {
         withFramework()
         appController("public \$uses = array('User');")
         configureController("public \$uses = false;", "\$this->Mo<caret>vie;")
-        assertEquals(emptySet<String>(), fieldTypeAtCaret())
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
     }
 
     fun `test AppController uses are appended`() {
@@ -159,6 +169,16 @@ class ConfiguredControllerTest : Cake2BaseTestCase() {
         withFramework()
         appController()
         configureController("public \$components = array(self::AUTH);", "\$this->Fo<caret>o;")
+        assertEquals(setOf("\\FooComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test known uses with incomplete components leaves the model out of the convention`() {
+        withFramework()
+        appController()
+        configureController(
+            "public \$uses = array('Artist');\npublic \$components = array(self::AUTH);",
+            "\$this->Fo<caret>o;"
+        )
         assertEquals(setOf("\\FooComponent"), fieldTypeAtCaret())
     }
 

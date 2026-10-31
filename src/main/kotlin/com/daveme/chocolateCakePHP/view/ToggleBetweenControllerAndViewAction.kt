@@ -8,7 +8,6 @@ import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
 import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -24,7 +23,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -150,13 +148,10 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
 
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile) ?: return
-        val templateDirVirtualFile = templatesDir.directory
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
+        val viewFile = viewFileOf(project, settings, virtualFile) ?: return
 
         ReadAction.nonBlocking<List<PsiElement>> {
-            val list = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+            val list = directReferencesTo(project, settings, viewFile)
             val acc = ArrayList<PsiElement>(list.size)
             for (p in list) {
                 ProgressManager.checkCanceled()

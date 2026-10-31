@@ -93,9 +93,9 @@ and its effect is limited to the type above. These notes carry over:
 - The walk also passes through `$this->layout` assignments and `render()` calls in view files. No
   assumption test covers a layout named from a template.
 - Track `(ViewFile, pending references)` as visited, and cache `resolvesTo` within a search.
-- The shared helper takes the rendering class's plugin as input, as elements in cell templates are
-  still an open question. That log is `features/2026/10/cell-template-element-plugin.md` on the
-  `cell-template-element-plugin` branch, and isn't on this branch until that one merges.
+- The shared helper takes the rendering class's plugin as input, as the rendering class can be a
+  cell: an unprefixed element in a cell's template follows the cell on CakePHP 3 to 5, as
+  [elements in cell templates](cell-template-element-plugin.md) records.
 
 ## Controller-side helpers
 
@@ -145,3 +145,4 @@ to 5 would be their own change, for navigation.
   heuristics and `defaultLayoutKey`.
 - Rewrote `LayoutHelperTest`, and added `AppControllerHelperTest`, `DirectControllerHelperTest` and
   `FrameworkNotIndexedHelperTest`, with their fixtures isolated through `HelperFixtureTestCase`.
+- Left the full suite to CI, which passed on both the stubs and real CakePHP.

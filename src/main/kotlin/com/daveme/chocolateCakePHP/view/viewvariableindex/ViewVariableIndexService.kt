@@ -2,11 +2,8 @@ package com.daveme.chocolateCakePHP.view.viewvariableindex
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.ControllerPath
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
-import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
-import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
-import com.intellij.openapi.application.ReadAction
+import com.daveme.chocolateCakePHP.view.ViewFile
+import com.daveme.chocolateCakePHP.view.viewFileOf
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.RecursionManager
@@ -14,13 +11,11 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
 import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.FunctionReference
-import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.ParameterList
 import com.jetbrains.php.lang.psi.elements.PhpTypedElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -28,7 +23,7 @@ import com.jetbrains.php.lang.psi.elements.Variable
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 
 // One of three key kinds, see controllerMethodKey(), elementDataKey() and viewSetKey():
-//   Movie:index                                  vars set by a controller action
+//   Movie:index, Blog.Movie:index                vars set by a controller action, of the app or a plugin
 //   element-data:element/Director/filmography    data arrays passed to that element by $this->element() calls
 //   view-set:Movie/film_director                 $this->set() calls made inside that view file
 // The view path part is the ViewFileIndex canonical key (relative to the templates dir, no extension).
@@ -237,11 +232,10 @@ data class RawViewVar(
     /** When [sourceFile] is a view file, the type its own view variable lookup gives [symbolName]. */
     private fun lookupAsViewVariableOfFile(project: Project, sourceFile: PsiFile, symbolName: String): PhpType? {
         val settings = Settings.getInstance(project)
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, sourceFile) ?: return null
-        val path = sourceFile.originalFile.virtualFile?.path ?: return null
-        val key = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, path)
+        val file = sourceFile.originalFile.virtualFile ?: return null
+        val viewFile = viewFileOf(project, settings, file) ?: return null
         return ViewVariableIndexService.lookupVariableTypeFromViewPathInSmartReadAction(
-            project, settings, key, symbolName
+            project, settings, viewFile, symbolName
         )
     }
 
@@ -429,15 +423,23 @@ val VIEW_VARIABLE_INDEX_KEY: ID<ViewVariablesKey, ViewVariablesWithRawVars> =
  * One index key that can contribute variables to a view file. See [ViewVariablesKey] for the
  * three key shapes.
  */
-sealed class ViewVariableSource(val key: ViewVariablesKey) {
-    /** Data arrays passed to the element being looked up by `$this->element()` calls. */
-    class ElementCallData(key: ViewVariablesKey) : ViewVariableSource(key)
+sealed class ViewVariableSource {
+    abstract val key: ViewVariablesKey
 
-    /** `$this->set()` calls in [file] made before the render call at [visibleBefore]. */
-    class ViewSet(key: ViewVariablesKey, val file: VirtualFile, val visibleBefore: Int) : ViewVariableSource(key)
+    /**
+     * The data array passed by the `$this->element()` call at [callOffset] in [file].
+     */
+    data class ElementCallData(override val key: ViewVariablesKey, val file: VirtualFile, val callOffset: Int) : ViewVariableSource()
 
-    /** A controller or cell action reached by walking render / element references backwards. */
-    class ControllerAction(key: ViewVariablesKey) : ViewVariableSource(key)
+    /**
+     * `$this->set()` calls in [file] made before the render call at [visibleBefore].
+     */
+    data class ViewSet(override val key: ViewVariablesKey, val file: VirtualFile, val visibleBefore: Int) : ViewVariableSource()
+
+    /**
+     * A controller or cell action reached by walking render / element references backwards.
+     */
+    data class ControllerAction(override val key: ViewVariablesKey) : ViewVariableSource()
 }
 
 object ViewVariableIndexService {
@@ -506,124 +508,35 @@ object ViewVariableIndexService {
     private fun concreteEntries(rawVar: RawViewVar, sourceFile: PsiFile?): List<RawViewVar> =
         if (rawVar.varKind in DYNAMIC_KINDS) expandDynamicEntry(rawVar, sourceFile) else listOf(rawVar)
 
-    private fun controllerKeyFromElementAndPath(
-        elementAndPath: PsiElementAndPath
-    ): String? {
-        val methodName = actionNameFromElementAndPath(elementAndPath) ?: return null
-        val controllerPath = elementAndPath.controllerPath ?: return null
-        return controllerMethodKey(controllerPath, methodName)
-    }
-
-    private fun actionNameFromElementAndPath(
-        elementAndPath: PsiElementAndPath
-    ): String? {
-        val psiElement = elementAndPath.psiElement ?: return null
-        val element = if (psiElement is Method)
-            psiElement
-        else
-            PsiTreeUtil.getParentOfType(psiElement, Method::class.java)
-        if (element == null || !element.isValid) {
-            return null
-        }
-        return element.name
-    }
-
     /**
-     * Visit every source that can contribute variables to the view file [filenameKey]:
-     *
-     *   1. ElementCallData(filenameKey) — data passed directly to this element. Only for the
-     *      original key: CakePHP hands `$data` to the named element alone (it renders with
-     *      `array_merge($this->viewVars, $data)`), so it does not flow into nested elements.
-     *   2. Walking the ViewFileIndex backwards (bounded breadth-first search): ViewSet for every
-     *      `element()` or `render()` call in a view file that renders this one, because
-     *      `viewVars` is shared downwards, and ControllerAction(key) for every controller action
-     *      reached. Each call is a separate ViewSet: only the `set()` calls before it, in its own
-     *      file, reach what it renders.
-     *
-     * The file's own `set()` calls are not a source: its local variables are extracted before
-     * it runs, so they reach only what it renders.
-     *
-     * Each reference is visited once and each ancestor file is expanded once, so the lookup
-     * budget does not multiply with repeated render calls. [process] returns false to stop early.
+     * Visit every source that can contribute variables to [viewFile]: for every `element()` or
+     * `render()` call in a view file that renders it, the `set()` calls before that call, and
+     * for a direct call the data it passes; and every controller or cell action that renders it.
+     * [process] returns false to stop early. See [ContributingSourceWalk].
      */
     private fun forEachContributingSource(
         project: Project,
         settings: Settings,
-        filenameKey: String,
+        viewFile: ViewFile,
         process: (ViewVariableSource) -> Boolean
     ) {
-        if (!process(ViewVariableSource.ElementCallData(elementDataKey(filenameKey)))) return
-
-        val toProcess = mutableListOf<PsiElementAndPath>()
-        val seenReferences = mutableSetOf<Pair<String, Int>>() // (file path, offset)
-        val expandedPaths = mutableSetOf<String>()
-        fun enqueueReferencesTo(viewKey: String) {
-            for (next in ViewFileIndexService.referencingElementsInSmartReadAction(project, viewKey)) {
-                // A cell template renders in its own view, so its callers' variables do not reach it
-                if (next.elementType == ElementType.CELL_RENDER) {
-                    continue
-                }
-                if (seenReferences.add(next.path to next.offset)) {
-                    toProcess.add(next)
-                }
-            }
-        }
-        enqueueReferencesTo(filenameKey)
-        var maxLookups = 15
-
-        while (toProcess.isNotEmpty()) {
-            if (maxLookups == 0) {
-                break
-            }
-            maxLookups -= 1
-            val elementAndPath = toProcess.removeAt(0)
-
-            if (elementAndPath.nameWithoutExtension.isAnyControllerClass()) {
-                val controllerKey = controllerKeyFromElementAndPath(elementAndPath) ?: continue
-                if (!process(ViewVariableSource.ControllerAction(controllerKey))) return
-                continue
-            }
-            val cellName = elementAndPath.cellName
-            if (settings.cake3Enabled && cellName != null) {
-                val methodName = actionNameFromElementAndPath(elementAndPath) ?: continue
-                if (!process(ViewVariableSource.ControllerAction(cellActionKey(cellName, methodName)))) return
-                continue
-            }
-
-            // A template or element that renders the current file: it contributes its own
-            // set() calls, and whatever renders it contributes in turn
-            val containingFile = ReadAction.compute<PsiFile?, Nothing> {
-                elementAndPath.psiElement?.containingFile
-            } ?: continue
-            val templatesDir = templatesDirectoryOfViewFile(project, settings, containingFile) ?: continue
-            val ancestorKey = ViewFileIndexService.canonicalizeFilenameToKey(
-                templatesDir,
-                settings,
-                elementAndPath.path
-            )
-            val ancestorFile = containingFile.virtualFile
-            if (ancestorKey != filenameKey && ancestorFile != null) {
-                val source = ViewVariableSource.ViewSet(viewSetKey(ancestorKey), ancestorFile, elementAndPath.offset)
-                if (!process(source)) return
-            }
-            if (expandedPaths.add(elementAndPath.path)) {
-                enqueueReferencesTo(ancestorKey)
-            }
+        for (source in ContributingSourceWalk(project, settings, viewFile).sources()) {
+            if (!process(source)) return
         }
     }
 
     fun lookupVariableTypeFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
-        filenameKey: String,
+        viewFile: ViewFile,
         variableName: String,
     ): PhpType {
         // Resolving a passed value may re-enter here for the calling template (see
         // RawViewVar.resolveLocalVariableType). Two elements passing each other's variables
         // would otherwise recurse without end; the inner frame yields no type instead.
-        return RecursionManager.doPreventingRecursion(Pair(filenameKey, variableName), false) {
+        return RecursionManager.doPreventingRecursion(Pair(viewFile, variableName), false) {
             val result = PhpType()
-            forEachContributingSource(project, settings, filenameKey) { source ->
+            forEachContributingSource(project, settings, viewFile) { source ->
                 lookupVariableTypeByKey(project, source, variableName)?.let { result.add(it) }
                 true
             }
@@ -650,20 +563,20 @@ object ViewVariableIndexService {
      * The records [source] contributes. Finish index access before loading PSI, expanding
      * arguments, or resolving types.
      *
-     * Element-data keys carry no plugin prefix, so they are limited to project scope
-     * like the reverse walk that finds the rendering templates. A view-set source reads only
-     * its own file, since other files can share its canonical key.
+     * A view-set or element-data source reads only its own file, since other files can share
+     * its canonical key.
      */
     private fun lookupRawVars(
         project: Project,
         source: ViewVariableSource,
     ): List<Pair<VirtualFile, ViewVariablesWithRawVars>> {
         val result = mutableListOf<Pair<VirtualFile, ViewVariablesWithRawVars>>()
-        val scope = if (source is ViewVariableSource.ElementCallData)
-            GlobalSearchScope.projectScope(project)
-        else
-            GlobalSearchScope.allScope(project)
-        val inFile = (source as? ViewVariableSource.ViewSet)?.file
+        val scope = GlobalSearchScope.allScope(project)
+        val inFile = when (source) {
+            is ViewVariableSource.ViewSet -> source.file
+            is ViewVariableSource.ElementCallData -> source.file
+            is ViewVariableSource.ControllerAction -> null
+        }
         FileBasedIndex.getInstance().processValues(VIEW_VARIABLE_INDEX_KEY, source.key, inFile,
             { file, records ->
                 result.add(file to records)
@@ -672,6 +585,11 @@ object ViewVariableIndexService {
         if (source is ViewVariableSource.ViewSet) {
             return result.map { (file, records) ->
                 file to ViewVariablesWithRawVars(records.calls.filterTo(mutableListOf()) { it.offset < source.visibleBefore })
+            }
+        }
+        if (source is ViewVariableSource.ElementCallData) {
+            return result.map { (file, records) ->
+                file to ViewVariablesWithRawVars(records.calls.filterTo(mutableListOf()) { it.offset == source.callOffset })
             }
         }
         return result.sortedBy { it.first.path }
@@ -692,7 +610,7 @@ object ViewVariableIndexService {
     }
 
     /**
-     * Every variable available in the view file [filenameKey], with its resolved type.
+     * Every variable available in [viewFile], with its resolved type.
      *
      * Sources are alternatives: a `set()` in another file or passed element data may not apply
      * on every render, so a variable's type is the union over every source that sets it, like
@@ -702,10 +620,10 @@ object ViewVariableIndexService {
     fun lookupVariablesFromViewPathInSmartReadAction(
         project: Project,
         settings: Settings,
-        filenameKey: String,
+        viewFile: ViewFile,
     ): ViewVariables {
         val result = ViewVariables()
-        forEachContributingSource(project, settings, filenameKey) { source ->
+        forEachContributingSource(project, settings, viewFile) { source ->
             lookupRawVars(project, source).forEach { (file, records) ->
                 val sourcePsiFile = PsiManager.getInstance(project).findFile(file)
                 sourceEntries(records, sourcePsiFile, source is ViewVariableSource.ElementCallData).forEach { entry ->
@@ -732,11 +650,11 @@ object ViewVariableIndexService {
     fun variableExistsInViewPath(
         project: Project,
         settings: Settings,
-        filenameKey: String,
+        viewFile: ViewFile,
         variableName: String
     ): Boolean {
         var found = false
-        forEachContributingSource(project, settings, filenameKey) { source ->
+        forEachContributingSource(project, settings, viewFile) { source ->
             if (variableExistsInSource(project, source, variableName)) {
                 found = true
             }
@@ -928,20 +846,22 @@ object ViewVariableIndexService {
 
 fun controllerMethodKey(
     controllerPath: ControllerPath,
-    methodName: String
+    methodName: String,
+    plugin: String? = null
 ): ViewVariablesKey {
-    return if (controllerPath.prefix.isEmpty()) {
+    val key = if (controllerPath.prefix.isEmpty()) {
         "${controllerPath.name}:${methodName}"
     } else {
         "${controllerPath.prefix}:${controllerPath.name}:${methodName}"
     }
+    return if (plugin == null) key else "$plugin.$key"
 }
 
 private const val CELL_ACTION_KEY_PREFIX = "cell:"
 
 /** Key under which the `$this->set()` calls of a cell action are indexed. */
-fun cellActionKey(cellName: String, methodName: String): ViewVariablesKey =
-    "${CELL_ACTION_KEY_PREFIX}${cellName}:${methodName}"
+fun cellActionKey(cellName: String, methodName: String, plugin: String? = null): ViewVariablesKey =
+    "${CELL_ACTION_KEY_PREFIX}${plugin?.let { "$it." }.orEmpty()}${cellName}:${methodName}"
 
 private const val ELEMENT_DATA_KEY_PREFIX = "element-data:"
 private const val VIEW_SET_KEY_PREFIX = "view-set:"

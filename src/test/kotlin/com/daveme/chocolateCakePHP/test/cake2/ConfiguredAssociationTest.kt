@@ -77,8 +77,9 @@ class ConfiguredAssociationTest : Cake2BaseTestCase() {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
-        // The framework's __get() return types are not part of the configured type:
-        return projectClassTypes(fieldReference!!.type.lookupCompleteType(project, null).types)
+        return fieldReference!!.type.lookupCompleteType(project, null).types
+            .filter { it.startsWith("\\") }
+            .toSet()
     }
 
     private fun completions(): List<String> {
@@ -154,6 +155,43 @@ class ConfiguredAssociationTest : Cake2BaseTestCase() {
     fun `test a chain resolves each link against the aliased class`() {
         configureController("", "\$this->Movie->Director->Stu<caret>dio;")
         assertEquals(setOf("\\Company"), fieldTypeAtCaret())
+    }
+
+    // In a parent class, the method's return type only reaches the field as a chained signature:
+    private fun configureControllerWithFilmMethod(returnType: String) {
+        myFixture.addFileToProject("app/Controller/FilmsBaseController.php", """
+            <?php
+            class FilmsBaseController extends AppController {
+                /** @return $returnType */
+                public function film() {}
+            }
+        """.trimIndent())
+        myFixture.configureByText("MoviesController.php", """
+            <?php
+            class MoviesController extends FilmsBaseController {
+                public function index() {
+                    ${'$'}this->film()->Direc<caret>tor;
+                }
+            }
+        """.trimIndent())
+    }
+
+    fun `test receivers that are all models union their types`() {
+        configureControllerWithFilmMethod("Movie|Remake")
+        assertEquals(setOf("\\Person", "\\Director"), fieldTypeAtCaret())
+    }
+
+    fun `test a receiver that is also another class keeps that class's field type`() {
+        myFixture.addFileToProject("app/Lib/Plain.php", """
+            <?php
+            class Plain {
+                /** @var Review */
+                public ${'$'}Director;
+            }
+        """.trimIndent())
+        configureControllerWithFilmMethod("Movie|Plain")
+        val types = fieldTypeAtCaret()
+        assertTrue("Expected \\Review in $types", types.contains("\\Review"))
     }
 
     fun `test a model the controller does not load has no nested type or completion`() {

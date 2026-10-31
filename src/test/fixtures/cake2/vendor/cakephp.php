@@ -19,7 +19,11 @@ class Controller {
 
     public $layout = 'default';
 
-    public function __get() {}
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    public function __get($name) {}
 
     public function set($keyOrArray, $value = null) {}
 }
@@ -33,6 +37,12 @@ class Model {
     public $hasMany = array();
 
     public $hasAndBelongsToMany = array();
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    public function __get($name) {}
 
     /**
      * @param string $type
@@ -59,11 +69,23 @@ class Component {
 class View {
 
     public $helpers = array();
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    public function __get($name) {}
 }
 
 class Helper {
 
     public $helpers = array();
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    public function __get($name) {}
 }
 
 class ClassRegistry {

@@ -2,14 +2,11 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.isCakeViewFile
-import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.navigation.CakeGotoRelatedItem
 import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.navigation.GotoRelatedProvider
 import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.Method
@@ -43,22 +40,11 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
         }
 
         val virtualFile = file.virtualFile ?: return emptyList()
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, file)
+        val viewFile = viewFileOf(project, settings, virtualFile)
             ?: return emptyList()
-
-        val templateDirVirtualFile = templatesDir.directory
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile)
-            ?: return emptyList()
-
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-            templatesDir,
-            settings,
-            relativePath
-        )
 
         // Get all controller references to this view file
-        val referencingElements = ViewFileIndexService
-            .referencingElementsInSmartReadAction(project, filenameKey)
+        val referencingElements = directReferencesTo(project, settings, viewFile)
 
         // Convert to GotoRelatedItems
         return referencingElements.mapNotNull { elementAndPath ->
