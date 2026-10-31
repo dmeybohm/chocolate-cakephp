@@ -261,9 +261,16 @@ chain with `InitializeChainResolver`, kinds `{BEHAVIOR}`, so an `initialize()` l
 ancestor's load of the same alias and a load elsewhere is unioned, exactly as for components.
 Each result carries the alias, the resolved `PhpClass` list, the load (for its options and
 offset), and whether it is an initialize load. Class resolution adds the `BEHAVIOR` case to
-`resolveLoad()` and `conventionCandidates()`: the app namespace's `Model\Behavior\{N}Behavior`,
-each plugin's, and `\Cake\ORM\Behavior\{N}Behavior`, in that order, filtered to existing classes
-as today; on CakePHP 2, `\{N}Behavior`. A plugin-dotted name resolves only under that plugin.
+`resolveLoad()`, with a rule of its own rather than `conventionCandidates()`: a bare name is the
+*first existing* class of the app namespace's `Model\Behavior\{N}Behavior` and then
+`\Cake\ORM\Behavior\{N}Behavior`, and nothing when neither exists. That is `App::className()`,
+which `testBareNameLoadsAppBehaviorBeforeCore` pins: the app class shadows the core one of the
+same name, so an app `TimestampBehavior` must not show the core behavior's methods beside its
+own. The configured plugins are not candidates for a bare name, even from a plugin's own table
+(`testBareNameDoesNotReachPluginBehavior`); a plugin-dotted name resolves only under that plugin,
+and a `className` option follows the same first-match rule for its plain name. On CakePHP 2 the
+class is the global `\{N}Behavior` whatever the prefix. The convention helper keeps returning
+every candidate for the other kinds, where `$this->Foo` genuinely can be any of them.
 
 `BehaviorMembers` (new, in a `behavior` package) computes the method and finder maps of one
 behavior class the way `_reflectionCache()` does, then applies the load's options the way
@@ -360,15 +367,25 @@ earlier lack `getBehavior()`, and 3.10.5 is what the suite attaches.
 
 ### 7. Associations added by behaviors
 
-`ConfiguredMemberService.resolveChain()` for a table chain gains the behaviors' association
-loads: for each class in the chain, resolve its `BEHAVIOR` loads with the rule above, and for
-each attached behavior class, read the chain of that class for `ASSOCIATION` loads flagged
-`viaTable`, inserted into the configuration list at the position of the attaching table class.
-A behavior's load in its own `initialize()` is an initialize load when the `addBehavior()` is
-one, and an other load otherwise, since the behavior's `initialize()` runs when the behavior is
-attached. Everything downstream (`$this->Photos->Tags`, `contain('Tags')`, `associationLoads()`
-and so the entity property `$photo->tags`) follows without change, because all of it reads the
-chain through the service.
+Two paths in `ConfiguredMemberService` read a table chain's association loads today, and both
+must see the behaviors' loads: `resolveChain()`, behind `memberType()` and `loadedMembers()`
+(so `$this->Photos->Tags`, `contain('Tags')` and the query-method navigation), and
+`associationLoads()`, which walks `classChain()` and reads the index on its own with its own
+nearest-initialize rule, and which `EntityAssociations.propertiesOf()` uses for `$photo->tags`.
+Extending only the first would leave the entity property untyped.
+
+So the step first pulls the chain reading into one private function, `chainConfigurations()`,
+that returns the per-class `ClassConfiguration` list for a chain, and makes both paths use it.
+It then adds the behaviors' loads there: for each class in the chain, resolve its `BEHAVIOR`
+loads with the rule above, and for each attached behavior class, read the chain of that class
+for `ASSOCIATION` loads flagged `viaTable`, inserted into the configuration list at the position
+of the attaching table class. A behavior's load in its own `initialize()` is an initialize load
+when the `addBehavior()` is one, and an other load otherwise, since the behavior's `initialize()`
+runs when the behavior is attached. `associationLoads()` reports the attaching table class as
+the class that configures such a load, since that is the file a `TableAssociationLoad` consumer
+navigates to; the behavior's own offset stays on the `MemberLoad`. With both paths on one
+reader, test 15 covers the association property, the association field and `contain()` from
+the same fixture.
 
 ### 8. CakePHP 2
 
@@ -417,7 +434,10 @@ Under `cake5/src5/Model/Behavior/` (new directory), then the cake4 and cake3 cop
 Tables, under `cake5/src5/Model/Table/`, leaving `MoviesTable`, `UsersTable` and the entity
 feature's tables untouched since their tests assert exact lists:
 
+- `CounterCacheBehavior` with `public function counted(): string`: an app behavior named like
+  the core one, so first-match resolution has something to choose between.
 - `PagesTable`: `initialize()` calls `addBehavior('Timestamp')`, `addBehavior('Sluggable')`,
+  `addBehavior('CounterCache')`,
   `addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']])` and declares its
   own `public function findSlugged(...)` and `public function touch(...)`, so `slugged` and
   `touch` are the table's, `slug`, `trail`, `timestamp` and the `audited` finder are mixed in,
@@ -458,8 +478,9 @@ Finders, with `$this->Pages` in a controller unless stated:
 
 Methods:
 
-5. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `recover`, `moveUp` and the
-   rest of `Tree`'s map, not `audit`, not `notMixedIn`, not `writeAudit` under its own name, not
+5. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `counted`, `recover`, `moveUp`
+   and the rest of `Tree`'s map, not `audit`, not `notMixedIn`, not `writeAudit` under its own
+   name, not `updateCounterCache` (the app `CounterCacheBehavior` shadows the core one), not
    `touch` from the behavior (the table's own `touch` is PhpStorm's), not `_normalize`, not
    `beforeSave`, not `getConfig`.
 6. `$this->PluginPages-><caret>` offers `pluginSlug` and `slug` from the plugin class and no
@@ -482,8 +503,9 @@ Instance:
 
 12. `$this->Pages->getBehavior('Sluggable')->` completes `slug` and `findSlugged` and the type
     is exactly `\App\Model\Behavior\SluggableBehavior`; `getBehavior('Timestamp')` is exactly
-    `\Cake\ORM\Behavior\TimestampBehavior`; `$this->PluginPages->getBehavior('Sluggable')` is the
-    plugin class.
+    `\Cake\ORM\Behavior\TimestampBehavior`; `getBehavior('CounterCache')` is exactly the app
+    class and not the core one; `$this->PluginPages->getBehavior('Sluggable')` is the plugin
+    class.
 13. `getBehavior('<caret>')` offers `Timestamp`, `Sluggable`, `Audit` and `Tree`; so do
     `hasBehavior()` and `removeBehavior()`. Goto declaration on the string reaches the class.
 14. `addBehavior('<caret>')` in a table offers the `*Behavior` subclasses by short name, and
@@ -555,6 +577,10 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
   too; completion offers the alias as written in the map.
 - **Behaviors attached outside `initialize()` are unioned**, following the configured-member
   rule. For behaviors there is no convention list to fall back to, so the union only adds.
+- **A behavior name resolves to one class, first match**, unlike the other kinds, because the
+  framework loads one class and the plugin has the assumption test to say which. Returning
+  every existing candidate would show an app behavior's methods beside the core behavior's it
+  shadows.
 
 ## Open questions
 
@@ -631,4 +657,10 @@ throwaway probe test on the Cake 5 fixtures, not kept):
   `$this->Movies->touch()`, whose receiver type comes from a provider. So scope item 4's
   suppressor stays, keyed on that description, and test 11 should use a typed parameter and
   `$this` inside a table as its receivers, since the `$this->Movies` form is silent either way.
+
+**Review of the plan** (after step 2): two gaps were found and folded into the sections above.
+Behavior class resolution is first match of app then core, not every existing candidate, with
+no plugin candidates for a bare name; and step 7 must extend `associationLoads()` as well as
+`resolveChain()`, since the entity association properties read the chain through the former,
+so both now share one chain reader.
 
