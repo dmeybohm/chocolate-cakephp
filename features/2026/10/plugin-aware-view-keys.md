@@ -296,3 +296,37 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   assumption test covers yet.
 
 ## Implementation Progress
+
+### Session #1
+
+All six plan steps are implemented, with CakePHP 2 included since it only needed the key change.
+`ViewFile` and `viewFileOf` moved to `ViewFile.kt`, next to `ViewFileResolution`, which holds the
+plugin rule. The plugin lookups for both version families are in `cake/CakePlugins.kt`. The walk
+moved to `ContributingSourceWalk`.
+
+Decisions the plan left open:
+
+- **`pluginOf` on CakePHP 3+** also takes `plugins/<Name>/` by convention, as `cakeTwoPluginName`
+  does, so an unconfigured plugin in the default location works. Configured paths match as path
+  suffixes, as they are relative to an app root that may be nested in the project.
+- **The walk defers what a hop contributes.** A `set()` or element data on a path through an
+  unprefixed hop only counts if a class on that path accepts the hop, so the walk builds its nodes,
+  `(file, pending files)`, within the budget and collects the sources afterwards.
+- **A file nothing renders decides by its own plugin.** Without this, data passed from a template
+  with no known controller would be lost. CakePHP 3+ layouts have no references, so an element in
+  one is also decided this way, even though a plugin controller may render that layout.
+- **Past the budget**, direct calls still give their element data, decided by the calling file's
+  plugin, since the up-front read this replaces had no budget. View sets and actions stay in budget.
+- **`cellDirNameFromSourceFile`** now also looks in `src/Template`. A CakePHP 3 plugin cell with no
+  template directory otherwise got `cell/` rather than `Cell/`, which missed the fallback.
+
+Known limitations:
+
+- The variable keys depend on the configured plugins, and changing the plugin settings doesn't
+  rebuild the indexes. A plugin configured after indexing, outside `plugins/`, loses its action
+  variables until the next reindex.
+- With both CakePHP 2 and 3+ enabled, a CakePHP 2 plugin controller is keyed as the app's, as
+  `ofSourceFile` takes it for CakePHP 3+. The plugin rule still sees its plugin.
+- A plugin named with a slash isn't recognized in the override directory.
+- An element reference is only indexed when the calling file's templates directory has an element
+  directory. This predates this work.
