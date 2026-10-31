@@ -78,8 +78,8 @@ index, so the walk finds no controllers and falls back to `AppView` alone, and
 
 ### 3. Incomplete `$helpers` declarations
 
-`readLoadArray()` skips entries it cannot read, such as `protected $helpers = [self::X]` on a
-helper. The helper then counts as having an initialize load of `HELPER`, so
+`LoadReader.readArray()` in `ConfiguredMemberDataIndexer` skips entries it cannot read, such as
+`protected $helpers = [self::X]` on a helper. The helper then counts as having an initialize load of `HELPER`, so
 `ViewHelperInViewHelperCompletionContributor` hides the convention list without knowing what the
 helper loads. The CakePHP 2 feature records the two cases separately, both read in
 `CakeTwoChainResolver`:
@@ -168,9 +168,11 @@ fix. All three are merged.
    and in an element only that template includes, without other controllers' aliases; any layout,
    and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
    keeps its alias in layouts; a cell template and its elements don't get the helpers of the
-   controller rendering the template that calls `cell()`; an `AppView` helper still resolves everywhere; an incomplete
-   `$helpers` on a helper keeps convention completion. Then Cake 4 and 3, including the deprecated
-   property.
+   controller rendering the template that calls `cell()`; an `AppView` helper still resolves
+   everywhere; an incomplete `$helpers` on a helper keeps convention completion; an
+   `addHelper('Foo', ['className' => $x])` with a non-literal class neither types `$this->Foo` as
+   a class it can't name nor hides `FooHelper` by convention. Then Cake 4 and 3, including the
+   deprecated property.
 6. Run the full suite.
 
 ## Open questions
