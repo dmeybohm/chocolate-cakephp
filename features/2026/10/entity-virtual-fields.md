@@ -165,10 +165,16 @@ bytecode first. The outcome decides the shape:
 5. **Find the getter.** Build the accessor table for the class the way `_accessor()` does:
    walk the class, its traits and its parents up to but excluding `Cake\ORM\Entity`, take every
    public or protected method named `_get…` or `_set…`, and key it under the three spellings.
-   A private method is taken only when its declaring class uses `EntityTrait` directly, which
-   matches the scope rule above. The 5.x case where such a class has no accessors of its own
-   is not modelled: an app entity that uses the trait directly rather than extending
-   `Cake\ORM\Entity` is rare, and over-reporting its own accessors is the lesser error. The table is per class and cached on
+   Private methods follow the scope rule above, which has two cases:
+   - On a subclass of a class that uses `EntityTrait` directly, a private `_get…` declared on
+     that trait-using parent is taken, because the inherited `_accessor()` runs in the
+     parent's scope. The subclass's own private methods are not.
+   - On the trait-using class itself, its own private methods are taken. This is right on 3.x
+     and 4.x. On 5.x the class has no accessors at all, private or otherwise, and the plugin
+     does not model that: an app entity that uses the trait directly rather than extending
+     `Cake\ORM\Entity` is rare, and over-reporting its own accessors is the lesser error.
+   On an entity that extends `Cake\ORM\Entity`, which is every ordinary entity, no private
+   method is taken. `EntityAccessorTest` pins each case. The table is per class and cached on
    `PhpFilesModificationTracker`, the project's tracker for PHP changes. Nearest declaration
    wins, as `get_class_methods()` reports the overriding method.
 6. **Answer with the getter's type.** The declared or `@return` type when there is one, else
