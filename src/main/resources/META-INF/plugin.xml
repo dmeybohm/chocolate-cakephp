@@ -41,6 +41,7 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.CustomFinderCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.ContainCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.CellCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.entity.EntityVirtualFieldCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.CellGotoDeclarationHandler" />
@@ -52,6 +53,7 @@
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerFieldGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerComponentsGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.entity.EntityVirtualFieldGotoDeclarationHandler" />
 
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker" />
         <gotoRelatedProvider implementation="com.daveme.chocolateCakePHP.view.ViewToControllerGotoRelatedProvider" />
@@ -62,6 +64,7 @@
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberIndex" />
 
         <lang.inspectionSuppressor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.UndefinedViewVariableInspectionSuppressor" />
+        <lang.inspectionSuppressor language="PHP" implementationClass="com.daveme.chocolateCakePHP.entity.EntityVirtualFieldInspectionSuppressor" />
 
     </extensions>
 

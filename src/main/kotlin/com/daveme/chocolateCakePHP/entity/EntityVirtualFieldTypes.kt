@@ -59,7 +59,7 @@ object EntityVirtualFieldTypes {
                 return null
             }
             val getter = EntityAccessors.tableOf(project, entity).getter(entity, fieldName) ?: return null
-            result.add(getterType(getter).lookupCompleteType(project, phpIndex, null))
+            result.add(getterType(project, phpIndex, getter))
         }
         return result.takeUnless { it.isEmpty }
     }
@@ -81,11 +81,14 @@ object EntityVirtualFieldTypes {
             PhpType().add(UNRESOLVABLE_SIGNATURE)
     }
 
-    private fun getterType(getter: Method): PhpType {
+    /**
+     * The type of the field a getter backs: its stated return type, or else the inferred one.
+     */
+    fun getterType(project: Project, phpIndex: PhpIndex, getter: Method): PhpType {
         val stated = PhpType()
         getter.returnType?.let { stated.add(it.type) }
         getter.docComment?.returnTag?.let { stated.add(it.type) }
-        return if (stated.isEmpty) getter.type else stated
+        return (if (stated.isEmpty) getter.type else stated).lookupCompleteType(project, phpIndex, null)
     }
 
     private fun parseFieldSignature(expression: String): Pair<String, String>? {

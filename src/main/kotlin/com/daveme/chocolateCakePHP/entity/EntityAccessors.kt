@@ -2,12 +2,14 @@ package com.daveme.chocolateCakePHP.entity
 
 import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.camelCaseToUnderscore
+import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.jetbrains.php.PhpIndex
+import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import java.util.concurrent.ConcurrentHashMap
@@ -65,16 +67,26 @@ object EntityAccessors {
      */
     fun entityClasses(phpIndex: PhpIndex, classNames: Collection<String>): List<PhpClass>? {
         val specific = classNames.filterNot { isFrameworkEntityType(it) }
-        val result = mutableListOf<PhpClass>()
-        for (each in specific) {
-            val phpClass = phpIndex.getClassesByFQN(each).firstOrNull() ?: return null
-            if (!isEntityClass(phpClass)) {
-                return null
-            }
-            result.add(phpClass)
-        }
-        return result
+        val result = specific.mapNotNull { entityClass(phpIndex, it) }
+        return result.takeIf { it.size == specific.size }
     }
+
+    /**
+     * The entity classes among the types of a field reference's receiver, ignoring any other class.
+     */
+    fun entitiesOfReceiver(phpIndex: PhpIndex, fieldReference: FieldReference): List<PhpClass> {
+        val project = fieldReference.project
+        val receiverTypes = fieldReference.classReference?.type
+            ?.lookupCompleteType(project, phpIndex, null)
+            ?.types
+            .orEmpty()
+        return receiverTypes
+            .filter { it.startsWith("\\") && !isFrameworkEntityType(it) }
+            .mapNotNull { entityClass(phpIndex, it) }
+    }
+
+    private fun entityClass(phpIndex: PhpIndex, fqn: String): PhpClass? =
+        phpIndex.getClassesByFQN(fqn).firstOrNull()?.takeIf { isEntityClass(it) }
 
     private fun classChain(phpClass: PhpClass): Sequence<PhpClass> {
         val visited = mutableSetOf<String>()
