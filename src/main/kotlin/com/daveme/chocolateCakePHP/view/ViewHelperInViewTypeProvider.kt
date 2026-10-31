@@ -29,7 +29,7 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         val signature = expression.substringOrNull(2) ?: return null
         val settings = Settings.getInstance(project)
         if (signature.firstOrNull() == VIEW_FILE_MARKER) {
-            val viewFile = ViewHelperReceivers.decode(signature.substring(1).substringBeforeLast(key), key)
+            val viewFile = ViewFile.decode(signature.substring(1).substringBeforeLast(key), key)
                 ?: return null
             val fieldName = signature.substringAfterLast(key, "").ifEmpty { return null }
             // A view loads any helper by name, so one its receivers do not load keeps its convention type:
@@ -62,11 +62,11 @@ class ViewHelperInViewTypeProvider : PhpTypeProvider4 {
         // A view's helpers can depend on what renders it, so the signature carries the view
         // file for complete() to find its receivers:
         val viewFile = psiElement.containingFile.originalFile.virtualFile?.let {
-            ViewHelperReceivers.viewFileOf(psiElement.project, settings, it)
+            viewFileOf(psiElement.project, settings, it)
         }
         if (viewFile != null) {
             return PhpType().add(
-                "#" + getKey() + VIEW_FILE_MARKER + ViewHelperReceivers.encode(viewFile, getKey()) +
+                "#" + getKey() + VIEW_FILE_MARKER + viewFile.encode(getKey()) +
                         getKey() + fieldReferenceName
             )
         }

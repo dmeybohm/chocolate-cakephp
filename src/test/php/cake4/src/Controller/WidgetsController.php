@@ -8,6 +8,11 @@ namespace App\Controller;
  */
 class WidgetsController extends AppController
 {
+    public function templatelayout(): void
+    {
+        $this->viewBuilder()->enableAutoLayout(true);
+    }
+
     public function unprefixed(): void
     {
         $this->render('only_in_plugin');

@@ -64,4 +64,8 @@ class TemplateResolutionTest extends ControllerTestCase {
 	public function testAppOverrideWinsForRenderOfOtherPlugin() {
 		$this->assertSame('override:Things/overridden_other', $this->renderedBy('/probe/things/crossoverride'));
 	}
+
+	public function testLayoutNamedFromTemplateWraps() {
+		$this->assertSame('layout:app:Widgets/templatelayout', $this->renderedBy('/widgets/templatelayout'));
+	}
 }
