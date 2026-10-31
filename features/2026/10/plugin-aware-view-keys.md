@@ -101,6 +101,15 @@ failure. It checks `reference.pluginPrefix ?: including.plugin` at each hop, on 
 `Blog` controller rendering an app template by fallback is not found as rendering `Blog`'s element
 from that template, and is found as rendering the app's element it does not use.
 
+#305 changes how `RenderingControllers` treats layouts: any layout gets all controllers, and its walk
+stops there. So when moving it to the shared helper:
+
+- Carried references filter that union. `Blog`'s `shared` element reached through a layout gets only
+  `Blog`'s controllers, and the app's gets all controllers except `Blog`'s. The union for the layout
+  itself stays unfiltered.
+- Share only the plugin rule, not the walk. `forEachContributingSource` doesn't stop at layouts, and
+  shouldn't for variables.
+
 ### `cell()` names do not follow the calling file
 
 Templates and elements look in the calling file's plugin first. Cell classes do not: an unprefixed
@@ -171,5 +180,11 @@ different variable, plus an app and a plugin cell of the same name. For each pai
   never to the calling plugin's.
 - An element in an app template that a plugin controller renders by fallback gets the plugin
   controller's variables through the plugin's element, not through the app's element of that name.
+- On CakePHP 2, an element reached through a layout: the plugin's element gets only the plugin's
+  controllers, and the app's element of that name gets all controllers except the plugin's.
+- A prefixed hop keeps the references already carried: in `element('Blog.a')` where `a` calls
+  `element('b')`, `b` follows the controller's plugin.
+- An assumption test for a layout named from a template, which the walk passes through and no
+  assumption test covers yet.
 
 ## Implementation Progress
