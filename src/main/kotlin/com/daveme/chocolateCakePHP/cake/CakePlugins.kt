@@ -6,7 +6,7 @@ import com.daveme.chocolateCakePHP.effectivePluginName
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 
-private val cakeTwoPluginDirectoryNames = setOf("Plugin", "plugins")
+internal val cakeTwoPluginDirectoryNames = setOf("Plugin", "plugins")
 
 /**
  * The CakePHP 2 plugin [file] belongs to, from its path: a directory under a `Plugin` or

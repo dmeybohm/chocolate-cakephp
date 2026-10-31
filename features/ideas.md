@@ -156,9 +156,79 @@ and warning suppression.
 
 ---
 
+### 7. Suppress Undefined Variable Warnings Only When Every Source Sets the Variable
+
+**What it does:** Change `UndefinedViewVariableInspectionSuppressor` to suppress a warning for
+`$var` in a view file only when every source that renders the file sets it, instead of when any
+source does.
+
+**Why it matters:** A template rendered by two actions, or an element included from several
+templates, is offered the union of their variables today, and the suppressor hides the warning
+for a variable only one of them sets. That is the case the inspection exists to catch. Completion
+can keep showing the union, with a weaker presentation for variables not set everywhere.
+
+**CakePHP APIs involved:**
+- `Controller::set()` in actions, `beforeRender()` and the methods they call
+- `View::set()` in templates and `$this->element('name', [...])` data
+
+**Implementation notes:** `ContributingSourceWalk` already returns the sources of a view file;
+the suppressor needs the per-source variable sets rather than their union. Decide what a source
+with no readable `set()` calls means for the intersection, and whether a file no controller
+renders keeps today's behavior. The result is only as complete as the sources, which idea 9
+improves.
+
+---
+
+### 8. Variables a Layout Inherits From the Actions That Render It
+
+**What it does:** Offer in a layout the variables set on every path that renders it, and in its
+elements, instead of isolating layouts from controller variables.
+
+**Why it matters:** CakePHP passes the view variables to the layout, so a variable set in
+`AppController::beforeRender()` or in every action is genuinely available there. Layouts are
+isolated today because the view file index only has the explicit references to a layout
+(`setLayout()`, `$this->layout`, `render()`'s second argument), which give an arbitrary subset of
+the rendering actions. The [layout navigation references](2026/10/layout-navigation-references.md)
+log records the isolation rule and why.
+
+**CakePHP APIs involved:**
+- The default layout, which nothing names, and `setLayout()` and friends for the others
+- `beforeRender()` on `AppController`, the base classes and the controller
+- `disableAutoLayout()` and `$autoLayout`, which take an action off the layout's paths
+
+**Implementation notes:** Needs the full set of actions rendering a layout, which is every
+action for `default` and every action naming the others, plus the methods each path runs
+through. Build it after idea 7, since the layout is where the intersection matters most, and
+after idea 9, which supplies the variables set outside the action itself.
+
+---
+
+### 9. Track Calls to Other Controller Methods and Index Their Variables
+
+**What it does:** Follow calls from an action to other methods of the controller and its base
+classes, and include the `$this->set()` calls made there in the action's variables. Tracked in
+[issue #173](https://github.com/dmeybohm/chocolate-cakephp/issues/173).
+
+**Why it matters:** Actions commonly call a private method or a base class method to set
+shared variables, and `beforeRender()` and `beforeFilter()` run on every request. Those
+variables are missing from the action's template today, which makes the union offered in
+completion incomplete and the intersection in ideas 7 and 8 too small to be useful.
+
+**CakePHP APIs involved:**
+- `Controller::set()` in any method, and `$this->method()` calls between them
+- `beforeFilter()`, `beforeRender()` and `initialize()` on the controller and its base classes
+- Components calling `$controller->set()`, a further step
+
+**Implementation notes:** The view variable index already stores `set()` calls per method, so
+the missing piece is the call graph within a controller class chain: which methods an action
+reaches, resolved at lookup from the indexed methods, bounded by depth and by the class chain.
+Both idea 7 and idea 8 get more complete as this does.
+
+---
+
 ## Priority 2 (Medium Impact)
 
-### 7. Configured Associations in Query Methods
+### 10. Configured Associations in Query Methods
 
 **What it does:** Use the per-table association records produced by configuration code
 disambiguation (feature 6) to drive the query-side features that still guess by name:
@@ -187,7 +257,7 @@ associations. Associations added by behaviours to `$this->_table` depend on inde
 
 ---
 
-### 8. Configuration Key Completion
+### 11. Configuration Key Completion
 
 **What it does:** Complete configuration keys in `Configure::read('App.key')` and
 `Configure::write()` calls, based on keys defined in config files.
@@ -208,7 +278,7 @@ completions. Nested arrays should produce dot-separated suggestions (e.g., `App.
 
 ---
 
-### 9. Middleware Completion + Navigation
+### 12. Middleware Completion + Navigation
 
 **What it does:** Complete middleware class names in `$middlewareQueue->add()` and provide
 navigation from middleware strings to their class definitions.
@@ -228,7 +298,7 @@ methods. Navigation via Ctrl+Click on middleware class strings.
 
 ---
 
-### 10. Event Listener Navigation
+### 13. Event Listener Navigation
 
 **What it does:** Navigate between event dispatching (`$this->dispatchEvent('Model.afterSave')`)
 and event listener registrations (`$this->getEventManager()->on('Model.afterSave', ...)`
@@ -250,7 +320,7 @@ navigates to listeners. A "Find Usages" provider for event names would also be v
 
 ---
 
-### 11. Request Data Field Completion
+### 14. Request Data Field Completion
 
 **What it does:** Complete field names in `$this->request->getData('field_name')` based
 on form definitions in the corresponding view templates.
@@ -271,7 +341,7 @@ database columns.
 
 ---
 
-### 12. Dynamic Property/Method Warning Suppression
+### 15. Dynamic Property/Method Warning Suppression
 
 **What it does:** Suppress false "undefined property" and "undefined method" warnings on
 CakePHP classes that use magic properties and methods — including Controllers, Cells,
@@ -296,7 +366,7 @@ undefined properties.
 
 ---
 
-### 13. Undefined Method/Field Error Inspection
+### 16. Undefined Method/Field Error Inspection
 
 **What it does:** Provide a custom inspection that flags genuinely undefined methods and
 fields on Controllers, Views, Components, and Helpers — complementing the warning
@@ -320,7 +390,7 @@ warning. This requires the indexing infrastructure from component and behavior s
 
 ---
 
-### 14. Quickfix to Add Missing Methods
+### 17. Quickfix to Add Missing Methods
 
 **What it does:** When a controller action, view helper method, or component method is
 called but doesn't exist, offer a quickfix to generate a stub method in the appropriate
@@ -343,7 +413,7 @@ create the corresponding template file.
 
 ---
 
-### 15. Plugin Auto-Discovery
+### 18. Plugin Auto-Discovery
 
 **What it does:** Automatically discover CakePHP plugins by reading the
 `vendor/cakephp-plugins.php` file instead of requiring manual plugin configuration in
@@ -369,7 +439,7 @@ as an override.
 
 ## Priority 3 (Lower Impact / Higher Effort)
 
-### 16. Bake/CLI Integration
+### 19. Bake/CLI Integration
 
 **What it does:** Provide a UI within PhpStorm for running CakePHP's `bake` code
 generation commands, with form fields for options and preview of generated files.
@@ -388,7 +458,7 @@ Significant UI work required. Consider whether this adds enough value over the t
 
 ---
 
-### 17. Migration Support
+### 20. Migration Support
 
 **What it does:** Provide completion and navigation in Phinx/CakePHP migration files,
 including table and column name completion in migration API calls.
@@ -409,7 +479,7 @@ parsing migration history in order, which adds complexity.
 
 ---
 
-### 18. Plugin Route Prefix Awareness
+### 21. Plugin Route Prefix Awareness
 
 **What it does:** Understand plugin routing prefixes and provide correct completions and
 navigation for plugin controllers and actions within their routing scope.
@@ -432,7 +502,7 @@ plugin loading mechanism and namespace mapping.
 
 ---
 
-### 19. Enhanced `.phpstorm.meta.php`
+### 22. Enhanced `.phpstorm.meta.php`
 
 **What it does:** Expand the existing `.phpstorm.meta.php` file (currently only covers
 CakePHP 2) to cover CakePHP 3-5 APIs using `expectedArguments()` and `registerArgumentsSet()`

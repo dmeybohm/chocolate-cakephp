@@ -126,10 +126,25 @@ private fun isCakeTwoController(
         return false
     }
     val topSourceDir = controllerDir.parent ?: return false
+    if (isCakeTwoPluginDirectory(topSourceDir, settings)) {
+        return true
+    }
     val topDir = topSourceDir.parent ?: return false
     return matchesCake2AppDirectory(topSourceDir, settings) &&
         !topDir.children.any { it.nameWithoutExtension == "templates" } &&
             !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
+}
+
+// CakePHP 3+ plugins have `src` between the plugin and its `Controller` directory, so they don't match:
+private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings): Boolean {
+    val pluginsDir = directory.parent
+    if (pluginsDir != null && pluginsDir.name in cakeTwoPluginDirectoryNames &&
+        pluginsDir.parent?.let { matchesCake2AppDirectory(it, settings) } == true) {
+        return true
+    }
+    return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().any {
+        it.pluginPath.isNotBlank() && directory.path.endsWith("/" + it.pluginPath.trim('/'))
+    }
 }
 
 object ViewFileIndexService {

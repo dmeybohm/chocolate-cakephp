@@ -65,6 +65,10 @@ sooner. For moving faster, try to focus on making tests for cake5
 first, and getting those to work, before writing tests for other
 cake versions.
 
+Once a branch has an open PR, don't run the full test suite locally.
+Run the targeted tests for the change and let CI run the full suite
+on the PR.
+
 ### Completion tests
 
 Here's an example of a completion test that checks a variable is

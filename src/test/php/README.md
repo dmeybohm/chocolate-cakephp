@@ -60,6 +60,34 @@ Relied on by view navigation, the controller action line marker and view file cr
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 
+### `LayoutResolutionTest`
+
+Relied on by layout navigation.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `render()`'s second argument names the layout | `testRenderSecondArgumentNamesLayout` | Same |
+| A `render()` with a layout, called from a template, wraps its own output, and the outer layout wraps it again | `testRenderFromTemplateWrapsItsOutputAgainInTheOuterLayout` | Same |
+| The builder's `setLayout()` names the layout | `testBuilderSetLayoutNamesLayout` | 3, 4, 5 |
+| Builder setters chained after `setLayout()` all apply | `testChainedBuilderSettersAllApply` | 3, 4, 5 |
+| The builder's `layout()` names the layout | `testBuilderLayoutNamesLayout` | 3, deprecated |
+| The builder has no `layout()` method | `testBuilderHasNoLayoutMethod` | 4, 5 |
+| A controller's `layout` property, declared or assigned, names the layout | `testControllerLayoutPropertyNamesLayout`, `testControllerLayoutAssignmentNamesLayout` | 2, 3 (deprecated) |
+| A controller's `layout` property, declared or assigned, has no effect | `testControllerLayoutPropertyHasNoEffect`, `testControllerLayoutAssignmentHasNoEffect` | 4, 5 |
+| `$this->layout = 'x'` in a template wraps it | `testLayoutAssignedInTemplateWraps` | 3, 4, 5. 2: `testLayoutNamedFromTemplateWraps` |
+| A view's `layout()` names the layout | `testViewLayoutMethodNamesLayout` | 3, deprecated |
+| A view has no `layout()` method | `testViewHasNoLayoutMethod` | 4, 5 |
+| A data view renders without a layout, even when one is named | `testDataViewRendersWithoutLayout` | Same |
+| A layout path selects a subdirectory of the layout directory | `testLayoutPathSelectsSubdirectory` | Same |
+| A plugin controller's unprefixed layout is found in the plugin first | `testPluginControllerPrefersPluginLayout` | Same |
+| A plugin controller's layout missing from the plugin falls back to the app's | `testPluginControllerFallsBackToAppLayout` | Same |
+| The app's override directory wins over the plugin's own layout | `testAppOverrideWinsOverPluginLayout` | Same |
+| An app controller's unprefixed layout does not reach a plugin's | `testAppControllerDoesNotReachPluginLayoutUnprefixed` | Same |
+| An app controller's `Plugin.name` layout finds the plugin's | `testAppControllerReachesPluginLayoutWithPrefix` | Same |
+| A layout named in a cell class has no effect | `testLayoutNamedInCellClassHasNoEffect` | 3, 4, 5 |
+| A layout named in a cell template has no effect | `testLayoutNamedInCellTemplateHasNoEffect` | 4, 5 |
+| A layout named in a cell template wraps the cell | `testLayoutNamedInCellTemplateWraps` | 3 |
+
 ### `ElementResolutionTest`
 
 Relied on by element navigation and element related usages.

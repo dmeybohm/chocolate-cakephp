@@ -46,9 +46,19 @@ sealed class TemplateDirStructure(val id: Char) {
     open val layoutDirectory: String? = null
 
     /**
-     * Whether the view file index stores references to layouts.
+     * Whether a `layout` property on a controller names its layout.
      */
-    open val indexesLayoutReferences: Boolean = false
+    abstract val readsLayoutProperty: Boolean
+
+    /**
+     * Whether a layout named from a cell's template wraps the cell's output.
+     */
+    open val cellTemplatesNameLayouts: Boolean = false
+
+    /**
+     * The methods that name a layout, on a view and on a view builder.
+     */
+    abstract val layoutSetters: Set<String>
 
     /**
      * Whether [templateKey] is the key of a layout.
@@ -112,7 +122,9 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override val layoutDirectory = "Layouts"
 
-        override val indexesLayoutReferences = true
+        override val readsLayoutProperty = true
+
+        override val layoutSetters = emptySet<String>()
 
         override val readsHelpersProperty = true
 
@@ -127,6 +139,9 @@ sealed class TemplateDirStructure(val id: Char) {
         override val layoutDirectory: String,
         override val cellDirectory: String,
         override val readsHelpersProperty: Boolean,
+        override val readsLayoutProperty: Boolean,
+        override val layoutSetters: Set<String>,
+        override val cellTemplatesNameLayouts: Boolean,
     ) : TemplateDirStructure(id) {
         override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
             cakeThreePluginName(file, projectDir, settings, overrideDirectory)
@@ -143,8 +158,12 @@ sealed class TemplateDirStructure(val id: Char) {
     }
 
     companion object {
-        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell", readsHelpersProperty = true)
-        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell", readsHelpersProperty = false)
+        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell",
+            readsHelpersProperty = true, readsLayoutProperty = true, layoutSetters = setOf("setLayout", "layout"),
+            cellTemplatesNameLayouts = true)
+        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell",
+            readsHelpersProperty = false, readsLayoutProperty = false, layoutSetters = setOf("setLayout"),
+            cellTemplatesNameLayouts = false)
 
         fun of(templatesDir: TemplatesDir): TemplateDirStructure = when (templatesDir) {
             is CakeTwoTemplatesDir -> CakeTwo
@@ -176,6 +195,19 @@ sealed class TemplateDirStructure(val id: Char) {
                 CakeTwo
             else
                 cakeFour
+        }
+
+        /**
+         * The structures whose layouts a file that refers to views can name. A file's path does not
+         * tell a CakePHP 3 controller from a later one, so such a controller can name the layouts of both.
+         */
+        fun layoutStructuresOf(project: Project, settings: Settings, file: VirtualFile, isController: Boolean): List<TemplateDirStructure> {
+            templatesDirectoryOfViewFile(project, settings, file)?.let { return listOf(of(it)) }
+            return when (ofSourceFile(project, settings, file, isController)) {
+                null -> emptyList()
+                CakeTwo -> listOf(CakeTwo)
+                else -> listOf(cakeThree, cakeFour)
+            }
         }
     }
 }
