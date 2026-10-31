@@ -7,14 +7,13 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class ConfiguredTableTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Controller/ConfiguredTableController.php",
             "cake4/src4/Model/Table/MoviesTable.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
             "cake4/src4/Model/Table/CatalogTable.php",
             "cake4/vendor/test/test_plugin/src/Model/Table/CatalogTable.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

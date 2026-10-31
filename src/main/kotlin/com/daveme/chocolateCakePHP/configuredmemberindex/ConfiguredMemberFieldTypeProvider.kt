@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.controllerConventionType
 import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.startsWithUppercaseCharacter
+import com.daveme.chocolateCakePHP.view.ViewHelperReceivers
 import com.daveme.chocolateCakePHP.viewHelperTypeFromFieldName
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -73,11 +74,25 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
         if (declaresField) {
             return null
         }
-        val configured = ConfiguredMemberService.memberType(project, listOf(receiverClass), kinds, fieldName)
-        val determined = configured != null && configured.hasInitializeLoad
         val isView = receiverClass.isViewClassName()
+        // The builder always passes a view its helpers, which replaces this property:
+        val ignoredProperties = if (isView) setOf(HELPERS_PROPERTY) else emptySet()
+        val configured = ConfiguredMemberService.memberType(
+            project, listOf(receiverClass), kinds, fieldName
+        ) { ignoredProperties }
+        val determined = configured != null && configured.hasInitializeLoad
         if (determined && configured!!.classFqns.isNotEmpty()) {
             return configured.type
+        }
+        // In a template, ViewHelperInViewTypeProvider knows which classes render it, so for a helper
+        // one of them may configure, neither __get() nor the convention should add to its answer:
+        if (settings.cake3Enabled && receiverClass.equals("${settings.appNamespace}\\View\\AppView", ignoreCase = true) &&
+            fieldName in ViewHelperReceivers.aliasesOfRenderingClasses(project)
+        ) {
+            return PhpType().apply {
+                add(UNRESOLVABLE_SIGNATURE)
+                configured?.let { add(it.type) }
+            }
         }
         return when {
             // A model can bind an association from anywhere, so one found by name still resolves:
@@ -135,6 +150,9 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
         )
 
         private const val MAX_CHAIN_LENGTH = 10
+
+        // An empty type would leave the field to native resolution, so this completes to nothing instead:
+        private val UNRESOLVABLE_SIGNATURE = "#${PhpTypeSignatureKey.FIELD.key}"
 
         /**
          * The receiver signature and field name of a native field signature, such as

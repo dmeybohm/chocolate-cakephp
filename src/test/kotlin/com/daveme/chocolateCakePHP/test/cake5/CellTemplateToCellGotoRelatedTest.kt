@@ -8,11 +8,10 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 class CellTemplateToCellGotoRelatedTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/View/Cell/InventoryCell.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

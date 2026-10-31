@@ -80,7 +80,8 @@ Relied on by element navigation and element related usages.
 
 ### `CellTest`
 
-Relied on by cell navigation, the cell action line marker and cell view variables. Cells do not
+Relied on by cell navigation, the cell action line marker, cell view variables and view helper
+resolution. Cells do not
 exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 
 | Behavior | Test method | Versions |
@@ -100,6 +101,37 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | An unprefixed element in an app cell called under a plugin controller is the app's | `testElementInAppCellCalledFromPluginResolvesInApp` | Same |
 | An unprefixed element in a cell template named with `render()` is the cell plugin's | `testElementInNamedCellTemplateResolvesInCellPlugin` | Same |
 | An element missing from a plugin cell's plugin falls back to the app's | `testElementInPluginCellFallsBackToAppElement` | Same |
+| A helper a controller adds through `viewBuilder()` reaches its template | `testControllerHelperReachesItsTemplate` | Same |
+| A controller's helper reaches the template of a cell called from its view | `testControllerHelperReachesCellTemplate` | Same |
+| A controller's helper reaches an element in that cell's template | `testControllerHelperReachesElementInCellTemplate` | Same |
+| A cell template lacks a helper its caller's controller did not add | `testCellTemplateHasNoHelperItsCallerLacks` | Same |
+
+### `ViewHelperTest`
+
+Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work differently, so
+"Same" here means 3, 4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A view class's `addHelper()` in `initialize()` wins over a controller's helper of the same alias | `testViewAddHelperWinsOverControllerHelper` | 4, 5. 3 has no `View::addHelper()` |
+| A view class's `loadHelper()` wins over a controller's helper of the same alias without options | `testViewLoadHelperWinsOverControllerHelperWithoutOptions` | Same |
+| A view class's `loadHelper()` raises an error when a controller gives the same alias another `className` | `testViewLoadHelperConflictsWithControllerClassName` | Same |
+| The builder's helpers replace a `$helpers` property declared on the view class | `testControllerBuilderReplacesViewHelpersProperty` | Same |
+| A controller's helper reaches a layout and an element in it | `testControllerHelperReachesLayoutAndItsElement` | Same |
+| A cell's own `viewBuilder()` helper reaches its template | `testCellOwnHelperReachesItsTemplate` | Same |
+| An app controller's helper reaches a plugin cell's template | `testControllerHelperReachesPluginCellTemplate` | Same |
+| An app controller's helper reaches an element in a plugin cell's template | `testControllerHelperReachesElementInPluginCellTemplate` | Same |
+| A plugin controller's helper reaches an app cell's template | `testPluginControllerHelperReachesAppCellTemplate` | Same |
+| A controller's `$helpers` property reaches its template, merged with its parent's | `testControllerHelpersPropertyReachesTemplateMerged` | 3 |
+| A controller's `$helpers` property raises a warning | `testControllerHelpersPropertyRaisesWarning` | 4 |
+| A controller's `$helpers` property is ignored | `testControllerHelpersPropertyIsIgnored` | 5 |
+| A controller's `$helpers` property is not loaded once its warning is past | `testControllerHelpersPropertyIsNotLoadedPastTheWarning` | 4 |
+| A cell's `initialize()` helper reaches its template | `testCellInitializeHelperReachesItsTemplate` | Same |
+| The caller's helper wins over a cell's `initialize()` helper of the same alias | `testCallerHelperWinsOverCellInitializeHelper` | Same |
+| A cell action's helper wins over the caller's of the same alias | `testCellActionHelperWinsOverCallerHelper` | Same |
+| A `$helpers` property on a cell reaches its template | `testCellHelpersPropertyReachesItsTemplate` | 3 |
+| A `$helpers` property on a cell wins over the caller's helper of the same alias | `testCellHelpersPropertyWinsOverCallerHelper` | 3 |
+| A `$helpers` property on a cell is ignored | `testCellHelpersPropertyIsIgnored` | 4, 5 |
 
 ### `TableLocatorTest`
 

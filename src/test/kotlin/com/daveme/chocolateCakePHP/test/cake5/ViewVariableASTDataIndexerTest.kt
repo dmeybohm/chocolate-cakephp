@@ -14,9 +14,6 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewVariableASTDataIndexerTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
-            "cake5/vendor/cakephp.php"
-        )
     }
 
     fun `test AST parsing works correctly`() {

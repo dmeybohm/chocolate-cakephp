@@ -11,14 +11,13 @@ import com.jetbrains.php.lang.psi.elements.Variable
 class CellMethodLineMarkerTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/View/AppView.php",
             "cake5/templates/cell/Inventory/display.php",
             "cake5/templates/cell/Inventory/compact.php",
             "cake5/templates/cell/Admin/Report/display.php",
             "cake5/vendor/test/test_plugin/templates/cell/Widget/display.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

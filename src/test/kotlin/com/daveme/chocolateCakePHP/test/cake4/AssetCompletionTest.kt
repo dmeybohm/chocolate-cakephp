@@ -4,14 +4,13 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class AssetCompletionTest : Cake4BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/View/AppView.php",
             "cake4/templates/Movie/artist.php",
             "cake4/webroot/css/movie.css",
             "cake4/webroot/js/movie.js",
             "cake4/webroot/img/pluginIcon.svg",
-            "cake4/vendor/cakephp.php",
         )
     }
 

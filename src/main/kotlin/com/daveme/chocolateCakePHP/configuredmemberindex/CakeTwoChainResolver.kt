@@ -40,7 +40,7 @@ internal class CakeTwoChainResolver(
     private val chain: List<String>,
     private val configurations: List<ClassConfiguration>,
     private val pluginName: String?,
-) {
+) : ChainResolver {
 
     private class Declared(
         val classIndex: Int,
@@ -59,7 +59,7 @@ internal class CakeTwoChainResolver(
         it.equals("\\${pluginName}AppController", ignoreCase = true)
     }
 
-    fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution {
+    override fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution {
         val members = mutableMapOf<String, Pair<Set<String>, Boolean>>()
         val knownKinds = mutableSetOf<MemberKind>()
         for (kind in kinds) {

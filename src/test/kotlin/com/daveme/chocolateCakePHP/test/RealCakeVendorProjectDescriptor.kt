@@ -6,6 +6,7 @@ import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.testFramework.LightProjectDescriptor
+import java.io.File
 
 /**
  * A light project with the real CakePHP framework source attached as a library.
@@ -14,12 +15,12 @@ class RealCakeVendorProjectDescriptor(private val cakeMajorVersion: Int) : Light
 
     val vendorPath: String
         get() = System.getProperty("chocolateCakePHP.vendor.cake$cakeMajorVersion")
-            ?: error("CakePHP $cakeMajorVersion vendor path not set; run tests through Gradle")
+            ?: File("build/cakephp-vendor/$cakeMajorVersion").absolutePath
 
     override fun configureModule(module: Module, model: ModifiableRootModel, contentEntry: ContentEntry) {
         super.configureModule(module, model, contentEntry)
         val root = LocalFileSystem.getInstance().refreshAndFindFileByPath(vendorPath)
-            ?: error("CakePHP vendor directory not found: $vendorPath")
+            ?: error("CakePHP vendor directory not found: $vendorPath; run ./gradlew fetchCake${cakeMajorVersion}Vendor")
         val library = model.moduleLibraryTable.modifiableModel.createLibrary("cakephp/cakephp")
         library.modifiableModel.apply {
             addRoot(root, OrderRootType.CLASSES)
@@ -34,9 +35,6 @@ class RealCakeVendorProjectDescriptor(private val cakeMajorVersion: Int) : Light
     override fun hashCode(): Int = cakeMajorVersion
 
     companion object {
-        val isEnabled: Boolean
-            get() = System.getProperty("chocolateCakePHP.vendor") == "real"
-
         private val descriptors = mutableMapOf<Int, RealCakeVendorProjectDescriptor>()
 
         fun forVersion(cakeMajorVersion: Int): RealCakeVendorProjectDescriptor =

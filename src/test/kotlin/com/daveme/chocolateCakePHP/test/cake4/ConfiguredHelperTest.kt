@@ -11,7 +11,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class ConfiguredHelperTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/View/ConfiguredView.php",
             "cake4/configured_view/AppView.php",
             "cake4/src4/View/Helper/ConfiguredHelper.php",
@@ -19,7 +19,6 @@ class ConfiguredHelperTest : Cake4BaseTestCase() {
             "cake4/src4/View/Helper/ArtistFormatterHelper.php",
             "cake4/src4/View/Helper/SharedHelper.php",
             "cake4/vendor/test/test_plugin/src/View/Helper/SharedHelper.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

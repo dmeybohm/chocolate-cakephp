@@ -9,14 +9,13 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 class CellReferenceIndexTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/MovieController.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/View/Cell/InventoryCell.php",
             "cake5/templates/cell/Inventory/display.php",
             "cake5/templates/cell/Inventory/compact.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

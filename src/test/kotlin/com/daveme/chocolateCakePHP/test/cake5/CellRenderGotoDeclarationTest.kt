@@ -7,7 +7,7 @@ import com.intellij.psi.PsiFile
 class CellRenderGotoDeclarationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/View/Cell/InventoryCell.php",
@@ -18,7 +18,6 @@ class CellRenderGotoDeclarationTest : Cake5BaseTestCase() {
             "cake5/templates/cell/Admin/Report/display.php",
             "cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php",
             "cake5/vendor/test/test_plugin/templates/cell/Widget/display.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

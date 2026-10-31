@@ -7,7 +7,6 @@ import com.daveme.chocolateCakePHP.configuredmemberindex.MemberTypeResult
 class ConfiguredMemberResolutionTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles("cake2/vendor/cakephp.php")
     }
 
     private fun addClasses(code: String) {

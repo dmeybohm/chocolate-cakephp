@@ -140,8 +140,7 @@ tasks {
         kotlinOptions.jvmTarget = properties("kotlinJvmTarget").get()
     }
 
-    // Run tests against the real CakePHP source with -PcakeVendor=real, or the hand-written stubs by default
-    val cakeVendor = properties("cakeVendor").getOrElse("stub")
+    // The tests run against these pinned CakePHP releases, attached to the test project as a library
     val cakeReleases = mapOf(
         5 to CakeRelease("5.4.3", "72618190ab60cd1d15ef3404cc4d4750bc01ccd070f9edf7868801b6b9f3b9f8"),
         4 to CakeRelease("4.6.5", "1d63f746514db6cabab084737a6d29f3853129e19a356ca525e21b9043240436"),
@@ -164,15 +163,12 @@ tasks {
 
     test {
         useJUnitPlatform()
-        systemProperty("chocolateCakePHP.vendor", cakeVendor)
-        if (cakeVendor == "real") {
-            cakeReleases.keys.zip(fetchCakeVendors).forEach { (major, fetch) ->
-                dependsOn(fetch)
-                systemProperty(
-                    "chocolateCakePHP.vendor.cake$major",
-                    fetch.get().outputDir.get().asFile.absolutePath
-                )
-            }
+        cakeReleases.keys.zip(fetchCakeVendors).forEach { (major, fetch) ->
+            dependsOn(fetch)
+            systemProperty(
+                "chocolateCakePHP.vendor.cake$major",
+                fetch.get().outputDir.get().asFile.absolutePath
+            )
         }
         // Support 'setUp' like 'BasePlatformTestCase::setUp' as valid test structure
         testLogging {
