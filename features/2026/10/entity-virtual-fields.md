@@ -429,9 +429,12 @@ properties as exactly the array type.
     `CritiquesTable` was found, so the first proves the accessor wins rather than that no
     table existed. The test also calls `ConfiguredMemberService.associationLoads()` for
     `\App\Model\Table\CritiquesTable` directly and asserts a `BELONGS_TO` load with alias
-    `Authors` whose derived property is `author`, so the load the accessor beat is shown to
-    exist and resolve, not inferred from a sibling. Completion on `$critique-><caret>` offers
-    `author` once, with type text `string`.
+    `Authors` and a `null` `propertyName` (the option was not given), that the property-name
+    helper from resolution step 4 derives `author` from it, and that
+    `ConfiguredMemberService.loadClasses()` resolves it to `\App\Model\Table\UsersTable`. The
+    load the accessor beat is then shown to exist, to name the field and to resolve, not
+    inferred from a sibling. Completion on `$critique-><caret>` offers `author` once, with
+    type text `string`.
 20. Completion on `$review-><caret>` offers `movie`, `author`, `editor`, `comments` and
     `ratings` with the entity's type text, next to the accessor fields; it does not offer
     `authors` or `Authors`. Completion on `$movie-><caret>` offers nothing from associations when
