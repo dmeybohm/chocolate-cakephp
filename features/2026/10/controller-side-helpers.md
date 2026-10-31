@@ -15,7 +15,7 @@ renders a template:
 `configuration-code-disambiguation-cake2` builds that mapping for CakePHP 2, where helpers are
 always configured on the controller: rendering controllers per template, and a walk back through
 `$this->element()` includes for elements. Every layout gets all controllers, as #305 simplified
-it (see `rendering-controllers-element-plugin.md`, on `main` once #305 merges). This feature
+it (see [its log](rendering-controllers-element-plugin.md)). This feature
 reuses that for CakePHP 3 to 5, and picks up the CakePHP 3 to 5 side of two gaps that review of
 the CakePHP 2 plan found.
 
@@ -88,6 +88,15 @@ Unprefixed elements follow the plugin of the rendering controller, not the inclu
 here too. The fix belongs to `plugin-aware-view-keys`, so land it first, or record the gap as
 accepted.
 
+### 5. Cell templates
+
+`RenderingControllers` has no check for `CELL_RENDER` references. CakePHP 2 has no cells, so this
+has no effect there. On CakePHP 3 to 5, its walk would go from a cell template through the template
+calling `cell()` to that template's controller, so cell templates and their elements would get that
+controller's helpers. A cell renders in its own view, and `forEachContributingSource` already skips
+these references for the same reason, so skip them here too. Where a cell's view gets its helpers
+hasn't been confirmed in the CakePHP source yet.
+
 ### Facade from the CakePHP 2 feature
 
 `configuration-code-disambiguation-cake2` puts view helper receivers behind a version-neutral
@@ -106,25 +115,27 @@ does not split `Foo.` prefixes. This feature mostly changes that structure:
 ## Dependencies
 
 Builds on `configuration-code-disambiguation-cake2`, for the rendering-controller mapping, the
-element walk and the complete flag, and on #305 for the layout rule. Start once #305 is merged,
-ideally after the element fix in `plugin-aware-view-keys`.
+element walk and the complete flag, and on #305 for the layout rule. Ideally start after the
+element fix in `plugin-aware-view-keys`.
 
 ## Plan
 
 1. Check the merge and precedence behaviour in the real CakePHP 3, 4 and 5 source: controller
    helpers against `AppView::initialize()` loads, `setHelpers()` with and without merge, and
-   where the deprecated Cake 3 `$helpers` property is read.
+   where the deprecated Cake 3 `$helpers` property is read. Also where a cell's view gets its helpers.
 2. Index: `viewBuilder()` helper calls in controllers as HELPER loads on the controller, and Cake
    3's controller `$helpers` property.
 3. Resolver and providers: CakePHP 3 to 5 templates and elements use `AppView` plus the rendering
    controllers as helper receivers, and layouts use `AppView` plus all controllers. This changes
    the deferred signature from `#<key><fieldName>` to the template-carrying form the CakePHP 2
    feature adds.
+   Skip `CELL_RENDER` references in the `RenderingControllers` walk.
 4. The complete flag for CakePHP 3 to 5 property arrays and options.
 5. Tests, Cake 5 first: an aliased helper added in a controller action resolves in its template
    and in an element only that template includes, without other controllers' aliases; any layout,
    and an element in a layout, gets the union of all controllers; a plugin bypassing `AppController`
-   keeps its alias in layouts; an `AppView` helper still resolves everywhere; an incomplete
+   keeps its alias in layouts; a cell template and its elements don't get the helpers of the
+   controller rendering the template that calls `cell()`; an `AppView` helper still resolves everywhere; an incomplete
    `$helpers` on a helper keeps convention completion. Then Cake 4 and 3, including the deprecated
    property.
 6. Run the full suite.
