@@ -218,6 +218,41 @@ class EntityVirtualFieldTest : Cake5BaseTestCase() {
         assertEmpty(gotoDeclarationHandlerTargets(EntityVirtualFieldGotoDeclarationHandler())!!)
     }
 
+    private fun configureInheritedFieldEntities() {
+        myFixture.addFileToProject(
+            "cake5/src5/Model/Entity/ParentEntity.php",
+            "<?php\nnamespace App\\Model\\Entity;\nuse Cake\\ORM\\Entity;\nclass ParentEntity extends Entity {\n" +
+                "    /** @var int */\n    public \$shared = 1;\n" +
+                "    protected function _getOther(): string { return ''; }\n}\n"
+        )
+        myFixture.addFileToProject(
+            "cake5/src5/Model/Entity/ChildEntity.php",
+            "<?php\nnamespace App\\Model\\Entity;\nclass ChildEntity extends ParentEntity {\n" +
+                "    protected function _getShared(): string { return ''; }\n}\n"
+        )
+    }
+
+    private fun configureChildEntityParameter(body: String) {
+        configureInheritedFieldEntities()
+        configureAction("probe(\\App\\Model\\Entity\\ChildEntity \$entity)", body)
+    }
+
+    fun `test field inherited from a parent keeps its type over a same named accessor`() {
+        configureChildEntityParameter("\$entity->sha<caret>red;")
+        assertEquals(setOf("\\int"), fieldTypeAtCaret())
+    }
+
+    fun `test goto declaration leaves a field inherited from a parent alone`() {
+        configureChildEntityParameter("\$entity->sha<caret>red;")
+        assertEmpty(gotoDeclarationHandlerTargets(EntityVirtualFieldGotoDeclarationHandler())!!)
+    }
+
+    fun `test completion lists a field inherited from a parent once with its type`() {
+        configureChildEntityParameter("\$entity-><caret>;")
+        assertEquals(1, completeStrings().count { it == "shared" })
+        assertEquals("int", typeTextOf("shared"))
+    }
+
     fun `test magic field warning is only left on fields without an accessor`() {
         myFixture.enableInspections(PhpUndefinedFieldInspection::class.java)
         configureMovieParameter("\$movie->full_title;\n\$movie->title = 'x';\n\$movie->not_a_field;")
