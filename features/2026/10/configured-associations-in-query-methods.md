@@ -241,10 +241,11 @@ Record both at index time, where the information is free:
 - `ConfiguredMemberExternalizer`: write the type as an ordinal with a sentinel for null, the
   property name through the existing nullable-string writer, and the flag as a boolean. Bump
   `ConfiguredMemberIndex.getVersion()`.
-- `MemberTypeResult` does not change. The entity follow-up reads the loads themselves through
-  `loadedMembers()` or a new accessor; whichever it needs is its call. The one lookup-side use
-  here is none: the query methods list aliases and resolve tables, and are not changed by the
-  new fields.
+- `MemberTypeResult` does not change, and `loadedMembers()` keeps returning resolved types,
+  not loads, so the new fields are not reachable through it. The entity follow-up adds an
+  accessor on `ConfiguredMemberService` that returns the `ASSOCIATION` loads of a receiver
+  chain with the same most-derived-wins rule `resolveChain()` applies. Nothing here reads the
+  new fields: the query methods list aliases and resolve tables.
 
 Tests, in `ConfiguredMemberIndexTest` or wherever #299 pins the index records: each of the four
 direct calls records its type; each `addAssociations()` key records its type; a literal
