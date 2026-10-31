@@ -212,19 +212,34 @@ only the `className` option is read.
 Record both at index time, where the information is free:
 
 - `AssociationType { BELONGS_TO, HAS_ONE, HAS_MANY, BELONGS_TO_MANY }` in `MemberLoad.kt`, and
-  `associationType: AssociationType?` on `MemberLoad`, null for every other kind.
+  `associationType: AssociationType?` on `MemberLoad`. Non-null exactly when the load is one of
+  the four association types. Null for every other kind, and for the one `ASSOCIATION`-kind
+  load that is not an association: the join model below.
   - Direct calls: from the method name in `methodCallSources`.
   - `addAssociations()`: from the top-level key `readAssociationsByType()` is iterating.
   - CakePHP 2 `$belongsTo`, `$hasOne`, `$hasMany`, `$hasAndBelongsToMany` arrays and
     `bindModel()`: from the property or key, with `hasAndBelongsToMany` as `BELONGS_TO_MANY`.
-    `LoadReader.property` already carries the key for the array forms (the HABTM join-model
-    check reads it), so the type is derived from what the reader already has; confirm that
-    when implementing rather than threading a new parameter through.
-- `propertyName: String?` on `MemberLoad`, read with `optionValue(options, "propertyName")`
-  next to `className`, kept as written. The CakePHP 2 equivalent is not read; CakePHP 2 has no
-  entities.
-- `ConfiguredMemberExternalizer`: write the type as an ordinal with a sentinel for null, and the
-  property name through the existing nullable-string writer. Bump
+    `LoadReader.property` carries the key for `bindModel()` and the property arrays, but
+    `readAssociationsByType()` passes null for `addAssociations()`, so the type is a new
+    `LoadReader` field set by every caller rather than derived from `property`.
+  - **The HABTM join model is not an association.** For a CakePHP 2
+    `$hasAndBelongsToMany` entry with a `with` option, `readJoinModel()` emits a second load
+    for the join model (`$this->ArticlesTag`), because the framework lazy-loads it as a
+    property too. It goes through the same `memberLoad()` as the HABTM entry and would inherit
+    `BELONGS_TO_MANY`. It gets `associationType = null`: it is a model reachable as a property,
+    not one of the four types, and a consumer that derives entity properties from the type
+    must skip it. `memberLoad()` takes the type as a parameter so `readJoinModel()` passes
+    null explicitly, instead of a default it could forget to override.
+- `propertyName: String?` and `hasUnreadPropertyName: Boolean` on `MemberLoad`, read with
+  `optionValue(options, "propertyName")` next to `className` and mirroring it exactly: the
+  string when the option is a literal, else null with the flag set when the option is present
+  but not readable (a constant, a concatenation, a variable). An absent option and an
+  unreadable one are different facts: the entity follow-up derives the conventional property
+  name only when the option is absent, and offers nothing for the association when the flag is
+  set, since the application overrode the name with something the index cannot see. The
+  CakePHP 2 equivalent is not read; CakePHP 2 has no entities.
+- `ConfiguredMemberExternalizer`: write the type as an ordinal with a sentinel for null, the
+  property name through the existing nullable-string writer, and the flag as a boolean. Bump
   `ConfiguredMemberIndex.getVersion()`.
 - `MemberTypeResult` does not change. The entity follow-up reads the loads themselves through
   `loadedMembers()` or a new accessor; whichever it needs is its call. The one lookup-side use
@@ -232,9 +247,12 @@ Record both at index time, where the information is free:
   new fields.
 
 Tests, in `ConfiguredMemberIndexTest` or wherever #299 pins the index records: each of the four
-direct calls records its type; each `addAssociations()` key records its type; a `propertyName`
-option is recorded and absent when not given; a component or helper load has a null type. For
-CakePHP 2, each property array and `bindModel()` key records its type.
+direct calls records its type; each `addAssociations()` key records its type; a literal
+`propertyName` option is recorded; an absent option gives null with the flag clear; a
+non-literal option (`'propertyName' => self::WRITER`) gives null with the flag set; a component
+or helper load has a null type. For CakePHP 2, each property array and `bindModel()` key
+records its type, and the join-model load of a HABTM entry with `with` has a null type while
+the HABTM load itself has `BELONGS_TO_MANY`.
 
 ## Interaction with entity virtual fields
 
