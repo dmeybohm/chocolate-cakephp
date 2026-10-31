@@ -58,10 +58,10 @@ Two details of the current output:
   (`$this->layout = 'probe'`, as in `testLayoutNamedFromTemplateWraps`) is listed under
   "Controllers" with the template's file name.
 - `canonicalizeFilenameToKey` strips a data-view directory, so `Layouts/json/default.ctp` has the
-  key `Layouts/default`, the same as `Layouts/default.ctp`. That matches CakePHP 2, which renders
-  `Layouts/json/default.ctp` for a JSON request when the controller names `default`, so a reference
-  to `default` reaches both. `Layouts/Emails/html/default.ctp` and `Layouts/js/default.ctp` keep
-  their directories in the key, and nothing indexed names them.
+  key `Layouts/default`, the same as `Layouts/default.ctp`, and a reference to `default` reaches both.
+  The framework's data views do not render it, as [Session #3](#session-3) records.
+  `Layouts/Emails/html/default.ctp` and `Layouts/js/default.ctp` keep their directories in the key,
+  and nothing indexed names them.
 
 ### CakePHP 3 to 5
 
@@ -157,9 +157,11 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
      gates both forms. `indexLayoutReferences` already knows controller files through `isController`,
      so a template's `$this->layout = 'x'` stays indexed on every version. The deprecated `layout()`
      setters, on the builder and the view, take a second flag true only on `cakeThree`.
-   - Skip cells. A cell renders with the layout off on 3 to 5 (`Cell::render()` turns it off before
-     rendering), so a `setLayout()` in a cell class or a cell template names nothing. The
-     structure's `cellDirectory` and `isCellKey`, from #309, tell a cell template apart.
+   - Skip cells. A cell renders with the layout off on 3 to 5, so a `setLayout()` in a cell class
+     names nothing, and neither does one in a cell template on 4 and 5. On 3 `Cell::render()` only
+     sets the builder's layout to false, so a cell template can name one, as
+     `testLayoutNamedInCellTemplateWraps` records. The structure's `cellDirectory` and `isCellKey`,
+     from #309, tell a cell template apart.
    - Stop `ContributingSourceWalk` at a layout, by the [isolation rule](#effects-on-variables).
    - Bump `ViewFileIndex.getVersion()` from 24 to 25.
 4. **Grouping.** In `ViewToControllerGotoRelatedProvider`, put references from view files under
@@ -230,6 +232,8 @@ version.
   the layout directory itself. Email layouts and mailers are out of scope; a `src/Mailer` file has
   no templates directory above it and is not indexed.
 - **Non-literal names** are skipped, as for templates.
+- **Data-view layouts.** `Layouts/json/default.ctp` lists the references to `default`, although a data
+  view renders without a layout. Only a layout path reaches that file.
 - **`LayoutController` on CakePHP 4 and 5.** A controller's `setLayout('admin')` is also stored under
   `Layout/admin`, which is the key of `templates/Layout/admin.php`, a template of a controller named
   `LayoutController`. That template then lists the controller naming the layout and offers its
@@ -247,7 +251,8 @@ CakePHP 2 first, then cake5, then 3 and 4:
 - The toggle action from a layout with one reference opens the controller, and from a layout with
   no references reports nothing.
 - A template that names the layout is listed under "Views", not "Controllers".
-- A layout in a data-view directory (`Layouts/json/default.ctp`) lists the references to `default`.
+- A layout in a data-view directory (`Layouts/json/default.ctp`) lists the references to `default`,
+  which is how the plugin keys it rather than what the framework renders.
 - `setLayout('admin')` in an action, in `beforeRender()`, chained before `setTemplate()`, and
   `layout('admin')` on CakePHP 3. The chained `setTemplate()` still links its template.
 - Plugins: a plugin controller naming `admin` links to the plugin's layout when it exists and to the
@@ -299,3 +304,22 @@ and each run applies its own version's rules: `public $layout`, `$this->layout =
 `layout()` are stored only under `Layout/`, so they still name nothing on CakePHP 4 and 5.
 This is the alternative the plan first rejected for leaving a wrong key in the index, with the one
 collision noted under [Known limitations](#known-limitations). `isCakeThreeController` is gone.
+
+### Session #3
+
+Added `LayoutResolutionTest` to the assumption suite on all four versions, so the table in
+[The framework's layout API](#the-frameworks-layout-api) is now run rather than read from source. It
+confirmed the table, the version limits and the plugin rules, and corrected two claims:
+
+- **Cell templates on CakePHP 3.** A layout named from a cell template wraps the cell, since
+  `Cell::render()` calls `setLayout(false)` on the builder there, where 4 and 5 pass `false` to
+  `View::render()`. Those references are now indexed, through
+  `TemplateDirStructure.cellTemplatesNameLayouts`. A cell class still names nothing.
+- **Data-view layouts.** This log claimed CakePHP 2 renders `Layouts/json/default.ctp` for a JSON request.
+  It does not, on any version: `JsonView` renders without a layout, even when one is named
+  (`testDataViewRendersWithoutLayout`). A layout path does reach that directory
+  (`testLayoutPathSelectsSubdirectory`). The key stripping is shared with templates, where it is right,
+  so it stays, and the mismatch is listed under [Known limitations](#known-limitations).
+
+A `render()` with a layout called from a template does name that layout, wrapped again by the outer
+one (`testRenderFromTemplateWrapsItsOutputAgainInTheOuterLayout`), so indexing it from any file stands.

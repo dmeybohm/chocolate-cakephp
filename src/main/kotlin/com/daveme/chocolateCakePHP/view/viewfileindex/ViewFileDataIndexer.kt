@@ -945,13 +945,14 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
     }
 
-    // A cell renders with the layout off, so a layout named in its class or template names nothing:
+    // A cell turns the layout off, so a layout named in its class names nothing, and neither does
+    // one named in its template, except where the template can turn it back on:
     private fun rendersWithoutLayout(project: Project, settings: Settings, file: VirtualFile): Boolean {
         if (settings.cake3Enabled && isCakeCellFile(file)) {
             return true
         }
         val viewFile = viewFileOf(project, settings, file) ?: return false
-        return viewFile.structure.isCellKey(viewFile.templateKey)
+        return viewFile.structure.isCellKey(viewFile.templateKey) && !viewFile.structure.cellTemplatesNameLayouts
     }
 
     // Layout names are relative to the layout directory, whatever file names them:

@@ -139,7 +139,7 @@ class LayoutNavigationTest : Cake3BaseTestCase() {
         assertEquals(emptySet<String>(), navigation.related(layout))
     }
 
-    fun `test cells name no layout`() {
+    fun `test a cell class names no layout but its template does`() {
         myFixture.addFileToProject("cake3/src/View/Cell/InventoryCell.php", """
             <?php
             namespace App\View\Cell;
@@ -151,7 +151,7 @@ class LayoutNavigationTest : Cake3BaseTestCase() {
         template("$app/$cells/Inventory/display", "\$this->setLayout('admin');")
         val layout = template("$app/$layouts/admin")
 
-        assertEquals(emptySet<String>(), navigation.related(layout))
+        assertEquals(setOf("Views: display.ctp"), navigation.related(layout))
     }
 
     fun `test layout does not offer the variables of an action naming it`() {
