@@ -170,11 +170,14 @@ tasks {
         // Run test classes across several JVMs. Each fork gets its own IDE
         // sandbox (system/config/log dirs) via ForkSandboxListener, otherwise
         // the forks contend on the shared index and cache storage and there is
-        // no speedup. Override with -PtestForks=N. Each fork needs ~1.5-2 GB,
-        // so the default is capped by a small constant rather than core count.
+        // no speedup. Override with -PtestForks=N. A single fork already keeps
+        // several cores busy and wants ~2 GB, so the gain flattens out at 3
+        // forks and reverses at 4 (see features/2026/09/parallel-tests.md).
         maxParallelForks = providers.gradleProperty("testForks")
             .map(String::toInt)
-            .getOrElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4))
+            .getOrElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3))
+        // Extra JVM flags for the test forks, e.g. -PtestJvmArgs=-Dcaches.indexerThreadsCount=2
+        providers.gradleProperty("testJvmArgs").orNull?.let { jvmArgs(it.split(' ')) }
 
         cakeReleases.keys.zip(fetchCakeVendors).forEach { (major, fetch) ->
             dependsOn(fetch)

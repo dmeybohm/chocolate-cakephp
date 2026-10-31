@@ -74,4 +74,65 @@ Commit after the Gradle change, after the listener, and after the measurements a
 ### Session #1
 
 - Created worktree `worktree/parallel-tests` on branch `parallel-tests` from `main`.
-- (measurements to follow)
+- Added `maxParallelForks` (`-PtestForks=N`) and `ForkSandboxListener`.
+
+### Session #2 (2026-10-31)
+
+- Merged `main`, which replaced the stub vendor with the real pinned CakePHP
+  releases, so the suite is now 1411 tests across 125 classes.
+- Moved the framework-independent tests into `test/core` so every group is a
+  package (`core`, `cake2`..`cake5`) and can be selected with one filter.
+- Added `-PtestJvmArgs="..."` to pass extra flags to the test forks.
+- Considered a container per test group (podman, like the assumption tests)
+  instead of forks. Rejected: it fixes the same shared-sandbox problem with
+  five Gradle daemons, five compiles, a static partition pinned to the
+  largest group (cake5, 463 tests) and report merging, while the listener
+  does it in one JVM property redirect. Containers only make sense if the
+  goal is a hermetic contributor environment, which is a separate concern.
+
+#### Measurements
+
+Machine: 8 cores, 15 GB, with an IDE and other sessions using ~9 GB. Full
+`./gradlew test --rerun`, wall clock, all 1411 tests passing in every run.
+"Cold" is the first run after a fork's sandbox is created (it has to index
+the framework sources); "warm" reuses it. The slot locks keep the same fork
+on the same sandbox across runs, so only the first run at a new count is cold.
+
+| Forks | Cold | Warm | Sum of class times (warm) | Mean CPU idle |
+|-------|------|------|---------------------------|---------------|
+| 1     | 333s | 286s | 354s                      | 43%           |
+| 2     | 383s | 217s | 447s                      | 37%           |
+| 3     |      | 207s | 544s                      | 28%           |
+| 4     | 341s | 266s | 861s                      | 25%, saturated a third of the time |
+| 4 with `-Dcaches.indexerThreadsCount=2` | | 226s | 679s | 25% |
+
+Some runs overlapped a full test run from another worktree and were
+discarded; the figures above are from clean windows, so treat differences
+under ~10% as noise.
+
+What the numbers say:
+
+- The per-fork sandbox works: each fork has its own `system-test-fork-N`,
+  `config-test-fork-N` and `log-test-fork-N` with its own `idea.log`.
+- Per-test indexing is not the cost. 5385 of 5390 scans in a fork log found
+  zero files to index; the light project is reused per CakePHP version. The
+  per-test cost is PSI and resolve work against the real framework files.
+- One fork already keeps about 4.5 cores busy (platform thread pools, G1).
+  Every added fork slows every test by roughly a quarter (the class-time sum
+  grows 354 → 447 → 544 → 679s), so the wall-clock gain flattens at 3 forks
+  and reverses at 4, where the box also runs out of memory (free dropped to
+  ~160 MB with swap-out). Capping the indexer threads did not change this.
+- The slowest class alone takes 36s at 1 fork and 63s under 4 forks.
+- Kover: the 1-fork and 4-fork `report.xml` have identical line (5631/7022),
+  branch (3718/5321) and instruction (32621/39213) counts. No JaCoCo switch
+  needed. The `build/kover/errors/test.log` entry about `JitSuppressor` is a
+  pre-existing instrumentation warning unrelated to forks.
+
+Decision: default `maxParallelForks` is `cores / 2` capped at 3 (3 here,
+2 on the 4-core CI runner). On this machine that is 286s → 207s, about 28%.
+A bigger win would need the per-test work itself to shrink, not more forks.
+
+CI was left as is (`./gradlew check`). If CI wall time matters later, a
+matrix split by package (`--tests 'com.daveme.chocolateCakePHP.test.cake5.*'`
+etc.) gives per-job isolation without containers; upload Kover per job with
+codecov flags.
