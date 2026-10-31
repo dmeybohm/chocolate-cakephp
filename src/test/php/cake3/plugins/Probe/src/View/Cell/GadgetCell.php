@@ -20,4 +20,16 @@ class GadgetCell extends Cell
     public function overridden()
     {
     }
+
+    public function elementinplugin()
+    {
+    }
+
+    public function elementinapp()
+    {
+    }
+
+    public function elementappfallback()
+    {
+    }
 }

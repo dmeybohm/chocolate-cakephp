@@ -16,4 +16,8 @@ class LampCell extends Cell
     public function pluginonly()
     {
     }
+
+    public function elementinapp()
+    {
+    }
 }
