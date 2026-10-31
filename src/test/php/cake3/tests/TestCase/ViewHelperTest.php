@@ -99,4 +99,10 @@ class ViewHelperTest extends TestCase
         $this->get('/widgets/showcell?name=Configuring::property');
         $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
     }
+
+    public function testCellHelpersPropertyWinsOverCallerHelper()
+    {
+        $this->get('/widgets/helpercell?name=PropertyHelper');
+        $this->assertResponseEquals('App\\View\\Helper\\ViewMarkerHelper');
+    }
 }

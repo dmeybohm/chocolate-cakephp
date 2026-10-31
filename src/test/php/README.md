@@ -130,6 +130,7 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | The caller's helper wins over a cell's `initialize()` helper of the same alias | `testCallerHelperWinsOverCellInitializeHelper` | Same |
 | A cell action's helper wins over the caller's of the same alias | `testCellActionHelperWinsOverCallerHelper` | Same |
 | A `$helpers` property on a cell reaches its template | `testCellHelpersPropertyReachesItsTemplate` | 3 |
+| A `$helpers` property on a cell wins over the caller's helper of the same alias | `testCellHelpersPropertyWinsOverCallerHelper` | 3 |
 | A `$helpers` property on a cell is ignored | `testCellHelpersPropertyIsIgnored` | 4, 5 |
 
 ### `TableLocatorTest`

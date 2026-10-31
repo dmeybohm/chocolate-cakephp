@@ -73,7 +73,7 @@ object ViewHelperReceivers {
     /**
      * The configured type of helper [fieldName] in [viewFile]. A view loads any helper by name, so
      * the result only determines the type when the view class or every class rendering the view
-     * loads it, or when the view is a template of the cells that load it.
+     * loads it, or when the view is a cell's template and its cells or its callers load it.
      */
     fun helperMemberType(project: Project, viewFile: ViewFile, fieldName: String): MemberTypeResult? {
         val settings = Settings.getInstance(project)
@@ -87,18 +87,30 @@ object ViewHelperReceivers {
         val perReceiver = (of(project, viewFile) - viewClasses.toSet()).associateWith {
             helperType(project, listOf(it), fieldName, ignored)
         }
-        val fqns = viewClassType?.classFqns.orEmpty() + perReceiver.values.flatMap { it?.classFqns.orEmpty() }
+        val cells = perReceiver.filterKeys { it.isAnyCellClass() }
+        val controllers = (perReceiver - cells.keys).values
+        val isCellTemplate = viewFile.structure.isCellKey(viewFile.templateKey)
+        val callersDetermine = isCellTemplate && controllers.isNotEmpty() && controllers.all { it.determinesHelper() }
+        // The caller's helpers reach a cell's builder after its initialize() has run, so they win:
+        val cellFqns = if (callersDetermine)
+            cells.keys.flatMap { cell ->
+                ConfiguredMemberService.memberTypeOutsideInitialize(
+                    project, cell, setOf(MemberKind.HELPER), fieldName, ignored(cell)
+                )?.classFqns.orEmpty()
+            }
+        else
+            cells.values.flatMap { it?.classFqns.orEmpty() }
+        val fqns = viewClassType?.classFqns.orEmpty() +
+                controllers.flatMap { it?.classFqns.orEmpty() } + cellFqns
         if (fqns.isEmpty()) {
             return null
         }
-        val cells = perReceiver.filterKeys { it.isAnyCellClass() }.values
-        val isDeterminedByCells = viewFile.structure.isCellKey(viewFile.templateKey) &&
-                cells.isNotEmpty() && cells.all { it.determinesHelper() }
+        val isDeterminedByCells = isCellTemplate && cells.isNotEmpty() && cells.values.all { it.determinesHelper() }
         val phpIndex = PhpIndex.getInstance(project)
         return MemberTypeResult(
             classFqns = fqns,
             classes = fqns.flatMap { phpIndex.getClassesByFQN(it) },
-            hasInitializeLoad = isDeterminedByCells ||
+            hasInitializeLoad = callersDetermine || isDeterminedByCells ||
                     (perReceiver.isNotEmpty() && perReceiver.values.all { it.determinesHelper() }),
         )
     }

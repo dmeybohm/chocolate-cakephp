@@ -290,3 +290,9 @@ Acted on what the assumption suite showed:
   `Helper|null`, or to a convention class, even when the controller settled the type. For `AppView`,
   that provider now leaves any alias a controller or cell configures to `ViewHelperInViewTypeProvider`,
   which knows the template. `\Cake\View\View`, as `$this->_View` is typed, is not affected.
+- In a cell's own template, when every caller settles an alias, a load in the cell's `initialize()`
+  no longer adds to the type, since the caller's helpers reach the builder after it. Those callers
+  also settle the type alone. A cell action's load stays in the union, as loads are not matched to
+  the action a template belongs to. Elements in cell templates keep the union too, because the walk
+  returns a flat list that can't tell a caller through the cell from a file including the element
+  directly.

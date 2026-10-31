@@ -392,4 +392,60 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         controller("Movie", "public function index() {}")
         assertTrue(fmtTypesIn("Movie/index", field = "ArtistFormatter").contains(artistHelper))
     }
+
+    private val addFmtToArtistInInitialize =
+        "public function initialize(): void { \$this->viewBuilder()->addHelper('Fmt', ['className' => 'ArtistFormatter']); }"
+
+    private fun calledFromMovieIndex() = template("Movie/index", "echo \$this->cell('Widget');")
+
+    fun `test a caller's helper wins over the helper of a cell's initialize`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        calledFromMovieIndex()
+        cell(addFmtToArtistInInitialize + "\npublic function display() {}")
+        assertEquals(setOf(movieHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test a cell's initialize helper stays when a caller does not configure the alias`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        controller("Other", "public function index() {}")
+        calledFromMovieIndex()
+        template("Other/index", "echo \$this->cell('Widget');")
+        cell(addFmtToArtistInInitialize + "\npublic function display() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test a cell's initialize helper stays when a caller only adds the alias in an action`() {
+        appView()
+        controller("Movie", fmtIn("MovieFormatter"))
+        calledFromMovieIndex()
+        cell(addFmtToArtistInInitialize + "\npublic function display() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test a cell action's helper stays alongside a caller's`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        calledFromMovieIndex()
+        cell("public function display() { \$this->viewBuilder()->addHelper('Fmt', ['className' => 'ArtistFormatter']); }")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test a caller's helper settles the type in a cell that does not configure it`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        calledFromMovieIndex()
+        cell("public function display() {}")
+        assertEquals(setOf(movieHelper), fmtTypesIn("cell/Widget/display"))
+    }
+
+    fun `test an element in a cell template keeps the union`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        calledFromMovieIndex()
+        template("cell/Widget/display", "echo \$this->element('in_cell');")
+        cell(addFmtToArtistInInitialize + "\npublic function display() {}")
+        assertTrue(fmtTypesIn("element/in_cell").containsAll(listOf(movieHelper, artistHelper)))
+    }
 }

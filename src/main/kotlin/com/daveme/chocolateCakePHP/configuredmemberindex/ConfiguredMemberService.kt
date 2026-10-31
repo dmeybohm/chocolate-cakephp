@@ -82,6 +82,22 @@ object ConfiguredMemberService {
         return combine(project, resolutions, kinds, alias)
     }
 
+    /**
+     * The type of [alias] on [classFqn], leaving out what the chain's `initialize()` methods load.
+     */
+    fun memberTypeOutsideInitialize(
+        project: Project,
+        classFqn: String,
+        kinds: Set<MemberKind>,
+        alias: String,
+        ignoredProperties: Set<String> = emptySet()
+    ): MemberTypeResult? {
+        val resolution = resolveChain(project, classFqn, kinds, alias, ignoredProperties) {
+            it.source == LoadSource.PROPERTY_ARRAY || !it.isInitializeLoad
+        }
+        return combine(project, listOf(resolution), kinds, alias)
+    }
+
     fun loadedMembers(
         project: Project,
         classFqns: Collection<String>,
@@ -153,7 +169,8 @@ object ConfiguredMemberService {
         classFqn: String,
         kinds: Set<MemberKind>,
         alias: String?,
-        ignoredProperties: Set<String>
+        ignoredProperties: Set<String>,
+        keepLoad: (MemberLoad) -> Boolean = { true }
     ): ChainResolution {
         val phpIndex = PhpIndex.getInstance(project)
         val settings = Settings.getInstance(project)
@@ -165,7 +182,7 @@ object ConfiguredMemberService {
         val configurations = chain.map { fqn ->
             val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
             ClassConfiguration(
-                values.flatMap { it.loads }.filter { it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignoredProperties },
+                values.flatMap { it.loads }.filter { (it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignoredProperties) && keepLoad(it) },
                 values.flatMap { it.declarations }.filter { it.property !in ignoredProperties }
             )
         }
