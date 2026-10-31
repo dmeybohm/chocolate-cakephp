@@ -13,7 +13,9 @@ CakePHP 2 has nothing comparable. Its `$virtualFields` are SQL expressions on a 
 everything here is gated on `settings.cake3Enabled`.
 
 Two pieces merged to `main` after this plan was written, and `main` was merged in on
-2026-10-31:
+2026-10-31. A second merge the same day brought in #308, #312 and #313 (layout navigation,
+parallel test forks and the view index fixes), none of which touch entities, tables or the
+`#P` provider; the only effect on this plan is the testing rule noted under step 11 below.
 
 - **The stub vendor is gone** (#310, [remove-stub-vendor](remove-stub-vendor.md)). Every test
   attaches the pinned real CakePHP release, so there is no second mode to keep in step and no
@@ -64,14 +66,15 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
 - `Inflector::underscore()` is `preg_replace('/(?<=\w)([A-Z])/', '_\1')` then `mb_strtolower`.
   For a method-name suffix (letters, digits, underscores) this matches the plugin's existing
   `camelCaseToUnderscore()`: `fullName` to `full_name`, `uRLSlug` to `u_r_l_slug`, `name2`
-  stays `name2`. A `StringsTest` case pins the agreement.
+  stays `name2`. `InflectorTest` pins the framework's answers for these inputs, and a
+  `StringsTest` case pins the port's.
 
 ## Assumption tests
 
 The framework behaviour above is pinned in the
 [CakePHP assumption suite](../../../src/test/php/README.md), run with
-`scripts/run-cakephp-assumption-tests.sh test 3 4 5 -- --filter Entity`, so the plugin is
-built on verified behaviour and a moved pin fails a test before a feature does:
+`scripts/run-cakephp-assumption-tests.sh test 3 4 5 -- --filter 'Entity|Inflector'`, so the
+plugin is built on verified behaviour and a moved pin fails a test before a feature does:
 
 - **`EntityAccessorTest`** (3, 4, 5): the three spellings, the stored value argument, the
   visibility rules (public and protected found, private not, with the direct `EntityTrait`
@@ -79,17 +82,26 @@ built on verified behaviour and a moved pin fails a test before a feature does:
   `_getURLSlug` and `_getName2`, `getNotAField()` not being an accessor, `$_virtual` only
   affecting `toArray()`, and the per-version `has()` and `isset()` results.
 - **`EntityAssociationPropertyTest`** (3, 4, 5): the property name of each association type,
-  the plugin prefix being dropped, the `propertyName` override, the target entity coming from
-  the target table's entity class (so `className` decides it, a plugin target gives the plugin's
-  entity, and a missing table class gives `Cake\ORM\Entity`), the to-one value being the
-  entity or `null`, the to-many value being an array, and an accessor named for an association
-  property receiving the association's value.
+  including the irregular `People` to `person`, the plugin prefix being dropped, the
+  `propertyName` override, the target entity coming from the target table's entity class (so
+  `className` decides it, a plugin target gives the plugin's entity, and a missing table class
+  gives `Cake\ORM\Entity`), the `belongsTo` and `hasOne` values being the entity or `null`,
+  the `hasMany` value being an array, and an accessor named for an association property
+  receiving the association's value.
+- **`InflectorTest`** (3, 4, 5): `Inflector::underscore()` on the inputs the `StringsTest`
+  case uses (`fullName`, `FullName`, `uRLSlug`, `name2`, `a`, `ReviewAuthors`),
+  `singularize()` and `pluralize()` on the irregular, special-cased and uncountable shapes
+  `entityToTableClass()` and `tableToEntityClass()` must agree on (`Person`/`People`,
+  `Movie`/`Movies`, `Category`/`Categories`, `Status`/`Statuses`, `Sheep`), and
+  `PeopleTable` deriving its entity class as `Person`. The port's rules matched on the first
+  run, so no `Inflector` fix was needed.
 
 Fixtures for them are `Author`, `BaseAuthor`, `AuthorAccessorsTrait`, `Standalone`,
-`StandaloneChild`, `User` and `Review` under each version's `src/Model/Entity`, and
-`UsersTable` and `ReviewsTable` under `src/Model/Table`. The association tests create `users`
-and `reviews` tables in the in-memory SQLite connection, because `Association::getProperty()`
-reads the source table's schema to warn about a column of the same name.
+`StandaloneChild`, `User`, `Review` and `Person` under each version's `src/Model/Entity`, and
+`UsersTable`, `ReviewsTable` and `PeopleTable` under `src/Model/Table`. The association tests
+create `users`, `reviews` and `profiles` tables in the in-memory SQLite connection, because
+`Association::getProperty()` reads the source table's schema to warn about a column of the
+same name, and `Profiles` has no table class so its rows come through a generic `Table`.
 
 Writing them corrected two claims in this log: `has()` on 5.x is true whenever an accessor
 exists, and a class using `EntityTrait` directly has no accessors on 5.x. Both are recorded
@@ -392,7 +404,8 @@ parameter unless stated:
 22. `StringsTest`: `entityToTableClass()` on an app entity, a plugin entity and an irregular
     singular.
 
-The full suite runs at the end (1,366 tests after #310).
+The full suite runs at the end, before the PR is opened; once it is open, only the targeted
+tests run locally and CI runs the suite (the rule #312 added to `AGENTS.md`).
 
 ## Plan
 
@@ -411,7 +424,8 @@ The full suite runs at the end (1,366 tests after #310).
    `associationLoads()` accessor; the resolver inside the `#P` provider with tests 14 to 19;
    completion and navigation with tests 20 and 21; then the cake4 and cake3 copies.
 10. **Step 5** if time allows.
-11. **Full suite.** Then add the feature to the README's supported-features list.
+11. **Full suite**, once, before opening the PR; after that CI runs it. Then add the feature
+    to the README's supported-features list.
 
 ## Interaction with configured associations in query methods
 
@@ -451,8 +465,9 @@ provider, field completion, field navigation) do not meet. What the merge settle
   PhpStorm's inference on the parameter; that is correct, not a conflict.
 - **Pluralization in `entityToTableClass()`.** The `Inflector` port covers the framework's
   irregular and uncountable lists at the time it was written. An entity whose plural the port
-  gets wrong resolves to no table and silently gets no associations. The `StringsTest` cases
-  pin the common shapes; a mismatch found later is an `Inflector` fix, not a provider one.
+  gets wrong resolves to no table and silently gets no associations. `InflectorTest` pins the
+  framework's answers for the common shapes and the `StringsTest` cases pin the port's; a
+  mismatch found later is an `Inflector` fix, not a provider one.
 - **Union receivers.** `$movie` typed `Movie|Article` answers only when every class is an
   entity and every class provides the field, consistent with the configured-member provider.
   A field present on one and not the other, or a union with a non-entity class, falls back to

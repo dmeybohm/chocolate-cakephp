@@ -231,7 +231,7 @@ connection, because `getProperty()` reads the source table's schema.
 
 | Behavior | Test method | Versions |
 |---|---|---|
-| A `belongsTo` property is the singular, underscored alias: `Authors` is `author`, `ReviewAuthors` is `review_author` | `testBelongsToPropertyIsSingularUnderscored` | Same |
+| A `belongsTo` property is the singular, underscored alias: `Authors` is `author`, `ReviewAuthors` is `review_author`, `People` is `person` | `testBelongsToPropertyIsSingularUnderscored` | Same |
 | A `hasOne` property is the singular, underscored alias | `testHasOnePropertyIsSingularUnderscored` | Same |
 | A `hasMany` property is the underscored alias: `ReviewComments` is `review_comments` | `testHasManyPropertyIsUnderscoredAlias` | Same |
 | A `belongsToMany` property is the underscored alias | `testBelongsToManyPropertyIsUnderscoredAlias` | Same |
@@ -240,5 +240,21 @@ connection, because `getProperty()` reads the source table's schema.
 | The property's entity is the target table's entity class, so `className` decides it and a plugin target gives the plugin's entity | `testTargetEntityIsTargetTablesEntityClass` | Same |
 | A target with no table class gives `Cake\ORM\Entity` | `testTargetWithoutTableClassUsesBaseEntity` | Same |
 | A `belongsTo` property holds the target entity, or `null` when nothing matched | `testBelongsToPropertyHoldsTargetEntityOrNull` | Same |
+| A `hasOne` property holds the target entity, or `null` when nothing matched | `testHasOnePropertyHoldsTargetEntityOrNull` | Same |
 | A `hasMany` property holds an array of target entities, empty when nothing matched | `testHasManyPropertyHoldsArrayOfTargetEntities` | Same |
 | An accessor named for an association property receives the association's value | `testAccessorReceivesAssociationValue` | Same |
+
+### `InflectorTest`
+
+Relied on by the plugin's `Inflector` port and the `camelCaseToUnderscore()`,
+`tableToEntityClass()` and `entityToTableClass()` helpers, which derive virtual field names,
+association property names and entity and table class names
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md)). "Same" means 3,
+4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `underscore()` puts an underscore before each capital after the first character and lowercases: `fullName` and `FullName` are `full_name`, `uRLSlug` is `u_r_l_slug`, `name2` stays `name2` | `testUnderscoreOfCamelCaseNames` | Same |
+| `singularize()` handles the irregular, special and uncountable plurals: `People` is `Person`, `Movies` is `Movie`, `Categories` is `Category`, `Statuses` is `Status`, `Sheep` stays | `testSingularizeIrregularAndSpecialPlurals` | Same |
+| `pluralize()` inverts them | `testPluralizeIrregularAndSpecialSingulars` | Same |
+| A table's default entity class is the singularized alias, so `PeopleTable` has `Person` | `testTableEntityClassIsTheSingularizedAlias` | Same |

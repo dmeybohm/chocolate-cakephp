@@ -17,6 +17,7 @@ class ReviewsTable extends Table
         $this->belongsTo('ReviewAuthors', ['className' => 'Users']);
         $this->belongsTo('Editors', ['className' => 'Users', 'propertyName' => 'reviewer']);
         $this->belongsTo('Movies');
+        $this->belongsTo('People');
         $this->hasMany('ReviewComments');
         $this->hasMany('Probe.Widgets');
         $this->belongsToMany('Tags');

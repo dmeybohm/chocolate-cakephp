@@ -27,10 +27,13 @@ class EntityAssociationPropertyTest extends TestCase
         $connection->execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)');
         $connection->execute(
             'CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY, user_id INTEGER, author_id INTEGER,'
-            . ' editor_id INTEGER, movie_id INTEGER, review_author_id INTEGER, body TEXT)'
+            . ' editor_id INTEGER, movie_id INTEGER, review_author_id INTEGER, person_id INTEGER, body TEXT)'
         );
+        $connection->execute('CREATE TABLE IF NOT EXISTS profiles (id INTEGER PRIMARY KEY, user_id INTEGER)');
         $connection->execute('DELETE FROM reviews');
+        $connection->execute('DELETE FROM profiles');
         $connection->execute('DELETE FROM users');
+        $connection->insert('profiles', ['id' => 1, 'user_id' => 1]);
         $connection->insert('users', ['id' => 1, 'name' => 'Ada']);
         $connection->insert('users', ['id' => 2, 'name' => 'Grace']);
         $connection->insert('reviews', ['id' => 1, 'user_id' => 1, 'author_id' => 1, 'editor_id' => 1, 'body' => 'first']);
@@ -61,6 +64,7 @@ class EntityAssociationPropertyTest extends TestCase
     {
         $this->assertSame('author', $this->reviews()->Authors->getProperty());
         $this->assertSame('review_author', $this->reviews()->ReviewAuthors->getProperty());
+        $this->assertSame('person', $this->reviews()->People->getProperty());
     }
 
     public function testHasOnePropertyIsSingularUnderscored(): void
@@ -104,6 +108,12 @@ class EntityAssociationPropertyTest extends TestCase
     {
         $this->assertInstanceOf(User::class, $this->review(1, ['Authors'])->author);
         $this->assertNull($this->review(2, ['Authors'])->author);
+    }
+
+    public function testHasOnePropertyHoldsTargetEntityOrNull(): void
+    {
+        $this->assertInstanceOf(Entity::class, $this->user(1, ['Profiles'])->profile);
+        $this->assertNull($this->user(2, ['Profiles'])->profile);
     }
 
     public function testHasManyPropertyHoldsArrayOfTargetEntities(): void
