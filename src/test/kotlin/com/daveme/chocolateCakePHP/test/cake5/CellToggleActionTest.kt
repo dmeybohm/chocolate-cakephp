@@ -28,10 +28,9 @@ class CellToggleActionTest : Cake5BaseTestCase() {
     }
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/View/AppView.php",
-            "cake5/vendor/cakephp.php",
         )
         // Copied without opening, so the toggle action is what opens them
         myFixture.copyFileToProject("cake5/templates/cell/Inventory/display.php")

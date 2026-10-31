@@ -7,6 +7,7 @@ use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingCellException;
 use Cake\View\Exception\MissingCellTemplateException;
+use Cake\View\Exception\MissingHelperException;
 
 /**
  * Cell class and template resolution, which cell navigation and cell view variables depend on.
@@ -113,5 +114,30 @@ class CellTest extends TestCase
     {
         $this->get('/widgets/showcell?name=Probe.Gadget::elementappfallback');
         $this->assertResponseEquals('app:element/app_only');
+    }
+
+    public function testControllerHelperReachesItsTemplate(): void
+    {
+        $this->get('/widgets/helpertemplate');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testControllerHelperReachesCellTemplate(): void
+    {
+        $this->get('/widgets/helpercell?name=Lamp::helper');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testControllerHelperReachesElementInCellTemplate(): void
+    {
+        $this->get('/widgets/helpercell?name=Lamp::helperelement');
+        $this->assertResponseEquals('App\\View\\Helper\\MarkerHelper');
+    }
+
+    public function testCellTemplateHasNoHelperItsCallerLacks(): void
+    {
+        $this->expectException(MissingHelperException::class);
+        $this->expectExceptionMessage('AliasedHelper');
+        $this->get('/widgets/showcell?name=Lamp::helper');
     }
 }

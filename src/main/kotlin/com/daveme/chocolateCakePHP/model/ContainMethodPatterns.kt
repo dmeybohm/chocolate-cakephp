@@ -1,21 +1,21 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.Settings
-import com.daveme.chocolateCakePHP.isProbablyTableClass
+import com.daveme.chocolateCakePHP.isAnyTableClass
 import com.daveme.chocolateCakePHP.isProbablyQueryObject
+import com.daveme.chocolateCakePHP.isProbablyTableClass
+import com.daveme.chocolateCakePHP.isQueryObject
+import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PatternCondition
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.util.ProcessingContext
-import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.MethodReference
-import com.jetbrains.php.lang.psi.elements.ParameterList
-import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 
 /**
- * Patterns for matching contain() method calls on Table and Query objects.
+ * Patterns for strings that name association paths in query methods on Table and Query objects.
  *
  * Note on pattern element types:
  * - Completion patterns start with LeafPsiElement because CompletionContributor works at the
@@ -27,101 +27,46 @@ import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
  */
 object ContainMethodPatterns {
 
+    private val associationPathMethods = setOf(
+        "contain",
+        "matching",
+        "notmatching",
+        "innerjoinwith",
+        "leftjoinwith",
+    )
+
     /**
-     * Pattern condition that matches contain() method references on Table or Query objects.
+     * Matches a string in the association path argument of a query method: the argument itself,
+     * an array element, an array key, or an element or key of an array nested under a key.
      */
-    private object ContainMethodCondition :
-        PatternCondition<MethodReference>("ContainMethodPattern") {
+    private object AssociationPathCondition :
+        PatternCondition<StringLiteralExpression>("AssociationPathPattern") {
 
         override fun accepts(
-            methodReference: MethodReference,
+            literal: StringLiteralExpression,
             context: ProcessingContext
         ): Boolean {
-            if (!"contain".equals(methodReference.name, ignoreCase = true)) {
+            val method = associationPathPosition(literal)?.method ?: return false
+            if (method.name?.lowercase() !in associationPathMethods) {
                 return false
             }
-
-            val settings = Settings.getInstance(methodReference.project)
-            if (!settings.cake3Enabled) {
+            if (!Settings.getInstance(method.project).cake3Enabled) {
                 return false
             }
-
-            val classRefType = methodReference.classReference?.type ?: return false
-            return classRefType.isProbablyTableClass() || classRefType.isProbablyQueryObject()
+            val classRefType = method.classReference?.type ?: return false
+            if (classRefType.isProbablyTableClass() || classRefType.isProbablyQueryObject()) {
+                return true
+            }
+            // The signature of a chain does not have to mention a table or a query:
+            return classRefType.lookupCompleteType(method.project, null).types.any {
+                it.isAnyTableClass() || it.isQueryObject()
+            }
         }
     }
 
-    /**
-     * Pattern for string literal directly in parameter list (for completion).
-     *
-     * Matches: $query->contain('<caret>Authors')
-     */
-    val stringForCompletion: ElementPattern<LeafPsiElement> = psiElement(LeafPsiElement::class.java)
-        .withParent(
-            psiElement(StringLiteralExpression::class.java)
-                .withParent(
-                    psiElement(ParameterList::class.java)
-                        .withParent(
-                            psiElement(MethodReference::class.java)
-                                .with(ContainMethodCondition)
-                        )
-                )
-        )
+    val stringForGotoDeclaration: ElementPattern<StringLiteralExpression> =
+        psiElement(StringLiteralExpression::class.java).with(AssociationPathCondition)
 
-    /**
-     * Pattern for string literal directly in parameter list (for goto declaration).
-     *
-     * Matches: $query->contain('Authors')
-     */
-    val stringForGotoDeclaration: ElementPattern<StringLiteralExpression> = psiElement(StringLiteralExpression::class.java)
-        .withParent(
-            psiElement(ParameterList::class.java)
-                .withParent(
-                    psiElement(MethodReference::class.java)
-                        .with(ContainMethodCondition)
-                )
-        )
-
-    /**
-     * Pattern for string literal inside array in parameter list (for completion).
-     *
-     * Matches: $query->contain(['<caret>Authors', 'Comments'])
-     */
-    val arrayForCompletion: ElementPattern<LeafPsiElement> = psiElement(LeafPsiElement::class.java)
-        .withParent(
-            psiElement(StringLiteralExpression::class.java)
-                .withParent(
-                    psiElement(PhpPsiElement::class.java) // ArrayElement
-                        .withParent(
-                            psiElement(ArrayCreationExpression::class.java)
-                                .withParent(
-                                    psiElement(ParameterList::class.java)
-                                        .withParent(
-                                            psiElement(MethodReference::class.java)
-                                                .with(ContainMethodCondition)
-                                        )
-                                )
-                        )
-                )
-        )
-
-    /**
-     * Pattern for string literal inside array in parameter list (for goto declaration).
-     *
-     * Matches: $query->contain(['Authors', 'Comments'])
-     */
-    val arrayForGotoDeclaration: ElementPattern<StringLiteralExpression> = psiElement(StringLiteralExpression::class.java)
-        .withParent(
-            psiElement(PhpPsiElement::class.java) // ArrayElement
-                .withParent(
-                    psiElement(ArrayCreationExpression::class.java)
-                        .withParent(
-                            psiElement(ParameterList::class.java)
-                                .withParent(
-                                    psiElement(MethodReference::class.java)
-                                        .with(ContainMethodCondition)
-                                )
-                        )
-                )
-        )
+    val stringForCompletion: ElementPattern<LeafPsiElement> =
+        psiElement(LeafPsiElement::class.java).withParent(stringForGotoDeclaration)
 }

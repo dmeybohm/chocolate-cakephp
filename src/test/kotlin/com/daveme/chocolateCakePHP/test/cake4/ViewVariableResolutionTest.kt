@@ -6,9 +6,6 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewVariableResolutionTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
-            "cake4/vendor/cakephp.php"
-        )
     }
 
     fun `test compact with parameter resolves type correctly`() {

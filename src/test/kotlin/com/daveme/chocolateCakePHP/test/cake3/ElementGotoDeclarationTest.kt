@@ -6,14 +6,13 @@ import com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler
 class ElementGotoDeclarationTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/MovieController.php",
             "cake3/src/View/AppView.php",
             "cake3/src/Template/Movie/artist.ctp",
             "cake3/src/Template/Movie/film_director.ctp",
             "cake3/src/Template/Element/Director/filmography.ctp",
-            "cake3/vendor/cakephp.php",
         )
     }
 

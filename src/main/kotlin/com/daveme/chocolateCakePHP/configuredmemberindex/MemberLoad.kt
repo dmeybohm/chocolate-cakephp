@@ -20,6 +20,16 @@ enum class LoadSource {
 }
 
 /**
+ * The type of association a configured member is.
+ */
+enum class AssociationType {
+    BELONGS_TO,
+    HAS_ONE,
+    HAS_MANY,
+    BELONGS_TO_MANY,
+}
+
+/**
  * One load of a dynamic property, such as `$this->loadComponent('Alias', [...])`, as it is
  * written in the source file.
  */
@@ -33,6 +43,9 @@ data class MemberLoad(
     val offset: Int,
     val property: String? = null,
     val hasUnreadClassName: Boolean = false,
+    val associationType: AssociationType? = null,
+    val propertyName: String? = null,
+    val hasUnreadPropertyName: Boolean = false,
 ) {
     val isInitializeLoad: Boolean
         get() = source == LoadSource.PROPERTY_ARRAY ||
@@ -82,11 +95,33 @@ internal val methodCallSources: Map<String, MemberKind> = mapOf(
     "belongstomany" to MemberKind.ASSOCIATION,
 )
 
+// By lowercase method name, array key or property name:
+internal val associationTypes: Map<String, AssociationType> = mapOf(
+    "belongsto" to AssociationType.BELONGS_TO,
+    "hasone" to AssociationType.HAS_ONE,
+    "hasmany" to AssociationType.HAS_MANY,
+    "belongstomany" to AssociationType.BELONGS_TO_MANY,
+    "hasandbelongstomany" to AssociationType.BELONGS_TO_MANY,
+)
+
 // Source methods whose second argument is not an options array, so cannot alias:
 // loadModel($modelClass, $modelType).
 internal val sourcesWithoutOptions: Set<String> = setOf(
     "loadmodel",
 )
+
+internal const val VIEW_BUILDER_METHOD = "viewbuilder"
+
+internal const val ADD_HELPER_METHOD = "addhelper"
+
+// ViewBuilder methods that take an array of helpers:
+internal val viewBuilderHelperArrayMethods: Set<String> = setOf(
+    "addhelpers",
+    "sethelpers",
+    "helpers",
+)
+
+internal const val HELPERS_PROPERTY = "helpers"
 
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
@@ -109,7 +144,7 @@ internal val cakeTwoAssociationTypeKeys: Set<String> = setOf(
 )
 
 internal val propertyArraySources: Map<String, MemberKind> = mapOf(
-    "helpers" to MemberKind.HELPER,
+    HELPERS_PROPERTY to MemberKind.HELPER,
     "components" to MemberKind.COMPONENT,
     "uses" to MemberKind.TABLE,
 ) + cakeTwoAssociationTypeKeys.associateWith { MemberKind.ASSOCIATION }

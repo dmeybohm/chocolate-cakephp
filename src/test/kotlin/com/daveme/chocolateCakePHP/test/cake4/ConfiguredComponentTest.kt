@@ -13,7 +13,7 @@ import java.io.File
 class ConfiguredComponentTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Controller/ConfiguredController.php",
             "cake4/src4/Controller/ChildConfiguredController.php",
@@ -27,7 +27,6 @@ class ConfiguredComponentTest : Cake4BaseTestCase() {
             "cake4/vendor/test/test_plugin/src/Controller/Component/ConditionalComponent.php",
             "cake4/src4/Model/Table/MoviesTable.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

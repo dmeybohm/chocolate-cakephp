@@ -6,7 +6,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 class ViewVariableTest: Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/MovieController.php",
             "cake5/src5/Controller/Nested/MyNestedController.php",
@@ -15,7 +15,6 @@ class ViewVariableTest: Cake5BaseTestCase() {
             "cake5/src5/View/Helper/ArtistFormatterHelper.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/Model/Table/MoviesTable.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/direct_call_test.php",
             "cake5/templates/Movie/expression_variety_test.php",
             "cake5/templates/Movie/array_variety_test.php"

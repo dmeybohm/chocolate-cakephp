@@ -5,13 +5,14 @@ import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import java.io.File
 
 class ConfiguredAssociationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Model/Table/ReviewsTable.php",
             "cake5/src5/Model/Table/UsersTable.php",
@@ -21,7 +22,6 @@ class ConfiguredAssociationTest : Cake5BaseTestCase() {
             "cake5/src5/Model/Table/ArticlesTable.php",
             "cake5/src5/Model/Table/RatingsTable.php",
             "cake5/vendor/test/test_plugin/src/Model/Table/RatingsTable.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 
@@ -121,5 +121,41 @@ class ConfiguredAssociationTest : Cake5BaseTestCase() {
         val targets = gotoDeclarationHandlerTargets(ControllerFieldGotoDeclarationHandler())
         assertNotNull(targets)
         assertEquals(listOf("\\App\\Model\\Table\\UsersTable"), targets!!.map { (it as PhpClass).fqn })
+    }
+
+    fun `test association chain walks one configured alias at a time`() {
+        configureController("\$this->Reviews->Authors-><caret>")
+        assertTrue(completions().contains("usersTableMethod"))
+    }
+
+    fun `test longer association chain resolves through the fallback hop`() {
+        configureController("\$this->Movies->Reviews->Authors-><caret>")
+        assertTrue(completions().contains("usersTableMethod"))
+    }
+
+    private fun queryTypesAtCaret(): Set<String> {
+        val element = myFixture.file.findElementAt(myFixture.caretOffset)
+        val method = PsiTreeUtil.getParentOfType(element, MethodReference::class.java)!!
+        return method.type.lookupCompleteType(project, null).types
+    }
+
+    fun `test query from an association chain carries the table`() {
+        configureController("\$this->Movies->Reviews->fi<caret>nd();")
+        assertContainsElements(queryTypesAtCaret(), QUERY_ON_REVIEWS)
+    }
+
+    fun `test query method chained after an association chain keeps the table`() {
+        configureController("\$this->Movies->Reviews->find()->wh<caret>ere([]);")
+        assertContainsElements(queryTypesAtCaret(), QUERY_ON_REVIEWS)
+    }
+
+    fun `test query from an association of this inside a table carries the table`() {
+        configureReviewsTable("\$this->Authors->fi<caret>nd();")
+        assertContainsElements(queryTypesAtCaret(), QUERY_ON_USERS)
+    }
+
+    private companion object {
+        const val QUERY_ON_USERS = "\\Best\\ChocolateCakePHP\\QueryBuilder\\App\\Model\\Table\\UsersTable"
+        const val QUERY_ON_REVIEWS = "\\Best\\ChocolateCakePHP\\QueryBuilder\\App\\Model\\Table\\ReviewsTable"
     }
 }

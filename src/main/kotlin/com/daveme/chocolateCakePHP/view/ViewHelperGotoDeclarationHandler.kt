@@ -46,12 +46,12 @@ class ViewHelperGotoDeclarationHandler : GotoDeclarationHandler {
             val phpIndex = PhpIndex.getInstance(project)
             val helperTypes = classReference.type.lookupCompleteType(project, phpIndex, null).types
                 .filter { it.startsWith("\\") && it.contains("Helper") }
-            val viewReceivers = if (helperTypes.isEmpty())
-                ViewHelperReceivers.ofFile(project, settings, psiElement.containingFile)
+            val viewFile = if (helperTypes.isEmpty())
+                psiElement.containingFile.originalFile.virtualFile?.let { viewFileOf(project, settings, it) }
             else
                 null
-            val configured = if (viewReceivers != null)
-                ViewHelperReceivers.helperMemberType(project, viewReceivers, fieldName)
+            val configured = if (viewFile != null)
+                ViewHelperReceivers.helperMemberType(project, viewFile, fieldName)
             else
                 ConfiguredMemberService.memberType(project, helperTypes, setOf(MemberKind.HELPER), fieldName)
             val result = configured?.classes.orEmpty().toMutableList()

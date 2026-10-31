@@ -6,7 +6,7 @@ import com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler
 class ElementGotoDeclarationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/MovieController.php",
             "cake5/src5/View/AppView.php",
@@ -14,7 +14,6 @@ class ElementGotoDeclarationTest : Cake5BaseTestCase() {
             "cake5/templates/Movie/film_director.php",
             "cake5/templates/element/Director/filmography.php",
             "cake5/templates/element/breadcrumb.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 
