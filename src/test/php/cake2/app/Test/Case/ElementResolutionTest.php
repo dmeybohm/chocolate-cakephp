@@ -25,6 +25,12 @@ class ElementResolutionTest extends ControllerTestCase {
 		$this->assertNotContains('plugin:element/plugin_only', $rendered);
 	}
 
+	public function testWronglyCasedElementDirectoryIsNotFound() {
+		$rendered = $this->renderedBy('/widgets/wrongcaseelement');
+		$this->assertContains('Element Not Found: Elements/wrong_case.ctp', $rendered);
+		$this->assertNotContains('app:Element/wrong_case', $rendered);
+	}
+
 	public function testAppTemplateRendersPrefixedPluginElement() {
 		$this->assertSame('plugin:element/plugin_only', $this->renderedBy('/widgets/prefixedelement'));
 	}

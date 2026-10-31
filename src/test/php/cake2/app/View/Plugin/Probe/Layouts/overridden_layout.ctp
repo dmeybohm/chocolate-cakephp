@@ -1,0 +1,1 @@
+override-layout:<?php echo $this->fetch('content'); ?>

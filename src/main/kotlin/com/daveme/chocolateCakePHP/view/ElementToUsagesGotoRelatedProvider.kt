@@ -10,6 +10,22 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 
 /**
+ * Whether [file] is in the element directory of its templates directory.
+ */
+internal fun isElementFile(file: PsiFile, settings: Settings): Boolean {
+    val project = file.project
+    val templatesDir = templatesDirectoryOfViewFile(project, settings, file)
+        ?: return false
+
+    val virtualFile = file.virtualFile ?: return false
+    val viewFile = viewFileOf(project, settings, virtualFile)
+        ?: return false
+
+    // Check if the file is in the element directory, by the key it has in its plugin
+    return viewFile.templateKey.startsWith("${templatesDir.elementDirName}/")
+}
+
+/**
  * Provides "Go to Related Item" navigation from element files to views/elements that use them.
  *
  * This contributes to the Navigate → Related Symbol popup (Ctrl+Alt+Home / ⌃⌘↑)
@@ -54,22 +70,6 @@ class ElementToUsagesGotoRelatedProvider : GotoRelatedProvider() {
         return referencingElements.map { element ->
             createGotoRelatedItem(element, settings)
         }
-    }
-
-    /**
-     * Check if the file is an element file (located in element/Element/Elements directory)
-     */
-    private fun isElementFile(file: PsiFile, settings: Settings): Boolean {
-        val project = file.project
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, file)
-            ?: return false
-
-        val virtualFile = file.virtualFile ?: return false
-        val viewFile = viewFileOf(project, settings, virtualFile)
-            ?: return false
-
-        // Check if the file is in the element directory, by the key it has in its plugin
-        return viewFile.templateKey.startsWith("${templatesDir.elementDirName}/")
     }
 
     /**

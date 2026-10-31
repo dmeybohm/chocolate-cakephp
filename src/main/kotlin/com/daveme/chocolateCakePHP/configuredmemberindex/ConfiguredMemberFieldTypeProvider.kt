@@ -75,11 +75,7 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
             return null
         }
         val isView = receiverClass.isViewClassName()
-        // The builder always passes a view its helpers, which replaces this property:
-        val ignoredProperties = if (isView) setOf(HELPERS_PROPERTY) else emptySet()
-        val configured = ConfiguredMemberService.memberType(
-            project, listOf(receiverClass), kinds, fieldName
-        ) { ignoredProperties }
+        val configured = ConfiguredMemberService.memberType(project, listOf(receiverClass), kinds, fieldName)
         val determined = configured != null && configured.hasInitializeLoad
         if (determined && configured!!.classFqns.isNotEmpty()) {
             return configured.type

@@ -1,0 +1,1 @@
+app-layout:<?= $this->fetch('content') ?>

@@ -60,6 +60,34 @@ Relied on by view navigation, the controller action line marker and view file cr
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 
+### `LayoutResolutionTest`
+
+Relied on by layout navigation.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `render()`'s second argument names the layout | `testRenderSecondArgumentNamesLayout` | Same |
+| A `render()` with a layout, called from a template, wraps its own output, and the outer layout wraps it again | `testRenderFromTemplateWrapsItsOutputAgainInTheOuterLayout` | Same |
+| The builder's `setLayout()` names the layout | `testBuilderSetLayoutNamesLayout` | 3, 4, 5 |
+| Builder setters chained after `setLayout()` all apply | `testChainedBuilderSettersAllApply` | 3, 4, 5 |
+| The builder's `layout()` names the layout | `testBuilderLayoutNamesLayout` | 3, deprecated |
+| The builder has no `layout()` method | `testBuilderHasNoLayoutMethod` | 4, 5 |
+| A controller's `layout` property, declared or assigned, names the layout | `testControllerLayoutPropertyNamesLayout`, `testControllerLayoutAssignmentNamesLayout` | 2, 3 (deprecated) |
+| A controller's `layout` property, declared or assigned, has no effect | `testControllerLayoutPropertyHasNoEffect`, `testControllerLayoutAssignmentHasNoEffect` | 4, 5 |
+| `$this->layout = 'x'` in a template wraps it | `testLayoutAssignedInTemplateWraps` | 3, 4, 5. 2: `testLayoutNamedFromTemplateWraps` |
+| A view's `layout()` names the layout | `testViewLayoutMethodNamesLayout` | 3, deprecated |
+| A view has no `layout()` method | `testViewHasNoLayoutMethod` | 4, 5 |
+| A data view renders without a layout, even when one is named | `testDataViewRendersWithoutLayout` | Same |
+| A layout path selects a subdirectory of the layout directory | `testLayoutPathSelectsSubdirectory` | Same |
+| A plugin controller's unprefixed layout is found in the plugin first | `testPluginControllerPrefersPluginLayout` | Same |
+| A plugin controller's layout missing from the plugin falls back to the app's | `testPluginControllerFallsBackToAppLayout` | Same |
+| The app's override directory wins over the plugin's own layout | `testAppOverrideWinsOverPluginLayout` | Same |
+| An app controller's unprefixed layout does not reach a plugin's | `testAppControllerDoesNotReachPluginLayoutUnprefixed` | Same |
+| An app controller's `Plugin.name` layout finds the plugin's | `testAppControllerReachesPluginLayoutWithPrefix` | Same |
+| A layout named in a cell class has no effect | `testLayoutNamedInCellClassHasNoEffect` | 3, 4, 5 |
+| A layout named in a cell template has no effect | `testLayoutNamedInCellTemplateHasNoEffect` | 4, 5 |
+| A layout named in a cell template wraps the cell | `testLayoutNamedInCellTemplateWraps` | 3 |
+
 ### `ElementResolutionTest`
 
 Relied on by element navigation and element related usages.
@@ -69,6 +97,7 @@ Relied on by element navigation and element related usages.
 | A plugin template prefers the plugin's element | `testPluginTemplatePrefersPluginElement` | Same |
 | A plugin template falls back to the app's element | `testPluginTemplateFallsBackToAppElement` | Same |
 | An app template's unprefixed element does not reach a plugin | `testAppTemplateDoesNotReachPluginElementUnprefixed` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
+| An element in a wrongly-cased directory is not found, on a case-sensitive filesystem | `testWronglyCasedElementDirectoryIsNotFound` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
 | An app template's `Plugin.name` element finds the plugin's element | `testAppTemplateRendersPrefixedPluginElement` | Same |
 | A `Plugin.name` element missing from the plugin falls back to the app's element | `testPrefixedElementFallsBackToAppElement` | Same |
 | A plugin template's element of another plugin finds that plugin's element | `testPluginTemplateRendersOtherPluginElement` | Same |
@@ -117,6 +146,8 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | A view class's `loadHelper()` wins over a controller's helper of the same alias without options | `testViewLoadHelperWinsOverControllerHelperWithoutOptions` | Same |
 | A view class's `loadHelper()` raises an error when a controller gives the same alias another `className` | `testViewLoadHelperConflictsWithControllerClassName` | Same |
 | The builder's helpers replace a `$helpers` property declared on the view class | `testControllerBuilderReplacesViewHelpersProperty` | Same |
+| The controller's helpers replace a `$helpers` property declared on the view class | `testControllerHelpersReplaceViewHelpersProperty` | 2 only |
+| A view built by hand, with no helpers passed, keeps its `$helpers` property | `testViewBuiltByHandKeepsHelpersProperty` | Same, and 2 |
 | A controller's helper reaches a layout and an element in it | `testControllerHelperReachesLayoutAndItsElement` | Same |
 | A cell's own `viewBuilder()` helper reaches its template | `testCellOwnHelperReachesItsTemplate` | Same |
 | An app controller's helper reaches a plugin cell's template | `testControllerHelperReachesPluginCellTemplate` | Same |

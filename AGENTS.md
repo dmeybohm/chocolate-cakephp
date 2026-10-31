@@ -53,7 +53,7 @@ running on in the typical locations for those.
 
 ### Test layout
 
-There are some generic tests under the top level, and then a
+The framework-independent tests live in the `core` directory, and then there is a
 breakdown by CakePHP version in `cake2`, `cake3`, etc directories.
 
 ### Targeted Tests
@@ -64,6 +64,10 @@ tests as soon as possible after development to find any problems
 sooner. For moving faster, try to focus on making tests for cake5
 first, and getting those to work, before writing tests for other
 cake versions.
+
+Once a branch has an open PR, don't run the full test suite locally.
+Run the targeted tests for the change and let CI run the full suite
+on the PR.
 
 ### Completion tests
 
@@ -116,6 +120,23 @@ appears and we can check the presentation results with
 Also, if you see a case where `lookupElementStrings` is null, it
 might be because of this edge case. So that is something important
 to keep in mind when dealing with the tests.
+
+## Assumption tests
+
+The plugin's behaviour is built on what CakePHP does at runtime, so verify that rather than
+inferring it. When designing a feature or a fix, write assumption tests for the framework behaviour
+it depends on first, before the plan settles and before the plugin code. A failing assumption test
+is cheap to learn from and says what the framework does instead.
+
+They live in `src/test/php`, run against real, pinned CakePHP releases in containers, and need Podman
+or Docker. Gradle does not run them.
+
+```bash
+scripts/run-cakephp-assumption-tests.sh test                # every version
+scripts/run-cakephp-assumption-tests.sh test 4 5 -- --filter Element
+```
+
+See `src/test/php/README.md` for how to add one, and for the catalogue each new test needs a row in.
 
 ## Debugging
 
