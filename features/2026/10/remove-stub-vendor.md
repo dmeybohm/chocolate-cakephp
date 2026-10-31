@@ -59,3 +59,35 @@ framework, and gets the default light project with no library.
 for any future test, and is not tied to the vendor mode.
 
 ## Implementation Progress
+
+### Session #1
+
+Done as planned, in one commit.
+
+- **Fixtures.** The 8 stub files are gone, 1,227 lines in all. The other content under
+  `cake3/vendor` and `cake5/vendor` (fixture packages and `test_plugin`) stays.
+- **Tests.** A script removed the stub path from every `configureByFiles` argument list, keeping
+  each list's trailing comma or lack of one, and removed the call where the stub was its only
+  argument. Callers of the `BaseTestCase` helper went back to `myFixture.configureByFiles`, so
+  109 test files changed mechanically. Two inline comments (`// create Template dir`) in the Cake 3
+  line marker test were put back by hand after the script moved them to their own line. A few
+  `setUpTestFiles()` overrides are now empty, which `cake2/ConfiguredMemberResolutionTest`
+  already was.
+- **No-framework tests.** `BaseTestCase.attachesFramework` (default `true`) replaces the mode
+  switch. `cake2/FrameworkNotIndexedHelperTest` sets it to `false`. The no-framework test from
+  `cake2/ConfiguredControllerTest` moved to `cake2/FrameworkNotIndexedControllerTest`, and the two
+  share `ConfiguredControllerFixtureTestCase`, which holds the class fixture and the
+  `appController` / `configureController` / `fieldTypeAtCaret` / `completions` helpers.
+  `withFramework()` and its 16 calls are gone.
+- **Descriptor.** Without the Gradle system property, `RealCakeVendorProjectDescriptor` looks in
+  `build/cakephp-vendor/<major>`, and the error for a missing directory names the
+  `fetchCake<N>Vendor` task. The IDE's JUnit runner works once that task has run.
+- **Build and CI.** `-PcakeVendor` and the `chocolateCakePHP.vendor` property are gone. The
+  `test` task always depends on the four fetch tasks. `build.yml` is a single job again; the
+  release zip cache and the coverage upload no longer have a mode condition.
+
+Targeted run: cake2 `ConfiguredControllerTest`, both `FrameworkNotIndexed*` classes and cake5
+`ConfiguredComponentTest`, 43 tests, all passed, 1 m 50 s including compilation.
+
+Full suite on a warm index: 1,366 tests, 0 failed, 0 skipped, 5 m 45 s. Nothing is skipped any
+more because there is no second mode left to skip for.
