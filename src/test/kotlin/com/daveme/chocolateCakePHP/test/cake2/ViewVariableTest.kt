@@ -14,7 +14,6 @@ class ViewVariableTest : Cake2BaseTestCase() {
             "cake2/app/View/Helper/ArtistFormatterHelper.php",
             "cake2/app/View/AppView.php",
             "cake2/app/Model/Movie.php",
-            "cake2/vendor/cakephp.php",
             "cake2/app/View/Movie/direct_call_test.ctp",
             "cake2/app/View/Movie/expression_variety_test.ctp"
         )
@@ -307,5 +306,143 @@ class ViewVariableTest : Cake2BaseTestCase() {
 
         val result = myFixture.lookupElementStrings
         assertTrue(result!!.contains("saveScreening"))
+    }
+
+    // Ternary / match expression tests (issue #280)
+
+    fun `test variable list is communicated to both branches of a ternary view field assignment`() {
+        for (view in listOf("ternary_one", "ternary_two")) {
+            myFixture.configureByFilePathAndText("cake2/app/View/Movie/$view.ctp", """
+            <?php
+            echo ${'$'}<caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected \$ternaryVar in $view, got: $result", result!!.contains("${'$'}ternaryVar"))
+            assertTrue("Expected \$movieModel in $view, got: $result", result.contains("${'$'}movieModel"))
+        }
+    }
+
+    fun `test variable type is communicated to both branches of a ternary view field assignment`() {
+        for (view in listOf("ternary_one", "ternary_two")) {
+            myFixture.configureByFilePathAndText("cake2/app/View/Movie/$view.ctp", """
+            <?php
+            echo ${'$'}movieModel-><caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected saveScreening in $view, got: $result", result!!.contains("saveScreening"))
+        }
+    }
+
+    fun `test variable list is communicated to every arm of a match view field assignment`() {
+        for (view in listOf("match_one", "match_two")) {
+            myFixture.configureByFilePathAndText("cake2/app/View/Movie/$view.ctp", """
+            <?php
+            echo ${'$'}<caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected \$matchVar in $view, got: $result", result!!.contains("${'$'}matchVar"))
+            assertTrue("Expected \$movieModel in $view, got: $result", result.contains("${'$'}movieModel"))
+        }
+    }
+
+    // Local variable template tests
+
+    fun `test variable list is communicated to both views of a variable view field assignment`() {
+        for (view in listOf("variable_one", "variable_two")) {
+            myFixture.configureByFilePathAndText("cake2/app/View/Movie/$view.ctp", """
+            <?php
+            echo ${'$'}<caret>
+            """.trimIndent())
+            myFixture.completeBasic()
+
+            val result = myFixture.lookupElementStrings
+            assertNotNull("Expected completion popup in $view", result)
+            assertTrue("Expected \$variableVar in $view, got: $result", result!!.contains("${'$'}variableVar"))
+            assertTrue("Expected \$movieModel in $view, got: $result", result.contains("${'$'}movieModel"))
+        }
+    }
+
+    // ---- data passed to elements and $this->set() inside view files -----------------------
+
+    private fun typeTextOf(lookupString: String): String? {
+        val element = myFixture.lookupElements!!.find { it.lookupString == lookupString }
+        assertNotNull("Should find $lookupString in completion", element)
+        val presentation = LookupElementPresentation()
+        element!!.renderElement(presentation)
+        return presentation.typeText
+    }
+
+    fun `test variables passed to element are completed`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        ${'$'}this->set('fromTemplate', 'x');
+        echo ${'$'}this->element('Director/filmography', array('table' => ${'$'}movieModel, 'count' => 3));
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Passed var missing: $result", result!!.contains("${'$'}table"))
+        assertTrue("Passed literal missing: $result", result.contains("${'$'}count"))
+        assertTrue("Controller var missing: $result", result.contains("${'$'}movieModel"))
+        assertTrue("Template set() var missing: $result", result.contains("${'$'}fromTemplate"))
+        assertEquals("int", typeTextOf("${'$'}count"))
+        assertEquals("string", typeTextOf("${'$'}fromTemplate"))
+    }
+
+    fun `test type of variable passed to element chains through the template`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        echo ${'$'}this->element('Director/filmography', array('table' => ${'$'}movieModel, 'count' => 3));
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}table-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", result)
+        assertTrue("Expected saveScreening, got: $result", result!!.contains("saveScreening"))
+    }
+
+    fun `test variable holding element data is completed and typed`() {
+        myFixture.configureByFilePathAndText("cake2/app/View/Movie/film_director.ctp", """
+        <?php
+        ${'$'}data = array('viaVar' => ${'$'}movieModel, 'viaCount' => 3);
+        echo ${'$'}this->element('Director/filmography', ${'$'}data);
+        """.trimIndent())
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}<caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+
+        val result = myFixture.lookupElementStrings
+        assertNotNull(result)
+        assertTrue("Expanded names missing: $result", result!!.containsAll(listOf("${'$'}viaVar", "${'$'}viaCount")))
+        assertEquals("int", typeTextOf("${'$'}viaCount"))
+
+        myFixture.configureByFilePathAndText("cake2/app/View/Elements/Director/filmography.ctp", """
+        <?php
+        echo ${'$'}viaVar-><caret>
+        """.trimIndent())
+        myFixture.completeBasic()
+        val methods = myFixture.lookupElementStrings
+        assertNotNull("Expected completion popup on passed table", methods)
+        assertTrue("Expected saveScreening, got: $methods", methods!!.contains("saveScreening"))
     }
 }

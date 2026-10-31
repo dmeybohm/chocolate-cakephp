@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberTypeResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
@@ -72,20 +73,21 @@ fun CompletionResultSet.completeFromClasses(
     }
 }
 
-fun CompletionResultSet.completeMethodCallWithParameterFromClasses(
-    classes: Collection<PhpClass>,
-    removeFromEnd: String = "",
-    advanceBeyondClosingParen: Boolean = false,
+fun CompletionResultSet.completeFromLoadedMembers(
+    members: Map<String, MemberTypeResult>,
+    containingClasses: List<PhpClass> = arrayListOf(),
 ) {
-    classes.map { klass ->
-        val targetName = klass.name.removeFromEnd(removeFromEnd, ignoreCase = true)
-        val lookupElement = LookupElementBuilder.create(targetName)
-            .withIcon(PhpIcons.FIELD)
-            .withTypeText(klass.type.toString().substring(1))
-            .withInsertHandler(CompleteStringParameter(advanceBeyondClosingParen))
+    for ((alias, member) in members) {
+        if (hasFieldAlready(containingClasses, alias)) {
+            continue
+        }
+        val lookupElement = LookupElementBuilder.create(alias)
+                .withIcon(PhpIcons.FIELD)
+                .withTypeText(member.classFqns.joinToString("|") { it.removePrefix("\\") })
         this.addElement(lookupElement)
     }
 }
+
 private fun hasFieldAlready(containingClasses: List<PhpClass>, propertyName: String): Boolean =
     containingClasses.any {
         val hasField = it.findFieldByName(propertyName, true) != null

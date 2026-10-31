@@ -1,6 +1,8 @@
 package com.daveme.chocolateCakePHP.controller
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.codeInsight.completion.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.patterns.PlatformPatterns
@@ -73,7 +75,19 @@ class ControllerComponentCompletionContributor : CompletionContributor() {
                 val phpIndex = PhpIndex.getInstance(fieldReference.project)
                 val containingClasses = phpIndex.getAllAncestorTypesFromFQNs(controllerClassNames)
 
-                val componentSubclasses = phpIndex.getComponentSubclasses(settings)
+                val loaded = ConfiguredMemberService.loadedMembers(
+                    fieldReference.project,
+                    controllerClassNames,
+                    setOf(MemberKind.COMPONENT)
+                )
+                completionResultSet.completeFromLoadedMembers(loaded.members, containingClasses)
+                if (MemberKind.COMPONENT in loaded.initializeKinds) {
+                    return
+                }
+
+                val componentSubclasses = phpIndex.getComponentSubclasses(settings).filter {
+                    it.name.removeFromEnd("Component", ignoreCase = true) !in loaded.members
+                }
                 completionResultSet.completeFromClasses(
                     componentSubclasses,
                     removeFromEnd = "Component",

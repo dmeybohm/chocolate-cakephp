@@ -1,6 +1,6 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
-import com.daveme.chocolateCakePHP.PluginConfig
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 import com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler
@@ -25,7 +25,6 @@ class PluginSupportTest : Cake5BaseTestCase() {
             "cake5/plugins/TestPlugin/templates/TestController/index.php",
             "cake5/plugins/TestPluginExtra/templates/element/extra_sidebar.php",
             "cake5/plugins/TestPluginExtra/templates/TestController/index.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 
@@ -36,14 +35,14 @@ class PluginSupportTest : Cake5BaseTestCase() {
         val settings = Settings.getInstance(myFixture.project)
         val state = settings.state.copy()
         state.pluginConfigs = listOf(
-            PluginConfig(
+            CakeThreePluginConfig(
                 pluginName = "TestPlugin",
                 namespace = "\\TestPlugin",
                 pluginPath = "plugins/TestPlugin",
                 srcPath = "src",
                 assetPath = "webroot"
             ),
-            PluginConfig(
+            CakeThreePluginConfig(
                 pluginName = "TestPluginExtra",
                 namespace = "\\TestPluginExtra",
                 pluginPath = "plugins/TestPluginExtra",
@@ -52,6 +51,47 @@ class PluginSupportTest : Cake5BaseTestCase() {
             )
         )
         settings.loadState(state)
+    }
+
+    fun `test element of a plugin with no template directory goes nowhere`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(
+            CakeThreePluginConfig(pluginName = "NoTemplates", pluginPath = "plugins/NoTemplates")
+        )
+        settings.loadState(state)
+
+        myFixture.configureByFilePathAndText("cake5/templates/Movie/artist.php", """
+        <?php
+        ${'$'}this->element('<caret>NoTemplates.sidebar');
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(ElementGotoDeclarationHandler())
+        assertNotNull(targets)
+        assertEmpty(targets!!)
+    }
+
+    fun `test render of a plugin with no template directory goes nowhere`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(
+            CakeThreePluginConfig(pluginName = "NoTemplates", pluginPath = "plugins/NoTemplates")
+        )
+        settings.loadState(state)
+
+        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
+        <?php
+        namespace App\Controller;
+
+        class MovieController extends AppController
+        {
+            public function artist() {
+                ${'$'}this->render('<caret>NoTemplates.TestController/index');
+            }
+        }
+        """.trimIndent())
+        val targets = gotoDeclarationHandlerTargets(TemplateGotoDeclarationHandler())
+        assertNotNull(targets)
+        assertEmpty(targets!!)
     }
 
     // ========== Asset Navigation Tests ==========

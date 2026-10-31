@@ -12,8 +12,7 @@ class GetTableLocatorTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/ArticlesTable.php",
             "cake3/src/Model/Table/MoviesTable.php",
             "cake3/src/Model/Entity/Article.php",
-            "cake3/src/Model/Entity/Movie.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/src/Model/Entity/Movie.php"
         )
     }
 
@@ -296,26 +295,5 @@ class GetTableLocatorTest : Cake3BaseTestCase() {
         val elements = gotoDeclarationHandlerTargets(handler)
         assertNotNull(elements)
         assertTrue(elements!!.isEmpty())
-    }
-
-    fun `test goto declaration works with plugin table classes`() {
-        myFixture.configureByFilePathAndText("cake3/src/Controller/MovieController.php", """
-        <?php
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-
-        class MovieController extends Controller
-        {
-            public function index() {
-                ${'$'}pluginTable = ${'$'}this->getTableLocator()->get('<caret>TestPlugin.Articles');
-            }
-        }
-        """.trimIndent())
-        val handler = TableLocatorGotoDeclarationHandler()
-        val elements = gotoDeclarationHandlerTargets(handler)
-        assertNotNull(elements)
-        // For plugin tables, we expect it to either find the plugin table or return empty if not found
-        // This is acceptable behavior for this test
     }
 }

@@ -11,6 +11,12 @@ fun PhpType.isProbablyControllerClass(): Boolean =
     else
         this.types.any { it.contains("Controller", ignoreCase = true) }
 
+fun PhpType.isProbablyCellClass(): Boolean =
+    if (this.isComplete)
+        this.types.any { it.isAnyCellClass() }
+    else
+        this.types.any { it.contains("Cell", ignoreCase = true) }
+
 fun PhpType.isProbablyTableLocatorClass(): Boolean =
     if (this.isComplete) {
         this.types.any {

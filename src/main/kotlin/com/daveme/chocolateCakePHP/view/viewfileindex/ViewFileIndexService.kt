@@ -13,6 +13,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.ID
+import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
@@ -25,22 +26,31 @@ enum class ElementType {
     METHOD,
     METHOD_REFERENCE,
     FIELD_ASSIGNMENT,
-    VIEW_BUILDER
+    VIEW_BUILDER,
+    FIELD,
+    CELL_RENDER
 }
 
 data class ViewReferenceData(
     val methodName: String,
     val elementType: ElementType,
-    val offset: Int
+    val offset: Int,
+    val pluginPrefix: String? = null
 )
 
 data class PsiElementAndPath(
     val path: String,
-    val elementPointer: SmartPsiElementPointer<PsiElement>
+    val file: VirtualFile,
+    val elementPointer: SmartPsiElementPointer<PsiElement>,
+    val offset: Int,
+    val elementType: ElementType,
+    val pluginPrefix: String? = null
 ) {
     val nameWithoutExtension: String by lazy { File(path).nameWithoutExtension }
+    val cellName: String? by lazy { cellNameFromPath(path) }
     val controllerPath: ControllerPath? by lazy {  controllerPathFromPsiElementAndPath() }
     val psiElement: PsiElement? get() = elementPointer.element
+    val isCellRender: Boolean get() = elementType == ElementType.CELL_RENDER
 
     private fun controllerPathFromPsiElementAndPath(): ControllerPath? {
         val parts = path.split("/")
@@ -169,8 +179,10 @@ object ViewFileIndexService {
                         ElementType.METHOD -> PsiTreeUtil.getParentOfType(leaf, Method::class.java, false)
                         ElementType.FIELD_ASSIGNMENT -> PsiTreeUtil.getParentOfType(leaf, FieldReference::class.java, false)
                         ElementType.VIEW_BUILDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
+                        ElementType.FIELD -> PsiTreeUtil.getParentOfType(leaf, Field::class.java, false)
+                        ElementType.CELL_RENDER -> PsiTreeUtil.getParentOfType(leaf, MethodReference::class.java, false)
                     } ?: continue
-                    result += PsiElementAndPath(indexedFile.path, spm.createSmartPsiElementPointer(element))
+                    result += PsiElementAndPath(indexedFile.path, indexedFile, spm.createSmartPsiElementPointer(element), data.offset, data.elementType, data.pluginPrefix)
                 }
                 true
             },
@@ -203,6 +215,10 @@ fun viewPathPrefixFromSourceFile(
     val controllerPath = controllerPathFromControllerFile(sourceFile)
     if (controllerPath != null) {
         return ViewPathPrefix(controllerPath.viewPath)
+    }
+    val cellPath = cellPathFromCellFile(projectDir, sourceFile)
+    if (cellPath != null) {
+        return ViewPathPrefix(cellPath.viewPath)
     }
 
     val containingDir = sourceFile.parent ?: return null

@@ -2,7 +2,6 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.*
 import com.daveme.chocolateCakePHP.cake.*
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -29,29 +28,16 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
             return null
         }
         val psiFile = psiElement.containingFile ?: return null
-        val templateDir = templatesDirectoryOfViewFile(psiElement.project, settings, psiFile)
+        templatesDirectoryOfViewFile(psiElement.project, settings, psiFile)
             ?: return null
 
         if (psiElement.textMatches("\$this")) {
             return viewType(settings)
         }
 
-        val path = psiFile.originalFile.virtualFile.path
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-            templateDir,
-            settings,
-            path
-        )
-
-        val cakeVersion = when (templateDir) {
-            is CakeFourTemplatesDir -> 4
-            is CakeThreeTemplatesDir -> 3
-            is CakeTwoTemplatesDir -> 2
-        }
-        val name = psiElement.name
-        val incompleteType = "#${getKey()}v$cakeVersion" + SEPARATOR +
-            filenameKey + SEPARATOR +
-            name
+        val file = psiFile.originalFile.virtualFile ?: return null
+        val viewFile = viewFileOf(psiElement.project, settings, file) ?: return null
+        val incompleteType = "#${getKey()}" + viewFile.encode(SEPARATOR) + SEPARATOR + psiElement.name
         return PhpType().add(incompleteType)
     }
 
@@ -68,18 +54,20 @@ class ViewVariableTypeProvider : PhpTypeProvider4 {
         }
         val encoded = expression.substringOrNull(2)
             ?: return null
-        val (_, relativePath, varName) = encoded.split(SEPARATOR)
-        if (relativePath.contains(getKey())) {
+        if (encoded.contains(getKey())) {
             // ensure no recursion:
             return null
         }
+        val viewFile = ViewFile.decode(encoded.substringBeforeLast(SEPARATOR), SEPARATOR)
+            ?: return null
+        val varName = encoded.substringAfterLast(SEPARATOR)
 
         val settings = Settings.getInstance(project)
 
         val type = ViewVariableIndexService.lookupVariableTypeFromViewPathInSmartReadAction(
             project,
             settings,
-            relativePath,
+            viewFile,
             varName
         )
         if (type.types.size > 0) {

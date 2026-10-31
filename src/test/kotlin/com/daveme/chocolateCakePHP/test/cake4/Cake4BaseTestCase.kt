@@ -1,10 +1,12 @@
 package com.daveme.chocolateCakePHP.test.cake4
 
-import com.daveme.chocolateCakePHP.PluginConfig
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 
 abstract class Cake4BaseTestCase : BaseTestCase() {
+
+    override val cakeMajorVersion = 4
 
     override fun setUp() {
         super.setUp()
@@ -15,7 +17,7 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         newState.cake3ForceEnabled = true
         newState.cake2Enabled = false
         newState.appDirectory = "src4"
-        newState.pluginConfigs = listOf(PluginConfig(
+        newState.pluginConfigs = listOf(CakeThreePluginConfig(
             pluginName = "TestPlugin",
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"

@@ -14,7 +14,6 @@ class ElementGotoDeclarationTest : Cake4BaseTestCase() {
             "cake4/templates/Movie/film_director.php",
             "cake4/templates/Movie/element_with_params.php",
             "cake4/templates/element/Director/filmography.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

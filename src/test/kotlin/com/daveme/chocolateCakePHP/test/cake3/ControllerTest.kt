@@ -9,8 +9,7 @@ class ControllerTest : Cake3BaseTestCase() {
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/Component/MovieMetadataComponent.php",
             "cake3/plugins/Controller/Component/InsidePluginComponent.php",
-            "cake3/src/View/AppView.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/src/View/AppView.php"
         )
     }
 

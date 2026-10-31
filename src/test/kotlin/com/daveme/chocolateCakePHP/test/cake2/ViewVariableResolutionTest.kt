@@ -6,9 +6,6 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewVariableResolutionTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        myFixture.configureByFiles(
-            "cake2/vendor/cakephp.php"
-        )
     }
 
     fun `test compact with parameter resolves type correctly`() {
@@ -28,7 +25,9 @@ class ViewVariableResolutionTest : Cake2BaseTestCase() {
 
         // Index it
         val fileContent = FileContentImpl.createByFile(controllerFile.virtualFile, project)
-        val indexResult = ViewVariableASTDataIndexer.map(fileContent)
+        val indexResult = ViewVariableASTDataIndexer.map(fileContent).mapValues { (_, records) ->
+            records.calls.flatMap { it.entries }.associateBy { it.variableName }
+        }
 
         // Verify it was indexed
         val controllerKey = "Test:testAction"

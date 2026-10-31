@@ -1,0 +1,1 @@
+<?= $this->element('Other.other_only') ?>

@@ -40,8 +40,10 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.TableLocatorCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.CustomFinderCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.ContainCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.CellCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.CellGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.model.CustomFinderGotoDeclarationHandler" />
@@ -57,6 +59,7 @@
 
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndex" />
         <fileBasedIndex implementation="com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndex" />
+        <fileBasedIndex implementation="com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberIndex" />
 
         <lang.inspectionSuppressor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.UndefinedViewVariableInspectionSuppressor" />
 
@@ -69,6 +72,7 @@
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.view.ViewVariableTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.TableLocatorTypeProvider" />
         <typeProvider4 implementation="com.daveme.chocolateCakePHP.model.AssociatedTableTypeProvider" />
+        <typeProvider4 implementation="com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberFieldTypeProvider" />
 
         <libraryRoot id="chocolate_cake_files" path="/chocolate-cakephp/" runtime="false"  />
     </extensions>

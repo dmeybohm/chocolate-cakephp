@@ -5,40 +5,31 @@ import java.io.DataInput
 import java.io.DataOutput
 
 object ViewVariableRawVarsExternalizer : DataExternalizer<ViewVariablesWithRawVars> {
-
     override fun save(out: DataOutput, value: ViewVariablesWithRawVars) {
-        out.writeInt(value.size)
-        value.forEach { (key, rawVar) ->
-            out.writeUTF(key)
-            out.writeUTF(rawVar.variableName)
-            out.writeInt(rawVar.varKind.ordinal)
-            out.writeInt(rawVar.offset)
-            // Save VarHandle
-            out.writeInt(rawVar.varHandle.sourceKind.ordinal)
-            out.writeUTF(rawVar.varHandle.symbolName)
-            out.writeInt(rawVar.varHandle.offset)
+        out.writeInt(value.calls.size)
+        for (call in value.calls) {
+            out.writeInt(call.offset)
+            out.writeInt(call.entries.size)
+            for (entry in call.entries) {
+                out.writeUTF(entry.variableName)
+                out.writeInt(entry.varKind.ordinal)
+                out.writeInt(entry.offset)
+                out.writeInt(entry.varHandle.sourceKind.ordinal)
+                out.writeUTF(entry.varHandle.symbolName)
+                out.writeInt(entry.varHandle.offset)
+            }
         }
     }
 
-    override fun read(`in`: DataInput): ViewVariablesWithRawVars {
-        val size = `in`.readInt()
-        val result = ViewVariablesWithRawVars()
-        repeat(size) {
-            val key = `in`.readUTF()
-            val variableName = `in`.readUTF()
-            val varKindOrdinal = `in`.readInt()
-            val offset = `in`.readInt()
-            // Read VarHandle
-            val sourceKindOrdinal = `in`.readInt()
-            val symbolName = `in`.readUTF()
-            val handleOffset = `in`.readInt()
-            
-            val varKind = VarKind.values()[varKindOrdinal]
-            val sourceKind = SourceKind.values()[sourceKindOrdinal]
-            val varHandle = VarHandle(sourceKind, symbolName, handleOffset)
-            val rawVar = RawViewVar(variableName, varKind, offset, varHandle)
-            result[key] = rawVar
+    override fun read(input: DataInput): ViewVariablesWithRawVars {
+        val calls = MutableList(input.readInt()) {
+            val offset = input.readInt()
+            val entries = List(input.readInt()) {
+                RawViewVar(input.readUTF(), VarKind.values()[input.readInt()], input.readInt(),
+                    VarHandle(SourceKind.values()[input.readInt()], input.readUTF(), input.readInt()))
+            }
+            ViewVariableCall(offset, entries)
         }
-        return result
+        return ViewVariablesWithRawVars(calls)
     }
 }

@@ -5,6 +5,8 @@ import com.daveme.chocolateCakePHP.test.BaseTestCase
 
 abstract class Cake2BaseTestCase : BaseTestCase() {
 
+    override val cakeMajorVersion = 2
+
     override fun setUp() {
         super.setUp()
 

@@ -3,11 +3,9 @@ package com.daveme.chocolateCakePHP.view
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.navigation.CakeGotoRelatedItem
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.navigation.GotoRelatedItem
 import com.intellij.navigation.GotoRelatedProvider
 import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 
@@ -44,22 +42,11 @@ class ElementToUsagesGotoRelatedProvider : GotoRelatedProvider() {
         }
 
         val virtualFile = file.virtualFile ?: return emptyList()
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, file)
+        val viewFile = viewFileOf(project, settings, virtualFile)
             ?: return emptyList()
-
-        val templateDirVirtualFile = templatesDir.directory
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile)
-            ?: return emptyList()
-
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(
-            templatesDir,
-            settings,
-            relativePath
-        )
 
         // Get all references to this element file
-        val referencingElements = ViewFileIndexService
-            .referencingElementsInSmartReadAction(project, filenameKey)
+        val referencingElements = directReferencesTo(project, settings, viewFile)
             .mapNotNull { it.psiElement }
             .filter { it.isValid }
 
@@ -78,11 +65,11 @@ class ElementToUsagesGotoRelatedProvider : GotoRelatedProvider() {
             ?: return false
 
         val virtualFile = file.virtualFile ?: return false
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templatesDir.directory)
+        val viewFile = viewFileOf(project, settings, virtualFile)
             ?: return false
 
-        // Check if the file is in the element directory
-        return relativePath.startsWith("${templatesDir.elementDirName}/")
+        // Check if the file is in the element directory, by the key it has in its plugin
+        return viewFile.templateKey.startsWith("${templatesDir.elementDirName}/")
     }
 
     /**

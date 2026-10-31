@@ -14,8 +14,7 @@ class ControllerTest : Cake2BaseTestCase() {
             "cake2/app/Model/Movie.php",
             "cake2/app/Model/Artist.php",
             "cake2/app/Model/Director.php",
-            "cake2/app/Model/Movie.php",
-            "cake2/vendor/cakephp.php"
+            "cake2/app/Model/Movie.php"
         )
     }
 
@@ -55,7 +54,7 @@ class ControllerTest : Cake2BaseTestCase() {
         myFixture.completeBasic()
 
         val strings = myFixture.lookupElementStrings
-        assertTrue(strings!!.contains("findById"))
+        assertTrue(strings!!.contains("find"))
     }
 
     fun `test nested model completion type provider in cake2`() {
@@ -103,7 +102,9 @@ class ControllerTest : Cake2BaseTestCase() {
         
         class MovieController extends Controller
         {
-            public function testNestedCake2Model() 
+            public ${'$'}components = array('MovieMetadata');
+
+            public function testNestedCake2Model()
             {
                 ${'$'}this->MovieMetadata-><caret>
             }

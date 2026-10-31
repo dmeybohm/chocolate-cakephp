@@ -1,0 +1,108 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Test\TestCase;
+
+use Cake\TestSuite\IntegrationTestTrait;
+use Cake\TestSuite\TestCase;
+use Cake\View\Exception\MissingTemplateException;
+
+/**
+ * Template resolution, which view navigation and view file creation depend on.
+ */
+class TemplateResolutionTest extends TestCase
+{
+    use IntegrationTestTrait;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        $this->disableErrorHandlerMiddleware();
+    }
+
+    public function testPluginControllerRendersImplicitTemplateFromPlugin(): void
+    {
+        $this->get('/probe/things/index');
+        $this->assertResponseEquals('plugin:Things/index');
+    }
+
+    public function testPluginControllerRendersUnprefixedTemplateFromPlugin(): void
+    {
+        $this->get('/probe/things/other');
+        $this->assertResponseEquals('plugin:Things/other');
+    }
+
+    public function testPluginControllerFallsBackToAppTemplate(): void
+    {
+        $this->get('/probe/things/appfallback');
+        $this->assertResponseEquals('app:Things/appfallback');
+    }
+
+    public function testAppOverrideWinsOverPluginTemplate(): void
+    {
+        $this->get('/probe/things/overridden');
+        $this->assertResponseEquals('override:Things/overridden');
+    }
+
+    public function testAppControllerDoesNotReachPluginTemplateUnprefixed(): void
+    {
+        $this->expectException(MissingTemplateException::class);
+        $this->expectExceptionMessage('only_in_plugin');
+        $this->get('/widgets/unprefixed');
+    }
+
+    public function testAppControllerRendersPrefixedPluginTemplate(): void
+    {
+        $this->get('/widgets/prefixed');
+        $this->assertResponseEquals('plugin:Widgets/only_in_plugin');
+    }
+
+    public function testRoutingPrefixResolvesToPrefixTemplate(): void
+    {
+        $this->get('/admin/widgets/index');
+        $this->assertResponseEquals('app:Admin/Widgets/index');
+    }
+
+    public function testPrefixedRenderFallsBackToAppTemplate(): void
+    {
+        $this->get('/widgets/prefixedfallback');
+        $this->assertResponseEquals('app:Widgets/app_only');
+    }
+
+    public function testAppOverrideWinsForPrefixedRender(): void
+    {
+        $this->get('/widgets/prefixedoverride');
+        $this->assertResponseEquals('override:Widgets/overridden_widget');
+    }
+
+    public function testPluginControllerRendersOtherPluginTemplate(): void
+    {
+        $this->get('/probe/things/crossplugin');
+        $this->assertResponseEquals('other:Things/in_other');
+    }
+
+    public function testRenderOfOtherPluginFallsBackToAppTemplate(): void
+    {
+        $this->get('/probe/things/crossfallback');
+        $this->assertResponseEquals('app:Things/in_app');
+    }
+
+    public function testRenderOfOtherPluginDoesNotFallBackToCallingPlugin(): void
+    {
+        $this->expectException(MissingTemplateException::class);
+        $this->expectExceptionMessage('in_probe');
+        $this->get('/probe/things/crossnotcaller');
+    }
+
+    public function testAppOverrideWinsForRenderOfOtherPlugin(): void
+    {
+        $this->get('/probe/things/crossoverride');
+        $this->assertResponseEquals('override:Things/overridden_other');
+    }
+
+    public function testLayoutNamedFromTemplateWraps(): void
+    {
+        $this->get('/widgets/templatelayout');
+        $this->assertResponseEquals('layout:app:Widgets/templatelayout');
+    }
+}

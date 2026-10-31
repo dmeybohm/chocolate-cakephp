@@ -1,15 +1,19 @@
 package com.daveme.chocolateCakePHP;
 
 import com.daveme.chocolateCakePHP.ui.DataViewTableModel;
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexServiceKt;
+import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexServiceKt;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.table.TableView;
+import com.intellij.util.indexing.FileBasedIndex;
 import com.intellij.util.ui.ElementProducer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
 
@@ -119,7 +123,20 @@ public class DataViewsForm implements SearchableConfigurable {
     @Override
     public void apply() {
         Settings settings = Settings.getInstance(project);
+        List<String> oldDataViewExtensions = settings.getDataViewExtensions();
+
         applyToSettings(settings);
+
+        if (settings.getEnabled() &&
+                !oldDataViewExtensions.equals(settings.getDataViewExtensions())) {
+            requestIndexRebuild();
+        }
+    }
+
+    private void requestIndexRebuild() {
+        FileBasedIndex fileIndex = FileBasedIndex.getInstance();
+        fileIndex.requestRebuild(ViewFileIndexServiceKt.getVIEW_FILE_INDEX_KEY());
+        fileIndex.requestRebuild(ViewVariableIndexServiceKt.getVIEW_VARIABLE_INDEX_KEY());
     }
 
 }

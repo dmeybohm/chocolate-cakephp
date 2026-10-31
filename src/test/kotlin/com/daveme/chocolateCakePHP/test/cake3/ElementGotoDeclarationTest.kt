@@ -13,7 +13,6 @@ class ElementGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Template/Movie/artist.ctp",
             "cake3/src/Template/Movie/film_director.ctp",
             "cake3/src/Template/Element/Director/filmography.ctp",
-            "cake3/vendor/cakephp.php",
         )
     }
 

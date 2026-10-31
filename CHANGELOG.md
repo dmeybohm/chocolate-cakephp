@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Added
+- Complete and type-infer variables passed to elements through the `$this->element($name, $data)` data array (array literal, `compact()`, or a variable holding either) from templates, layouts and nested elements, and variables set with `$this->set()` inside view files
+- Support ternary and `match` expressions, and local variables assigned a template name, in `render()`, `setTemplate()`, `setTemplatePath()` and `$this->view` so every possible template is navigable and indexed
+- Add a CakePHP version selector to the plugin settings dialog, and a version column to the plugin settings table
+- Support `Plugin.Table` aliases and the `className` option in `fetchTable()`, `getTableLocator()->get()` and `TableRegistry::get()`, for return types, navigation and completion
+- Resolve helpers configured from CakePHP 3 to 5 controllers, through `viewBuilder()` and CakePHP 3's `$helpers` property, in the templates and elements they render, in cells those call, and in layouts, and helpers configured from cells in their own templates
+
+### Changed
+- Keep the view variables and related items of app and plugin classes with the same name apart, following how CakePHP falls back from a plugin to the app, and support templates in the app's plugin override directory
+- If both CakePHP 2 and CakePHP 3+ are enabled, check the version column in the plugin settings: an existing CakePHP 2 plugin with no namespace outside the CakePHP 2 app directory is treated as CakePHP 3+ until you select CakePHP 2 for it
+- A table locator alias without a plugin prefix now navigates only to the app's table, as CakePHP loads it, and completion inserts the `Plugin.Table` alias for plugin tables
+
 ## [1.1.0] - 2026-04-09
 
 ### Added

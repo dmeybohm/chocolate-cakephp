@@ -7,8 +7,7 @@ class LocatorAwareTraitTest : Cake3BaseTestCase() {
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
             "cake3/src/Model/Entity/Article.php",
-            "cake3/src/Model/Entity/Movie.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/src/Model/Entity/Movie.php"
         )
     }
 

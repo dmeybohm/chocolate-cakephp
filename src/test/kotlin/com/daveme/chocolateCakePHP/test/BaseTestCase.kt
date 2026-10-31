@@ -6,20 +6,55 @@ import com.intellij.codeInsight.daemon.LineMarkerProviders
 import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.navigation.GotoRelatedItem
+import com.intellij.openapi.util.RecursionManager
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.testFramework.LightProjectDescriptor
+import com.intellij.testFramework.TestApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import kotlin.collections.any
 import kotlin.reflect.KClass
+import org.junit.runner.RunWith
 
+@RunWith(AssumptionAwareJUnit38Runner::class)
 abstract class BaseTestCase : BasePlatformTestCase() {
 
     data class RelatedItemInfo(val filename: String, val containingDir: String)
 
 
+    /**
+     * The CakePHP major version the test targets, or null if it doesn't target one.
+     */
+    protected open val cakeMajorVersion: Int? = null
+
+    /**
+     * Whether the CakePHP framework source is attached to the project as a library.
+     */
+    protected open val attachesFramework: Boolean = true
+
+    private val realVendorDescriptor: RealCakeVendorProjectDescriptor?
+        get() = cakeMajorVersion?.takeIf { attachesFramework }
+            ?.let { RealCakeVendorProjectDescriptor.forVersion(it) }
+
     override fun getTestDataPath(): String {
         return "src/test/fixtures"
+    }
+
+    override fun getProjectDescriptor(): LightProjectDescriptor? =
+        realVendorDescriptor ?: super.getProjectDescriptor()
+
+    override fun setUp() {
+        realVendorDescriptor?.let { descriptor ->
+            VfsRootAccess.allowRootAccess(testRootDisposable, descriptor.vendorPath)
+            // The PHP plugin hits recursion guards inferring self-referential field types in the
+            // framework source. Loading the application enables these assertions, so load it first.
+            TestApplicationManager.getInstance()
+            RecursionManager.disableMissedCacheAssertions(testRootDisposable)
+            RecursionManager.disableAssertOnRecursionPrevention(testRootDisposable)
+        }
+        super.setUp()
     }
 
     fun calculateLineMarkers(element: PsiElement, klass: KClass<out LineMarkerProvider>): List<LineMarkerInfo<*>> {

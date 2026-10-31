@@ -18,7 +18,6 @@ class AssetGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/webroot/css/movie.css",
             "cake3/webroot/js/movie.js",
             "cake3/webroot/img/pluginIcon.svg",
-            "cake3/vendor/cakephp.php",
         )
     }
 

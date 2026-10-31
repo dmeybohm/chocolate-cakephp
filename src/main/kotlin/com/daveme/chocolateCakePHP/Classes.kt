@@ -1,5 +1,7 @@
 package com.daveme.chocolateCakePHP
 
+import com.daveme.chocolateCakePHP.cake.CELL_PARENT_CLASS
+import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -135,6 +137,13 @@ fun PhpIndex.getComponentSubclasses(settings: Settings): Collection<PhpClass> {
     return result
 }
 
+fun PhpIndex.getCellSubclasses(settings: Settings): Collection<PhpClass> {
+    if (!settings.cake3Enabled) {
+        return emptyList()
+    }
+    return getAllSubclassesRecursively(CELL_PARENT_CLASS)
+}
+
 fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> {
     val result = ArrayList<PhpClass>()
     classes.map {
@@ -177,7 +186,7 @@ fun PhpIndex.viewHelperClassesFromFieldName(settings: Settings, fieldName: Strin
         result += getClassesByFQN(
             "${settings.appNamespace}\\View\\Helper\\${fieldName}Helper"
         )
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result += getClassesByFQN("${pluginConfig.namespace}\\View\\Helper\\${fieldName}Helper")
         }
     }
@@ -201,7 +210,7 @@ fun PhpIndex.componentFieldClassesFromFieldName(settings: Settings, fieldName: S
         result += getClassesByFQN(
                 "${settings.appNamespace}\\Controller\\Component\\${fieldName}Component"
         )
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result += getClassesByFQN("${pluginConfig.namespace}\\Controller\\Component\\${fieldName}Component")
         }
     }
@@ -224,7 +233,7 @@ fun PhpIndex.modelFieldClassesFromFieldName(settings: Settings, fieldName: Strin
         result += getClassesByFQN(
                 "${settings.appNamespace}\\Model\\Table\\$fieldName"
         )
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result += getClassesByFQN("${pluginConfig.namespace}\\Model\\Table\\${fieldName}")
         }
     }
@@ -254,9 +263,27 @@ fun viewHelperTypeFromFieldName(settings: Settings, fieldName: String): PhpType 
     if (settings.cake3Enabled) {
         result = result.add("\\Cake\\View\\Helper\\${fieldName}Helper")
             .add("${settings.appNamespace}\\View\\Helper\\${fieldName}Helper")
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result = result.add("${pluginConfig.namespace}\\View\\Helper\\${fieldName}Helper")
         }
+    }
+    return result
+}
+
+/**
+ * The type a controller field has by convention, leaving out [excludedKinds]. Only CakePHP 2
+ * configuration rules kinds out, and its classes are global.
+ */
+fun controllerConventionType(settings: Settings, fieldName: String, excludedKinds: Set<MemberKind>): PhpType {
+    if (excludedKinds.isEmpty()) {
+        return componentOrModelTypeFromFieldName(settings, fieldName)
+    }
+    val result = PhpType()
+    if (MemberKind.COMPONENT !in excludedKinds) {
+        result.add("\\${fieldName}Component")
+    }
+    if (MemberKind.TABLE !in excludedKinds) {
+        result.add("\\$fieldName")
     }
     return result
 }
@@ -276,7 +303,7 @@ fun componentOrModelTypeFromFieldName(settings: Settings, fieldName: String): Ph
             .add("${settings.appNamespace}\\Controller\\Component\\${fieldName}Component")
             .add("${settings.appNamespace}\\Model\\Table\\${pluralFieldName}Table")
             .add("${settings.appNamespace}\\Model\\Table\\${fieldName}Table")
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result = result.add("${pluginConfig.namespace}\\Controller\\Component\\${fieldName}Component")
         }
     }
@@ -291,7 +318,7 @@ fun controllerTypeFromControllerName(settings: Settings, controllerName: String)
     if (settings.cake3Enabled) {
         result = result.add("\\Cake\\Controller\\${controllerName}Controller")
             .add("${settings.appNamespace}\\Controller\\${controllerName}Controller")
-        for (pluginConfig in settings.pluginConfigs) {
+        for (pluginConfig in settings.cakeThreePluginConfigs) {
             result = result.add("${pluginConfig.namespace}\\Controller\\${controllerName}Controller")
         }
     }

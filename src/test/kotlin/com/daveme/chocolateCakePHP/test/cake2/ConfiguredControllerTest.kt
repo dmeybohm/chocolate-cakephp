@@ -1,0 +1,144 @@
+package com.daveme.chocolateCakePHP.test.cake2
+
+import com.daveme.chocolateCakePHP.controller.ControllerComponentsGotoDeclarationHandler
+import com.daveme.chocolateCakePHP.controller.ControllerFieldGotoDeclarationHandler
+import com.jetbrains.php.lang.psi.elements.PhpClass
+
+class ConfiguredControllerTest : ConfiguredControllerFixtureTestCase() {
+
+    private fun gotoClassNames(targets: Array<*>?): Set<String> =
+        targets.orEmpty().filterIsInstance<PhpClass>().map { it.name }.toSet()
+
+    fun `test an aliased component resolves to its className only`() {
+        appController()
+        configureController(
+            "public \$components = array('Meta' => array('className' => 'MovieMetadata'));",
+            "\$this->Me<caret>ta;"
+        )
+        assertEquals(setOf("\\MovieMetadataComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test a plain component resolves by name and not as a model`() {
+        appController()
+        configureController("public \$components = array('MovieMetadata');", "\$this->MovieMeta<caret>data;")
+        assertEquals(setOf("\\MovieMetadataComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test an AppController alias resolves in the child`() {
+        appController("public \$components = array('Meta' => array('className' => 'MovieMetadata'));")
+        configureController("public \$components = array('Paginator');", "\$this->Me<caret>ta;")
+        assertEquals(setOf("\\MovieMetadataComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test an unloaded component is null even when its class exists`() {
+        appController()
+        configureController("public \$components = array('MovieMetadata');", "\$this->Unlo<caret>aded;")
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
+    }
+
+    fun `test completion on a ruled-out member offers no request methods`() {
+        appController()
+        configureController("public \$components = array('MovieMetadata');", "\$this->Unloaded-><caret>")
+        myFixture.completeBasic()
+        val result = myFixture.lookupElementStrings.orEmpty()
+        assertFalse("Unexpected request methods in $result", result.contains("referer"))
+    }
+
+    fun `test component completion lists only the loaded components`() {
+        appController()
+        configureController("public \$components = array('MovieMetadata');", "\$this-><caret>")
+        val result = completions()
+        assertTrue("Expected MovieMetadata in $result", result.contains("MovieMetadata"))
+        assertTrue(result.contains("Session"))
+        assertFalse(result.contains("Unloaded"))
+    }
+
+    fun `test uses entries resolve and other models are null`() {
+        appController()
+        configureController("public \$uses = array('Artist');", "\$this->Art<caret>ist;")
+        assertEquals(setOf("\\Artist"), fieldTypeAtCaret())
+
+        configureController("public \$uses = array('Artist');", "\$this->Mo<caret>vie;")
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
+    }
+
+    fun `test model completion with uses hides other models`() {
+        appController()
+        configureController("public \$uses = array('Artist');", "\$this-><caret>")
+        val result = completions()
+        assertTrue(result.contains("Artist"))
+        assertFalse(result.contains("Movie"))
+        assertFalse(result.contains("User"))
+    }
+
+    fun `test a controller without uses has its default model`() {
+        appController()
+        configureController("", "\$this->Mo<caret>vie;")
+        assertEquals(setOf("\\Movie"), fieldTypeAtCaret())
+    }
+
+    fun `test uses false makes every model null`() {
+        appController("public \$uses = array('User');")
+        configureController("public \$uses = false;", "\$this->Mo<caret>vie;")
+        assertEquals(setOf("\\null"), fieldTypeAtCaret())
+    }
+
+    fun `test AppController uses are appended`() {
+        appController("public \$uses = array('User');")
+        configureController("public \$uses = array('Artist');", "\$this->Us<caret>er;")
+        assertEquals(setOf("\\User"), fieldTypeAtCaret())
+    }
+
+    fun `test loadModel makes a model resolve that uses does not list`() {
+        appController()
+        configureController(
+            "public \$uses = array('Artist');",
+            "\$this->loadModel('Movie');\n\$this->Mo<caret>vie;"
+        )
+        assertEquals(setOf("\\Movie"), fieldTypeAtCaret())
+    }
+
+    fun `test incomplete components keep the component convention only`() {
+        appController()
+        configureController("public \$components = array(self::AUTH);", "\$this->Fo<caret>o;")
+        assertEquals(setOf("\\FooComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test known uses with incomplete components leaves the model out of the convention`() {
+        appController()
+        configureController(
+            "public \$uses = array('Artist');\npublic \$components = array(self::AUTH);",
+            "\$this->Fo<caret>o;"
+        )
+        assertEquals(setOf("\\FooComponent"), fieldTypeAtCaret())
+    }
+
+    fun `test goto on an aliased field goes to the className`() {
+        appController()
+        configureController(
+            "public \$components = array('Meta' => array('className' => 'MovieMetadata'));",
+            "\$this->Me<caret>ta;"
+        )
+        assertEquals(
+            setOf("MovieMetadataComponent"),
+            gotoClassNames(gotoDeclarationHandlerTargets(ControllerFieldGotoDeclarationHandler()))
+        )
+    }
+
+    fun `test goto on property array strings resolves through the configuration`() {
+        appController("public \$components = array('Auth' => array('className' => 'MyAuth'));")
+        val handler = ControllerComponentsGotoDeclarationHandler()
+
+        configureController("public \$components = array('Me<caret>ta' => array('className' => 'MovieMetadata'));", "")
+        assertEquals(setOf("MovieMetadataComponent"), gotoClassNames(gotoDeclarationHandlerTargets(handler)))
+
+        configureController("public \$components = array('Meta' => array('className' => 'MovieMeta<caret>data'));", "")
+        assertEquals(setOf("MovieMetadataComponent"), gotoClassNames(gotoDeclarationHandlerTargets(handler)))
+
+        configureController("public \$components = array('Au<caret>th' => array('authorize' => 'Controller'));", "")
+        assertEquals(setOf("MyAuthComponent"), gotoClassNames(gotoDeclarationHandlerTargets(handler)))
+
+        configureController("public \$uses = array('Art<caret>ist');", "")
+        assertEquals(setOf("Artist"), gotoClassNames(gotoDeclarationHandlerTargets(handler)))
+    }
+}

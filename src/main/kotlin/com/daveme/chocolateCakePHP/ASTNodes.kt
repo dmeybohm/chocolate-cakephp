@@ -1,7 +1,10 @@
 package com.daveme.chocolateCakePHP
 
 import com.intellij.lang.ASTNode
-import com.jetbrains.php.lang.parser.PhpElementTypes;
+import com.intellij.psi.PsiComment
+import com.intellij.psi.TokenType
+import com.jetbrains.php.lang.lexer.PhpTokenTypes
+import com.jetbrains.php.lang.parser.PhpElementTypes
 
 /**
  * Helper functions for checking PHP element types using string comparison instead of
@@ -17,6 +20,7 @@ import com.jetbrains.php.lang.parser.PhpElementTypes;
 private const val VARIABLE = "VARIABLE"
 private const val CLASS_METHOD = "CLASS_METHOD"
 private const val IDENTIFIER = "IDENTIFIER"
+private const val FUNCTION = "FUNCTION"
 
 /**
  * Compares two strings by matching only alphabetic characters, case-insensitively.
@@ -76,3 +80,140 @@ fun ASTNode.isArrayAccessExpression() = this.elementType == PhpElementTypes.ARRA
 fun ASTNode.isHashArrayElement() = this.elementType == PhpElementTypes.HASH_ARRAY_ELEMENT
 fun ASTNode.isArrayKey() = this.elementType == PhpElementTypes.ARRAY_KEY
 fun ASTNode.isArrayValue() = this.elementType == PhpElementTypes.ARRAY_VALUE
+fun ASTNode.isTernaryExpression() = this.elementType == PhpElementTypes.TERNARY_EXPRESSION
+fun ASTNode.isMatchExpression() = this.elementType == PhpElementTypes.MATCH_EXPRESSION
+fun ASTNode.isMatchArm() = this.elementType == PhpElementTypes.MATCH_ARM
+fun ASTNode.isParenthesizedExpression() = this.elementType == PhpElementTypes.PARENTHESIZED_EXPRESSION
+fun ASTNode.isDefaultMatchArm() = this.elementType == PhpElementTypes.DEFAULT_MATCH_ARM
+fun ASTNode.isFunction() = equalsAlphaIgnoreCase(this.elementType.toString(), FUNCTION)
+fun ASTNode.isClosure() = this.elementType == PhpElementTypes.CLOSURE
+
+/**
+ * A node that introduces a new local variable scope: a method, a function, or a closure.
+ * Arrow functions (`fn() => ...`) count as a scope too, even though PHP captures the
+ * enclosing scope by value. This is a known simplification.
+ */
+fun ASTNode.isScopeNode() = this.isClassMethod() || this.isFunction() || this.isClosure()
+
+/**
+ * The syntactic parts of a METHOD_REFERENCE node such as `$this->set('a', $b)`.
+ *
+ * [receiverName] is the bare variable name of the receiver ("this" for `$this->...`), or null
+ * when the receiver is not a plain variable (for example `$this->Html->link(...)`, whose
+ * receiver is a field reference). [parameters] are the significant children of the
+ * PARAMETER_LIST: whitespace and commas are dropped, everything else is kept in order.
+ */
+data class MethodCallParts(
+    val node: ASTNode,
+    val receiverName: String?,
+    val methodName: String?,
+    val parameters: List<ASTNode>
+) {
+    /** True for `$this->name(...)`; the method name is compared ignoring case, as PHP does. */
+    fun isThisCall(name: String): Boolean =
+        receiverName == "this" && methodName?.equals(name, ignoreCase = true) == true
+}
+
+/** Significant children of a PARAMETER_LIST node (no whitespace, comments or commas). */
+fun ASTNode.parameterNodes(): List<ASTNode> {
+    val result = mutableListOf<ASTNode>()
+    var child = firstChildNode
+    while (child != null) {
+        if (child.elementType != TokenType.WHITE_SPACE &&
+            child.elementType != PhpTokenTypes.opCOMMA &&
+            child.psi !is PsiComment
+        ) {
+            result.add(child)
+        }
+        child = child.treeNext
+    }
+    return result
+}
+
+/** Reads receiver, method name and parameters of a METHOD_REFERENCE; null for any other node. */
+fun ASTNode.readMethodCall(): MethodCallParts? {
+    if (!isMethodReference()) {
+        return null
+    }
+    var receiverName: String? = null
+    var methodName: String? = null
+    var parameters: List<ASTNode> = emptyList()
+    var child = firstChildNode
+    while (child != null) {
+        when {
+            child.isVariable() -> receiverName = child.text.removePrefix("$")
+            child.elementType == PhpTokenTypes.IDENTIFIER -> methodName = child.text
+            child.isParameterList() -> parameters = child.parameterNodes()
+        }
+        child = child.treeNext
+    }
+    return MethodCallParts(this, receiverName, methodName, parameters)
+}
+
+/**
+ * Every METHOD_REFERENCE at or below this node, in document order, whose parts satisfy
+ * [predicate]. Nested calls inside a matching call's arguments are visited too.
+ */
+fun ASTNode.collectMethodCalls(predicate: (MethodCallParts) -> Boolean): List<MethodCallParts> {
+    val result = mutableListOf<MethodCallParts>()
+    collectMethodCallsInto(this, result, predicate)
+    return result
+}
+
+private fun collectMethodCallsInto(
+    node: ASTNode,
+    result: MutableList<MethodCallParts>,
+    predicate: (MethodCallParts) -> Boolean
+) {
+    val parts = node.readMethodCall()
+    if (parts != null && predicate(parts)) {
+        result.add(parts)
+    }
+    var child = node.firstChildNode
+    while (child != null) {
+        collectMethodCallsInto(child, result, predicate)
+        child = child.treeNext
+    }
+}
+
+/**
+ * The unquoted value of a STRING node, or of a wrapper node (such as ARRAY_KEY or ARRAY_VALUE)
+ * whose direct child is a STRING. Null for anything else, so a variable such as `$key` is never
+ * mistaken for a literal.
+ */
+fun ASTNode.stringLiteralValue(): String? {
+    if (isString()) {
+        return unquotedStringText(this)
+    }
+    var child = firstChildNode
+    while (child != null) {
+        if (child.isString()) {
+            return unquotedStringText(child)
+        }
+        child = child.treeNext
+    }
+    return null
+}
+
+private fun unquotedStringText(stringNode: ASTNode): String {
+    val lit = stringNode.findChildByType(PhpTokenTypes.STRING_LITERAL)
+    return (lit ?: stringNode).text.removeSurrounding("'").removeSurrounding("\"")
+}
+
+/** True for a `compact(...)` function call (name compared ignoring case, leading backslash allowed). */
+fun ASTNode.isCompactCall(): Boolean {
+    if (!isFunctionCall()) {
+        return false
+    }
+    var child = firstChildNode
+    while (child != null) {
+        if (child.isParameterList()) {
+            return false
+        }
+        if (child.text.trim().removePrefix("\\").equals("compact", ignoreCase = true)) {
+            return true
+        }
+        child = child.treeNext
+    }
+    return false
+}

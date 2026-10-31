@@ -12,8 +12,7 @@ class FetchTableTest : Cake5BaseTestCase() {
             "cake5/src5/Model/Table/ArticlesTable.php",
             "cake5/src5/Model/Table/MoviesTable.php",
             "cake5/src5/Model/Entity/Article.php",
-            "cake5/src5/Model/Entity/Movie.php",
-            "cake5/vendor/cakephp.php"
+            "cake5/src5/Model/Entity/Movie.php"
         )
     }
 
@@ -195,25 +194,5 @@ class FetchTableTest : Cake5BaseTestCase() {
         val elements = gotoDeclarationHandlerTargets(handler)
         assertNotNull(elements)
         assertTrue(elements!!.isEmpty())
-    }
-
-    fun `test goto declaration works with plugin table classes`() {
-        myFixture.configureByFilePathAndText("cake5/src5/Controller/MovieController.php", """
-        <?php
-        namespace App\Controller;
-
-        use Cake\Controller\Controller;
-
-        class MovieController extends Controller
-        {
-            public function index() {
-                ${'$'}pluginTable = ${'$'}this->fetchTable('<caret>TestPlugin.Articles');
-            }
-        }
-        """.trimIndent())
-        val handler = TableLocatorGotoDeclarationHandler()
-        val elements = gotoDeclarationHandlerTargets(handler)
-        assertNotNull(elements)
-        // For plugin tables, we expect it to either find the plugin table or return empty if not found
     }
 }

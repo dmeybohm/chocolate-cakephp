@@ -6,8 +6,8 @@ import com.daveme.chocolateCakePHP.createViewActionPopupFromAllViewPaths
 import com.daveme.chocolateCakePHP.getScreenPoint
 import com.daveme.chocolateCakePHP.showPsiElementPopupFromEditor
 import com.daveme.chocolateCakePHP.showPsiFilePopupFromEditor
+import com.daveme.chocolateCakePHP.view.viewfileindex.ElementType
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
-import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -23,7 +23,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -61,8 +60,9 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         } else {
             val isViewFile = isCakeViewFile(project, settings, psiFile)
             val isControllerFile = isCakeControllerFile(psiFile)
+            val isCellFile = settings.cake3Enabled && psiFile.virtualFile?.let { isCakeCellFile(it) } == true
 
-            e.presentation.isEnabled = isViewFile || isControllerFile
+            e.presentation.isEnabled = isViewFile || isControllerFile || isCellFile
             e.presentation.isVisible = isViewFile
         }
     }
@@ -76,7 +76,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
 
         if (isCakeViewFile(project, settings, psiFile)) {
             tryToNavigateFromView(project, settings, virtualFile, psiFile, e)
-        } else if (isCakeControllerFile(psiFile)) {
+        } else if (isCakeControllerFile(psiFile) || (settings.cake3Enabled && isCakeCellFile(virtualFile))) {
             tryToNavigateToView(project, settings, virtualFile, psiFile, e)
         }
     }
@@ -92,7 +92,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val offset = editor.caretModel.offset
         val element = psiFile.findElementAt(offset)
         val method = PsiTreeUtil.getParentOfType(element, Method::class.java) ?: return
-        val controllerPath = controllerPathFromControllerFile(virtualFile) ?: return
+        val ownerPath = viewOwnerPathFromFile(project, settings, virtualFile) ?: return
 
         val actionNames = actionNamesFromControllerMethod(method)
         val topSourceDirectory = topSourceDirectoryFromSourceFile(settings, psiFile)
@@ -101,7 +101,7 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
             ?: return
 
         val allViewPaths = allViewPathsFromController(
-            controllerPath,
+            ownerPath,
             allTemplatesPaths,
             settings,
             actionNames
@@ -148,16 +148,15 @@ class ToggleBetweenControllerAndViewAction : AnAction() {
         val inputEvent = e.inputEvent as? MouseEvent
         val point = inputEvent?.getScreenPoint()
 
-        val templatesDir = templatesDirectoryOfViewFile(project, settings, psiFile) ?: return
-        val templateDirVirtualFile = templatesDir.directory
-        val relativePath = VfsUtil.getRelativePath(virtualFile, templateDirVirtualFile) ?: return
-        val filenameKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, relativePath)
+        val viewFile = viewFileOf(project, settings, virtualFile) ?: return
 
         ReadAction.nonBlocking<List<PsiElement>> {
-            val list = ViewFileIndexService.referencingElementsInSmartReadAction(project, filenameKey)
+            val list = directReferencesTo(project, settings, viewFile)
             val acc = ArrayList<PsiElement>(list.size)
             for (p in list) {
                 ProgressManager.checkCanceled()
+                // A template's callers are not its controller or cell
+                if (p.elementType == ElementType.CELL_RENDER) continue
                 val el = p.psiElement ?: continue
                 if (!el.isValid) continue
                 acc += el

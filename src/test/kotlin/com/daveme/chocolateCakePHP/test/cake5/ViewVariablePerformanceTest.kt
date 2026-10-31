@@ -10,8 +10,7 @@ class ViewVariablePerformanceTest : Cake5BaseTestCase() {
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/src5/Controller/MovieController.php",
-            "cake5/vendor/cakephp.php"
+            "cake5/src5/Controller/MovieController.php"
         )
     }
 

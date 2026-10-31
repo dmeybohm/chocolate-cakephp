@@ -19,8 +19,7 @@ class ViewTest : Cake2BaseTestCase() {
             "cake2/app/View/Helper/ArtistFormatterHelper.php",
             "cake2/app/View/Helper/MovieFormatterHelper.php",
             "cake2/app/View/Helper/MyViewHelper.php",
-            "cake2/app/View/Layouts/Emails/html/default.ctp",
-            "cake2/vendor/cakephp.php"
+            "cake2/app/View/Layouts/Emails/html/default.ctp"
         )
     }
 
@@ -30,6 +29,8 @@ class ViewTest : Cake2BaseTestCase() {
 
         class MovieFormatterHelper extends AppHelper
         {
+            public ${'$'}helpers = array('ArtistFormatter');
+
             public function format(array ${'$'}movies): string {
                 return ${'$'}this-><caret>;
             }

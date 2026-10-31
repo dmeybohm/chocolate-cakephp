@@ -11,7 +11,6 @@ class ContainGotoDeclarationTest : Cake5BaseTestCase() {
             "cake5/src5/Model/Table/AuthorsTable.php",
             "cake5/src5/Model/Table/CommentsTable.php",
             "cake5/src5/Model/Table/MoviesTable.php",
-            "cake5/vendor/cakephp.php",
             "cake5/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
         )
     }

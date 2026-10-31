@@ -11,7 +11,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
         // breadcrumb element is used by index_with_elements view
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/element/breadcrumb.php",
             "cake5/templates/Movie/index_with_elements.php",
         )
@@ -40,7 +39,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
         // breadcrumb element is used by layout_header element
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/element/breadcrumb.php",
             "cake5/templates/element/layout_header.php",
         )
@@ -63,7 +61,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
         // breadcrumb is used by both index_with_elements.php (view) and layout_header.php (element)
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/element/breadcrumb.php",
             "cake5/templates/element/layout_header.php",
             "cake5/templates/Movie/index_with_elements.php",
@@ -89,7 +86,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
         // Test that views are grouped under "Views" and elements under "Elements"
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/element/breadcrumb.php",
             "cake5/templates/element/layout_header.php",
             "cake5/templates/Movie/index_with_elements.php",
@@ -125,7 +121,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
         // Test Director/filmography element navigation
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/element/Director/filmography.php",
             "cake5/templates/Movie/element_with_params.php",
         )
@@ -147,7 +142,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
     fun `test non-element file returns empty`() {
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/src5/Controller/MovieController.php",
         )
 
@@ -165,7 +159,6 @@ class ElementToUsagesGotoRelatedTest : Cake5BaseTestCase() {
     fun `test non-element view file returns empty`() {
         myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/vendor/cakephp.php",
             "cake5/templates/Movie/artist.php",
         )
 

@@ -10,8 +10,7 @@ class ViewTest : Cake4BaseTestCase() {
             "cake4/src4/Controller/Component/MovieMetadataComponent.php",
             "cake4/src4/View/Helper/MovieFormatterHelper.php",
             "cake4/src4/View/Helper/ArtistFormatterHelper.php",
-            "cake4/src4/View/AppView.php",
-            "cake4/vendor/cakephp.php"
+            "cake4/src4/View/AppView.php"
         )
     }
 

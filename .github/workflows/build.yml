@@ -47,6 +47,13 @@ jobs:
           distribution: zulu
           java-version: 21
 
+      # Cache the pinned CakePHP releases the tests run against
+      - name: Cache CakePHP Releases
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/chocolate-cakephp
+          key: cakephp-releases-${{ hashFiles('build.gradle.kts') }}
+
       # Run tests
       - name: Run Tests
         run: ./gradlew check

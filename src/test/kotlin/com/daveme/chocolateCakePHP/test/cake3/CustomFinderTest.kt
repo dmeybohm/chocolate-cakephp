@@ -5,8 +5,7 @@ class CustomFinderTest : Cake3BaseTestCase() {
     override fun setUpTestFiles() {
         myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
-            "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/src/Model/Table/MoviesTable.php"
         )
     }
 

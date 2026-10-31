@@ -10,7 +10,6 @@ class ContainCompletionTest : Cake4BaseTestCase() {
             "cake4/src4/Model/Table/AuthorsTable.php",
             "cake4/src4/Model/Table/CommentsTable.php",
             "cake4/src4/Model/Table/MoviesTable.php",
-            "cake4/vendor/cakephp.php",
             "cake4/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
         )
     }

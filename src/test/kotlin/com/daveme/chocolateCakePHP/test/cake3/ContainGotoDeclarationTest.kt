@@ -12,7 +12,6 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/AuthorsTable.php",
             "cake3/src/Model/Table/CommentsTable.php",
             "cake3/src/Model/Table/MoviesTable.php",
-            "cake3/vendor/cakephp.php",
             "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php"
         )
     }

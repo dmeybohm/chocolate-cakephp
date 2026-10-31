@@ -11,8 +11,7 @@ class ViewTest() : Cake3BaseTestCase() {
             "cake3/src/View/Helper/MovieFormatterHelper.php",
             "cake3/src/View/Helper/ArtistFormatterHelper.php",
             "cake3/src/View/AppView.php",
-            "cake3/plugins/TestPlugin/src/View/Helper/TestPluginHelper.php",
-            "cake3/vendor/cakephp.php"
+            "cake3/plugins/TestPlugin/src/View/Helper/TestPluginHelper.php"
         )
     }
 

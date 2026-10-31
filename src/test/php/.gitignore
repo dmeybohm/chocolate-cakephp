@@ -1,0 +1,7 @@
+# Dependencies and runtime output of the assumption test apps
+cake*/vendor/
+cake*/tmp/
+cake*/logs/
+cake*/app/tmp/
+.phpunit.result.cache
+.phpunit.cache/
