@@ -16,10 +16,9 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
     private val conventionHelper = "\\App\\View\\Helper\\FmtHelper"
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/View/Helper/MovieFormatterHelper.php",
             "cake5/src5/View/Helper/ArtistFormatterHelper.php",
-            "cake5/vendor/cakephp.php",
         )
         // A file's element references are only indexed once the element directory exists:
         myFixture.addFileToProject("cake5/templates/element/placeholder.php", "<?php echo 1;")
