@@ -95,6 +95,21 @@ class BehaviorTest extends TestCase
         $this->assertSame(['Sluggable'], $table->behaviors()->loaded());
     }
 
+    public function testBareNameInPluginTableLoadsAppBehavior(): void
+    {
+        $stamps = TableRegistry::getTableLocator()->get('Probe.Stamps');
+        $this->assertSame(AppSluggable::class, get_class($stamps->getBehavior('Sluggable')));
+        $this->assertSame(AppCounterCache::class, get_class($stamps->getBehavior('CounterCache')));
+    }
+
+    public function testClassNamePlainNameLoadsAppBehaviorBeforeCore(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Counter', ['className' => 'CounterCache']);
+        $this->assertSame(['Counter'], $table->behaviors()->loaded());
+        $this->assertSame(AppCounterCache::class, get_class($table->getBehavior('Counter')));
+    }
+
     public function testPluginNameDoesNotFallBackToAppBehavior(): void
     {
         $this->expectException(MissingBehaviorException::class);

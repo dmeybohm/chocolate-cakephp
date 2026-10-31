@@ -161,7 +161,9 @@ The framework behaviour above is pinned in the
 verified behaviour and a moved pin fails a test before a feature does. The catalogue in that
 README has one row per assumption.
 
-- **`BehaviorTest`** (3, 4, 5): class resolution for bare, plugin-dotted and `className` loads;
+- **`BehaviorTest`** (3, 4, 5): class resolution for bare, plugin-dotted and `className` loads,
+  including a bare name from a plugin's own table and a plain `className` that the app and
+  the core both have (the first-match rule);
   `addBehaviors()`; the reflection map and its exclusions; a parent behavior's methods;
   `$_defaultConfig` maps on an app behavior and on the core `Tree`; the three merge cases for
   `implementedMethods` in the load options; the table's own method and finder winning; the
@@ -604,7 +606,8 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
 ### Session #1
 
 Plan step 1, the assumption tests, is done on all four versions: 20 tests each on 3, 4 and 5,
-and 10 on 2, all passing, with the catalogue rows added. Two things the first drafts got wrong
+and 10 on 2, all passing, with the catalogue rows added (22 on 3, 4 and 5 after the review
+added the first-match cases). Two things the first drafts got wrong
 were the tests' own doing, not the framework's: a `className` test that loaded the app and the
 plugin `Sluggable` on one table tripped the duplicate-method rule that the next test pins, and
 the CakePHP 2 app had no `AppModel`, so one was added beside its `AppController`. The CakePHP 2

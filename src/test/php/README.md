@@ -275,8 +275,10 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A bare name loads the app's behavior before the core one of the same name | `testBareNameLoadsAppBehaviorBeforeCore` | 3, 4, 5 |
 | A bare name does not reach a plugin's behavior | `testBareNameDoesNotReachPluginBehavior` | 3, 4, 5. 2: `testBareNameOfAnUnloadedClassDoesNotReachPluginBehavior`, only while the class is not loaded |
 | A `Plugin.Name` loads the plugin's behavior under the short alias | `testPluginNameLoadsPluginBehavior` | 3, 4, 5 |
+| A bare name in a plugin's own table loads the app's behavior, not the plugin's | `testBareNameInPluginTableLoadsAppBehavior` | 3, 4, 5 |
 | A `Plugin.Name` missing from the plugin does not fall back to the app's behavior | `testPluginNameDoesNotFallBackToAppBehavior` | 3, 4, 5. 2: `testPluginNameOfAnUnloadedClassDoesNotFallBackToAppBehavior`, only while the class is not loaded |
 | Any name of a behavior class that is already loaded uses that class, whichever app or plugin it came from, since behavior class names are global | `testAnyNameOfALoadedClassUsesItWhateverItsOrigin` | 2 |
+| A plain `className` option loads the app's behavior before the core one of the same name | `testClassNamePlainNameLoadsAppBehaviorBeforeCore` | 3, 4, 5 |
 | The `className` option accepts a plain name, plugin notation and an FQN, and the first argument is the alias | `testClassNameOptionAcceptsPlainPluginAndFqnAndKeepsAlias` | 3, 4, 5. 2: `testClassNameOptionKeepsAliasAndLoadsClass`, plain name only |
 | `addBehaviors()` accepts a plain string and an alias with options | `testAddBehaviorsAcceptsPlainAndKeyedEntries` | 3, 4, 5 |
 | Reflection mixes in the public methods, keys `find*` methods as finders by `lcfirst`, and skips protected methods, callbacks and base-class methods | `testReflectionMixesInPublicMethodsAndFinders` | 3, 4, 5 |
