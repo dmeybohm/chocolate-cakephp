@@ -109,7 +109,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 val classRefType = classReference.type.filterUnknown()
 
                 // $this->Movies->find():
-                val configuredField = classRefType.types.firstOrNull {
+                val configuredField = classReference.type.types.firstOrNull {
                     ControllerFieldTypeProvider.isConfiguredFieldSignature(it)
                 }
                 if (configuredField != null) {

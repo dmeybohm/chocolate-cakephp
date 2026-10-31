@@ -116,6 +116,42 @@ namespace Cake\ORM {
         public function contain($associations) {
             return $this;
         }
+
+        /**
+         * @param string $assoc
+         * @param callable|null $builder
+         * @return static
+         */
+        public function matching($assoc, $builder = null) {
+            return $this;
+        }
+
+        /**
+         * @param string $assoc
+         * @param callable|null $builder
+         * @return static
+         */
+        public function notMatching($assoc, $builder = null) {
+            return $this;
+        }
+
+        /**
+         * @param string $assoc
+         * @param callable|null $builder
+         * @return static
+         */
+        public function innerJoinWith($assoc, $builder = null) {
+            return $this;
+        }
+
+        /**
+         * @param string $assoc
+         * @param callable|null $builder
+         * @return static
+         */
+        public function leftJoinWith($assoc, $builder = null) {
+            return $this;
+        }
     }
 
     class RulesChecker {}
