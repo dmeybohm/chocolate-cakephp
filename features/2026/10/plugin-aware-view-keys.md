@@ -123,8 +123,9 @@ go wrong both ways. `cell('Blog.Widget')` in an app template would count as the 
    change here that needs a view file index version bump. When the walk in
    `forEachContributingSource` passes through an including file, carry its unprefixed references
    along and check them against the plugin of the class it reaches, as
-   [above](#unprefixed-elements-follow-the-rendering-class) requires, reusing the helper from
-   [the `RenderingControllers` fix](rendering-controllers-element-plugin.md).
+   [above](#unprefixed-elements-follow-the-rendering-class) requires. Move `RenderingControllers`
+   to the same helper, following
+   [the notes from its simplification](rendering-controllers-element-plugin.md#element-plugin-fix-moved).
 3. **Plugin in the variable keys (step 2).** Add the plugin to `controllerMethodKey` and
    `cellActionKey`, such as `Blog.Articles:index` and `cell:Blog.Widget:display`, on both the
    indexing side (`ViewVariableASTDataIndexer`, from the source file) and the lookup side (from the
