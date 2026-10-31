@@ -281,8 +281,13 @@ type is the field's type:
 5. **The type:** the target table's entity through `tableToEntityClass()` on each class the
    load resolves to (`ConfiguredMemberService.loadClasses()` gives them; `Authors` with
    `className` `Users` gives `UsersTable`, so `User`). When the entity class does not exist,
-   `\Cake\ORM\Entity`, which is what the framework instantiates. As an array (`User[]`) for
-   `HAS_MANY` and `BELONGS_TO_MANY`.
+   `\Cake\ORM\Entity`, which is what the framework instantiates. For `BELONGS_TO` and
+   `HAS_ONE` the type is the entity or `null` (`User|null`), because the suite shows the
+   property holding `null` when the query matched nothing
+   (`testBelongsToPropertyHoldsTargetEntityOrNull`, `testHasOnePropertyHoldsTargetEntityOrNull`).
+   For `HAS_MANY` and `BELONGS_TO_MANY` it is an array (`User[]`), empty when nothing matched.
+   Whether the association was loaded at all is not modelled, as the out-of-scope list says,
+   so the unloaded `null` every field shares adds nothing to the array type.
 6. **Declared fields win**, as for accessors: a `@property` tag for the name leaves native
    resolution alone.
 
@@ -332,8 +337,12 @@ without associations, so `$movie->reviews` is deliberately not an example.
   on a new `PostsTable` with a `Post` entity, which no other test loads:
   `hasMany('Reviews', ['propertyName' => 'written'])` and
   `hasMany('Comments', ['propertyName' => self::REMARKS])` with the constant declared on the
-  class. Then cake4 and cake3 copies; the three versions' table fixtures gained the same
-  `UsersTable` and `ProfilesTable` in #311.
+  class. The accessor-over-association case (test 19) goes on a `Critique` entity with a
+  `CritiquesTable` of its own, since the resolver finds a table by the entity's name and an
+  entity with no table has no association for the accessor to beat: `CritiquesTable` declares
+  `belongsTo('Authors', ['className' => 'Users'])` and `belongsTo('Movies')`, and `Critique`
+  declares `_getAuthor(): string` and no accessor for `movie`. Then cake4 and cake3 copies;
+  the three versions' table fixtures gained the same `UsersTable` and `ProfilesTable` in #311.
 - **Framework.** The `test` task fetches the pinned releases into
   `build/cakephp-vendor/<major>`. A fresh worktree has none until it runs, or until
   `fetchCake5Vendor` is run for the IDE's JUnit runner.
@@ -378,25 +387,32 @@ assertion.
 Association properties, in `cake5/EntityAssociationFieldTest`, with `$review` a `Review`
 parameter unless stated:
 
-14. `$review->movie` has type exactly `\App\Model\Entity\Movie` (`belongsTo`, singularized).
-15. `$review->author` and `$review->editor` have type `\App\Model\Entity\User`: the alias is
-    not the class, and the `addAssociations()` record works like a direct call.
+To-one properties are asserted as exactly the entity class and `null`, in whatever form
+`PhpType` gives `null` in the `fieldTypeAtCaret()` listing, and nothing else; to-many
+properties as exactly the array type.
+
+14. `$review->movie` has type `\App\Model\Entity\Movie` or `null` (`belongsTo`, singularized).
+15. `$review->author` and `$review->editor` have type `\App\Model\Entity\User` or `null`: the
+    alias is not the class, and the `addAssociations()` record works like a direct call.
 16. `$review->comments` has type `\Cake\ORM\Entity[]` when no `Comment` entity exists, and
     `$review->ratings` has type `\TestPlugin\Model\Entity\Rating[]` (plugin target).
 17. `$user->reviews` has type `\App\Model\Entity\Review[]` and `$user->profile` has
-    `\App\Model\Entity\Profile` (`hasOne`, singularized). On `Post`, `$post->written` has type
+    `\App\Model\Entity\Profile` or `null` (`hasOne`, singularized). On `Post`, `$post->written` has type
     `\App\Model\Entity\Review[]` (the `propertyName` option) and `$post->reviews` is not typed
     or completed; `$post->comments` is not typed or completed either, because the option is
     unreadable, and neither is `$post->remarks`.
-18. `$this->Reviews->get($id)->author` has type `User` (a method-call receiver), and
-    `$user->reviews[0]->author` resolves to `User` through the array element (`UsersTable` has
-    `hasMany('Reviews')`, and `Review` reaches `User` through `Authors`).
-19. An entity with an accessor `_getAuthor(): string` on `Review` types `$review->author` as
-    `string`, not `User`. Use a separate fixture entity or a test-local class so the other
-    tests keep the association type.
+18. `$this->Reviews->get($id)->author` has type `User` or `null` (a method-call receiver), and
+    `$user->reviews[0]->author` resolves to `User` or `null` through the array element
+    (`UsersTable` has `hasMany('Reviews')`, and `Review` reaches `User` through `Authors`).
+19. With `$critique` a `Critique` parameter, `$critique->author` has type exactly `string`,
+    from `_getAuthor(): string`, with no `User` and no `null` in it, while `$critique->movie`
+    has type `\App\Model\Entity\Movie` or `null`. The second assertion is the control: it shows
+    `CritiquesTable` was found and its `Authors` load was there to lose, so the first proves
+    the accessor wins rather than that no association existed. Completion on
+    `$critique-><caret>` offers `author` once, with type text `string`.
 20. Completion on `$review-><caret>` offers `movie`, `author`, `editor`, `comments` and
-    `ratings` with entity type text, next to the accessor fields; it does not offer `authors`
-    or `Authors`. Completion on `$movie-><caret>` offers nothing from associations when
+    `ratings` with the entity's type text, next to the accessor fields; it does not offer
+    `authors` or `Authors`. Completion on `$movie-><caret>` offers nothing from associations when
     `MoviesTable` configures none.
 21. Goto declaration on `$review->author` reaches the `belongsTo('Authors', ...)` call in
     `ReviewsTable.php` and `User.php`; on `$review->editor` it reaches the `addAssociations()`
@@ -462,7 +478,15 @@ provider, field completion, field navigation) do not meet. What the merge settle
 - **Accessor and association with the same name.** Step 6 checks accessors first, matching the
   framework, which hands the stored association value to the accessor. A `_getAuthor()` with
   no declared return type infers from its body, so the type may still end up `User` through
-  PhpStorm's inference on the parameter; that is correct, not a conflict.
+  PhpStorm's inference on the parameter; that is correct, not a conflict. The test for this
+  needs an entity whose table exists and configures the association, which is why `Critique`
+  has `CritiquesTable` rather than being a bare copy of `Review`.
+- **Nullable to-one properties.** `User|null` is what the framework delivers for a `belongsTo`
+  or `hasOne` that matched nothing, and it is what the suite pins. Bake's `@property` tags
+  write the bare entity class for associations, so a project that has run bake sees the
+  declared, non-nullable type (declared fields win) and one that has not sees the nullable
+  one. The difference is accepted: the plugin's type comes from observed behaviour, the tag's
+  from the generator's choice.
 - **Pluralization in `entityToTableClass()`.** The `Inflector` port covers the framework's
   irregular and uncountable lists at the time it was written. An entity whose plural the port
   gets wrong resolves to no table and silently gets no associations. `InflectorTest` pins the
