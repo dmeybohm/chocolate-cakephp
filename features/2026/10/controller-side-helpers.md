@@ -128,6 +128,11 @@ A cell hop differs from an element hop in two ways. An unprefixed `cell()` name 
 and what the cell's template includes resolves in the cell's plugin, not the controller's, so the
 hop checks the name directly and drops the carried hops.
 
+A cell also supplies helpers to its own templates, through `viewBuilder()` in `initialize()` or an
+action. A load in `initialize()` settles the type in the cell's template, though the caller's helper
+wins an alias both configure. In an element it does not, as that element can be included outside the
+cell too.
+
 ### Facade from the CakePHP 2 feature
 
 `configuration-code-disambiguation-cake2` puts view helper receivers behind a version-neutral
@@ -253,9 +258,6 @@ the builder's helpers replace a `$helpers` property on the view class.
 
 - A builder held in a variable, as in `$builder = $this->viewBuilder(); $builder->addHelper('X')`, is
   not indexed.
-- A cell class's own `viewBuilder()` helpers are not receivers of its templates.
-- `$helpers` on a Cake 4 or 5 controller is still read, though the framework ignores it, since the
-  index doesn't know the version.
 - `setHelpers()` is treated as adding, so a replaced helper stays in the union.
 - Completion's type text unions `AppView` and controllers for an alias both configure, where the type
   provider and go to declaration give `AppView` alone.
@@ -263,8 +265,28 @@ the builder's helpers replace a `$helpers` property on the view class.
 
 **Found along the way, not changed:**
 
-- Since the view class receives the builder's `helpers` even when empty, the constructor replaces a
-  `$helpers` property declared on `AppView`. The index still reads that property as a load.
 - `elementPathPrefixFromSourceFile` needs the element directory to exist when a file is indexed, so a
   file indexed before that directory is created has no element references until it is next
   reindexed. This made a test order-dependent until its setup created the directory first.
+
+### Session #2
+
+Acted on what the assumption suite showed:
+
+- `RenderingControllers` counts cells as well as controllers. `cell-support` had put this off until
+  cells could load something worth indexing, which indexing `viewBuilder()` helpers now provides.
+- A `$helpers` property on a view class is ignored on every version. The builder always passes the
+  view its helpers, even an empty array, and `isset()` holds for that, so the property is replaced
+  whatever the controller configures. Only a view built by hand with `new` keeps it, and such a view
+  now resolves those aliases by convention only.
+- A `$helpers` property on a controller or a cell is only read on CakePHP 3, where `createView()`
+  copies it to the builder. Cake 4 raises a warning without loading the helpers, and Cake 5 ignores
+  it. `readsHelpersProperty` on the structure tells these apart, which works because Cake 3's
+  `src/Template` layout has its own structure, while 4 and 5 share one.
+- These apply to completion as well as types, through `ViewHelperReceivers.loadedHelpers`.
+- Running these tests with `-PcakeVendor=real` found what the stubs hide. PhpStorm's own field
+  signature `#P#C\App\View\AppView.Fmt` goes to `ConfiguredMemberFieldTypeProvider`, which only knows
+  the view class, so a helper only a controller configures fell through to `View::__get`, adding
+  `Helper|null`, or to a convention class, even when the controller settled the type. For `AppView`,
+  that provider now leaves any alias a controller or cell configures to `ViewHelperInViewTypeProvider`,
+  which knows the template. `\Cake\View\View`, as `$this->_View` is typed, is not affected.
