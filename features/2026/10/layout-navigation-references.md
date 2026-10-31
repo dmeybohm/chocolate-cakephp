@@ -118,6 +118,16 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
    under both keys, avoids the detection but leaves a wrong key in the index for every reference,
    so prefer the fix. `controller-side-helpers` needs the same constructor argument; whichever lands
    first adds it.
+
+   The same check decides CakePHP 2 with both versions enabled, and gets a Cake 2 plugin controller
+   wrong today: `isCakeTwoController` wants the directory above `Controller` to be the Cake 2 app
+   directory, and in `app/Plugin/Blog/Controller/` it is the plugin. The controller then takes the
+   `cakeFour` structure, as #307 noted for its plugin, and `fullImplicitViewPath` already
+   underscores its camel-case action names as if it were CakePHP 3+. Accept a `Controller`
+   directory whose parent is a plugin directory as well: one under `Plugin` or `plugins` below the
+   Cake 2 app directory, or a configured Cake 2 plugin path, as `cakeTwoPluginName` finds them.
+   CakePHP 3+ plugins have `src` between the plugin and `Controller`, so they do not match. No test
+   runs with both versions enabled yet, so add one for this.
 3. **CakePHP 3 to 5 forms.** With `layoutDirectory` set, the render second argument and
    `$this->layout` assignments are indexed by the existing code. Add:
    - `viewBuilder()->setLayout()` on 3 to 5 and `viewBuilder()->layout()` with an argument on 3.
@@ -127,6 +137,11 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
      `setTemplate()` chained after `setLayout()`. `indexViewBuilderCalls` ignores method names it
      does not know, so the new calls pass through it unchanged.
    - `$this->setLayout()` and `$this->layout()` with a string argument, from view files.
+   - Every form requires `$this` as the receiver, or `$this->viewBuilder()` at the root of the
+     chain. `map()` already filters the render calls and the layout assignments to `$this`, and
+     `isViewBuilderMethodCall` checks the chain root, so the new forms follow the same rule. A
+     mailer or view object in a controller, as in `$email->viewBuilder()->setLayout('x')` or
+     `$view->render('x', 'y')`, must not produce a layout reference.
    - Limit the `$layout` field form to CakePHP 2 and 3, where it has an effect, and to controller
      files, not cells.
    - Stop `ContributingSourceWalk` at a layout, by the [isolation rule](#effects-on-variables).
@@ -198,8 +213,6 @@ from step 2.
   the layout directory itself. Email layouts and mailers are out of scope; a `src/Mailer` file has
   no templates directory above it and is not indexed.
 - **Non-literal names** are skipped, as for templates.
-- With CakePHP 2 and 3+ both enabled, a CakePHP 2 plugin controller takes the CakePHP 3+ structure
-  in `ofSourceFile`, as #307 records, and would store its layouts under `layout/`.
 
 ## Tests
 
@@ -217,6 +230,10 @@ CakePHP 2 first, then cake5, then 3 and 4:
   app's otherwise; an app controller's `Blog.admin` links to `Blog`'s layout; the app's `admin` does
   not list the plugin controller when the plugin has its own.
 - CakePHP 3 keys: a controller's `setLayout()` reaches `src/Template/Layout/admin.ctp`.
+- Both versions enabled: a Cake 2 plugin controller's `$this->layout = 'admin'` reaches the plugin's
+  `Layouts/admin.ctp`, and its camel-case action still reaches its Cake 2 template.
+- Negative: `$email->viewBuilder()->setLayout('admin')` and `$view->render('x', 'admin')` in a
+  controller, and `$other->setLayout('admin')` in a template, give the layout no reference.
 - Variables: a layout named from an action does not offer that action's variables, on CakePHP 2
   and 5, and an element the layout includes still gets the data passed to it.
 
