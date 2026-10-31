@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.test.cake3
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.ViewNavigation
 import com.daveme.chocolateCakePHP.view.viewFileOf
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.psi.PsiFile
 
@@ -120,7 +121,6 @@ class LayoutNavigationTest : Cake3BaseTestCase() {
 
     fun `test app controller reaches a plugin layout through its prefix`() {
         appController("Articles", "public function index() { \$this->viewBuilder()->setLayout('Blog.admin'); }")
-        template("$app/$layouts/admin")
         val blogLayout = template("$blog/$layouts/admin")
 
         assertEquals(setOf("Controllers: ArticlesController::index()"), navigation.related(blogLayout))
@@ -166,6 +166,14 @@ class LayoutNavigationTest : Cake3BaseTestCase() {
 
         assertEquals(emptySet<String>(), variables(layout))
         assertEquals(setOf("passed"), variables(element))
+    }
+
+    fun `test controller indexed before the template directory exists reaches its layout`() {
+        appController("Articles", "public function index() { \$this->viewBuilder()->setLayout('admin'); }")
+        assertEmpty(ViewFileIndexService.referencingElementsInSmartReadAction(project, "Layout/none"))
+        val layout = template("$app/$layouts/admin")
+
+        assertEquals(setOf("Controllers: ArticlesController::index()"), navigation.related(layout))
     }
 
     fun `test deprecated forms name the layout`() {

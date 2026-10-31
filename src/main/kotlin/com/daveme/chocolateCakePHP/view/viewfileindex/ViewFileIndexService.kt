@@ -114,19 +114,17 @@ private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings)
     return true
 }
 
-private fun controllerDirectoryOf(controllerFile: VirtualFile): VirtualFile? {
-    var controllerDir: VirtualFile? = controllerFile.parent
-    while (controllerDir != null && controllerDir.name != "Controller") {
-        controllerDir = controllerDir.parent
-    }
-    return controllerDir
-}
-
 private fun isCakeTwoController(
     controllerFile: VirtualFile,
     settings: Settings
 ): Boolean {
-    val controllerDir = controllerDirectoryOf(controllerFile) ?: return false
+    var controllerDir: VirtualFile? = controllerFile.parent
+    while (controllerDir != null && controllerDir.name != "Controller") {
+        controllerDir = controllerDir.parent
+    }
+    if (controllerDir == null) {
+        return false
+    }
     val topSourceDir = controllerDir.parent ?: return false
     if (isCakeTwoPluginDirectory(topSourceDir, settings)) {
         return true
@@ -147,24 +145,6 @@ private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings)
     return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().any {
         it.pluginPath.isNotBlank() && directory.path.endsWith("/" + it.pluginPath.trim('/'))
     }
-}
-
-/**
- * Whether the templates directory nearest above [controllerFile] is CakePHP 3's `Template`.
- */
-fun isCakeThreeController(controllerFile: VirtualFile, settings: Settings): Boolean {
-    var directory = controllerDirectoryOf(controllerFile)?.parent
-    while (directory != null) {
-        if (directory.findChild("Template") != null ||
-            directory.findChild(settings.appDirectory)?.findChild("Template") != null) {
-            return true
-        }
-        if (directory.findChild("templates") != null) {
-            return false
-        }
-        directory = directory.parent
-    }
-    return false
 }
 
 object ViewFileIndexService {

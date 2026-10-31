@@ -118,11 +118,9 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
    no controller names a layout, so the tests add controllers with `addFileToProject`, as
    `PluginAwareViewKeysTest` does. Include the plugin cases below.
 2. **Controller structure.** `CakeThreeAndLater` has its per-version `layoutDirectory` since #309.
-   Make `ofSourceFile` tell a CakePHP 3 controller from a CakePHP 4 one: walk up to the
-   `Controller` directory and return `cakeThree` when its parent has a `Template` child, the way
-   `isCakeTwoController` already checks for `templates` and `Template` siblings. The alternative,
-   storing a controller's layout reference under both keys, avoids the detection but leaves a wrong
-   key in the index for every reference, so prefer the fix.
+   A controller's path does not tell CakePHP 3 from 4 (`src/Controller/` on both), so index each of
+   its layout references under both directories, by the rules of each version. See
+   [Session #2](#session-2).
 
    The same check decides CakePHP 2 with both versions enabled, and gets a Cake 2 plugin controller
    wrong today: `isCakeTwoController` wants the directory above `Controller` to be the Cake 2 app
@@ -232,6 +230,10 @@ version.
   the layout directory itself. Email layouts and mailers are out of scope; a `src/Mailer` file has
   no templates directory above it and is not indexed.
 - **Non-literal names** are skipped, as for templates.
+- **`LayoutController` on CakePHP 4 and 5.** A controller's `setLayout('admin')` is also stored under
+  `Layout/admin`, which is the key of `templates/Layout/admin.php`, a template of a controller named
+  `LayoutController`. That template then lists the controller naming the layout and offers its
+  variables.
 
 ## Tests
 
@@ -274,11 +276,6 @@ Where the implementation differs from the plan:
 - **Layout setters.** `TemplateDirStructure.layoutSetters` is one set of method names, empty on
   CakePHP 2, instead of a flag for the deprecated `layout()` setters. It also keeps `setLayout()` from
   being indexed on CakePHP 2, where the method does not exist.
-- **CakePHP 3 detection.** The plan checked for a `Template` directory beside `Controller`, which
-  misses a plugin with no templates of its own that falls back to the app's layout. `isCakeThreeController`
-  walks up instead: the nearest `Template`, or `Template` under the app directory, means CakePHP 3, and
-  the nearest `templates` means CakePHP 4 or later. An app with no `Template` directory at all still
-  reads as CakePHP 4.
 - **Chain order.** Calls in a chain share a start offset and the outer call was collected first, so
   a `setTemplate()` chained after `setTemplatePath()` lost its path. Generalizing the chain check did not
   cause this, but the `setLayout()->setTemplatePath()->setTemplate()` test found it.
@@ -286,3 +283,19 @@ Where the implementation differs from the plan:
 
 The label of implicit-render references in "go to related" is a separate bug, tracked in
 [Go to related method names](goto-related-method-names.md).
+
+### Session #2
+
+The first version told CakePHP 3 controllers from later ones by looking for a `Template` directory
+while indexing. That is the bug class [view index bugs](view-index-bugs.md) removes for elements: a
+controller indexed before the directory existed stored its references under `layout/` and kept them
+until the file changed. An element's directory comes from the calling file's own path, but a controller's
+path is the same on CakePHP 3 and 4. Composer detection is no answer either, since a project's settings
+can override it to support either version or both.
+
+So `TemplateDirStructure.layoutStructuresOf` gives a CakePHP 3+ controller both structures, and
+`indexLayoutReferences` runs once for each. A key for the other version is simply never looked up,
+and each run applies its own version's rules: `public $layout`, `$this->layout = 'x'` and the builder's
+`layout()` are stored only under `Layout/`, so they still name nothing on CakePHP 4 and 5.
+This is the alternative the plan first rejected for leaving a wrong key in the index, with the one
+collision noted under [Known limitations](#known-limitations). `isCakeThreeController` is gone.

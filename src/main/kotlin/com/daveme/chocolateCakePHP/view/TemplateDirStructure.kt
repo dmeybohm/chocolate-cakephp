@@ -8,7 +8,6 @@ import com.daveme.chocolateCakePHP.cake.TemplatesDir
 import com.daveme.chocolateCakePHP.cake.cakeThreePluginName
 import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
-import com.daveme.chocolateCakePHP.view.viewfileindex.isCakeThreeController
 import com.daveme.chocolateCakePHP.view.viewfileindex.lookupControllerFileInfo
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -183,11 +182,23 @@ sealed class TemplateDirStructure(val id: Char) {
             }
             // A plugin controller is not under the app directory, so with only CakePHP 2
             // enabled every controller is a CakePHP 2 one:
-            return when {
-                settings.cake2Enabled &&
-                    (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo) -> CakeTwo
-                isCakeThreeController(file, settings) -> cakeThree
-                else -> cakeFour
+            return if (settings.cake2Enabled &&
+                (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo))
+                CakeTwo
+            else
+                cakeFour
+        }
+
+        /**
+         * The structures whose layouts a file that refers to views can name. A file's path does not
+         * tell a CakePHP 3 controller from a later one, so such a controller can name the layouts of both.
+         */
+        fun layoutStructuresOf(project: Project, settings: Settings, file: VirtualFile, isController: Boolean): List<TemplateDirStructure> {
+            templatesDirectoryOfViewFile(project, settings, file)?.let { return listOf(of(it)) }
+            return when (ofSourceFile(project, settings, file, isController)) {
+                null -> emptyList()
+                CakeTwo -> listOf(CakeTwo)
+                else -> listOf(cakeThree, cakeFour)
             }
         }
     }

@@ -694,8 +694,10 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
         val pluginContext = referencePluginContext(project, settings, virtualFile, isController)
         if (!rendersWithoutLayout(project, settings, virtualFile)) {
-            indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, astViewLayoutCalls,
-                astViewBuilderCalls, isController, pluginContext)
+            for (structure in TemplateDirStructure.layoutStructuresOf(project, settings, virtualFile, isController)) {
+                indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, astViewLayoutCalls,
+                    astViewBuilderCalls, isController, structure)
+            }
         }
         indexRenderCalls(result, projectDir, astRenderCalls, virtualFile, pluginContext)
         indexElementCalls(result, projectDir, astElementCalls, virtualFile, pluginContext)
@@ -961,12 +963,11 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         viewLayoutCalls: List<MethodCallInfo>,
         viewBuilderCalls: List<ViewBuilderCallInfo>,
         isController: Boolean,
-        pluginContext: ReferencePluginContext?
+        structure: TemplateDirStructure
     ) {
-        val structure = pluginContext?.structure ?: return
         val layoutDirectory = structure.layoutDirectory ?: return
         fun addLayout(name: String, data: (String?) -> ViewReferenceData) {
-            val (layoutName, pluginPrefix) = pluginContext.split(name)
+            val (layoutName, pluginPrefix) = structure.resolveName(name)
             if (layoutName.isNotEmpty() && !layoutName.startsWith("/")) {
                 addViewReference(result, "$layoutDirectory/$layoutName", data(pluginPrefix))
             }

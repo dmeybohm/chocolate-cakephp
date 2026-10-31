@@ -120,7 +120,6 @@ class LayoutNavigationTest : Cake5BaseTestCase() {
 
     fun `test app controller reaches a plugin layout through its prefix`() {
         appController("Articles", "public function index() { \$this->viewBuilder()->setLayout('Blog.admin'); }")
-        template("$app/$layouts/admin")
         val blogLayout = template("$blog/$layouts/admin")
 
         assertEquals(setOf("Controllers: ArticlesController::index()"), navigation.related(blogLayout))
