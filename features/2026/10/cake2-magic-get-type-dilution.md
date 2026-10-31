@@ -177,6 +177,15 @@ Results:
 - Full suite in stub mode at `91c4017`: 1300 passed, 0 failed, 1 skipped (the real-only test
   `test a field with no class by convention keeps its native type`).
 
-**Not verified:** the CakePHP 3 to 5 convention change has not run in real mode, which the plan
-requires before deciding on it. The stubs for those versions declare no `__get()`, so its tests
-can't fail in stub mode for lack of the fix. Plan step 6's real-mode full run is also still open.
+Real mode, for the CakePHP 3 to 5 convention change and plan step 6:
+
+- **Full suite in real mode at `7c77697`:** 1300 passed, 0 failed, 1 skipped (the stub-only
+  `test without the framework and declarations convention stays`).
+- **With the convention path disabled,** real CakePHP 5 fails `test an unloaded table property
+  leaves out the framework's magic types`, with `\null`, `\mixed` and `\Cake\ORM\Table` in the type.
+- **Core helpers never reach `__get()`.** The helper test first used `$this->Time` and passed with
+  the path disabled, because the real `View` declares `@property \Cake\View\Helper\TimeHelper
+  $Time`. It now uses the app's `ArtistFormatter`, and fails with the path disabled (`\null` and
+  `\Cake\View\Helper` in the type).
+- **CakePHP 3 and 4** have no test of their own for convention members. The real-mode suite only
+  shows that they did not regress.
