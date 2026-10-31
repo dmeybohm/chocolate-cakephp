@@ -88,6 +88,17 @@ internal val sourcesWithoutOptions: Set<String> = setOf(
     "loadmodel",
 )
 
+internal const val VIEW_BUILDER_METHOD = "viewbuilder"
+
+internal const val ADD_HELPER_METHOD = "addhelper"
+
+// ViewBuilder methods that take an array of helpers:
+internal val viewBuilderHelperArrayMethods: Set<String> = setOf(
+    "addhelpers",
+    "sethelpers",
+    "helpers",
+)
+
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
 internal const val BIND_MODEL_METHOD = "bindmodel"

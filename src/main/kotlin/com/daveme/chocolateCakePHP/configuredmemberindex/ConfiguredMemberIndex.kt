@@ -22,7 +22,7 @@ class ConfiguredMemberIndex : FileBasedIndexExtension<String, ClassConfiguration
         ConfiguredMemberExternalizer
 
     override fun getVersion(): Int {
-        return 3
+        return 4
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {
