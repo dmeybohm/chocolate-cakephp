@@ -210,3 +210,27 @@ where the rule belongs, and the chain resolution is the only place that answers 
 2. Bug 2 service test (expected to fail without a reader's lambda), then its plan, then the `cake4`
    test. One commit.
 3. Run `cake5` tests first, then `cake3`, `cake4`, `cake2`, then the full suite once at the end.
+
+## Implementation Progress
+
+### Session #1
+
+Both bugs are fixed as planned, and the full suite passes.
+
+- Bug 1: `elementPathPrefixFromSourceFile` became `elementPathPrefix(templatesDir)`, since it no
+  longer takes a source file. The placeholder elements are gone from `cake5/ControllerSideHelperTest`.
+- Bug 2: the rule is `ConfiguredMemberService.isViewChain`. `classChain` never records the framework
+  base classes, so only the `superFQN` check is needed. Dropping the name-based ignore in
+  `ConfiguredMemberFieldTypeProvider` does not change CakePHP 2, where `CakeTwoChainResolver` returns
+  nothing for a view chain.
+- No new complete-array helper test: `ConfiguredHelperTest` already has
+  `test helper completion in a helper lists only the helpers array`.
+
+Behaviour that narrowed, both accepted as following from the plan:
+
+- Element references are now only indexed in files `templatesDirectoryOfViewFile` recognises. The old
+  walk accepted any `templates`, `Template` or `View` ancestor with an element child, such as a
+  CakePHP 3 plugin template when `appDirectory` is a nested path, or a CakePHP 2 plugin outside the
+  app directory.
+- A `*View` class whose chain does not reach `\Cake\View\View`, for example because its parent is not
+  indexed, now has its `$helpers` property read.
