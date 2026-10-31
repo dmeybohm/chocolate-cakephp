@@ -13,7 +13,7 @@ class PluginAwareViewKeysTest : Cake2BaseTestCase() {
     private val settings get() = Settings.getInstance(project)
 
     override fun setUpTestFiles() {
-        configureByFiles("cake2/app/Controller/AppController.php", "cake2/vendor/cakephp.php")
+        myFixture.configureByFiles("cake2/app/Controller/AppController.php")
     }
 
     private fun template(path: String, code: String = "echo 1;"): PsiFile =

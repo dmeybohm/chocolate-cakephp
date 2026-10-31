@@ -9,7 +9,6 @@ class ControllerSideHelperTest : Cake3BaseTestCase() {
     private val movieHelper = "\\App\\View\\Helper\\MovieFormatterHelper"
 
     override fun setUpTestFiles() {
-        configureByFiles("cake3/vendor/cakephp.php")
         myFixture.addFileToProject("cake3/src/View/Helper/MovieFormatterHelper.php", """
             <?php
             namespace App\View\Helper;

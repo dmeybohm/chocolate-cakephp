@@ -8,13 +8,12 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
-import org.junit.Assume
 import java.io.File
 
 class ConfiguredComponentTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/Controller/ConfiguredController.php",
             "cake5/src5/Controller/ChildConfiguredController.php",
@@ -28,7 +27,6 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
             "cake5/vendor/test/test_plugin/src/Controller/Component/ConditionalComponent.php",
             "cake5/src5/Model/Table/MoviesTable.php",
             "cake5/src5/Model/Table/ArticlesTable.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 
@@ -147,7 +145,6 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
     }
 
     fun `test a field with no class by convention keeps its native type`() {
-        Assume.assumeTrue("The stub Controller declares no __get", usesRealVendor)
         configureConfiguredController("\$this->Nonexist<caret>ent;")
         assertTrue(fieldTypeAtCaret().contains("\\Cake\\ORM\\Table"))
     }

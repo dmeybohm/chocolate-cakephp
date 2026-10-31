@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 class ViewTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/Component/AppComponent.php",
             "cake2/app/Controller/Component/MovieMetadataComponent.php",
@@ -19,8 +19,7 @@ class ViewTest : Cake2BaseTestCase() {
             "cake2/app/View/Helper/ArtistFormatterHelper.php",
             "cake2/app/View/Helper/MovieFormatterHelper.php",
             "cake2/app/View/Helper/MyViewHelper.php",
-            "cake2/app/View/Layouts/Emails/html/default.ctp",
-            "cake2/vendor/cakephp.php"
+            "cake2/app/View/Layouts/Emails/html/default.ctp"
         )
     }
 

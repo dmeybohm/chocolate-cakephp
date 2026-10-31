@@ -22,11 +22,10 @@ class NestedAppDirectoryTest : BaseTestCase() {
     }
 
     private fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake2_nested/src/app/Controller/AppController.php",
             "cake2_nested/src/app/Model/Movie.php",
-            "cake2_nested/src/app/View/Movie/index.ctp",
-            "cake2_nested/vendor/cakephp.php"
+            "cake2_nested/src/app/View/Movie/index.ctp"
         )
     }
 

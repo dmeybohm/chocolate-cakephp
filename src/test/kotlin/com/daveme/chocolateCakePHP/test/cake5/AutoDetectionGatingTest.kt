@@ -24,11 +24,10 @@ class AutoDetectionGatingTest : BaseTestCase() {
         // appDirectory left at its default; the nested path must come from composer.json.
         originalSettings.loadState(newState)
 
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5_nested/app/src5/Controller/AppController.php",
             "cake5_nested/app/src5/Model/Table/MoviesTable.php",
-            "cake5_nested/templates/Movie/index.php",
-            "cake5_nested/vendor/cakephp.php"
+            "cake5_nested/templates/Movie/index.php"
         )
     }
 

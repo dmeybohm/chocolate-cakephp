@@ -6,11 +6,12 @@ import com.daveme.chocolateCakePHP.view.viewFileOf
 
 class FrameworkNotIndexedControllerHelperTest : Cake5BaseTestCase() {
 
+    override val attachesFramework = false
+
     override fun setUpTestFiles() {
     }
 
     fun `test a layout finds controllers at any depth when the framework class is not indexed`() {
-        assumeStubVendor("The real framework is always attached")
         myFixture.addFileToProject("cake5/src5/Controller/AppController.php", """
             <?php
             namespace App\Controller;

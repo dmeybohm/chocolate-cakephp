@@ -27,7 +27,6 @@ class PluginAwareViewKeysTest : Cake5BaseTestCase() {
     private val settings get() = Settings.getInstance(project)
 
     override fun setUpTestFiles() {
-        configureByFiles("cake5/vendor/cakephp.php")
     }
 
     private fun template(path: String, code: String = "echo 1;"): PsiFile =

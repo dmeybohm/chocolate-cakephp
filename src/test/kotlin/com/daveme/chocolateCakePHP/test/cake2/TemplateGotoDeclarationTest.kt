@@ -5,13 +5,12 @@ import com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler
 
 class TemplateGotoDeclarationTest : Cake2BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake2/app/Controller/AppController.php",
             "cake2/app/Controller/MovieController.php",
             "cake2/app/View/AppView.php",
             "cake2/app/View/Movie/artist.ctp",
             "cake2/app/View/Movie/film_director.ctp",
-            "cake2/vendor/cakephp.php",
         )
     }
 
