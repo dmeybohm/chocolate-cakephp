@@ -5,6 +5,8 @@ namespace App\Test\TestCase;
 
 use App\Controller\LegacyHelpersController;
 use Cake\Http\ServerRequest;
+use App\View\ConfiguredView;
+use App\View\Helper\ViewMarkerHelper;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingHelperException;
@@ -46,6 +48,12 @@ class ViewHelperTest extends TestCase
         $this->expectException(MissingHelperException::class);
         $this->expectExceptionMessage('ByPropertyHelper');
         $this->get('/helpers/viewproperty');
+    }
+
+    public function testViewBuiltByHandKeepsHelpersProperty(): void
+    {
+        $view = new ConfiguredView();
+        $this->assertInstanceOf(ViewMarkerHelper::class, $view->ByProperty);
     }
 
     public function testControllerHelperReachesLayoutAndItsElement(): void

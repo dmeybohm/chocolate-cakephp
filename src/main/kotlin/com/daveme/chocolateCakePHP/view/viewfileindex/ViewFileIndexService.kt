@@ -199,12 +199,6 @@ private fun isTemplateDir(currentDir: VirtualFile): Boolean {
             currentDir.name == "View"
 }
 
-private fun findElementDir(currentDir: VirtualFile): VirtualFile? {
-    return currentDir.findChild("element")  ?:
-            currentDir.findChild("Element") ?:
-           currentDir.findChild("Elements")
-}
-
 fun viewPathPrefixFromSourceFile(
     projectDir: VirtualFile,
     sourceFile: VirtualFile,
@@ -250,28 +244,8 @@ fun viewPathToTemplatesDirRoot(
         return null
 }
 
-fun elementPathPrefixFromSourceFile(
-    projectDir: VirtualFile,
-    sourceFile: VirtualFile,
-): ViewPathPrefix? {
-    var currentDir: VirtualFile? = sourceFile
-    var elementPath : VirtualFile? = null
-    while (
-        currentDir != null &&
-        sourceFile != projectDir
-    ) {
-        val found = isTemplateDir(currentDir)
-        if (found) {
-            elementPath = findElementDir(currentDir)
-            break
-        }
-        currentDir = currentDir.parent
-    }
-    if (elementPath != null)
-        return ViewPathPrefix(elementPath.name + "/")
-    else
-        return null
-}
+fun elementPathPrefix(templatesDir: TemplatesDir): ViewPathPrefix =
+    ViewPathPrefix(templatesDir.elementDirName + "/")
 
 fun fullExplicitViewPath(
     viewPathPrefix: ViewPathPrefix,

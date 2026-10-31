@@ -117,6 +117,23 @@ Also, if you see a case where `lookupElementStrings` is null, it
 might be because of this edge case. So that is something important
 to keep in mind when dealing with the tests.
 
+## Assumption tests
+
+The plugin's behaviour is built on what CakePHP does at runtime, so verify that rather than
+inferring it. When designing a feature or a fix, write assumption tests for the framework behaviour
+it depends on first, before the plan settles and before the plugin code. A failing assumption test
+is cheap to learn from and says what the framework does instead.
+
+They live in `src/test/php`, run against real, pinned CakePHP releases in containers, and need Podman
+or Docker. Gradle does not run them.
+
+```bash
+scripts/run-cakephp-assumption-tests.sh test                # every version
+scripts/run-cakephp-assumption-tests.sh test 4 5 -- --filter Element
+```
+
+See `src/test/php/README.md` for how to add one, and for the catalogue each new test needs a row in.
+
 ## Debugging
 
 If you get stuck (for example would like to run some code in a debugger),

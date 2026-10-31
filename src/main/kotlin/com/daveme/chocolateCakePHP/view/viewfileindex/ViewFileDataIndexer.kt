@@ -5,6 +5,8 @@ import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
 import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.parseCellName
+import com.daveme.chocolateCakePHP.cake.TemplatesDir
+import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.TemplateDirStructure
 import com.intellij.openapi.project.Project
 import com.intellij.psi.util.PsiTreeUtil
@@ -704,7 +706,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val pluginContext = referencePluginContext(project, settings, virtualFile, isController)
         indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, isController, pluginContext)
         indexRenderCalls(result, projectDir, astRenderCalls, virtualFile, pluginContext)
-        indexElementCalls(result, projectDir, astElementCalls, virtualFile, pluginContext)
+        indexElementCalls(result, astElementCalls, templatesDirectoryOfViewFile(project, settings, virtualFile), pluginContext)
         indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile, pluginContext)
         indexViewBuilderCalls(result, projectDir, astViewBuilderCalls, virtualFile)
         indexCellReferences(result, projectDir, astCellReferences, virtualFile)
@@ -739,19 +741,15 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
 
     private fun indexElementCalls(
         result: MutableMap<String, List<ViewReferenceData>>,
-        projectDir: VirtualFile,
         elementCalls: List<MethodCallInfo>,
-        virtualFile: VirtualFile,
+        templatesDir: TemplatesDir?,
         pluginContext: ReferencePluginContext?
     ) {
-        if (elementCalls.isEmpty()) {
+        if (elementCalls.isEmpty() || templatesDir == null) {
             return
         }
 
-        val viewPathPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
-            ?: return
-
-        setViewPath(elementCalls, viewPathPrefix, result, pluginContext)
+        setViewPath(elementCalls, elementPathPrefix(templatesDir), result, pluginContext)
     }
 
     private fun indexViewFieldAssignments(
