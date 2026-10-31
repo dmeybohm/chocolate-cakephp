@@ -12,7 +12,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class TableLocatorPluginNotationTest : Cake3BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Model/Table/RatingsTable.php",
             "cake3/src/Model/Entity/Rating.php",
@@ -21,7 +21,6 @@ class TableLocatorPluginNotationTest : Cake3BaseTestCase() {
             "cake3/vendor/test/test_plugin/src/Model/Table/Sub/NestedTable.php",
             "cake3/vendor/test/test_plugin/src/Model/Entity/PluginItem.php",
             "cake3/vendor/acme/vendored/src/Model/Table/ThingsTable.php",
-            "cake3/vendor/cakephp.php",
         )
     }
 

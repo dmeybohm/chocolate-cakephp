@@ -8,10 +8,9 @@ package com.daveme.chocolateCakePHP.test.cake5
 class ViewVariablePerformanceTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
-            "cake5/src5/Controller/MovieController.php",
-            "cake5/vendor/cakephp.php"
+            "cake5/src5/Controller/MovieController.php"
         )
     }
 

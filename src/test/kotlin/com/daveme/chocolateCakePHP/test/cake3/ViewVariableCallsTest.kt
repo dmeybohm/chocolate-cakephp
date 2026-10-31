@@ -15,7 +15,6 @@ class ViewVariableCallsTest : Cake3BaseTestCase() {
     private val settings get() = Settings.getInstance(project)
 
     override fun setUpTestFiles() {
-        configureByFiles("cake3/vendor/cakephp.php")
         myFixture.addFileToProject("$root/$elementKey.$extension", "<?php echo \$title;")
     }
 

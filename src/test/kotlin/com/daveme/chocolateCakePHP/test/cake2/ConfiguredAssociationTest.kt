@@ -9,7 +9,6 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class ConfiguredAssociationTest : Cake2BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles("cake2/vendor/cakephp.php")
         myFixture.addFileToProject("app/Controller/AppController.php", """
             <?php
             class AppController extends Controller {}

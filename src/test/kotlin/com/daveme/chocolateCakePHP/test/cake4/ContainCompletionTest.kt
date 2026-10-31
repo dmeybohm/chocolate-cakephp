@@ -5,7 +5,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 
 class ContainCompletionTest : Cake4BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/ArticleController.php",
             "cake4/src4/Model/Table/ArticlesTable.php",
             "cake4/src4/Model/Table/AuthorsTable.php",
@@ -14,7 +14,6 @@ class ContainCompletionTest : Cake4BaseTestCase() {
             "cake4/src4/Model/Table/RatingsTable.php",
             "cake4/src4/Model/Table/ReviewsTable.php",
             "cake4/src4/Model/Table/UsersTable.php",
-            "cake4/vendor/cakephp.php",
             "cake4/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php",
             "cake4/vendor/test/test_plugin/src/Model/Table/RatingsTable.php"
         )

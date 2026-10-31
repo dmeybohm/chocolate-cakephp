@@ -12,7 +12,7 @@ import java.io.File
 class ConfiguredAssociationTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Model/Table/ReviewsTable.php",
             "cake4/src4/Model/Table/UsersTable.php",
@@ -22,7 +22,6 @@ class ConfiguredAssociationTest : Cake4BaseTestCase() {
             "cake4/src4/Model/Table/ArticlesTable.php",
             "cake4/src4/Model/Table/RatingsTable.php",
             "cake4/vendor/test/test_plugin/src/Model/Table/RatingsTable.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

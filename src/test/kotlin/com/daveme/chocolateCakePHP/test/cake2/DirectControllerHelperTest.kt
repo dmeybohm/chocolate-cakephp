@@ -3,7 +3,6 @@ package com.daveme.chocolateCakePHP.test.cake2
 class DirectControllerHelperTest : HelperFixtureTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles("cake2/vendor/cakephp.php")
         addHelpers("BootstrapHtmlHelper", "FooHtmlHelper")
         addController("AppController", "Controller", htmlAlias("BootstrapHtml"))
         addController("MoviesController", "AppController", "public function index() {}")

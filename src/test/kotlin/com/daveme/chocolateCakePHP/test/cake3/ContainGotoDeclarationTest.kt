@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
 
 class ContainGotoDeclarationTest : Cake3BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/ArticleController.php",
             "cake3/src/Model/Table/ArticlesTable.php",
@@ -15,7 +15,6 @@ class ContainGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/src/Model/Table/ProfilesTable.php",
             "cake3/src/Model/Table/ReviewsTable.php",
             "cake3/src/Model/Table/UsersTable.php",
-            "cake3/vendor/cakephp.php",
             "cake3/vendor/test/test_plugin/src/Model/Table/PluginItemsTable.php",
             "cake3/vendor/test/test_plugin/src/Model/Table/RatingsTable.php"
         )

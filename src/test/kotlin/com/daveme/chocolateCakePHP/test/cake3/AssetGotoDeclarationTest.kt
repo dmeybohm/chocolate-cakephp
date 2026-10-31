@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.view.AssetGotoDeclarationHandler
 
 class AssetGotoDeclarationTest : Cake3BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake3/src/Controller/AppController.php",
             "cake3/src/Controller/MovieController.php",
             "cake3/src/Controller/Nested/MyNestedController.php",
@@ -18,7 +18,6 @@ class AssetGotoDeclarationTest : Cake3BaseTestCase() {
             "cake3/webroot/css/movie.css",
             "cake3/webroot/js/movie.js",
             "cake3/webroot/img/pluginIcon.svg",
-            "cake3/vendor/cakephp.php",
         )
     }
 
