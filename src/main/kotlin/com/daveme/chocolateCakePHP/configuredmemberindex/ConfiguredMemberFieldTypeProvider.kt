@@ -109,7 +109,9 @@ class ConfiguredMemberFieldTypeProvider : PhpTypeProvider4 {
         else
             viewHelperTypeFromFieldName(settings, fieldName)
         // Without a class to show for it, the convention says less than the __get() type does:
-        if (settings.cake3Enabled && convention.types.none { phpIndex.getClassesByFQN(it).isNotEmpty() }) {
+        val hasClass = configured?.classFqns.orEmpty().isNotEmpty() ||
+            convention.types.any { phpIndex.getClassesByFQN(it).isNotEmpty() }
+        if (settings.cake3Enabled && !hasClass) {
             return null
         }
         return PhpType().apply {

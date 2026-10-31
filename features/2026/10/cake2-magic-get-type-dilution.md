@@ -189,3 +189,17 @@ Real mode, for the CakePHP 3 to 5 convention change and plan step 6:
   `\Cake\View\Helper` in the type).
 - **CakePHP 3 and 4** have no test of their own for convention members. The real-mode suite only
   shows that they did not regress.
+
+### Session #3
+
+A review comment on #306 found the convention guard from Session #2 only looked at the convention
+candidates. `BeforeFilterOnlyController` loads `Late` as `MovieMetadataComponent` in
+`beforeFilter()`, and no `LateComponent` exists, so the provider stepped aside and real CakePHP 5
+kept `\null`, `\mixed`, `\Cake\ORM\Table` and `\Cake\Controller\Component` beside the configured
+class. The guard now also accepts a configured class. It checks `classFqns` without an index
+lookup, so a load naming a class that can't be found also answers.
+
+`test a beforeFilter load with no class by convention leaves out the framework's magic types`
+fails in real mode without the fix. `Configured*` for CakePHP 3 to 5 passes in stub and real mode.
+The type still includes the convention names such as `LateComponent`, which is the union #299 kept
+for loads outside `initialize()`.

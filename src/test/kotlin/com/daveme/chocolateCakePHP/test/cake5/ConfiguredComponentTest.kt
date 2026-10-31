@@ -152,6 +152,15 @@ class ConfiguredComponentTest : Cake5BaseTestCase() {
         assertTrue(fieldTypeAtCaret().contains("\\Cake\\ORM\\Table"))
     }
 
+    fun `test a beforeFilter load with no class by convention leaves out the framework's magic types`() {
+        configureControllerWithBody("cake5/src5/Controller/BeforeFilterOnlyController.php", "\$this->La<caret>te;")
+        val types = fieldTypeAtCaret()
+        assertTrue(types.contains("\\App\\Controller\\Component\\MovieMetadataComponent"))
+        for (magicType in listOf("\\null", "\\mixed", "\\Cake\\ORM\\Table", "\\Cake\\Controller\\Component")) {
+            assertFalse("Unexpected $magicType in $types", types.contains(magicType))
+        }
+    }
+
     fun `test load in beforeFilter is unioned with convention`() {
         configureConfiguredController("\$this->Conditional-><caret>")
         val result = completionsOnThis()
