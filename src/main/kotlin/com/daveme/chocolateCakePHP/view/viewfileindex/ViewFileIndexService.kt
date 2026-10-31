@@ -114,23 +114,46 @@ private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings)
     return true
 }
 
-private fun isCakeTwoController(
-    controllerFile: VirtualFile,
-    settings: Settings
-): Boolean {
+private fun controllerDirectoryOf(controllerFile: VirtualFile): VirtualFile? {
     var controllerDir: VirtualFile? = controllerFile.parent
     while (controllerDir != null && controllerDir.name != "Controller") {
         controllerDir = controllerDir.parent
     }
-    if (controllerDir == null) {
-        return false
-    }
+    return controllerDir
+}
+
+private fun isCakeTwoController(
+    controllerFile: VirtualFile,
+    settings: Settings
+): Boolean {
+    val controllerDir = controllerDirectoryOf(controllerFile) ?: return false
     val topSourceDir = controllerDir.parent ?: return false
+    if (isCakeTwoPluginDirectory(topSourceDir, settings)) {
+        return true
+    }
     val topDir = topSourceDir.parent ?: return false
     return matchesCake2AppDirectory(topSourceDir, settings) &&
         !topDir.children.any { it.nameWithoutExtension == "templates" } &&
             !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
 }
+
+// CakePHP 3+ plugins have `src` between the plugin and its `Controller` directory, so they don't match:
+private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings): Boolean {
+    val pluginsDir = directory.parent
+    if (pluginsDir != null && pluginsDir.name in cakeTwoPluginDirectoryNames &&
+        pluginsDir.parent?.let { matchesCake2AppDirectory(it, settings) } == true) {
+        return true
+    }
+    return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().any {
+        it.pluginPath.isNotBlank() && directory.path.endsWith("/" + it.pluginPath.trim('/'))
+    }
+}
+
+/**
+ * Whether [controllerFile] has CakePHP 3's `Template` directory beside its `Controller` directory.
+ */
+fun isCakeThreeController(controllerFile: VirtualFile): Boolean =
+    controllerDirectoryOf(controllerFile)?.parent?.findChild("Template") != null
 
 object ViewFileIndexService {
     fun canonicalizeFilenameToKey(

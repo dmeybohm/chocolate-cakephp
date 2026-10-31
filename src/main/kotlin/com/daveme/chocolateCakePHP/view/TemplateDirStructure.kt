@@ -8,6 +8,7 @@ import com.daveme.chocolateCakePHP.cake.TemplatesDir
 import com.daveme.chocolateCakePHP.cake.cakeThreePluginName
 import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.isCakeThreeController
 import com.daveme.chocolateCakePHP.view.viewfileindex.lookupControllerFileInfo
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -171,11 +172,12 @@ sealed class TemplateDirStructure(val id: Char) {
             }
             // A plugin controller is not under the app directory, so with only CakePHP 2
             // enabled every controller is a CakePHP 2 one:
-            return if (settings.cake2Enabled &&
-                (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo))
-                CakeTwo
-            else
-                cakeFour
+            return when {
+                settings.cake2Enabled &&
+                    (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo) -> CakeTwo
+                isCakeThreeController(file) -> cakeThree
+                else -> cakeFour
+            }
         }
     }
 }
