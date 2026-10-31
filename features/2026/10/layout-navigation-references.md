@@ -136,7 +136,7 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
 3. **CakePHP 3 to 5 forms.** Set `indexesLayoutReferences` on `CakeThreeAndLater`. It then holds on
    every structure, so drop the flag and let `layoutDirectory` alone gate the indexer again, as it
    did before #309. The render second argument and `$this->layout` assignments are then indexed by
-   the existing code. Add:
+   the existing code, subject to the version limits below. Add:
    - `viewBuilder()->setLayout()` on 3 to 5 and `viewBuilder()->layout()` with an argument on 3.
      Extend `parseViewBuilderCall` and `ViewBuilderCallInfo`, and pass the calls to
      `indexLayoutReferences` as `VIEW_BUILDER` references. Generalize the chain check to "the
@@ -145,15 +145,20 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
      does not know, so the new calls pass through it unchanged. The assumption suite's
      `HelpersController` already names its layout this way, as
      `enableAutoLayout(true)->setLayout('helper')->addHelper(...)`.
-   - `$this->setLayout()` and `$this->layout()` with a string argument, from view files.
+   - `$this->setLayout()` with a string argument from view files on 3 to 5, and `$this->layout()`
+     only on 3, where `View::layout()` exists.
    - Every form requires `$this` as the receiver, or `$this->viewBuilder()` at the root of the
      chain. `map()` already filters the render calls and the layout assignments to `$this`, and
      `isViewBuilderMethodCall` checks the chain root, so the new forms follow the same rule. A
      mailer or view object in a controller, as in `$email->viewBuilder()->setLayout('x')` or
      `$view->render('x', 'y')`, must not produce a layout reference.
-   - Limit the `$layout` field form to CakePHP 2 and 3, where it has an effect, with a structure
-     flag like the `readsHelpersProperty` #309 added for the `$helpers` property, which Cake 3 reads
-     the same way.
+   - Limit the controller property forms, `public $layout` and `$this->layout = 'x'` in a controller,
+     to CakePHP 2 and 3, where the property has an effect. Cake 3's `__set` maps the assignment to
+     `setLayout()`; Cake 4's only handles `components`, and Cake 5 has none. A structure flag like the
+     `readsHelpersProperty` #309 added for the `$helpers` property, which Cake 3 reads the same way,
+     gates both forms. `indexLayoutReferences` already knows controller files through `isController`,
+     so a template's `$this->layout = 'x'` stays indexed on every version. The deprecated `layout()`
+     setters, on the builder and the view, take a second flag true only on `cakeThree`.
    - Skip cells. A cell renders with the layout off on 3 to 5 (`Cell::render()` turns it off before
      rendering), so a `setLayout()` in a cell class or a cell template names nothing. The
      structure's `cellDirectory` and `isCellKey`, from #309, tell a cell template apart.
@@ -251,6 +256,9 @@ CakePHP 2 first, then cake5, then 3 and 4:
   `Layouts/admin.ctp`, and its camel-case action still reaches its Cake 2 template.
 - Negative: `$email->viewBuilder()->setLayout('admin')` and `$view->render('x', 'admin')` in a
   controller, and `$other->setLayout('admin')` in a template, give the layout no reference.
+- Version limits, on CakePHP 4 and 5: a controller's `$this->layout = 'admin'` and `public $layout`,
+  a template's `$this->layout('admin')` and the builder's `layout('admin')` give the layout no
+  reference, while a template's `$this->layout = 'admin'` still does.
 - Variables: a layout named from an action does not offer that action's variables, on CakePHP 2
   and 5, and an element the layout includes still gets the data passed to it.
 
