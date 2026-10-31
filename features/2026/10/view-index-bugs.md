@@ -86,9 +86,12 @@ directory path and does not depend on siblings. Not touched.
   for `cake3` (`Element/nav`) and `cake2` (`Elements/nav`).
 - An end-to-end test in `cake5/ControllerSideHelperTest` that reproduces the intermittent failure
   deterministically: add the controller and the template with the element call, force the template
-  to be indexed by querying it (for example `fmtTypesIn("Movie/index")`, or
-  `ViewFileIndexService.referencingElementsInSmartReadAction(project, "Movie/index")`), then create
-  the element file and assert the controller's helper type resolves in it.
+  to be indexed by querying the index without touching the file, with
+  `ViewFileIndexService.referencingElementsInSmartReadAction(project, "Movie/index")` or
+  `FileBasedIndex.getInstance().ensureUpToDate(VIEW_FILE_INDEX_KEY, project, null)`, then create
+  the element file and assert the controller's helper type resolves in it. `fmtTypesIn` is not
+  usable for the forcing step: it writes its own content to the path it is given, which would
+  replace the template and lose the element call.
 - The existing `ElementToUsagesGotoRelatedTest` and `ViewVariableTest` element cases keep covering
   the normal order.
 
@@ -101,7 +104,8 @@ constructor's `isset()` holds for that, so a `$helpers` property on a view class
 whatever the controller configures. `testControllerBuilderReplacesViewHelpersProperty` in the
 assumption suite records this on CakePHP 3, 4 and 5. CakePHP 2's `View::__construct()` copies the
 controller's `helpers` as well, and `TemplateDirStructure.CakeTwo` has no view class receivers, so
-the question only arises for 3 to 5. Only a view built by hand with `new` keeps the property.
+the question only arises for 3 to 5. Only a view built by hand with `new` and no `helpers` config
+keeps the property; the framework never builds one that way to render a template.
 
 `ConfiguredMemberDataIndexer` indexes the property as a `PROPERTY_ARRAY` load of `$helpers` like it
 does for any class, and records a `PropertyDeclaration` for it.
@@ -153,6 +157,21 @@ Move the view-class rule into `ConfiguredMemberService.resolveChain`, so every r
    the member kinds and the CakePHP 2 branch.
 4. Helper classes (`\Cake\View\Helper`), cells and controllers are unaffected: their chains do not
    reach `\Cake\View\View`.
+5. Say in the doc comment of the rule that it resolves a view class as the framework renders it.
+
+### Limitation
+
+The rule applies to the class, not to how an instance was made. A view created by hand, such as
+`$view = new AppView(); $view->Fmt;` in a test or a shell, does keep its `$helpers` property at
+runtime, and the service will still leave it out. `resolveChain` only has the class chain, and no
+reader has the construction either: the field type provider's signature is the receiver class
+(`#C\App\View\AppView.Fmt`), with nothing to say whether it came from `new` or from the builder.
+This is also the behaviour both current readers already have, since `ConfiguredMemberFieldTypeProvider`
+ignores the property for any receiver named `*View` and `ViewHelperReceivers` for every view-class
+receiver, so centralising changes nothing for the hand-built case. The property's class is not lost
+entirely: the helper still resolves by convention from its alias where one applies, and an explicit
+`loadHelper()` or `addHelper()` in `initialize()` is always honoured. Accepted as an intentional
+limitation, covered by a test so the choice is recorded.
 
 The smaller alternative is to pass the view-class ignore in the two fallback readers and leave the
 three copies in place. It closes the gaps with less change, but the question this log asked is
@@ -166,6 +185,9 @@ where the rule belongs, and the chain resolution is the only place that answers 
 - The same call with `$this->loadHelper('Fmt', ...)` in `AppView::initialize()` still returns the
   class with `hasInitializeLoad`. `test a view class load wins over the controller's` covers the
   reader side already.
+- The limitation, as a test: the type of `$view->Fmt` after `$view = new AppView();` in an app
+  class, with `AppView::$helpers = ['Fmt' => ['className' => 'MovieFormatter']]`, does not include
+  `MovieFormatterHelper`. The test's name and comment say this is the accepted behaviour.
 - A `$helpers` property on a helper class still loads: keep
   `test an incomplete helpers array keeps convention completion in a helper` and add a complete-array
   case if `ViewHelperInViewHelperCompletionContributor` has none.
