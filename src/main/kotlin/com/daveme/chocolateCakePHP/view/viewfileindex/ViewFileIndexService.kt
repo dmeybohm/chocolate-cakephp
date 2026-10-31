@@ -150,10 +150,22 @@ private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings)
 }
 
 /**
- * Whether [controllerFile] has CakePHP 3's `Template` directory beside its `Controller` directory.
+ * Whether the templates directory nearest above [controllerFile] is CakePHP 3's `Template`.
  */
-fun isCakeThreeController(controllerFile: VirtualFile): Boolean =
-    controllerDirectoryOf(controllerFile)?.parent?.findChild("Template") != null
+fun isCakeThreeController(controllerFile: VirtualFile, settings: Settings): Boolean {
+    var directory = controllerDirectoryOf(controllerFile)?.parent
+    while (directory != null) {
+        if (directory.findChild("Template") != null ||
+            directory.findChild(settings.appDirectory)?.findChild("Template") != null) {
+            return true
+        }
+        if (directory.findChild("templates") != null) {
+            return false
+        }
+        directory = directory.parent
+    }
+    return false
+}
 
 object ViewFileIndexService {
     fun canonicalizeFilenameToKey(

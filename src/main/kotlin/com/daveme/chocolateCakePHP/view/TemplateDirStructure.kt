@@ -47,9 +47,14 @@ sealed class TemplateDirStructure(val id: Char) {
     open val layoutDirectory: String? = null
 
     /**
-     * Whether the view file index stores references to layouts.
+     * Whether a `layout` property on a controller names its layout.
      */
-    open val indexesLayoutReferences: Boolean = false
+    abstract val readsLayoutProperty: Boolean
+
+    /**
+     * The methods that name a layout, on a view and on a view builder.
+     */
+    abstract val layoutSetters: Set<String>
 
     /**
      * Whether [templateKey] is the key of a layout.
@@ -113,7 +118,9 @@ sealed class TemplateDirStructure(val id: Char) {
 
         override val layoutDirectory = "Layouts"
 
-        override val indexesLayoutReferences = true
+        override val readsLayoutProperty = true
+
+        override val layoutSetters = emptySet<String>()
 
         override val readsHelpersProperty = true
 
@@ -128,6 +135,8 @@ sealed class TemplateDirStructure(val id: Char) {
         override val layoutDirectory: String,
         override val cellDirectory: String,
         override val readsHelpersProperty: Boolean,
+        override val readsLayoutProperty: Boolean,
+        override val layoutSetters: Set<String>,
     ) : TemplateDirStructure(id) {
         override fun pluginOf(file: VirtualFile, projectDir: VirtualFile?, settings: Settings) =
             cakeThreePluginName(file, projectDir, settings, overrideDirectory)
@@ -144,8 +153,10 @@ sealed class TemplateDirStructure(val id: Char) {
     }
 
     companion object {
-        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell", readsHelpersProperty = true)
-        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell", readsHelpersProperty = false)
+        private val cakeThree = CakeThreeAndLater('3', "Plugin", "Layout", "Cell",
+            readsHelpersProperty = true, readsLayoutProperty = true, layoutSetters = setOf("setLayout", "layout"))
+        private val cakeFour = CakeThreeAndLater('4', "plugin", "layout", "cell",
+            readsHelpersProperty = false, readsLayoutProperty = false, layoutSetters = setOf("setLayout"))
 
         fun of(templatesDir: TemplatesDir): TemplateDirStructure = when (templatesDir) {
             is CakeTwoTemplatesDir -> CakeTwo
@@ -175,7 +186,7 @@ sealed class TemplateDirStructure(val id: Char) {
             return when {
                 settings.cake2Enabled &&
                     (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo) -> CakeTwo
-                isCakeThreeController(file) -> cakeThree
+                isCakeThreeController(file, settings) -> cakeThree
                 else -> cakeFour
             }
         }

@@ -1,6 +1,9 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
+import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.ViewNavigation
+import com.daveme.chocolateCakePHP.view.viewFileOf
+import com.daveme.chocolateCakePHP.view.viewvariableindex.ViewVariableIndexService
 import com.intellij.psi.PsiFile
 
 class LayoutNavigationTest : Cake2BaseTestCase() {
@@ -97,5 +100,23 @@ class LayoutNavigationTest : Cake2BaseTestCase() {
 
         assertEquals(setOf("Controllers: ArticlesController::index()"), navigation.related(blogLayout))
         assertEquals(setOf("Controllers: PagesController::index()"), navigation.related(appLayout))
+    }
+
+    fun `test layout does not offer the variables of an action naming it`() {
+        appController("Articles", """
+            public function index() {
+                ${'$'}this->layout = 'admin';
+                ${'$'}this->set('actionVar', 1);
+            }
+        """.trimIndent())
+        val layout = template("$app/Layouts/admin", "echo \$this->element('shared', ['passed' => 1]);")
+        val element = template("$app/Elements/shared")
+        val settings = Settings.getInstance(project)
+        fun variables(file: PsiFile) = ViewVariableIndexService.lookupVariablesFromViewPathInSmartReadAction(
+            project, settings, viewFileOf(project, settings, file.virtualFile)!!
+        ).keys
+
+        assertEquals(emptySet<String>(), variables(layout))
+        assertEquals(setOf("passed"), variables(element))
     }
 }

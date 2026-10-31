@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
 import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.parseCellName
 import com.daveme.chocolateCakePHP.view.TemplateDirStructure
+import com.daveme.chocolateCakePHP.view.viewFileOf
 import com.intellij.openapi.project.Project
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.PhpClass
@@ -41,6 +42,8 @@ private val cakeSkipRenderingMethods : HashSet<String> = listOf(
     "setrequest",
 ).map { it.lowercase() }.toHashSet()
 
+private val viewBuilderMethods = setOf("setTemplate", "setTemplatePath", "setLayout", "layout")
+
 // Data structures for AST-level parsing
 data class MethodCallInfo(
     val methodName: String,
@@ -64,8 +67,8 @@ data class FieldAssignmentInfo(
 )
 
 data class ViewBuilderCallInfo(
-    val methodName: String,            // "setTemplate" or "setTemplatePath"
-    val parameterValues: List<String>, // All literal template names or paths the parameter can take
+    val methodName: String,            // One of viewBuilderMethods
+    val parameterValues: List<String>, // All literal names or paths the parameter can take
     val offset: Int,
     val containingMethodStartOffset: Int  // Offset of containing CLASS_METHOD node
 )
@@ -338,19 +341,19 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             containingMethodOffset
         }
 
-        // Check if this node represents a method reference
-        if (node.isMethodReference()) {
-            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset, ctx)
-            if (viewBuilderCall != null) {
-                result.add(viewBuilderCall)
-            }
-        }
-
         // Recursively check child nodes
         var child = node.firstChildNode
         while (child != null) {
             findViewBuilderCallsRecursive(child, result, ctx, currentMethodOffset)
             child = child.treeNext
+        }
+
+        // Calls in a chain share a start offset, so the receivers go first to keep source order
+        if (node.isMethodReference()) {
+            val viewBuilderCall = parseViewBuilderCall(node, currentMethodOffset, ctx)
+            if (viewBuilderCall != null) {
+                result.add(viewBuilderCall)
+            }
         }
     }
 
@@ -359,26 +362,22 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         containingMethodOffset: Int,
         ctx: TemplateNameContext
     ): ViewBuilderCallInfo? {
-        // Look for:
+        // Look for a view builder method whose receiver chain ends at $this->viewBuilder(),
+        // through any setters:
         //   1. $this->viewBuilder()->setTemplate('name')
-        //   2. $this->viewBuilder()->setTemplatePath('path')
-        //   3. $this->viewBuilder()->setTemplatePath('path')->setTemplate('name')  (chained)
+        //   2. $this->viewBuilder()->setLayout('name')->setTemplatePath('path')->setTemplate('name')
         //
-        // For chained calls, both setTemplatePath and setTemplate are returned as separate
-        // ViewBuilderCallInfo objects to preserve state tracking behavior.
+        // Each call in a chain is returned separately to preserve state tracking behavior.
         //
         // AST structure:
-        //   Normal: METHOD_REFERENCE (setTemplate/setTemplatePath)
-        //     -> receiver: METHOD_REFERENCE (viewBuilder)
-        //         -> receiver: VARIABLE ($this)
-        //   Chained: METHOD_REFERENCE (setTemplate)
+        //   METHOD_REFERENCE (setTemplate)
         //     -> receiver: METHOD_REFERENCE (setTemplatePath)
         //         -> receiver: METHOD_REFERENCE (viewBuilder)
         //             -> receiver: VARIABLE ($this)
 
         // Quick check: get method name first for early rejection
         val methodName = getMethodName(node)
-        if (methodName != "setTemplate" && methodName != "setTemplatePath") {
+        if (methodName == null || methodName !in viewBuilderMethods) {
             return null  // Early exit for non-target methods
         }
 
@@ -386,7 +385,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         var parameterValues: List<String> = emptyList()
         var receiverMethodRef: ASTNode? = null
 
-        // Parse the outer method reference (setTemplate or setTemplatePath)
+        // Parse the outer method reference
         var child = node.firstChildNode
         while (child != null) {
             when {
@@ -411,43 +410,28 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             child = child.treeNext
         }
 
-        if (receiverMethodRef == null) {
+        if (receiverMethodRef == null || !isViewBuilderChain(receiverMethodRef)) {
             return null
         }
 
-        // Pattern 1: Normal calls - receiver is viewBuilder()
-        if (isViewBuilderMethodCall(receiverMethodRef)) {
-            // Use passed-in offset instead of walking up tree
-            return ViewBuilderCallInfo(
-                methodName = methodName,
-                parameterValues = parameterValues,
-                offset = node.startOffset,
-                containingMethodStartOffset = containingMethodOffset
-            )
-        }
+        // Use passed-in offset instead of walking up tree
+        return ViewBuilderCallInfo(
+            methodName = methodName,
+            parameterValues = parameterValues,
+            offset = node.startOffset,
+            containingMethodStartOffset = containingMethodOffset
+        )
+    }
 
-        // Pattern 2: Chained calls - setTemplate's receiver is setTemplatePath
-        // Check receiver method name to see if it's setTemplatePath
-        val receiverMethodName = getMethodName(receiverMethodRef)
-        if (methodName == "setTemplate" && receiverMethodName == "setTemplatePath") {
-            // Verify the chain goes back to viewBuilder()
-            val viewBuilderNode = getReceiverMethodRef(receiverMethodRef)
-            if (viewBuilderNode != null && isViewBuilderMethodCall(viewBuilderNode)) {
-                // Use passed-in offset instead of walking up tree
-                // Return as normal setTemplate - state tracking will handle the path
-                return ViewBuilderCallInfo(
-                    methodName = "setTemplate",
-                    parameterValues = parameterValues,  // Just the template names, not combined!
-                    offset = node.startOffset,
-                    containingMethodStartOffset = containingMethodOffset
-                )
+    private fun isViewBuilderChain(node: ASTNode): Boolean {
+        var current: ASTNode? = node
+        while (current != null) {
+            if (isViewBuilderMethodCall(current)) {
+                return true
             }
+            current = getReceiverMethodRef(current)
         }
-
-        // Pattern 3: Chained setTemplatePath - will be processed normally by Pattern 1
-        // AST traversal visits it separately, so no special handling needed
-
-        return null
+        return false
     }
 
     /**
@@ -667,6 +651,12 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             .filter { it.receiverText == "this" }
         val astElementCalls = findMethodCallsByName(rootNode, "element", ctx)
             .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
+        val astViewLayoutCalls = if (!inputData.contentAsText.contains("layout", ignoreCase = true)) {
+            emptyList()
+        } else {
+            (findMethodCallsByName(rootNode, "setLayout", ctx) + findMethodCallsByName(rootNode, "layout", ctx))
+                .filter { it.receiverText == "this" && it.firstParameterValues.isNotEmpty() }
+        }
         val astViewFieldAssignments = findFieldAssignments(rootNode, "view", ctx)
             .filter { it.receiverText == "this" && it.assignedValues.isNotEmpty() }
         val astLayoutAssignments = findFieldAssignments(rootNode, "layout", ctx)
@@ -694,6 +684,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             astElementCalls.isEmpty() &&
             astViewFieldAssignments.isEmpty() &&
             astLayoutAssignments.isEmpty() &&
+            astViewLayoutCalls.isEmpty() &&
             astViewBuilderCalls.isEmpty() &&
             astCellReferences.isEmpty() &&
             !isController
@@ -702,7 +693,10 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
 
         val pluginContext = referencePluginContext(project, settings, virtualFile, isController)
-        indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, isController, pluginContext)
+        if (!rendersWithoutLayout(project, settings, virtualFile)) {
+            indexLayoutReferences(result, psiFile, astRenderCalls, astLayoutAssignments, astViewLayoutCalls,
+                astViewBuilderCalls, isController, pluginContext)
+        }
         indexRenderCalls(result, projectDir, astRenderCalls, virtualFile, pluginContext)
         indexElementCalls(result, projectDir, astElementCalls, virtualFile, pluginContext)
         indexViewFieldAssignments(result, projectDir, astViewFieldAssignments, virtualFile, pluginContext)
@@ -949,17 +943,28 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         }
     }
 
+    // A cell renders with the layout off, so a layout named in its class or template names nothing:
+    private fun rendersWithoutLayout(project: Project, settings: Settings, file: VirtualFile): Boolean {
+        if (settings.cake3Enabled && isCakeCellFile(file)) {
+            return true
+        }
+        val viewFile = viewFileOf(project, settings, file) ?: return false
+        return viewFile.structure.isCellKey(viewFile.templateKey)
+    }
+
     // Layout names are relative to the layout directory, whatever file names them:
     private fun indexLayoutReferences(
         result: MutableMap<String, List<ViewReferenceData>>,
         psiFile: PsiFile,
         renderCalls: List<MethodCallInfo>,
         layoutAssignments: List<FieldAssignmentInfo>,
+        viewLayoutCalls: List<MethodCallInfo>,
+        viewBuilderCalls: List<ViewBuilderCallInfo>,
         isController: Boolean,
         pluginContext: ReferencePluginContext?
     ) {
         val structure = pluginContext?.structure ?: return
-        val layoutDirectory = structure.layoutDirectory?.takeIf { structure.indexesLayoutReferences } ?: return
+        val layoutDirectory = structure.layoutDirectory ?: return
         fun addLayout(name: String, data: (String?) -> ViewReferenceData) {
             val (layoutName, pluginPrefix) = pluginContext.split(name)
             if (layoutName.isNotEmpty() && !layoutName.startsWith("/")) {
@@ -970,6 +975,21 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             for (name in call.secondParameterValues) {
                 addLayout(name) { ViewReferenceData(call.methodName, ElementType.METHOD_REFERENCE, call.offset, it) }
             }
+        }
+        for (call in viewBuilderCalls.filter { it.methodName in structure.layoutSetters }) {
+            for (name in call.parameterValues) {
+                addLayout(name) { ViewReferenceData(call.methodName, ElementType.VIEW_BUILDER, call.offset, it) }
+            }
+        }
+        if (!isController) {
+            for (call in viewLayoutCalls.filter { it.methodName in structure.layoutSetters }) {
+                for (name in call.firstParameterValues) {
+                    addLayout(name) { ViewReferenceData(call.methodName, ElementType.METHOD_REFERENCE, call.offset, it) }
+                }
+            }
+        }
+        if (isController && !structure.readsLayoutProperty) {
+            return
         }
         for (assignment in layoutAssignments) {
             for (name in assignment.assignedValues) {
