@@ -320,11 +320,10 @@ Decisions the plan left open:
 - **`cellDirNameFromSourceFile`** now also looks in `src/Template`. A CakePHP 3 plugin cell with no
   template directory otherwise got `cell/` rather than `Cell/`, which missed the fallback.
 
-Known limitations:
+Known limitations and dependencies:
 
-- The variable keys depend on the configured plugins, and changing the plugin settings doesn't
-  rebuild the indexes. A plugin configured after indexing, outside `plugins/`, loses its action
-  variables until the next reindex.
+- The variable keys depend on the configured plugins. `PluginForm.apply` already rebuilds both view
+  indexes when they change, so this needs no new code.
 - With both CakePHP 2 and 3+ enabled, a CakePHP 2 plugin controller is keyed as the app's, as
   `ofSourceFile` takes it for CakePHP 3+. The plugin rule still sees its plugin.
 - A plugin named with a slash isn't recognized in the override directory.
