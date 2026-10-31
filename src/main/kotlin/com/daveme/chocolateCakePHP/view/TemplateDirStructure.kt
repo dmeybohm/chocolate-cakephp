@@ -50,17 +50,12 @@ sealed class TemplateDirStructure(val id: Char) {
         layoutDirectory?.let { templateKey.startsWith("$it/") } ?: false
 
     /**
-     * The key of the layout a controller renders when nothing in its chain names one.
-     */
-    val defaultLayoutKey: String? get() = layoutDirectory?.let { "$it/default" }
-
-    /**
      * The class every application controller extends, when layouts are tracked.
      */
     open val appControllerClass: String? = null
 
     /**
-     * The framework class controllers extend, whose methods are not actions.
+     * The framework class every controller extends, when layouts are tracked.
      */
     open val frameworkControllerClass: String? = null
 

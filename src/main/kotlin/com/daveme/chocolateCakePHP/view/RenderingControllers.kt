@@ -15,11 +15,7 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.PhpIndex
-import com.jetbrains.php.lang.psi.elements.Field
-import com.jetbrains.php.lang.psi.elements.Method
-import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.PhpClass
-import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -28,7 +24,6 @@ import java.util.concurrent.ConcurrentHashMap
 object RenderingControllers {
 
     private const val MAX_INCLUDING_FILES = 200
-    private const val MAX_CHAIN_LENGTH = 20
 
     private val CACHE_KEY = Key.create<CachedValue<ConcurrentHashMap<ViewFile, List<String>>>>(
         "com.daveme.chocolateCakePHP.view.RenderingControllers"
@@ -62,21 +57,19 @@ object RenderingControllers {
             while (queue.isNotEmpty() && visited.size <= MAX_INCLUDING_FILES) {
                 ProgressManager.checkCanceled()
                 val current = queue.removeFirst()
-                val isLayout = current.structure.isLayoutKey(current.templateKey)
+                // Any controller may render a layout, so whatever a layout includes gets them all:
+                if (current.structure.isLayoutKey(current.templateKey)) {
+                    allControllers(current.structure).mapTo(controllers) { it.fqn }
+                    continue
+                }
                 for (reference in ViewFileIndexService.referencingElementsInSmartReadAction(project, current.templateKey)) {
                     val element = reference.psiElement ?: continue
                     val phpClass = PsiTreeUtil.getParentOfType(element, PhpClass::class.java, false)
                     if (phpClass != null) {
-                        if (!phpClass.fqn.isAnyControllerClass()) {
-                            continue
-                        }
-                        // A layout a class names is the layout of its subclasses too:
-                        val candidates = if (isLayout) layoutControllers(current, phpClass, element is Field) else listOf(phpClass)
-                        for (controller in candidates) {
-                            val plugin = reference.pluginPrefix ?: pluginOf(current, controller)
-                            if (resolvesTo(plugin, current)) {
-                                controllers += controller.fqn
-                            }
+                        if (phpClass.fqn.isAnyControllerClass() &&
+                            resolvesTo(reference.pluginPrefix ?: pluginOf(current, phpClass), current)
+                        ) {
+                            controllers += phpClass.fqn
                         }
                         continue
                     }
@@ -86,11 +79,6 @@ object RenderingControllers {
                         queue.add(including)
                     }
                 }
-                if (current.templateKey == current.structure.defaultLayoutKey) {
-                    controllersWithDefaultLayout(current)
-                        .filter { resolvesTo(pluginOf(current, it), current) }
-                        .mapTo(controllers) { it.fqn }
-                }
             }
             return controllers.toList()
         }
@@ -98,85 +86,12 @@ object RenderingControllers {
         private fun pluginOf(viewFile: ViewFile, phpClass: PhpClass): String? =
             phpClass.containingFile?.virtualFile?.let { viewFile.structure.pluginOf(it, projectDir, settings) }
 
-        // An assignment applies to every subclass, a declaration to those that do not redeclare it:
-        private fun layoutControllers(viewFile: ViewFile, phpClass: PhpClass, isDeclaration: Boolean): List<PhpClass> {
-            val subclasses = phpIndex.getAllSubclasses(phpClass.fqn).filter {
-                it.fqn.isAnyControllerClass() &&
-                        (!isDeclaration || nearestLayoutDeclaration(it)?.fqn == phpClass.fqn)
-            }
-            return (listOf(phpClass) + subclasses).filter { rendersPages(viewFile, it) }
-        }
-
-        // A controller others extend is their base unless it renders pages of its own, and an
-        // abstract one is never dispatched:
-        private fun rendersPages(viewFile: ViewFile, phpClass: PhpClass): Boolean =
-            !phpClass.isAbstract && (
-                    phpIndex.getDirectSubclasses(phpClass.fqn).none { it.fqn.isAnyControllerClass() } ||
-                            rendersOwnPages(viewFile, phpClass)
-                    )
-
-        // A template under its own name for one of its actions, or an action that renders with
-        // the controller's layout, rather than any public method, so adding a helper method to a
-        // base class changes nothing:
-        private fun rendersOwnPages(viewFile: ViewFile, phpClass: PhpClass): Boolean {
-            val actions = actionsOf(viewFile, phpClass)
-            if (actions.any { rendersWithOwnLayout(it) }) {
-                return true
-            }
-            val controllerName = phpClass.name.removeSuffix("Controller")
-            val plugin = pluginOf(viewFile, phpClass)
-            return actions.any { viewFileExists(ViewFile(viewFile.structure, "$controllerName/${it.name}", plugin)) }
-        }
-
-        // CakePHP dispatches inherited public methods too, but not the framework controller's:
-        private fun actionsOf(viewFile: ViewFile, phpClass: PhpClass): List<Method> {
-            val frameworkController = viewFile.structure.frameworkControllerClass
-            // A child's method overrides its parent's of the same name, case-insensitively as in PHP:
-            val actions = linkedMapOf<String, Method>()
-            var current: PhpClass? = phpClass
-            var depth = 0
-            while (current != null && depth++ < MAX_CHAIN_LENGTH &&
-                !current.fqn.equals(frameworkController, ignoreCase = true)
-            ) {
-                for (method in current.ownMethods) {
-                    actions.putIfAbsent(method.name.lowercase(), method)
-                }
-                current = current.superClass
-            }
-            return actions.values.filter { it.access.isPublic && !it.name.startsWith("_") }
-        }
-
-        // A render() call that names a layout renders with that one, which is indexed separately:
-        private fun rendersWithOwnLayout(method: Method): Boolean =
-            PsiTreeUtil.findChildrenOfType(method, MethodReference::class.java).any {
-                it.name.equals("render", ignoreCase = true) &&
-                        it.classReference?.textMatches("\$this") == true &&
-                        it.parameters.size < 2
-            }
-
-        // Controllers whose chain declares the default layout, or none (as when the framework
-        // class that declares it is not indexed):
-        private fun controllersWithDefaultLayout(viewFile: ViewFile): List<PhpClass> {
-            val appController = viewFile.structure.appControllerClass ?: return emptyList()
-            return (phpIndex.getClassesByFQN(appController) + phpIndex.getAllSubclasses(appController))
-                .filter { rendersPages(viewFile, it) }
-                .filter { controller ->
-                    val declaration = nearestLayoutDeclaration(controller) ?: return@filter true
-                    val layout = declaration.findOwnFieldByName("layout", false)?.defaultValue
-                    (layout as? StringLiteralExpression)?.contents == "default"
-                }
-        }
-
-        private fun nearestLayoutDeclaration(phpClass: PhpClass): PhpClass? {
-            var current: PhpClass? = phpClass
-            var depth = 0
-            while (current != null && depth++ < MAX_CHAIN_LENGTH) {
-                if (current.findOwnFieldByName("layout", false) != null) {
-                    return current
-                }
-                current = current.superClass
-            }
-            return null
+        private fun allControllers(structure: TemplateDirStructure): List<PhpClass> {
+            val framework = structure.frameworkControllerClass?.let { phpIndex.getAllSubclasses(it) }.orEmpty()
+            val app = structure.appControllerClass?.let {
+                phpIndex.getClassesByFQN(it) + phpIndex.getAllSubclasses(it)
+            }.orEmpty()
+            return (framework + app).distinctBy { it.fqn }
         }
 
         // A name resolving in a plugin finds the plugin's file first, and the app's otherwise:
