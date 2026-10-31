@@ -129,6 +129,7 @@ versions (`testLayoutNamedFromTemplateWraps`, with `$this->layout = 'probe'` on 
    - `$this->setLayout()` and `$this->layout()` with a string argument, from view files.
    - Limit the `$layout` field form to CakePHP 2 and 3, where it has an effect, and to controller
      files, not cells.
+   - Stop `ContributingSourceWalk` at a layout, by the [isolation rule](#effects-on-variables).
    - Bump `ViewFileIndex.getVersion()` from 24 to 25.
 4. **Grouping.** In `ViewToControllerGotoRelatedProvider`, put references from view files under
    "Views" or "Elements", as `ElementToUsagesGotoRelatedProvider` does, and name a `FIELD`
@@ -142,16 +143,30 @@ without the index, and layouts would need their own branch there. It is not part
 
 ## Effects on variables
 
-`ContributingSourceWalk` starts from the view file's own references, so from a layout on CakePHP 2
-it already reaches the controllers naming the layout. A controller reference contributes the
-`set()` calls of the method containing it: an action for `render('view', 'admin')`, `beforeRender()`
-for `$this->layout = 'admin'` there, and nothing for a class-level `$layout` field, which has no
-method. An element included by the layout gets the same through the layout hop. Adding the CakePHP 3
-to 5 references extends this to `setLayout()` there, so completion in a layout and its elements will
-start offering variables from the methods that name the layout. This is a side effect to record and
-test, not the layout variable tracking the earlier draft put out of scope: that needs the default
-layout and every rendering action, and the 15-lookup budget of the walk still applies, so a layout
-named by many controllers gets a subset.
+`ContributingSourceWalk` starts from a view file's own references, so from a layout on CakePHP 2 it
+reaches the controllers naming the layout today, and a controller reference contributes the `set()`
+calls of the method containing it: an action for `render('view', 'admin')`, `beforeFilter()` for
+`$this->layout = 'admin'` there, and nothing for a class-level `$layout` field, which has no
+method. An element the layout includes gets the same through the layout hop. Nothing names
+`default`, so it gets nothing, and the 15-lookup budget trims a layout named by many controllers.
+
+That is neither the union nor the intersection of what renders the layout, and the inspection
+suppressor reads the same sources, so one action setting `$var` and naming the layout stops `$var`
+being flagged in a layout every other request renders without it. Adding the CakePHP 3 to 5
+references would extend this.
+
+**Isolation rule.** The variable walk treats a layout as a file with no references, on every
+version. A layout offers no controller variables, and an element it includes gets its passed data
+and is decided by its own plugin. This is how the walk treats a CakePHP 3 to 5 layout today, as the
+plugin-aware log records, so CakePHP 2 changes to match. The references stay in the index for
+navigation; only `ContributingSourceWalk` stops reading them, as `RenderingControllers` already
+stops at a layout for helpers. No existing test depends on variables in a layout.
+
+**Later.** A layout's variables are the ones set on every path that renders it: `beforeRender()` on
+`AppController` and the base classes, plus whatever every action sets. That needs the default layout
+and the whole rendering path of each action, not the explicit references this feature indexes, so it
+is its own feature. Completion could show the union with a weaker presentation while the inspection
+used the intersection.
 
 `RenderingControllers` stops at a layout and is unaffected. The `layoutDirectory` coupling noted by
 `controller-side-helpers`, that setting it switches on indexing as well as `isLayoutKey`, is what
@@ -202,7 +217,7 @@ CakePHP 2 first, then cake5, then 3 and 4:
   app's otherwise; an app controller's `Blog.admin` links to `Blog`'s layout; the app's `admin` does
   not list the plugin controller when the plugin has its own.
 - CakePHP 3 keys: a controller's `setLayout()` reaches `src/Template/Layout/admin.ctp`.
-- Variables: a layout named from an action offers that action's variables, and so does an element
-  the layout includes.
+- Variables: a layout named from an action does not offer that action's variables, on CakePHP 2
+  and 5, and an element the layout includes still gets the data passed to it.
 
 ## Implementation Progress
