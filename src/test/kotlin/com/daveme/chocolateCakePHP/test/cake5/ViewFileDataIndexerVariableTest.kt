@@ -11,9 +11,6 @@ import com.intellij.util.indexing.FileContentImpl
 class ViewFileDataIndexerVariableTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
-            "cake5/vendor/cakephp.php"
-        )
     }
 
     private fun indexKeysOfController(methodBody: String, methodSignature: String = "public function index()"): Set<String> {

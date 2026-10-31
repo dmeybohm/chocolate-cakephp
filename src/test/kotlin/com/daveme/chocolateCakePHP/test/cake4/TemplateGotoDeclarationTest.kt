@@ -5,7 +5,7 @@ import com.daveme.chocolateCakePHP.view.TemplateGotoDeclarationHandler
 
 class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Controller/MovieController.php",
             "cake4/src4/View/AppView.php",
@@ -16,7 +16,6 @@ class TemplateGotoDeclarationTest : Cake4BaseTestCase() {
             "cake4/templates/Admin/edit.php",
             "cake4/templates/Reports/Monthly/summary.php",
             "cake4/templates/User/Profile/view.php",
-            "cake4/vendor/cakephp.php",
         )
     }
 

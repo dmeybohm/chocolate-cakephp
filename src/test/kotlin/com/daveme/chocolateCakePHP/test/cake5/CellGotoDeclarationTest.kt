@@ -8,14 +8,13 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class CellGotoDeclarationTest : Cake5BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake5/src5/Controller/AppController.php",
             "cake5/src5/View/AppView.php",
             "cake5/src5/View/Cell/InventoryCell.php",
             "cake5/src5/View/Cell/Admin/ReportCell.php",
             "cake5/vendor/test/test_plugin/src/View/Cell/WidgetCell.php",
             "cake5/templates/Movie/artist.php",
-            "cake5/vendor/cakephp.php",
         )
     }
 

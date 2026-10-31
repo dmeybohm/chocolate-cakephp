@@ -12,11 +12,10 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 class CellTest : Cake4BaseTestCase() {
 
     override fun setUpTestFiles() {
-        configureByFiles(
+        myFixture.configureByFiles(
             "cake4/src4/Controller/AppController.php",
             "cake4/src4/Controller/MovieController.php",
             "cake4/src4/View/AppView.php",
-            "cake4/vendor/cakephp.php",
         )
         myFixture.copyFileToProject("cake4/src4/View/Cell/InventoryCell.php")
         myFixture.copyFileToProject("cake4/templates/cell/Inventory/display.php")
