@@ -110,6 +110,19 @@ internal val sourcesWithoutOptions: Set<String> = setOf(
     "loadmodel",
 )
 
+internal const val VIEW_BUILDER_METHOD = "viewbuilder"
+
+internal const val ADD_HELPER_METHOD = "addhelper"
+
+// ViewBuilder methods that take an array of helpers:
+internal val viewBuilderHelperArrayMethods: Set<String> = setOf(
+    "addhelpers",
+    "sethelpers",
+    "helpers",
+)
+
+internal const val HELPERS_PROPERTY = "helpers"
+
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
 internal const val BIND_MODEL_METHOD = "bindmodel"
@@ -131,7 +144,7 @@ internal val cakeTwoAssociationTypeKeys: Set<String> = setOf(
 )
 
 internal val propertyArraySources: Map<String, MemberKind> = mapOf(
-    "helpers" to MemberKind.HELPER,
+    HELPERS_PROPERTY to MemberKind.HELPER,
     "components" to MemberKind.COMPONENT,
     "uses" to MemberKind.TABLE,
 ) + cakeTwoAssociationTypeKeys.associateWith { MemberKind.ASSOCIATION }

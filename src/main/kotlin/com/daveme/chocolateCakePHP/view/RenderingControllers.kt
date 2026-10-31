@@ -2,6 +2,7 @@ package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.isAnyCellClass
 import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.progress.ProgressManager
@@ -16,7 +17,7 @@ import com.jetbrains.php.lang.psi.elements.PhpClass
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The controllers that render a view file.
+ * The controllers and cells that render a view file.
  */
 object RenderingControllers {
 
@@ -27,7 +28,7 @@ object RenderingControllers {
     )
 
     /**
-     * The controllers that render [viewFile], directly or through the files that include it.
+     * The controllers and cells that render [viewFile], directly or through the files that include it.
      */
     fun of(project: Project, viewFile: ViewFile): List<String> {
         val tracker = project.getService(PhpFilesModificationTracker::class.java)
@@ -72,8 +73,11 @@ object RenderingControllers {
                     val element = reference.psiElement ?: continue
                     val phpClass = PsiTreeUtil.getParentOfType(element, PhpClass::class.java, false)
                     if (phpClass != null) {
+                        if (reference.isCellRender) {
+                            continue
+                        }
                         val plugin = pluginOf(current, phpClass)
-                        if (phpClass.fqn.isAnyControllerClass() &&
+                        if ((phpClass.fqn.isAnyControllerClass() || phpClass.fqn.isAnyCellClass()) &&
                             resolution.resolvesTo(reference.pluginPrefix ?: plugin, current) &&
                             pendingResolve(pending, plugin)
                         ) {
@@ -87,7 +91,14 @@ object RenderingControllers {
                     if (prefix != null && !resolution.resolvesTo(prefix, current)) {
                         continue
                     }
-                    val next = Step(including, if (prefix == null) pending + current else pending)
+                    // A cell inherits the helpers of the view calling it, but renders in its own
+                    // plugin, and an unprefixed cell() name resolves in the app:
+                    val next = when {
+                        reference.isCellRender ->
+                            if (resolution.resolvesTo(prefix, current)) Step(including, emptySet()) else continue
+                        prefix == null -> Step(including, pending + current)
+                        else -> Step(including, pending)
+                    }
                     if (visited.add(next)) {
                         queue.add(next)
                     }

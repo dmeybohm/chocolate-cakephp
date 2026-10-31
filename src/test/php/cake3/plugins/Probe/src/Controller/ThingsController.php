@@ -84,4 +84,10 @@ class ThingsController extends AppController
     {
         return $this->getTableLocator()->get($alias);
     }
+
+    public function helpercell()
+    {
+        $this->viewBuilder()->setHelpers(['Aliased' => ['className' => 'Marker']]);
+        $this->set('name', $this->getRequest()->getQuery('name'));
+    }
 }

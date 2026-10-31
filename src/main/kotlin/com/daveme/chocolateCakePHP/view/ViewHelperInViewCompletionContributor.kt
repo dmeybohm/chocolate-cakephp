@@ -54,13 +54,13 @@ class ViewHelperInViewCompletionContributor : CompletionContributor() {
             if (!isCakeViewFile(psiElement.project, settings, containingFile)) {
                 return
             }
-            val receivers = ViewHelperReceivers.ofFile(psiElement.project, settings, containingFile)
-                ?: viewType(settings).types
-            val loaded = ConfiguredMemberService.loadedMembers(
-                psiElement.project,
-                receivers,
-                setOf(MemberKind.HELPER)
-            )
+            val viewFile = containingFile.originalFile.virtualFile?.let {
+                viewFileOf(psiElement.project, settings, it)
+            }
+            val loaded = if (viewFile != null)
+                ViewHelperReceivers.loadedHelpers(psiElement.project, viewFile)
+            else
+                ConfiguredMemberService.loadedMembers(psiElement.project, viewType(settings).types, setOf(MemberKind.HELPER))
             completionResultSet.completeFromLoadedMembers(loaded.members)
 
             // The view lazy loads any helper by name, so the convention list stays:

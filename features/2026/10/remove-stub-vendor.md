@@ -91,3 +91,11 @@ Targeted run: cake2 `ConfiguredControllerTest`, both `FrameworkNotIndexed*` clas
 
 Full suite on a warm index: 1,366 tests, 0 failed, 0 skipped, 5 m 45 s. Nothing is skipped any
 more because there is no second mode left to skip for.
+
+### Session #2
+
+CI failed on the PR's merge with `main`: #309 (controller-side helpers) merged after this branch
+was cut, and its four new test classes still loaded the stub and called `assumeStubVendor`, so
+`compileTestKotlin` broke. `main` is merged in, the three `ControllerSideHelperTest` classes lost
+the stub path, and `cake5/FrameworkNotIndexedControllerHelperTest` opts out with
+`attachesFramework = false`. The four classes pass, 45 tests.

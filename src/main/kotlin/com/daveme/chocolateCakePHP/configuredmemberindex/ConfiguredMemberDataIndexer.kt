@@ -116,6 +116,10 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         methodNode.findChildByType(PhpTokenTypes.IDENTIFIER)?.text
 
     private fun readMethodCall(call: MethodCallParts, methodName: String?, out: MutableList<MemberLoad>) {
+        if (isOnViewBuilder(call)) {
+            readViewBuilderHelpers(call, methodName, out)
+            return
+        }
         if (call.receiverName != "this") {
             return
         }
@@ -135,6 +139,30 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val associationType = associationTypes[calledName]
         out += LoadReader(kind, LoadSource.METHOD_CALL, methodName, null, out, associationType)
             .memberLoad(loadedName, options, firstParam.startOffset, associationType)
+    }
+
+    // The builder's setters return it, so it can be any number of calls back in a chain:
+    private fun isOnViewBuilder(call: MethodCallParts): Boolean {
+        var receiver = call.node.firstChildNode?.readMethodCall()
+        while (receiver != null) {
+            if (receiver.receiverName == "this") {
+                return receiver.methodName.equals(VIEW_BUILDER_METHOD, ignoreCase = true)
+            }
+            receiver = receiver.node.firstChildNode?.readMethodCall()
+        }
+        return false
+    }
+
+    private fun readViewBuilderHelpers(call: MethodCallParts, methodName: String?, out: MutableList<MemberLoad>) {
+        val calledName = call.methodName?.lowercase() ?: return
+        val firstParam = call.parameters.getOrNull(0) ?: return
+        val reader = LoadReader(MemberKind.HELPER, LoadSource.METHOD_CALL, methodName, null, out, associationType = null)
+        if (calledName == ADD_HELPER_METHOD) {
+            val loadedName = literalString(firstParam) ?: return
+            out += reader.memberLoad(loadedName, call.parameters.getOrNull(1), firstParam.startOffset, associationType = null)
+        } else if (calledName in viewBuilderHelperArrayMethods && firstParam.isArrayCreationExpression()) {
+            reader.readArray(firstParam)
+        }
     }
 
     /**
