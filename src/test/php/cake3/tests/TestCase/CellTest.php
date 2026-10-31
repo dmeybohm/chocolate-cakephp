@@ -78,4 +78,40 @@ class CellTest extends TestCase
         $this->expectExceptionMessage('inprobe');
         $this->get('/probe/things/showcell?name=Other.Sprocket::inprobe');
     }
+
+    public function testElementInPluginCellTemplateResolvesInCellPlugin()
+    {
+        $this->get('/widgets/showcell?name=Probe.Gadget::elementinplugin');
+        $this->assertResponseEquals('plugin:element/shared');
+    }
+
+    public function testElementInFallbackCellTemplateResolvesInCellPlugin()
+    {
+        $this->get('/widgets/showcell?name=Probe.Gadget::elementinapp');
+        $this->assertResponseEquals('plugin:element/shared');
+    }
+
+    public function testElementInCellCalledFromOtherPluginTemplateResolvesInCellPlugin()
+    {
+        $this->get('/widgets/othershowcell?name=Probe.Gadget::elementinplugin');
+        $this->assertResponseEquals('plugin:element/shared');
+    }
+
+    public function testElementInAppCellCalledFromPluginResolvesInApp()
+    {
+        $this->get('/probe/things/showcell?name=Lamp::elementinapp');
+        $this->assertResponseEquals('app:element/shared');
+    }
+
+    public function testElementInNamedCellTemplateResolvesInCellPlugin()
+    {
+        $this->get('/widgets/cellnamedtemplate');
+        $this->assertResponseEquals('plugin:element/shared');
+    }
+
+    public function testElementInPluginCellFallsBackToAppElement()
+    {
+        $this->get('/widgets/showcell?name=Probe.Gadget::elementappfallback');
+        $this->assertResponseEquals('app:element/app_only');
+    }
 }

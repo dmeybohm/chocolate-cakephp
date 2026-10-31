@@ -49,4 +49,14 @@ class WidgetsController extends AppController
     {
         $this->render('Probe.inner');
     }
+
+    public function othershowcell(): void
+    {
+        $this->set('name', $this->getRequest()->getQuery('name'));
+        $this->render('Other.showcell');
+    }
+
+    public function cellnamedtemplate(): void
+    {
+    }
 }

@@ -26,4 +26,16 @@ class GadgetCell extends Cell
     {
         return $this->fetchTable($alias);
     }
+
+    public function elementinplugin(): void
+    {
+    }
+
+    public function elementinapp(): void
+    {
+    }
+
+    public function elementappfallback(): void
+    {
+    }
 }
