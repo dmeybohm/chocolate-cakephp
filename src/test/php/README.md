@@ -165,3 +165,49 @@ tests are 4 and 5 only.
 | An alias with an empty plugin part, `.Table`, loads the app's table | `testEmptyPluginSegmentLoadsAppTable` | Same |
 | A bare `fetchTable()` in a plugin cell loads the app's table | `testPluginCellBareFetchTableLoadsAppTable` | 4, 5 |
 | A plugin cell's `fetchTable()` of another plugin loads that plugin's table | `testPluginCellLoadsOtherPluginTable` | 4, 5 |
+
+### `EntityAccessorTest`
+
+Relied on by entity virtual field types, completion and navigation
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md)). CakePHP 2 has no
+entities, so "Same" here means 3, 4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `_getFullName()` answers `full_name`, `fullName` and `FullName` | `testGetterAnswersSnakeCamelAndTitleNames` | Same |
+| A getter receives the stored value of the same field, or `null` | `testGetterReceivesStoredValueOrNull` | Same |
+| A public `_get*` method is an accessor | `testPublicGetterIsFound` | Same |
+| A private `_get*` method on an entity extending `Entity` is not | `testPrivateGetterIsNotFound` | Same |
+| A private `_get*` method on a parent entity is not | `testPrivateGetterOnParentIsNotFound` | Same |
+| A parent entity's protected getter is inherited | `testParentGetterIsInherited` | Same |
+| A trait's protected getter is an accessor | `testTraitGetterIsFound` | Same |
+| A child's getter overrides the parent's of the same name | `testChildGetterOverridesParent` | Same |
+| Accessors on a class that uses `EntityTrait` directly, instead of extending `Entity` | `testGettersOnClassUsingEntityTraitDirectly` | 3, 4: found, its private getter included, because the scope is the class itself. 5: none at all, because the trait's `static::class === self::class` guard resolves to the using class |
+| On a child of that class, the parent's protected and private getters are found and the child's private getter is not | `testGettersOnChildOfClassUsingEntityTraitDirectly` | Same |
+| `_setNickname()` runs on `$entity->nickname = ...` | `testSetterRunsOnAssignment` | Same |
+| The field name is `Inflector::underscore()` of the method suffix: `_getURLSlug` is `u_r_l_slug`, `_getName2` is `name2` | `testGetterNameIsUnderscoredLikeInflector` | Same |
+| `getNotAField()` is not an accessor | `testMethodWithoutUnderscoreIsNotAccessor` | Same |
+| `$_virtual` is not needed for access; it only adds the field to `toArray()` | `testVirtualPropertyIsNotNeededForAccess` | Same |
+| `has()` and `isset()` are true for a getter returning a value | `testHasAndIssetOnAccessorReturningValue` | Same |
+| `has()` and `isset()` for a getter returning `null` | `testHasAndIssetOnAccessorReturningNull` | 3, 4: both false. 5: `has()` true because the accessor exists, `isset()` false |
+
+### `EntityAssociationPropertyTest`
+
+Relied on by entity association property types, completion and navigation
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md), step 6). "Same"
+means 3, 4 and 5. The tests create `users` and `reviews` tables in the in-memory SQLite
+connection, because `getProperty()` reads the source table's schema.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A `belongsTo` property is the singular, underscored alias: `Authors` is `author`, `ReviewAuthors` is `review_author` | `testBelongsToPropertyIsSingularUnderscored` | Same |
+| A `hasOne` property is the singular, underscored alias | `testHasOnePropertyIsSingularUnderscored` | Same |
+| A `hasMany` property is the underscored alias: `ReviewComments` is `review_comments` | `testHasManyPropertyIsUnderscoredAlias` | Same |
+| A `belongsToMany` property is the underscored alias | `testBelongsToManyPropertyIsUnderscoredAlias` | Same |
+| A `Plugin.Alias` association's property drops the plugin | `testPluginPrefixIsDroppedFromProperty` | Same |
+| The `propertyName` option replaces the derived name | `testPropertyNameOptionOverrides` | Same |
+| The property's entity is the target table's entity class, so `className` decides it and a plugin target gives the plugin's entity | `testTargetEntityIsTargetTablesEntityClass` | Same |
+| A target with no table class gives `Cake\ORM\Entity` | `testTargetWithoutTableClassUsesBaseEntity` | Same |
+| A `belongsTo` property holds the target entity, or `null` when nothing matched | `testBelongsToPropertyHoldsTargetEntityOrNull` | Same |
+| A `hasMany` property holds an array of target entities, empty when nothing matched | `testHasManyPropertyHoldsArrayOfTargetEntities` | Same |
+| An accessor named for an association property receives the association's value | `testAccessorReceivesAssociationValue` | Same |

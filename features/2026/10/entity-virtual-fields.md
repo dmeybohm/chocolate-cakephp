@@ -30,8 +30,10 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
 
 - `__get($field)` calls `get()`, and `__set($field, $value)` calls `set()`. Both ask
   `static::_accessor($field, 'get' | 'set')` for a method name and call it when one exists.
-  `__isset()` and `has()` go through `get()` as well, so a virtual field counts as present
-  when its getter returns a non-null value.
+  `isset()` on a virtual field is true when its getter returns a non-null value on every
+  version. `has()` differs: on 3.x and 4.x it is `get() !== null`, and on 5.x it is true
+  whenever an accessor exists, whatever the getter returns. The plugin does not model `has()`,
+  so this only matters for reading the framework's tests.
 - `_accessor()` scans `get_class_methods($class)` once per concrete class. Every method whose
   name starts with `_get` or `_set` (the three characters after the underscore decide) is
   registered under three keys built from `$field = lcfirst(substr($method, 4))`:
@@ -44,8 +46,12 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
   in by a trait is found. A private method counts only when its declaring class is the calling
   scope itself, so a private `_getX()` on an entity that extends `Cake\ORM\Entity` is never
   found, whether declared on the entity or on one of its parents. The one case where a private
-  accessor works is a class that uses `EntityTrait` directly and declares the accessor itself.
-  A PHP visibility probe confirmed this. The convention is `protected`.
+  accessor works is a class that uses `EntityTrait` directly and declares the accessor itself,
+  and only on 3.x and 4.x: on 5.x the guard that skips the base class is written
+  `static::class === self::class`, and `self::class` in a trait is the using class, so a class
+  that uses `EntityTrait` directly has no accessors at all on 5.x, while its subclasses have
+  the parent's protected and private ones. `EntityAccessorTest` pins all of this.
+  The convention is `protected`.
 - `Cake\ORM\Entity` itself is skipped (`static::class === self::class` returns no accessor),
   and `EntityTrait` declares no `_get*` or `_set*` methods of its own, so there is nothing to
   filter out from the framework side.
@@ -59,6 +65,39 @@ sources (`src/test/php/cake*/vendor/cakephp/cakephp`):
   For a method-name suffix (letters, digits, underscores) this matches the plugin's existing
   `camelCaseToUnderscore()`: `fullName` to `full_name`, `uRLSlug` to `u_r_l_slug`, `name2`
   stays `name2`. A `StringsTest` case pins the agreement.
+
+## Assumption tests
+
+The framework behaviour above is pinned in the
+[CakePHP assumption suite](../../../src/test/php/README.md), run with
+`scripts/run-cakephp-assumption-tests.sh test 3 4 5 -- --filter Entity`, so the plugin is
+built on verified behaviour and a moved pin fails a test before a feature does:
+
+- **`EntityAccessorTest`** (3, 4, 5): the three spellings, the stored value argument, the
+  visibility rules (public and protected found, private not, with the direct `EntityTrait`
+  user's per-version behaviour), parent and trait accessors, overriding, setters, the inflection of
+  `_getURLSlug` and `_getName2`, `getNotAField()` not being an accessor, `$_virtual` only
+  affecting `toArray()`, and the per-version `has()` and `isset()` results.
+- **`EntityAssociationPropertyTest`** (3, 4, 5): the property name of each association type,
+  the plugin prefix being dropped, the `propertyName` override, the target entity coming from
+  the target table's entity class (so `className` decides it, a plugin target gives the plugin's
+  entity, and a missing table class gives `Cake\ORM\Entity`), the to-one value being the
+  entity or `null`, the to-many value being an array, and an accessor named for an association
+  property receiving the association's value.
+
+Fixtures for them are `Author`, `BaseAuthor`, `AuthorAccessorsTrait`, `Standalone`,
+`StandaloneChild`, `User` and `Review` under each version's `src/Model/Entity`, and
+`UsersTable` and `ReviewsTable` under `src/Model/Table`. The association tests create `users`
+and `reviews` tables in the in-memory SQLite connection, because `Association::getProperty()`
+reads the source table's schema to warn about a column of the same name.
+
+Writing them corrected two claims in this log: `has()` on 5.x is true whenever an accessor
+exists, and a class using `EntityTrait` directly has no accessors on 5.x. Both are recorded
+above.
+
+The platform side (the `#P` key sharing, the receiver encodings, the undefined-field weak
+warning) cannot be pinned in this suite. Those are plan steps 1, 3 and 7, and their findings go
+in the progress log as the dilution work did.
 
 ## What PhpStorm does today
 
@@ -127,7 +166,9 @@ bytecode first. The outcome decides the shape:
    walk the class, its traits and its parents up to but excluding `Cake\ORM\Entity`, take every
    public or protected method named `_get…` or `_set…`, and key it under the three spellings.
    A private method is taken only when its declaring class uses `EntityTrait` directly, which
-   matches the scope rule above. The table is per class and cached on
+   matches the scope rule above. The 5.x case where such a class has no accessors of its own
+   is not modelled: an app entity that uses the trait directly rather than extending
+   `Cake\ORM\Entity` is rare, and over-reporting its own accessors is the lesser error. The table is per class and cached on
    `PhpFilesModificationTracker`, the project's tracker for PHP changes. Nearest declaration
    wins, as `get_class_methods()` reports the overriding method.
 6. **Answer with the getter's type.** The declared or `@return` type when there is one, else
