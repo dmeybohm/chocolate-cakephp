@@ -381,11 +381,15 @@ loads with the rule above, and for each attached behavior class, read the chain 
 for `ASSOCIATION` loads flagged `viaTable`, inserted into the configuration list at the position
 of the attaching table class. A behavior's load in its own `initialize()` is an initialize load
 when the `addBehavior()` is one, and an other load otherwise, since the behavior's `initialize()`
-runs when the behavior is attached. `associationLoads()` reports the attaching table class as
-the class that configures such a load, since that is the file a `TableAssociationLoad` consumer
-navigates to; the behavior's own offset stays on the `MemberLoad`. With both paths on one
-reader, test 15 covers the association property, the association field and `contain()` from
-the same fixture.
+runs when the behavior is attached. The reader keeps every load paired with the class whose
+file declares it: a behavior's loads form their own entry, keyed by the behavior's FQN, placed
+after the attaching table's entry. `InitializeChainResolver` only sees the ordered
+configurations, so the position carries the override rule, and `associationLoads()` reports the
+behavior class as the `declaringClassFqn` of a `TableAssociationLoad`, which is what
+`EntityAssociationProperty.targets()` applies the load's offset to. Reporting the attaching
+table there would send navigation to an unrelated offset in the table's file. With both paths
+on one reader, test 15 covers the association property, its navigation, the association field
+and `contain()` from the same fixture.
 
 ### 8. CakePHP 2
 
@@ -516,6 +520,8 @@ Associations:
 
 15. `$this->Photos->Tags` has type `\App\Model\Table\TagsTable`; `contain('<caret>')` on
     `$this->Photos->find()` offers `Tags` and `TagLinks`; `$photo->tags` is `\App\Model\Entity\Tag[]`.
+    Goto declaration on `$photo->tags` reaches the `$this->_table->belongsToMany('Tags')` call
+    in `TaggableBehavior.php` and the `Tag` entity, and nothing in `PhotosTable.php`.
 16. A table that attaches `Taggable` in a method other than `initialize()` still offers `Tags`
     in `contain()` and resolves `$this->Alias->Tags`, as an other load.
 
@@ -662,5 +668,7 @@ throwaway probe test on the Cake 5 fixtures, not kept):
 Behavior class resolution is first match of app then core, not every existing candidate, with
 no plugin candidates for a bare name; and step 7 must extend `associationLoads()` as well as
 `resolveChain()`, since the entity association properties read the chain through the former,
-so both now share one chain reader.
+so both now share one chain reader. A second pass caught that the reader must keep a
+behavior's loads under the behavior's own FQN, because the entity navigation applies a load's
+offset to the file of the class reported with it.
 
