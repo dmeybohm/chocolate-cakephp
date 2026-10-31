@@ -228,6 +228,12 @@ fix. All three are merged.
 - Cells inherit the calling view's helpers, which reversed section 5. `CellTest` in the assumption
   suite confirms this at runtime on 3, 4 and 5, for a cell template and an element in it.
 
+`ViewHelperTest` in the assumption suite then checked these at runtime, with two corrections to the
+above: a view class's `loadHelper()` only wins when the controller gives no options, and a different
+`className` raises an error on every version; and Cake 4 raises a warning for the controller
+property. It also confirmed that a cell's own `viewBuilder()` helpers reach its template, and that
+the builder's helpers replace a `$helpers` property on the view class.
+
 **Decisions:**
 
 - `ViewHelperReceivers.helperMemberType` now takes the `ViewFile`. An initialize load on the view

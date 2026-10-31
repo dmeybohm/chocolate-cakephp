@@ -28,4 +28,9 @@ class LampCell extends Cell
     public function helperelement()
     {
     }
+
+    public function ownhelper()
+    {
+        $this->viewBuilder()->setHelpers(['OwnAliased' => ['className' => 'Marker']]);
+    }
 }

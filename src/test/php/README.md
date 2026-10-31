@@ -106,6 +106,26 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | A controller's helper reaches an element in that cell's template | `testControllerHelperReachesElementInCellTemplate` | Same |
 | A cell template lacks a helper its caller's controller did not add | `testCellTemplateHasNoHelperItsCallerLacks` | Same |
 
+### `ViewHelperTest`
+
+Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work differently, so
+"Same" here means 3, 4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A view class's `addHelper()` in `initialize()` wins over a controller's helper of the same alias | `testViewAddHelperWinsOverControllerHelper` | 4, 5. 3 has no `View::addHelper()` |
+| A view class's `loadHelper()` wins over a controller's helper of the same alias without options | `testViewLoadHelperWinsOverControllerHelperWithoutOptions` | Same |
+| A view class's `loadHelper()` raises an error when a controller gives the same alias another `className` | `testViewLoadHelperConflictsWithControllerClassName` | Same |
+| The builder's helpers replace a `$helpers` property declared on the view class | `testControllerBuilderReplacesViewHelpersProperty` | Same |
+| A controller's helper reaches a layout and an element in it | `testControllerHelperReachesLayoutAndItsElement` | Same |
+| A cell's own `viewBuilder()` helper reaches its template | `testCellOwnHelperReachesItsTemplate` | Same |
+| An app controller's helper reaches a plugin cell's template | `testControllerHelperReachesPluginCellTemplate` | Same |
+| An app controller's helper reaches an element in a plugin cell's template | `testControllerHelperReachesElementInPluginCellTemplate` | Same |
+| A plugin controller's helper reaches an app cell's template | `testPluginControllerHelperReachesAppCellTemplate` | Same |
+| A controller's `$helpers` property reaches its template, merged with its parent's | `testControllerHelpersPropertyReachesTemplateMerged` | 3 |
+| A controller's `$helpers` property raises a warning | `testControllerHelpersPropertyRaisesWarning` | 4 |
+| A controller's `$helpers` property is ignored | `testControllerHelpersPropertyIsIgnored` | 5 |
+
 ### `TableLocatorTest`
 
 Relied on by table locator types, navigation and completion. CakePHP 2 has no table locator, so
