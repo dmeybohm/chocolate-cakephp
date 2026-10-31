@@ -101,7 +101,7 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                     return PhpType().add("#${key}.${name}.${unwrappedType}")
                 }
                 else if (type.startsWith(RECURSIVE_START)) {
-                    val wrappedType = type.split('.')[2]
+                    val wrappedType = type.split('.', limit = 3)[2]
                     return PhpType().add("#${key}.${name}.${wrappedType}")
                 }
             }
@@ -109,11 +109,17 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
                 val classRefType = classReference.type.filterUnknown()
 
                 // $this->Movies->find():
-                val configuredField = classRefType.types.firstOrNull {
+                val configuredField = classReference.type.types.firstOrNull {
                     ControllerFieldTypeProvider.isConfiguredFieldSignature(it)
                 }
                 if (configuredField != null) {
                     return PhpType().add("#${key}.${name}.${configuredField}")
+                }
+
+                // $this->Movies->Reviews->find():
+                val associationField = classReference.type.types.firstOrNull { it.isAssociationSignature() }
+                if (associationField != null) {
+                    return PhpType().add("#${key}.${name}.${associationField}")
                 }
 
                 // TODO: handle incomplete types here by deferring lookup to
@@ -137,6 +143,9 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
         return null
     }
 
+    private fun String.isAssociationSignature(): Boolean =
+        startsWith("#${AssociatedTableTypeProvider.TYPE_PROVIDER_CHAR}")
+
     private fun getTableClass(methodRef: MethodReference, settings: Settings): PhpType? {
         val tableClass = tableClassFqnFromLocatorCall(settings, methodRef) ?: return null
         return PhpType().add(tableClass)
@@ -147,10 +156,13 @@ class TableLocatorTypeProvider : PhpTypeProvider4 {
             return PhpType()
         }
 
-        val (_, invokingMethodName, wrappedType) = expression.split('.')
+        // The wrapped type of an association signature has dots of its own:
+        val (_, invokingMethodName, wrappedType) = expression.split('.', limit = 3)
 
-        if (ControllerFieldTypeProvider.isConfiguredFieldSignature(wrappedType)) {
-            // Resolve the controller field to its table classes first:
+        if (ControllerFieldTypeProvider.isConfiguredFieldSignature(wrappedType) ||
+            wrappedType.isAssociationSignature()
+        ) {
+            // Resolve the field to its table classes first:
             val result = PhpType()
             PhpIndex.getInstance(project).completeType(project, PhpType().add(wrappedType), null).types
                 .filter { it.startsWith("\\") && it.isAnyTableClass() }
