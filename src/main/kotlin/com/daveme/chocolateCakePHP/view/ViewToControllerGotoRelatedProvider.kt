@@ -9,6 +9,7 @@ import com.intellij.navigation.GotoRelatedProvider
 import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.lang.psi.elements.Field
 import com.jetbrains.php.lang.psi.elements.Method
 
 /**
@@ -52,7 +53,14 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
             val group = when {
                 elementAndPath.elementType == ElementType.CELL_RENDER -> "Cell usages"
                 elementAndPath.cellName != null -> "Cells"
-                else -> "Controllers"
+                else -> {
+                    val containingFile = element.containingFile
+                    when {
+                        containingFile == null || !isCakeViewFile(project, settings, containingFile) -> "Controllers"
+                        isElementFile(containingFile, settings) -> "Elements"
+                        else -> "Views"
+                    }
+                }
             }
             createGotoRelatedItem(element, group)
         }
@@ -74,6 +82,9 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
     }
 
     private fun computeCustomName(element: PsiElement): String {
+        // A field names the class that declares it
+        (element as? Field)?.containingClass?.name?.let { return it }
+
         // Try to get method name
         val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
         if (method != null) {
