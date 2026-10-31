@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
+use Cake\Database\Connection;
+use Cake\Database\Driver\Sqlite;
+use Cake\Datasource\ConnectionManager;
 
 define('ROOT', dirname(__DIR__));
 define('APP_DIR', 'src');
@@ -45,4 +48,12 @@ Configure::write('Security.salt', 'assumption-tests-only-assumption-tests-only')
 
 foreach (['default', '_cake_core_', '_cake_model_', '_cake_routes_', '_cake_translations_'] as $name) {
     Cache::setConfig($name, ['className' => 'Array']);
+}
+
+foreach (['default', 'test'] as $name) {
+    ConnectionManager::setConfig($name, [
+        'className' => Connection::class,
+        'driver' => Sqlite::class,
+        'database' => ':memory:',
+    ]);
 }

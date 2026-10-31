@@ -14,7 +14,11 @@ import java.util.function.Consumer;
 import static com.daveme.chocolateCakePHP.SettingsKt.effectivePluginName;
 
 public class EditPluginEntryDialog extends DialogWrapper {
+    private static final String CAKE_THREE_VERSION = "CakePHP 3+";
+    private static final String CAKE_TWO_VERSION = "CakePHP 2";
+
     private JPanel contentPane;
+    private JComboBox<String> versionComboBox;
     private JLabel pluginNameLabel;
     private JTextField pluginNameTextField;
     private JLabel namespaceLabel;
@@ -44,11 +48,21 @@ public class EditPluginEntryDialog extends DialogWrapper {
         this.existingEntries = existingEntries;
         this.editingIndex = editingIndex;
 
-        pluginNameTextField.setText(initialPluginConfig.getPluginName());
-        namespaceTextField.setText(initialPluginConfig.getNamespace());
-        pluginPathTextField.setText(initialPluginConfig.getPluginPath());
-        sourcePathTextField.setText(initialPluginConfig.getSrcPath());
-        assetsPathTextField.setText(initialPluginConfig.getAssetPath());
+        PluginEntry initialEntry = PluginEntry.fromPluginConfig(initialPluginConfig);
+        boolean cakeTwo = editingIndex >= 0
+                ? initialEntry.getCakeTwo()
+                : project != null && Settings.getInstance(project).pluginPathIsCakeTwo(initialEntry.getPluginPath());
+        versionComboBox.addItem(CAKE_THREE_VERSION);
+        versionComboBox.addItem(CAKE_TWO_VERSION);
+        versionComboBox.setSelectedItem(cakeTwo ? CAKE_TWO_VERSION : CAKE_THREE_VERSION);
+        versionComboBox.addActionListener(e -> updateFieldVisibility());
+        updateFieldVisibility();
+
+        pluginNameTextField.setText(initialEntry.getPluginName());
+        namespaceTextField.setText(initialEntry.getNamespace());
+        pluginPathTextField.setText(initialEntry.getPluginPath());
+        sourcePathTextField.setText(initialEntry.getSrcPath().isEmpty() ? "src" : initialEntry.getSrcPath());
+        assetsPathTextField.setText(initialEntry.getAssetPath());
 
         setTitle(title);
         init();
@@ -59,8 +73,29 @@ public class EditPluginEntryDialog extends DialogWrapper {
         return contentPane;
     }
 
+    private boolean isCakeTwoSelected() {
+        return CAKE_TWO_VERSION.equals(versionComboBox.getSelectedItem());
+    }
+
+    private void updateFieldVisibility() {
+        boolean cakeThree = !isCakeTwoSelected();
+        namespaceLabel.setVisible(cakeThree);
+        namespaceTextField.setVisible(cakeThree);
+        sourcePathLabel.setVisible(cakeThree);
+        sourcePathTextField.setVisible(cakeThree);
+    }
+
     @Override
     protected void doOKAction() {
+        if (isCakeTwoSelected() && pluginNameTextField.getText().isBlank()) {
+            String fromPath = pluginPathTextField.getText().replaceAll("/+$", "");
+            pluginNameTextField.setText(fromPath.substring(fromPath.lastIndexOf('/') + 1));
+            if (pluginNameTextField.getText().isBlank()) {
+                setErrorText("A CakePHP 2 plugin needs a name.", pluginNameTextField);
+                return;
+            }
+        }
+
         PluginConfig newConfig = getPluginConfig();
         String newName = effectivePluginName(newConfig);
 
@@ -99,12 +134,13 @@ public class EditPluginEntryDialog extends DialogWrapper {
     }
 
     public PluginConfig getPluginConfig() {
-        return new PluginConfig(
+        return new PluginEntry(
             pluginNameTextField.getText(),
             namespaceTextField.getText(),
-            sourcePathTextField.getText(),
             pluginPathTextField.getText(),
-            assetsPathTextField.getText()
-        );
+            assetsPathTextField.getText(),
+            sourcePathTextField.getText(),
+            isCakeTwoSelected()
+        ).toPluginConfig();
     }
 }

@@ -1,7 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
-import com.daveme.chocolateCakePHP.cake.getPossibleTableClasses
+import com.daveme.chocolateCakePHP.cake.tableClassFqnFromLocatorCall
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -80,21 +80,11 @@ class TableLocatorGotoDeclarationHandler : GotoDeclarationHandler {
             }
         }
 
-        // Get the table name from the string literal
-        val tableName = stringLiteral.contents
-        if (tableName.isEmpty() || tableName.length > 255) {
-            return PsiElement.EMPTY_ARRAY
-        }
-
-        // Look up the table class
-        val phpIndex = PhpIndex.getInstance(sourceElement.project)
-        val tableClasses = phpIndex.getPossibleTableClasses(settings, tableName)
-
-        return if (tableClasses.isNotEmpty()) {
-            tableClasses.toTypedArray()
-        } else {
-            PsiElement.EMPTY_ARRAY
-        }
+        val tableClass = tableClassFqnFromLocatorCall(settings, methodReference)
+            ?: return PsiElement.EMPTY_ARRAY
+        return PhpIndex.getInstance(sourceElement.project)
+            .getClassesByFQN(tableClass)
+            .toTypedArray()
     }
 
     override fun getActionText(context: DataContext): String? {

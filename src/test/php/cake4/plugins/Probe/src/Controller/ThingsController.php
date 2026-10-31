@@ -80,4 +80,9 @@ class ThingsController extends AppController
     public function fallbackinner(): void
     {
     }
+
+    public function loadTable($alias)
+    {
+        return $this->fetchTable($alias);
+    }
 }
