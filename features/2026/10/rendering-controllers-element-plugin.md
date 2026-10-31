@@ -41,6 +41,15 @@ extends `AppController`.
 Templates and elements keep `resolvesTo` as it is. CakePHP 3 to 5 have no plugin here, as `pluginOf`
 returns null for them. That arrives with plugin-aware view keys and `controller-side-helpers`.
 
+### Plugins that don't extend `AppController`
+
+Proposed, and not yet part of the decision above: collect all subclasses of `\Controller` instead of
+`AppController` and its subclasses. If `FooAppController extends Controller`, `BarsController`'s
+alias would otherwise disappear even from Foo's own layout, since a layout no longer looks at the
+controllers naming it. This is more likely with plugins than with app controllers, and the result is
+a missing alias, not an extra one. It keeps `frameworkControllerClass`. Check that it still works
+when the framework class isn't indexed.
+
 ### Known gap until the element fix
 
 Elements keep today's per-hop check, which uses the including file's plugin. Stopping the walk at a
@@ -68,7 +77,10 @@ Fixing the walk for unprefixed elements moves to
 versions. The bug here needs a shared element name and differently aliased controllers on CakePHP 2,
 and its effect is limited to the type above. These notes carry over:
 
-- Check the carried references wherever the walk reaches a class.
+- Check the carried references wherever the walk reaches a class, including at a layout, where they
+  filter the union. `Blog`'s `shared` element reached through a layout gets only `Blog`'s
+  controllers, and the app's gets all controllers except `Blog`'s. The union for the layout itself
+  stays unfiltered.
 - A prefixed hop must not clear references already carried: in `element('Blog.a')` where `a` calls
   `element('b')`, `b` still follows the controller's plugin.
 - The walk also passes through `$this->layout` assignments and `render()` calls in view files. No
@@ -88,7 +100,8 @@ to 5 would be their own change, for navigation.
 
 1. Rewrite `LayoutHelperTest` around the rules above, and add tests for `AppController` aliases.
 2. Replace the layout handling in `RenderingControllers` with the rule above, and remove the
-   heuristics, `defaultLayoutKey` and `frameworkControllerClass`.
+   heuristics and `defaultLayoutKey`, and `frameworkControllerClass` unless the proposal under
+   [Plugins](#plugins-that-dont-extend-appcontroller) is taken.
 3. Run the full suite.
 
 ## Tests
@@ -102,6 +115,10 @@ to 5 would be their own change, for navigation.
 - Templates: a template rendered by one controller still gets only that controller's helpers, and so
   does an element only its templates include.
 - Plugins: a plugin's layout gets the union, including the plugin's aliases. A plugin controller's
-  template gets only that controller's helpers.
+  template gets only that controller's helpers. An app override of a plugin layout still counts as a
+  layout. If the proposal under Plugins is taken, a plugin whose base class extends `Controller`
+  keeps its alias in layouts.
+- Existing tests that change: `test a plugin's default layout gets the plugin's controllers` and
+  `test a plugin prefixed layout gets the app controller that names it` now expect the union.
 
 ## Implementation Progress
