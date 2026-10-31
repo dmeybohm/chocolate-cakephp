@@ -83,8 +83,9 @@ and its effect is limited to the type above. These notes carry over:
 - The shared helper takes the rendering class's plugin as input, as
   [elements in cell templates](cell-template-element-plugin.md) is still open.
 
-`controller-side-helpers` should drop its layout tracking to match this decision when it next
-merges `main`.
+`controller-side-helpers` should follow the same layout rules when it next merges `main`. It still
+needs to index `setLayout()`, since a named layout is found through its references, but not layout
+paths or a controller's layout names across its class chain.
 
 ## Plan
 
