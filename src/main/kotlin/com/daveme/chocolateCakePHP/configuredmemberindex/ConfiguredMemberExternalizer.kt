@@ -6,6 +6,8 @@ import java.io.DataOutput
 
 object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
 
+    private const val NO_ASSOCIATION_TYPE = -1
+
     override fun save(out: DataOutput, value: ClassConfiguration) {
         out.writeInt(value.loads.size)
         for (load in value.loads) {
@@ -18,6 +20,9 @@ object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
             out.writeInt(load.offset)
             writeNullableUTF(out, load.property)
             out.writeBoolean(load.hasUnreadClassName)
+            out.writeInt(load.associationType?.ordinal ?: NO_ASSOCIATION_TYPE)
+            writeNullableUTF(out, load.propertyName)
+            out.writeBoolean(load.hasUnreadPropertyName)
         }
         out.writeInt(value.declarations.size)
         for (declaration in value.declarations) {
@@ -41,6 +46,10 @@ object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
                 offset = input.readInt(),
                 property = readNullableUTF(input),
                 hasUnreadClassName = input.readBoolean(),
+                associationType = input.readInt().takeIf { it != NO_ASSOCIATION_TYPE }
+                    ?.let { AssociationType.values()[it] },
+                propertyName = readNullableUTF(input),
+                hasUnreadPropertyName = input.readBoolean(),
             )
         }
         val declarations = List(input.readInt()) {

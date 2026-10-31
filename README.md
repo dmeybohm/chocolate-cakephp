@@ -27,6 +27,7 @@ The plugin understands CakePHP's conventions and provides navigation between MVC
 
 #### Model & Database Layer
 - Navigate to and autocomplete custom finder methods in models
+- Complete and navigate association paths in `contain()`, `matching()`, `notMatching()`, `innerJoinWith()` and `leftJoinWith()`, following the associations each table configures
 
 #### Components & Helpers
 - Component suggestions in controllers
