@@ -598,3 +598,4 @@ What changed from the plan while building them:
   Native resolution completes the same receivers anyway, so the provider adds only its own class
   checks and index lookups.
 
+**Full suite:** 1713 tests, 0 failed, before any PR was opened.
