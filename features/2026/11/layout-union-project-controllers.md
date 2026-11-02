@@ -48,6 +48,14 @@ integration also registers `vendor` as a library root and excludes it, but confi
 predicates holds there before choosing one, and whether a configured plugin path inside `vendor/`
 is excluded as well. The configured-plugin-path clause exists for that case.
 
+**Answer:** PhpStorm's Composer integration (with "add packages as libraries", the default) does
+both for each installed package: `ExcludedDirectoriesApplier` adds the package directory to the
+module's excluded folders, and `IncludePathApplier` adds it to the PHP include path, which
+`PhpIncludePathManager` serves as library roots. So a vendor file has `isInContent` false and
+`isInLibrary` true, as in the tests, and a configured plugin under `vendor/` is excluded too, which
+the configured-plugin-path clause covers. With that option off, `vendor/` stays in content and the
+filter keeps its controllers, which is today's behaviour. The filter uses `isInContent`.
+
 The lookup runs inside the cached search that `RenderingControllers.of` starts from a read action,
 so `ProjectFileIndex` can be queried where `allControllers` already resolves each class's file.
 
@@ -125,3 +133,28 @@ they are left as they are here and noted as a follow-up.
 
 Branched from `cake5-layout-helper-test-parity`, which adds the tests this change flips. Merge that
 branch first, or rebase this one onto `main` once it lands.
+
+## Implementation Progress
+
+### Session #1
+
+- Rebased onto `main` now that `cake5-layout-helper-test-parity` has landed.
+- Read the Composer integration in the bundled PHP plugin (232.8660.205) for step 1; the answer
+  is recorded under "Why `ProjectFileIndex` rather than paths".
+- `ViewFileResolution.isProjectFile` holds for a file in project content or under a configured
+  plugin path (`isInConfiguredPlugin` in `CakePlugins.kt`, matching CakePHP 2 paths from the
+  project directory and CakePHP 3+ paths as suffixes, as the plugin name rules do).
+  `RenderingControllers` filters the layout union through it.
+- `Settings.modificationTracker` is bumped in `loadState()`. The `RenderingControllers` cache
+  depends on it, `ProjectRootManager` and `CakePhpFilesModificationTracker` as well as
+  `PhpFilesModificationTracker`.
+- The three ErrorController layout tests now assert the exact union. The cake3 and cake4
+  `FrameworkNotIndexedControllerHelperTest` classes are gone, and the cake5 one keeps only its
+  any-depth test.
+- New cake5 tests: a configured plugin's controller in a library counts in a layout, and changing
+  the plugin path drops it from the union and restores it, with no PHP file changed. Each fails
+  when the configured-plugin clause or the settings tracker dependency is removed.
+- The cake3, cake4 and cake5 `ControllerSideHelperTest` classes and all the cake2 helper tests
+  pass. The full suite is left to CI.
+- Follow-up, unchanged here: `ViewHelperReceivers` caches still depend on
+  `PhpFilesModificationTracker` alone.
