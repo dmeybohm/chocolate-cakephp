@@ -170,6 +170,21 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         assertTrue(fmtTypesIn("layout/default").contains(movieHelper))
     }
 
+    fun `test a layout keeps the convention type as the framework's ErrorController settles nothing`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        controller("Artist", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        val types = fmtTypesIn("layout/default")
+        assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
+    }
+
+    fun `test a helper AppController adds in initialize settles the type in a subclass's template`() {
+        appView()
+        controller("App", fmtInInitialize("MovieFormatter"))
+        controller("Movie", "public function index() {}", parent = "AppController")
+        assertEquals(setOf(movieHelper), fmtTypesIn("Movie/index"))
+    }
+
     fun `test a cell template inherits the helpers of the view calling it`() {
         appView()
         controller("Movie", fmtIn("MovieFormatter"))
