@@ -21,6 +21,7 @@
 - Label an implicitly rendered controller action with its method name in "Go to related" from a template
 - Link and navigate to the underscored template CakePHP renders for a camelCase name in `render()`, `setTemplate()`, `$this->view` and a cell's `render()`, and for a camelCase action on CakePHP 2, while keeping names with a slash as written
 - Navigate from the templates, layouts and elements of a configured CakePHP 2 plugin outside the app directory, such as one under `plugins/` or loaded from an explicit path, and complete its view variables and helpers
+- Stop treating a copy of a configured plugin's directory elsewhere in the project, such as one inside another plugin's `vendor` directory, as that plugin; the settings now say plugin and theme paths are relative to the app root
 
 ## [1.1.0] - 2026-04-09
 

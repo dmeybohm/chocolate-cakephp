@@ -5,7 +5,7 @@
 Planned 2026-11-02, from review feedback on #321
 ([cake2-configured-plugin-views](cake2-configured-plugin-views.md)). Branched from
 `cake2-configured-plugin-views`, since it builds on that branch's shared CakePHP 2 rule; rebase
-target is `main` once #321 merges. Assumption tests added; see Implementation Progress.
+target is `main` once #321 merges. Implemented; see Implementation Progress.
 
 ## The problem
 
@@ -167,3 +167,32 @@ and agree with the plan.
 The full assumption suite passes on 2, 3, 4 and 5. The one PHPUnit warning on CakePHP 4 is
 `ViewHelperTest::testControllerHelpersPropertyRaisesWarning`'s existing deprecation notice. No
 plugin code yet.
+
+### Session #2
+
+Implemented steps 2 to 5.
+
+- Tests: `AnchoredPluginPathTest` on cake2 and cake5. On cake2, with `lib/Shop` configured under
+  `cake2/`, `examples/lib/Shop` is not the plugin (no templates directory, no plugin name, not in a
+  configured plugin, not a CakePHP 2 controller), and the guards pass: the app root's own copy,
+  `examples/lib/Shop` once `examples/app` exists, a nested `src/app` setting, and a path entered as
+  `cake2/lib/Shop`. On cake5, with `vendor/acme/blog` configured, the copies at
+  `examples/vendor/acme/blog` and `plugins/Foo/vendor/acme/blog` are not `Blog`, while the app root's
+  is. Only the three decoy tests failed first; the guards passed before and after.
+- Rule: `isDirectoryOfConfiguredPlugin` in `CakePlugins.kt` replaces `isDirectoryOfPluginPath`. It
+  takes the config, finds the root by walking up as many directories as the path has components,
+  accepts it if it is the project directory, and otherwise requires it to hold the config's app
+  directory and not to sit under `plugins`. `configuredCakeTwoPluginOfDirectory`,
+  `isInConfiguredPlugin` and `cakeThreePluginName` all use it.
+- The CakePHP 2 controller check needs the project directory for the legacy fallback, so
+  `lookupControllerFileInfo`, `isCakeTwoController` and `isCakeTwoPluginDirectory` now take it.
+- Settings UI: both explanations in `PluginForm.form` and both edit dialog labels now say the app
+  root.
+- `ViewFileIndex` is at 30 and `ViewVariableIndex` at 24.
+- `test configured vendor plugin is a plugin` in the cake3, cake4 and cake5 `PluginAwareViewKeysTest`
+  had no file under the app directory, so its fixture had no app root. Each now adds an
+  `Application.php` under the app source directory, as a real app has.
+
+One behaviour to note: a configured plugin of an app nested in the project is now recognised only
+when the app directory setting matches the app's layout. When the app root is the project
+directory, the fallback accepts it regardless.
