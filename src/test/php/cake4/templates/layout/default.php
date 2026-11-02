@@ -1,0 +1,1 @@
+default:<?= $this->fetch('content') ?>

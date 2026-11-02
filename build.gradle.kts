@@ -52,6 +52,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    // For ForkSandboxListener (LauncherSessionListener), which gives each Gradle
+    // test fork its own IDE sandbox so forks can run in parallel.
+    testImplementation("org.junit.platform:junit-platform-launcher:1.8.2")
 }
 
 // Set the JVM language level used to build the project. Use Java 11 for 2020.3+, and Java 17 for 2022.2+.
@@ -163,6 +166,20 @@ tasks {
 
     test {
         useJUnitPlatform()
+
+        // Run test classes across several JVMs. Each fork gets its own IDE
+        // sandbox (system/config/log dirs) via ForkSandboxListener, otherwise
+        // the forks contend on the shared index and cache storage and there is
+        // no speedup. Override with -PtestForks=N. A single fork already keeps
+        // about four cores busy and wants ~2 GB, so the default is one fork
+        // per four cores: on the 4-core CI runner a second fork made the
+        // suite 1.5x slower (see features/2026/09/parallel-tests.md).
+        maxParallelForks = providers.gradleProperty("testForks")
+            .map(String::toInt)
+            .getOrElse((Runtime.getRuntime().availableProcessors() / 4).coerceIn(1, 3))
+        // Extra JVM flags for the test forks, e.g. -PtestJvmArgs=-Dcaches.indexerThreadsCount=2
+        providers.gradleProperty("testJvmArgs").orNull?.let { jvmArgs(it.split(' ')) }
+
         cakeReleases.keys.zip(fetchCakeVendors).forEach { (major, fetch) ->
             dependsOn(fetch)
             systemProperty(

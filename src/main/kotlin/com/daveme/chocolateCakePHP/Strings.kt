@@ -48,6 +48,18 @@ fun String.tableToEntityClass(): String {
     return newParts.joinToString("\\" )
 }
 
+/**
+ * The conventional table class of an entity class, or null if the class is not in an `Entity`
+ * namespace.
+ */
+fun String.entityToTableClass(): String? {
+    val parts = this.split('\\')
+    if (parts.size < 2 || !parts[parts.size - 2].equals("Entity", ignoreCase = true)) {
+        return null
+    }
+    return (parts.dropLast(2) + "Table" + "${parts.last().pluralize()}Table").joinToString("\\")
+}
+
 fun String.isTableLocatorInterface(): Boolean =
     this.equals("\\Cake\\ORM\\Locator\\LocatorInterface", ignoreCase = true)
 

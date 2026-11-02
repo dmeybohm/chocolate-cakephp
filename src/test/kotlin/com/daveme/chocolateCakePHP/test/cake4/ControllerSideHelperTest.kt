@@ -45,6 +45,18 @@ class ControllerSideHelperTest : Cake4BaseTestCase() {
         assertTrue(fmtTypesIn("cake4/templates/layout/default.php").contains(movieHelper))
     }
 
+    fun `test a helpers property on the view class is ignored`() {
+        myFixture.addFileToProject("cake4/src4/View/AppView.php", """
+            <?php
+            namespace App\View;
+            class AppView extends \Cake\View\View {
+                protected ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];
+            }
+        """.trimIndent())
+        controller("public function index() {}")
+        assertFalse(fmtTypesIn("cake4/templates/Movie/index.php").contains(movieHelper))
+    }
+
     fun `test a helpers property on a controller is ignored`() {
         controller("""
             public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];

@@ -1,0 +1,1 @@
+json-layout:<?= $this->fetch('content') ?>

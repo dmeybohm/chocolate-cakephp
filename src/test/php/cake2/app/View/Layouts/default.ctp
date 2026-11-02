@@ -1,0 +1,1 @@
+default:<?php echo $this->fetch('content'); ?>

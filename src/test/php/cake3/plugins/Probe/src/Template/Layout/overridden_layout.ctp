@@ -1,0 +1,1 @@
+plugin-layout:<?= $this->fetch('content') ?>

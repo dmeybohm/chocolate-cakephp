@@ -55,11 +55,21 @@ internal interface ChainResolver {
     fun resolve(kinds: Set<MemberKind>, alias: String?, resolveLoad: (MemberLoad) -> List<String>): ChainResolution
 }
 
+/**
+ * An association configured on a table class, with the class in the table's chain that configures it.
+ */
+data class TableAssociationLoad(
+    val declaringClassFqn: String,
+    val load: MemberLoad,
+)
+
 object ConfiguredMemberService {
+
+    private const val CAKE_VIEW_CLASS = "\\Cake\\View\\View"
 
     private val frameworkBaseClasses = setOf(
         "\\Cake\\Controller\\Controller",
-        "\\Cake\\View\\View",
+        CAKE_VIEW_CLASS,
         "\\Cake\\View\\Helper",
         "\\Cake\\ORM\\Table",
     ).map { it.lowercase() }.toSet()
@@ -127,6 +137,28 @@ object ConfiguredMemberService {
             .flatMap { phpIndex.getClassesByFQN(it) }
     }
 
+    /**
+     * The associations configured by the chains of [tableFqns]. As in [InitializeChainResolver],
+     * the nearest class's `initialize()` loads of an alias replace its ancestors', and loads
+     * outside `initialize()` are kept from every class.
+     */
+    fun associationLoads(project: Project, tableFqns: Collection<String>): List<TableAssociationLoad> {
+        val phpIndex = PhpIndex.getInstance(project)
+        val fileBasedIndex = FileBasedIndex.getInstance()
+        val scope = GlobalSearchScope.allScope(project)
+        return tableFqns.flatMap { tableFqn ->
+            val nearestInitialize = mutableMapOf<String, String>()
+            classChain(phpIndex, tableFqn).flatMap { fqn ->
+                val loads = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
+                    .flatMap { it.loads }
+                    .filter { it.kind == MemberKind.ASSOCIATION && it.associationType != null }
+                loads.filter { it.isInitializeLoad }.forEach { nearestInitialize.putIfAbsent(it.alias, fqn) }
+                loads.filter { !it.isInitializeLoad || nearestInitialize[it.alias] == fqn }
+                    .map { TableAssociationLoad(fqn, it) }
+            }
+        }
+    }
+
     // The framework base classes say nothing about which members a receiver has.
     private fun specificReceivers(classFqns: Collection<String>): List<String> =
         classFqns.filter { it.lowercase() !in frameworkBaseClasses }
@@ -179,11 +211,12 @@ object ConfiguredMemberService {
 
         // Most-derived class first:
         val chain = classChain(phpIndex, classFqn)
+        val ignored = if (isViewChain(phpIndex, chain)) ignoredProperties + HELPERS_PROPERTY else ignoredProperties
         val configurations = chain.map { fqn ->
             val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
             ClassConfiguration(
-                values.flatMap { it.loads }.filter { (it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignoredProperties) && keepLoad(it) },
-                values.flatMap { it.declarations }.filter { it.property !in ignoredProperties }
+                values.flatMap { it.loads }.filter { (it.source != LoadSource.PROPERTY_ARRAY || it.property !in ignored) && keepLoad(it) },
+                values.flatMap { it.declarations }.filter { it.property !in ignored }
             )
         }
         val cakeTwoBase = if (settings.cake2Enabled) CakeTwoBase.ofChain(phpIndex, chain) else null
@@ -197,6 +230,15 @@ object ConfiguredMemberService {
         }
         return InitializeChainResolver(configurations).resolve(kinds, alias) { resolveLoad(phpIndex, settings, it) }
     }
+
+    /**
+     * Whether [chain] extends the framework's view class. A view class resolves as the framework
+     * renders it: the view builder always passes helpers, which replaces its `$helpers` property.
+     */
+    private fun isViewChain(phpIndex: PhpIndex, chain: List<String>): Boolean =
+        chain.any { fqn ->
+            phpIndex.getClassesByFQN(fqn).any { it.superFQN.equals(CAKE_VIEW_CLASS, ignoreCase = true) }
+        }
 
     private fun classChain(phpIndex: PhpIndex, classFqn: String): List<String> {
         val result = mutableListOf<String>()

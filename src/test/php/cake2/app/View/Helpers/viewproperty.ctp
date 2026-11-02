@@ -1,0 +1,1 @@
+<?php echo get_class($this) . ':' . ($this->Helpers->loaded('ByProperty') ? 'kept' : 'replaced');

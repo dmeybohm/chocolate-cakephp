@@ -39,6 +39,13 @@ class ElementResolutionTest extends TestCase
         $this->get('/widgets/pluginelement');
     }
 
+    public function testWronglyCasedElementDirectoryIsNotFound(): void
+    {
+        $this->expectException(MissingElementException::class);
+        $this->expectExceptionMessage('wrong_case');
+        $this->get('/widgets/wrongcaseelement');
+    }
+
     public function testAppTemplateRendersPrefixedPluginElement(): void
     {
         $this->get('/widgets/prefixedelement');
