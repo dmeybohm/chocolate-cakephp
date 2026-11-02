@@ -177,7 +177,8 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
     }
 
     /**
-     * A controller in a directory attached as a library rather than in project content.
+     * A controller in a directory attached as a library rather than in project content, under an
+     * app root as a vendor package is.
      */
     private fun libraryController(libraryPath: String, namespace: String, name: String, body: String) {
         val tempDir = FileUtil.createTempDirectory("library", null)
@@ -194,6 +195,8 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
                 }
             """.trimIndent())
         }
+        val appDir = File(tempDir, Settings.getInstance(project).state.appDirectory).apply { mkdirs() }
+        assertNotNull(LocalFileSystem.getInstance().refreshAndFindFileByIoFile(appDir))
         val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(libraryDir)!!
         val library = PsiTestUtil.addProjectLibrary(module, libraryPath, listOf(root), emptyList())
         Disposer.register(testRootDisposable) { PsiTestUtil.removeLibrary(module, library) }
