@@ -129,11 +129,15 @@ private fun isCakeTwoController(
     if (isCakeTwoPluginDirectory(topSourceDir, settings)) {
         return true
     }
-    val topDir = topSourceDir.parent ?: return false
-    return matchesCake2AppDirectory(topSourceDir, settings) &&
-        !topDir.children.any { it.nameWithoutExtension == "templates" } &&
-            !topSourceDir.children.any { it.nameWithoutExtension == "Template" }
+    if (!matchesCake2AppDirectory(topSourceDir, settings)) {
+        return false
+    }
+    // Both settings match by trailing components, so when one nests the other the longer one names the directory:
+    return !matchesAppDirectory(topSourceDir, settings) ||
+        pathComponentCount(settings.cake2AppDirectory) > pathComponentCount(settings.appDirectory)
 }
+
+private fun pathComponentCount(path: String): Int = path.split("/").size
 
 // CakePHP 3+ plugins have `src` between the plugin and its `Controller` directory, so they don't match:
 private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings): Boolean {
