@@ -36,6 +36,8 @@ Router::scope('/rt', function ($routes) {
         $routes->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
         $routes->connect('/unprefixed', ['prefix' => null, 'controller' => 'Routed', 'action' => 'index']);
         $routes->connect('/unprefixed-false', ['prefix' => false, 'controller' => 'Routed', 'action' => 'index']);
+        $routes->connect('/camel', ['controller' => 'Routed', 'action' => 'viewAll']);
+        $routes->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
         $routes->connect('/params', ['controller' => 'Routed', 'action' => 'params']);
         $routes->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
         $routes->prefix('Reports', function ($routes) {
@@ -49,6 +51,9 @@ Router::scope('/rt', function ($routes) {
     });
     $routes->plugin('Probe', function ($routes) {
         $routes->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
+        $routes->connect('/camel', ['controller' => 'Routed', 'action' => 'viewAll']);
+        $routes->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
+        $routes->connect('/cellurl', ['controller' => 'Routed', 'action' => 'cellurl']);
         $routes->connect('/app', ['plugin' => null, 'controller' => 'Routed', 'action' => 'index']);
         $routes->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
     });

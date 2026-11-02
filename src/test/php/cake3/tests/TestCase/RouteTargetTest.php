@@ -326,4 +326,30 @@ class RouteTargetTest extends TestCase
         $this->get('/rt/redirecting');
         $this->assertHeader('Location', 'http://localhost/rt/camel');
     }
+
+    public function testUrlNoActionKeyCopiesTheRequestActionAcrossPrefixes()
+    {
+        $this->get('/rt/admin/url?controller=Routed');
+        $this->assertResponseEquals('/rt/admin/url');
+    }
+
+    public function testHelpersInPluginTemplateKeepTheRequestPlugin()
+    {
+        $this->get('/rt/probe/links');
+        $this->assertResponseContains('link:<a href="/rt/probe/camel">x</a>');
+        $this->assertResponseContains('build:/rt/probe/camel');
+    }
+
+    public function testHelpersInPrefixedTemplateKeepTheRequestPrefix()
+    {
+        $this->get('/rt/admin/links');
+        $this->assertResponseContains('link:<a href="/rt/admin/camel">x</a>');
+        $this->assertResponseContains('build:/rt/admin/camel');
+    }
+
+    public function testUrlInCellTemplateTakesTheCallingRequest()
+    {
+        $this->get('/rt/probe/cellurl');
+        $this->assertResponseContains('cell:/rt/probe/camel');
+    }
 }

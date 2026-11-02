@@ -133,7 +133,9 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
   `Controller` suffix (`Routed` for `RoutedController`, as the runtime key is spelled), and the
   enclosing method's name as the action when the array is inside a controller action. In a
   view file there is one per rendering controller from `RenderingControllers`, each with an
-  unknown action. Anywhere else the list is empty.
+  unknown action. A cell template's candidates are the controllers of the templates that call
+  the cell, since a cell renders in its caller's request; the cells `RenderingControllers`
+  lists are not candidates themselves. Anywhere else the list is empty.
 - `resolvedTargets = defaults + target`, one per candidate, where the defaults are the
   `RouteScope` in a route builder call and each `RouteContextController` in a URL-building
   call, and an explicit "none" in the target wins. When the candidate list is empty the
@@ -309,5 +311,11 @@ how a missing `action` key defaults (step 4's enclosing-controller default has t
 request's action, not `index`, when the controller names match), inherited and framework
 methods as actions (step 4's action list is every public method not declared by
 `Cake\Controller\Controller`), and vendor-namespaced plugin keys and scopes.
+
+A third round, 4 more tests per version, pinned the request-context side of the candidate
+model: helpers in a template rendered by a plugin or prefixed controller keep that request's
+plugin and prefix, a URL built in a cell template takes the calling request rather than the
+cell, and a missing `action` key copies the request's action across prefixes as it does across
+plugins.
 
 Next: step 2, the route target model and `getControllerSubclasses`.

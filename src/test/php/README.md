@@ -217,6 +217,7 @@ differently and will get its own table, so "Same" here means 3, 4 and 5. The app
 | `Router::url()` with `controller` and `action` keys builds the route's URL | `testUrlControllerAndActionKeysBuildTheUrl` | Same |
 | `Router::url()` with only an `action` key keeps the request's controller | `testUrlActionOnlyKeepsTheRequestController` | Same |
 | `Router::url()` with no `action` key copies the request's action when the `controller` key is the request's controller name, even with another `plugin` key | `testUrlNoActionKeyCopiesTheRequestActionForTheSameController`, `testUrlNoActionKeyCopiesTheRequestActionAcrossPlugins` | Same |
+| `Router::url()` with no `action` key copies the request's action across prefixes too | `testUrlNoActionKeyCopiesTheRequestActionAcrossPrefixes` | Same |
 | `Router::url()` with no `action` key defaults to `index` for another controller | `testUrlNoActionKeyDefaultsToIndexForAnotherController` | Same |
 | `Router::url()` keeps the request's prefix when the array has no `prefix` key | `testUrlKeepsTheRequestPrefix` | Same |
 | `Router::url()` with `'prefix' => false` leaves the request's prefix | `testUrlFalsePrefixLeavesTheRequestPrefix` | Same |
@@ -227,6 +228,9 @@ differently and will get its own table, so "Same" here means 3, 4 and 5. The app
 | `Router::url()` on a dashed route matches `plugin` and `controller` keys in any case | `testUrlDashedRouteInflectsControllerAndPlugin` | Same |
 | `Html->link()`, `Form->postLink()`, `Url->build()` and `Form->create()`'s `url` option build a target array like `Router::url()`, request defaults included | `testHelpersBuildUrlsLikeRouterUrl` | Same |
 | `Controller::redirect()` builds a target array like `Router::url()` | `testControllerRedirectBuildsUrlsLikeRouterUrl` | Same |
+| Helpers in a template rendered by a plugin controller keep the request's plugin | `testHelpersInPluginTemplateKeepTheRequestPlugin` | Same |
+| Helpers in a template rendered by a prefixed controller keep the request's prefix | `testHelpersInPrefixedTemplateKeepTheRequestPrefix` | Same |
+| A URL built in a cell's template takes the calling request's plugin and controller, not the cell's | `testUrlInCellTemplateTakesTheCallingRequest` | Same |
 
 ### `TableLocatorTest`
 

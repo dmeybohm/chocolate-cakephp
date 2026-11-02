@@ -26,6 +26,10 @@ trait RoutedActionsTrait
     {
     }
 
+    public function cellurl(): void
+    {
+    }
+
     public function redirecting()
     {
         return $this->redirect(['action' => 'viewAll']);

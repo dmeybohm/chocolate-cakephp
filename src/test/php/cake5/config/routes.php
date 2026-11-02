@@ -36,6 +36,8 @@ return static function (RouteBuilder $routes): void {
         $builder->prefix('Admin', static function (RouteBuilder $builder): void {
             $builder->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
             $builder->connect('/unprefixed', ['prefix' => null, 'controller' => 'Routed', 'action' => 'index']);
+            $builder->connect('/camel', ['controller' => 'Routed', 'action' => 'viewAll']);
+            $builder->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
             $builder->connect('/params', ['controller' => 'Routed', 'action' => 'params']);
             $builder->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
             $builder->prefix('Reports', static function (RouteBuilder $builder): void {
@@ -49,6 +51,9 @@ return static function (RouteBuilder $routes): void {
         });
         $builder->plugin('Probe', static function (RouteBuilder $builder): void {
             $builder->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
+            $builder->connect('/camel', ['controller' => 'Routed', 'action' => 'viewAll']);
+            $builder->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
+            $builder->connect('/cellurl', ['controller' => 'Routed', 'action' => 'cellurl']);
             $builder->connect('/app', ['plugin' => null, 'controller' => 'Routed', 'action' => 'index']);
             $builder->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
         });
