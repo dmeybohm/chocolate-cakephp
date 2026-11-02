@@ -54,23 +54,20 @@ the `templates` file it works.
 
 ## Plan
 
-1. Regression tests in `cake2/BothVersionsLayoutNavigationTest`, both expected to fail first:
-   - `test app controller keeps the CakePHP 2 conventions beside a templates directory`: the
-     reproduction above.
-   - A 3+ controller indexed before its `templates` directory exists, with `cake2AppDirectory` and
-     `appDirectory` naming the same directory: add the controller, then
-     `templates/layout/admin.php`, and assert the layout is related to the action.
+Assume `cake2AppDirectory` and `appDirectory` name different directories. A mixed-version project
+where both settings name the same directory is rare enough not to handle: the path cannot tell the
+versions apart there, and such a controller is treated as 3+. That also leaves out the indexing-order
+case above, which only arises with that configuration.
+
+1. Regression test in `cake2/BothVersionsLayoutNavigationTest`, expected to fail first:
+   `test app controller keeps the CakePHP 2 conventions beside a templates directory`, the
+   reproduction above.
 2. Decide the version from the controller's path and the settings alone. After the plugin check, a
-   controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and not the 3+
-   `appDirectory`. Generalise `matchesCake2AppDirectory` to take the configured path, so nested
-   values such as `src/app` match the same way for both settings. Remove the sibling lookups.
-3. When both settings name the same directory, the path cannot tell the versions apart. Index that
-   controller's layouts under every structure (`CakeTwo` and both 3+ ones) in `layoutStructuresOf`,
-   as it already does for CakePHP 3 and 4. A key only matches a layout that exists, so the extra keys
-   cost a false link only if the same layout name exists in both versions' layout directories.
-   Nothing else in the index depends on the choice for an app controller.
-4. Bump the `ViewFileIndex` version, since stored keys change.
-5. Run the `cake2` tests, then the other versions' layout navigation tests.
+   controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and not `appDirectory`,
+   using `matchesAppDirectory` from `CakePaths.kt` for the second. The `appDirectory` check covers
+   nested overlaps such as `app` and `src/app`. Remove the sibling lookups.
+3. Bump the `ViewFileIndex` version, since stored keys change.
+4. Run the `cake2` tests, then the other versions' layout navigation tests.
 
 No assumption test applies: the classification depends on how the project is laid out and
 configured, not on what CakePHP does at runtime.
