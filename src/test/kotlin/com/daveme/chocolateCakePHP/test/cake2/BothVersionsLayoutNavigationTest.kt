@@ -70,6 +70,24 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
         assertFalse("Keys were: $keys", "Layout/admin" in keys)
     }
 
+    fun `test configured plugin beside the app navigates from its template and layout`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(CakeTwoPluginConfig(pluginName = "Blog", pluginPath = "plugins/Blog"))
+        settings.loadState(state)
+        myFixture.addFileToProject("cake2/plugins/Blog/Controller/PostsController.php", """
+            <?php
+            class PostsController extends AppController {
+                public function viewAll() { ${'$'}this->layout = 'admin'; }
+            }
+        """.trimIndent())
+        val layout = myFixture.addFileToProject("cake2/plugins/Blog/View/Layouts/admin.ctp", "<?php echo 1;")
+        val template = myFixture.addFileToProject("cake2/plugins/Blog/View/Posts/view_all.ctp", "<?php echo 1;")
+
+        assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(layout))
+        assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(template))
+    }
+
     fun `test the longer app directory setting wins when it nests the CakePHP 2 one`() {
         val keys = layoutKeysOfControllerIn("src/app", cake2AppDirectory = "src/app", appDirectory = "app")
         assertTrue("Keys were: $keys", "Layouts/admin" in keys)
