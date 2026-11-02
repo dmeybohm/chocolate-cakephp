@@ -58,6 +58,7 @@ Relied on by view navigation, the controller action line marker and view file cr
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
+| A camelCase action's implicit template is the underscored action name: `viewAll` renders `view_all` | `testCamelCaseActionRendersImplicitTemplate` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 
 ### `LayoutResolutionTest`

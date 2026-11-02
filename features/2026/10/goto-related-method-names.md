@@ -19,3 +19,13 @@ so it finds no method and falls back to the file name.
    template assertion in `BothVersionsLayoutNavigationTest` to expect the method name.
 
 ## Implementation Progress
+
+### Session #1
+
+Merged `origin/main`, which brought in the assumption suite, and added
+`testCamelCaseActionRendersImplicitTemplate`: an implicit render of `viewAll` uses the
+`view_all` template on every version. Cake 2's `View::_getViewFileName()` underscores the name
+too, so the plugin's Cake 2 handling, which keeps the action name as is
+(`fullImplicitViewPath()` and `addViewFilenameExtension()`), links `viewAll` to `viewAll.ctp`
+instead. That is a separate bug, left out of this branch. Until it is fixed, the Cake 2 mirror
+of the label test should use a single word action, so it does not pin the wrong file name.

@@ -105,4 +105,10 @@ class TemplateResolutionTest extends TestCase
         $this->get('/widgets/templatelayout');
         $this->assertResponseEquals('layout:app:Widgets/templatelayout');
     }
+
+    public function testCamelCaseActionRendersImplicitTemplate()
+    {
+        $this->get('/widgets/view-all');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
 }

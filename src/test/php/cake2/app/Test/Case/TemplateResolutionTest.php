@@ -68,4 +68,9 @@ class TemplateResolutionTest extends ControllerTestCase {
 	public function testLayoutNamedFromTemplateWraps() {
 		$this->assertSame('layout:app:Widgets/templatelayout', $this->renderedBy('/widgets/templatelayout'));
 	}
+
+	public function testCamelCaseActionRendersImplicitTemplate() {
+		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/viewAll'));
+	}
+
 }
