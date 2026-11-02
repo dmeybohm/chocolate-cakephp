@@ -28,6 +28,16 @@ settings alone: `isCakeTwoPluginDirectory` (`ViewFileIndexService.kt`) accepts a
 `plugins` directory under the app directory, or a configured plugin's path as a suffix. #320's log
 records this view-side gap under "Plugin controllers" as separate from that fix.
 
+Plugin identity has a second gap of its own. `cakeTwoPluginName` (`CakePlugins.kt`) names a file's
+plugin from a `Plugin` or `plugins` directory above it, and otherwise from a configured path, which
+it resolves from the IDE project directory. Settings paths are relative to the app root
+(`appRootDirectoryFromViewFile`, and the settings form), and that root may be nested in the project,
+as every test fixture nests it under `cake2/`. So a configured plugin outside those directories,
+such as `lib/Shop` in `ConfiguredPluginTest`, is named only when the project directory is the app
+root. Recognising its `View` directory alone would then make `viewFileOf` treat its templates as
+the app's. `isInConfiguredPlugin`'s CakePHP 2 branch, from #319, resolves the same way. The
+CakePHP 3+ rule, `cakeThreePluginName`, matches configured paths as suffixes for this reason.
+
 ## What the user sees
 
 In a view file of such a plugin, everything that starts from the file's templates directory is
@@ -70,22 +80,36 @@ exactly this setup because navigating from the layout fails here.
      indexer-keys test in `BothVersionsLayoutNavigationTest`, which configures the plugin by loading
      a settings state with a `CakeTwoPluginConfig`. Since #319 a layout lists only project
      controllers, those in content or under a configured plugin path, which the fixture's controller
-     is. The tests keep `plugins/Blog`, so `cakeTwoPluginName` names the plugin from the directory
-     and only the templates directory lookup is under test; the framework side of a path outside
-     those directories is pinned by the assumption test, and the plugin side is noted under Not in
-     scope.
+     is. With `plugins/Blog`, `cakeTwoPluginName` names the plugin from the directory, so these
+     pin the templates directory lookup alone.
+   - The explicit-path case end to end: a configured plugin at `lib/Shop`, the path
+     `ConfiguredPluginTest` uses, outside any `Plugin` or `plugins` directory and under the nested
+     `cake2/` root. Go to related from its template and layout lists its controller's action, and
+     `viewFileOf` of the template names the plugin `Shop`, in the style of `PluginAwareViewKeysTest`.
+     This fails first on both counts: no templates directory, and no plugin name once there is one.
    - An element call in a configured plugin's view is indexed under `Elements/`, following
      `ElementReferenceIndexingTest`.
    - A view file of an unconfigured `{root}/plugins` plugin still has no templates directory, so the
      tests pin that it is left to auto-discovery.
-3. In the CakePHP 2 branch of `templatesDirectoryOfViewFile`, also accept a `View` directory whose
-   parent is a configured CakePHP 2 plugin. Match the path with `endsWith("/" + pluginPath)`, as
-   `isCakeTwoPluginDirectory` does on the controller side, so recognition is decided from the path
-   and the settings alone, and holds when the app root is nested in the project as the test
-   fixtures are. That helper is private to `ViewFileIndexService.kt`; move it to `CakePlugins.kt`
-   beside `cakeTwoPluginName` so both sides share one rule, rather than copying it.
-4. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since both indexers call it. After
-   #320 they are at 28 and 22.
+3. One rule for a configured CakePHP 2 plugin directory, in `CakePlugins.kt` beside
+   `cakeTwoPluginName`: the directory's path ends with `"/" + pluginPath`, as
+   `isCakeTwoPluginDirectory` (private to `ViewFileIndexService.kt`) matches today. Recognition is
+   then decided from the path and the settings alone, and holds when the app root is nested in the
+   project. Use it from four places:
+   - the CakePHP 2 branch of `templatesDirectoryOfViewFile`, which also accepts a `View` directory
+     whose parent is such a plugin;
+   - `isCakeTwoController`'s plugin check, which moves to it;
+   - the configured-path clause of `cakeTwoPluginName`, in place of the project-directory lookup,
+     so the plugin's files are named by it (`viewFileOf`, `pluginOfClassFile` while indexing, and
+     `ConfiguredMemberService.cakeTwoPluginOfClass`);
+   - the CakePHP 2 branch of `isInConfiguredPlugin`, so #319's layout union counts the plugin's
+     controllers under a nested root too.
+   When the project directory is the app root, the suffix matches everything the relative lookup
+   did, so nothing recognised today is lost. The directory-name clause of `cakeTwoPluginName`
+   stays first, as it is.
+4. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since both indexers call
+   `templatesDirectoryOfViewFile`, and `cakeTwoPluginName` reaches stored keys through
+   `pluginOfClassFile`. After #320 they are at 28 and 22.
 5. Run the cake2 tests in full, since every caller starts seeing these files, then the targeted
    tests for other versions.
 
@@ -100,11 +124,6 @@ exactly this setup because navigating from the layout fails here.
   reindexes its view files, as it does its controllers. Since #319 the `RenderingControllers` cache
   also depends on `Settings.modificationTracker`, so go to related does not keep a stale result
   either.
-- How `cakeTwoPluginName` and `isInConfiguredPlugin` (`CakePlugins.kt`) match a configured CakePHP 2
-  path: from the project directory, not as a suffix, so a configured plugin under a nested app root
-  is named only when it sits under a `Plugin` or `plugins` directory. The tests here use
-  `plugins/Blog`, which the directory name covers. Aligning those with the suffix rule is a separate
-  change.
 
 ## Implementation Progress
 
@@ -131,3 +150,18 @@ with an explicit `path` of `{root}/packages/Pathed/`, and
 `/pathed/trinkets/index`. It passes on CakePHP 2.10.24, so a configured plugin's `View` directory
 is its templates directory wherever the plugin sits. The full CakePHP 2 assumption suite still
 passes (48 tests). No plugin code yet.
+
+### Session #3
+
+A review of the plan found the explicit-path case was not covered end to end: step 3 would have
+recognised `packages/Pathed/View` as a templates directory while `cakeTwoPluginName` still resolved
+configured paths from the project directory, so under a nested app root `viewFileOf` would have
+treated the plugin's templates as the app's, and plugin-aware navigation and resolution could stay
+wrong after the fix. The plan had put that alignment out of scope.
+
+Brought it into scope, rather than narrowing the outcome to `plugins/{Name}`: settings paths are
+relative to the app root, which the fixtures and real monorepos nest, and the 3+ rule and the
+controller side already match as suffixes, so the project-directory lookup was the odd one out.
+Step 3 now defines the suffix rule once in `CakePlugins.kt` and routes `templatesDirectoryOfViewFile`,
+`isCakeTwoController`, `cakeTwoPluginName` and `isInConfiguredPlugin` through it, and step 2 adds a
+`lib/Shop` test that checks navigation and `viewFileOf`'s plugin name together. No plugin code yet.
