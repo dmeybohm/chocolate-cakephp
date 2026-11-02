@@ -86,10 +86,20 @@ case above, which only arises with that configuration.
      `plugins/Blog` controller, beside a `templates` entry, stores `Layouts/admin` and not
      `Layout/admin`. Passes today; it guards the plugin check against the fix. It reads the
      indexer's keys rather than navigating from the layout, because of the view side gap above.
+   - `test the longer app directory setting wins when it nests the CakePHP 2 one`:
+     `cake2AppDirectory = "src/app"`, `appDirectory = "app"`, and a controller in
+     `src/app/Controller` stores CakePHP 2 layout keys. Passes today; a rule that lets any
+     `appDirectory` match win would break it.
+   - `test the longer app directory setting wins when it nests the CakePHP 3 one`: the reverse,
+     `cake2AppDirectory = "app"`, `appDirectory = "src/app"`, stores 3+ layout keys. Fails today:
+     with no `templates` entry beside it, the controller is classified as CakePHP 2.
 2. Decide the version from the controller's path and the settings alone. After the plugin check, a
-   controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and not `appDirectory`,
-   using `matchesAppDirectory` from `CakePaths.kt` for the second. The `appDirectory` check covers
-   nested overlaps such as `app` and `src/app`. Remove the sibling lookups.
+   controller is CakePHP 2 when its app directory matches `cake2AppDirectory`, unless it also
+   matches `appDirectory` (`matchesAppDirectory` in `CakePaths.kt`) and that setting has at least as
+   many path components. Both matchers compare only the trailing components, so distinct settings
+   can both match one directory when one nests the other, such as `src/app` and `app`. The shorter
+   is then a suffix of the longer, and the longer names the actual directory. Equal lengths only
+   happen with identical settings, which are treated as 3+. Remove the sibling lookups.
 3. Bump the `ViewFileIndex` version, since stored keys change.
 4. Run the `cake2` tests, then the other versions' layout navigation tests.
 
@@ -128,4 +138,10 @@ loads a plugin from `{root}/plugins` and renders its template. A navigation test
 `plugins/Blog` controller failed on the view side, not on controller detection, which is how the
 `templatesDirectoryOfViewFile` gap above was found; the test reads the indexer's keys instead, and
 passes.
+
+A second review found that distinct settings can still both match one directory, since the matchers
+compare trailing path components: `src/app` matches both `src/app` and `app`. The plan's rule let
+`appDirectory` win any overlap, which would classify a CakePHP 2 controller in `src/app` as 3+ when
+`appDirectory` is `app`. The rule now prefers the setting with more components, with a test for each
+direction of the overlap.
 

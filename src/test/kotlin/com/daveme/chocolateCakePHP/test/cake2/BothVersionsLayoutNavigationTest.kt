@@ -66,7 +66,34 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
         """.trimIndent()).virtualFile
 
         val keys = ViewFileDataIndexer.map(FileContentImpl.createByFile(controller, project)).keys
-        assertTrue("Keys were: ${'$'}keys", "Layouts/admin" in keys)
-        assertFalse("Keys were: ${'$'}keys", "Layout/admin" in keys)
+        assertTrue("Keys were: $keys", "Layouts/admin" in keys)
+        assertFalse("Keys were: $keys", "Layout/admin" in keys)
+    }
+
+    fun `test the longer app directory setting wins when it nests the CakePHP 2 one`() {
+        val keys = layoutKeysOfControllerIn("src/app", cake2AppDirectory = "src/app", appDirectory = "app")
+        assertTrue("Keys were: $keys", "Layouts/admin" in keys)
+        assertFalse("Keys were: $keys", "Layout/admin" in keys)
+    }
+
+    fun `test the longer app directory setting wins when it nests the CakePHP 3 one`() {
+        val keys = layoutKeysOfControllerIn("src/app", cake2AppDirectory = "app", appDirectory = "src/app")
+        assertTrue("Keys were: $keys", "Layout/admin" in keys)
+        assertFalse("Keys were: $keys", "Layouts/admin" in keys)
+    }
+
+    private fun layoutKeysOfControllerIn(appPath: String, cake2AppDirectory: String, appDirectory: String): Set<String> {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.cake2AppDirectory = cake2AppDirectory
+        state.appDirectory = appDirectory
+        settings.loadState(state)
+        val controller = myFixture.addFileToProject("cake2/$appPath/Controller/PostsController.php", """
+            <?php
+            class PostsController extends AppController {
+                public function viewAll() { ${'$'}this->layout = 'admin'; }
+            }
+        """.trimIndent()).virtualFile
+        return ViewFileDataIndexer.map(FileContentImpl.createByFile(controller, project)).keys
     }
 }
