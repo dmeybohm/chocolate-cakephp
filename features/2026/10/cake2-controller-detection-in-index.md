@@ -23,8 +23,7 @@ That goes wrong in two ways:
   file only when its own content changes, so it keeps that classification until it is edited. This
   is the same class of bug as the element directory dependency in `view-index-bugs`.
 
-CakePHP 2 plugin controllers are not affected: `isCakeTwoPluginDirectory` recognises them from their
-path and settings before the sibling check.
+CakePHP 2 plugin controllers are covered in [Plugin controllers](#plugin-controllers).
 
 ## What the user sees
 
@@ -52,6 +51,27 @@ cake2/app/View/Layouts/admin.ctp
 Go to related from `admin.ctp` should list `PostsController::viewAll()`. It lists nothing. Without
 the `templates` file it works.
 
+## Plugin controllers
+
+`isCakeTwoPluginDirectory` runs before the sibling check, and decides from the path and settings
+alone. When it returns true the sibling check never runs, so the fix cannot change these cases.
+
+- `{app}/Plugin/{Name}/Controller`: recognised from the path.
+- `{root}/plugins/{Name}/Controller`, the directory beside the app directory: CakePHP 2 searches it
+  by default (`App.php`, pinned by `testRootPluginsDirectoryPluginRendersItsTemplate`). Recognised
+  when the plugin is configured, from its configured path. Unconfigured, it fails the plugin check
+  and then `matchesCake2AppDirectory`, so it is classified 3+, before the fix and after it. That is
+  left to "auto-discovered CakePHP 2 plugins" in [cake2-plugin-settings](cake2-plugin-settings.md),
+  which would make such a plugin a configured one; hard-coding `{root}/plugins` here would give
+  plugin identity a second source. A 3+ plugin there has `src` before `Controller`, so the two do
+  not collide.
+
+Separate, and not in this branch: `templatesDirectoryOfViewFile` (`CakePaths.kt`) recognises a
+CakePHP 2 plugin's `View` directory only under the app directory, and does not consult configured
+plugins. A view file of a plugin in `{root}/plugins`, configured or not, has no templates directory,
+so going from it to its controller finds nothing, with CakePHP 2 alone as well.
+[view-index-bugs](view-index-bugs.md) noted the narrowing this caused for element references.
+
 ## Plan
 
 Assume `cake2AppDirectory` and `appDirectory` name different directories. A mixed-version project
@@ -59,9 +79,13 @@ where both settings name the same directory is rare enough not to handle: the pa
 versions apart there, and such a controller is treated as 3+. That also leaves out the indexing-order
 case above, which only arises with that configuration.
 
-1. Regression test in `cake2/BothVersionsLayoutNavigationTest`, expected to fail first:
-   `test app controller keeps the CakePHP 2 conventions beside a templates directory`, the
-   reproduction above.
+1. Tests in `cake2/BothVersionsLayoutNavigationTest`:
+   - `test app controller keeps the CakePHP 2 conventions beside a templates directory`: the
+     reproduction above. Fails until the fix.
+   - `test configured plugin controller beside the app stores CakePHP 2 layout keys`: a configured
+     `plugins/Blog` controller, beside a `templates` entry, stores `Layouts/admin` and not
+     `Layout/admin`. Passes today; it guards the plugin check against the fix. It reads the
+     indexer's keys rather than navigating from the layout, because of the view side gap above.
 2. Decide the version from the controller's path and the settings alone. After the plugin check, a
    controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and not `appDirectory`,
    using `matchesAppDirectory` from `CakePaths.kt` for the second. The `appDirectory` check covers
@@ -69,8 +93,9 @@ case above, which only arises with that configuration.
 3. Bump the `ViewFileIndex` version, since stored keys change.
 4. Run the `cake2` tests, then the other versions' layout navigation tests.
 
-No assumption test applies: the classification depends on how the project is laid out and
-configured, not on what CakePHP does at runtime.
+The app controller classification depends on how the project is laid out and configured, not on
+what CakePHP does at runtime, so it has no assumption test. The default plugin location does:
+`testRootPluginsDirectoryPluginRendersItsTemplate` (2).
 
 ## Implementation Progress
 
@@ -90,10 +115,17 @@ Merged `origin/main` twice (2026-11-02). What changed for this bug:
   `ofSourceFile` uses described above are what is left.
 
 An assumption test for the same behaviour was added here and then removed again, as it duplicated
-the one from #317. No other assumption test applies: what is left depends on how the project is laid
-out and configured, not on what CakePHP does at runtime.
+the one from #317.
 
 A review pointed out that the bug also misclassifies a CakePHP 2 controller straight away, not only
 depending on indexing order, and that only the layout keys change. Both were confirmed in the code,
 and the first was reproduced by the first regression test of the plan, which fails as expected and
 passes once the `templates` file is removed. The plan above was written from that.
+
+Narrowed the plan to distinct `cake2AppDirectory` and `appDirectory` settings, and looked at plugin
+controllers. Added `testRootPluginsDirectoryPluginRendersItsTemplate`, which passes: CakePHP 2.10.24
+loads a plugin from `{root}/plugins` and renders its template. A navigation test for a configured
+`plugins/Blog` controller failed on the view side, not on controller detection, which is how the
+`templatesDirectoryOfViewFile` gap above was found; the test reads the indexer's keys instead, and
+passes.
+

@@ -1,8 +1,11 @@
 package com.daveme.chocolateCakePHP.test.cake2
 
+import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.test.ViewNavigation
+import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileDataIndexer
+import com.intellij.util.indexing.FileContentImpl
 
 class BothVersionsLayoutNavigationTest : BaseTestCase() {
 
@@ -47,5 +50,23 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
         val layout = myFixture.addFileToProject("cake2/app/View/Layouts/admin.ctp", "<?php echo 1;")
 
         assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(layout))
+    }
+
+    fun `test configured plugin controller beside the app stores CakePHP 2 layout keys`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(CakeTwoPluginConfig(pluginName = "Blog", pluginPath = "plugins/Blog"))
+        settings.loadState(state)
+        myFixture.addFileToProject("cake2/templates/Posts/index.php", "<?php echo 1;")
+        val controller = myFixture.addFileToProject("cake2/plugins/Blog/Controller/PostsController.php", """
+            <?php
+            class PostsController extends AppController {
+                public function viewAll() { ${'$'}this->layout = 'admin'; }
+            }
+        """.trimIndent()).virtualFile
+
+        val keys = ViewFileDataIndexer.map(FileContentImpl.createByFile(controller, project)).keys
+        assertTrue("Keys were: ${'$'}keys", "Layouts/admin" in keys)
+        assertFalse("Keys were: ${'$'}keys", "Layout/admin" in keys)
     }
 }
