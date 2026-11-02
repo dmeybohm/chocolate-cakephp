@@ -129,14 +129,19 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
   in for the request the URL is built in. Each `RouteContextController(plugin, prefix,
   controller, action)` is one controller the array may run under: inside a controller class
   there is one, with the plugin from the file's location (`cakeThreePluginName`), the prefix
-  from the namespace segments between `Controller` and the class, the class's short name, and
-  the enclosing method's name as the action when the array is inside a controller action. In a
+  from the namespace segments between `Controller` and the class, the class name without its
+  `Controller` suffix (`Routed` for `RoutedController`, as the runtime key is spelled), and the
+  enclosing method's name as the action when the array is inside a controller action. In a
   view file there is one per rendering controller from `RenderingControllers`, each with an
   unknown action. Anywhere else the list is empty.
 - `resolvedTargets = defaults + target`, one per candidate, where the defaults are the
   `RouteScope` in a route builder call and each `RouteContextController` in a URL-building
-  call, and an explicit "none" in the target wins. A missing `controller` key takes the
-  candidate's controller. A missing `action` key is, following the runtime rule, the
+  call, and an explicit "none" in the target wins. When the candidate list is empty the
+  defaults are empty too (no plugin, no prefix, no controller, no action), so the array's own
+  keys still resolve: a fully specified URL array outside any controller or view yields one
+  target, and one with no `controller` key yields a target whose controller is unknown, which
+  offers app controllers for the `controller` key and nothing for `action`. A missing
+  `controller` key otherwise takes the candidate's controller. A missing `action` key is, following the runtime rule, the
   candidate's action when the controller key is absent or names the candidate's controller,
   and `index` when it names another controller. The candidate's action may itself be unknown,
   as in a view file, in which case the action stays unknown rather than guessed. Action
