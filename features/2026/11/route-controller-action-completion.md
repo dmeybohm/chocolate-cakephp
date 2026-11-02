@@ -318,4 +318,22 @@ plugin and prefix, a URL built in a cell template takes the calling request rath
 cell, and a missing `action` key copies the request's action across prefixes as it does across
 plugins.
 
-Next: step 2, the route target model and `getControllerSubclasses`.
+### Session #2
+
+Step 2 is in `cake/CakeRoutes.kt`, with `getControllerSubclasses` in `Classes.kt` and
+`RouteTargetModelTest` (cake5) covering parsing, scopes, context, resolution, naming and actions.
+Two choices that differ from the plan's wording:
+
+- A candidate's plugin and prefix come from the class's FQN against the app and configured plugin
+  namespaces (`routeControllerNameFromClass`), not from the file's location. The FQN is what the
+  runtime maps a target to, and a namespace that is not configured is read as the plugin name
+  with `\` as `/`, the same fallback `cellClassFqn` uses, which covers vendor-namespaced plugins.
+- A target's prefix matches a class's prefix camelized per segment on every version, since the
+  settings do not tell CakePHP 5 from 4 and `'admin'` resolves on 3 and 4. Completion offers the
+  class's own spelling regardless; only navigation is lenient.
+
+The closure of a `scope()`, `prefix()` or `plugin()` call sits inside a wrapper node in the PSI,
+so `routeScopeOf` finds the enclosing parameter list and takes the argument that ends where the
+closure ends, which keeps a closure nested in an array argument from counting.
+
+Next: step 3, the patterns for where the arrays are.

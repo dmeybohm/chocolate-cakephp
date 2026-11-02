@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP
 
 import com.daveme.chocolateCakePHP.cake.CELL_PARENT_CLASS
+import com.daveme.chocolateCakePHP.cake.CONTROLLER_PARENT_CLASS
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
@@ -142,6 +143,19 @@ fun PhpIndex.getCellSubclasses(settings: Settings): Collection<PhpClass> {
         return emptyList()
     }
     return getAllSubclassesRecursively(CELL_PARENT_CLASS)
+}
+
+/**
+ * The controllers a route target can name: the concrete subclasses of the CakePHP 3+ base
+ * controller, leaving out `AppController` and classes not named as controllers.
+ */
+fun PhpIndex.getControllerSubclasses(settings: Settings): Collection<PhpClass> {
+    if (!settings.cake3Enabled) {
+        return emptyList()
+    }
+    return getAllSubclassesRecursively(CONTROLLER_PARENT_CLASS).filter {
+        !it.isAbstract && it.name != "AppController" && it.name.endsWith("Controller")
+    }
 }
 
 fun PhpIndex.getAllAncestorTypesFromFQNs(classes: List<String>): List<PhpClass> {
