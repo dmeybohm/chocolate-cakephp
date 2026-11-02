@@ -21,9 +21,17 @@ return static function (RouteBuilder $routes): void {
         $builder->connect('/keyed-nested-prefix', ['prefix' => 'Admin/Reports', 'controller' => 'Routed', 'action' => 'index']);
         $builder->connect('/lower-prefix', ['prefix' => 'admin', 'controller' => 'Cased', 'action' => 'index']);
         $builder->connect('/keyed-plugin', ['plugin' => 'Probe', 'controller' => 'Routed', 'action' => 'index']);
+        $builder->connect('/keyed-vendor-plugin', ['plugin' => 'Acme/Vendored', 'controller' => 'Routed', 'action' => 'index']);
         $builder->connect('/string', 'Routed::index');
         $builder->connect('/string-prefixed', 'Admin/Routed::index');
         $builder->connect('/string-plugin', 'Probe.Routed::index');
+        $builder->connect('/string-vendor-plugin', 'Acme/Vendored.Routed::index');
+        $builder->connect('/inherited', ['controller' => 'Routed', 'action' => 'inherited']);
+        $builder->connect('/base-method', ['controller' => 'Routed', 'action' => 'redirect']);
+        $builder->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
+        $builder->connect('/redirecting', ['controller' => 'Routed', 'action' => 'redirecting']);
+        $builder->connect('/other', ['controller' => 'Other', 'action' => 'index']);
+        $builder->connect('/other-view', ['controller' => 'Other', 'action' => 'viewAll']);
         $builder->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
         $builder->prefix('Admin', static function (RouteBuilder $builder): void {
             $builder->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
@@ -46,6 +54,9 @@ return static function (RouteBuilder $routes): void {
             $builder->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
         });
         $builder->scope('/scope-plugin', ['plugin' => 'Probe'], static function (RouteBuilder $builder): void {
+            $builder->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
+        });
+        $builder->plugin('Acme/Vendored', static function (RouteBuilder $builder): void {
             $builder->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
         });
         $builder->resources('Routed');

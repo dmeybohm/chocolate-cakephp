@@ -20,9 +20,17 @@ Router::scope('/rt', function ($routes) {
     $routes->connect('/lower-prefix', ['prefix' => 'admin', 'controller' => 'Cased', 'action' => 'index']);
     $routes->connect('/camel-prefix', ['prefix' => 'Admin', 'controller' => 'Cased', 'action' => 'viewAll']);
     $routes->connect('/keyed-plugin', ['plugin' => 'Probe', 'controller' => 'Routed', 'action' => 'index']);
+    $routes->connect('/keyed-vendor-plugin', ['plugin' => 'Acme/Vendored', 'controller' => 'Routed', 'action' => 'index']);
     $routes->connect('/string', 'Routed::index');
     $routes->connect('/string-prefixed', 'Admin/Routed::index');
     $routes->connect('/string-plugin', 'Probe.Routed::index');
+    $routes->connect('/string-vendor-plugin', 'Acme/Vendored.Routed::index');
+    $routes->connect('/inherited', ['controller' => 'Routed', 'action' => 'inherited']);
+    $routes->connect('/base-method', ['controller' => 'Routed', 'action' => 'redirect']);
+    $routes->connect('/links', ['controller' => 'Routed', 'action' => 'links']);
+    $routes->connect('/redirecting', ['controller' => 'Routed', 'action' => 'redirecting']);
+    $routes->connect('/other', ['controller' => 'Other', 'action' => 'index']);
+    $routes->connect('/other-view', ['controller' => 'Other', 'action' => 'viewAll']);
     $routes->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
     $routes->prefix('Admin', function ($routes) {
         $routes->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
@@ -45,6 +53,9 @@ Router::scope('/rt', function ($routes) {
         $routes->connect('/url', ['controller' => 'Routed', 'action' => 'url']);
     });
     $routes->scope('/scope-plugin', ['plugin' => 'Probe'], function ($routes) {
+        $routes->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
+    });
+    $routes->plugin('Acme/Vendored', function ($routes) {
         $routes->connect('/scoped', ['controller' => 'Routed', 'action' => 'index']);
     });
     $routes->resources('Routed');

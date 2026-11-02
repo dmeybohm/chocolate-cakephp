@@ -6,7 +6,7 @@ namespace App\Controller;
 /**
  * An application controller the route target tests dispatch to.
  */
-class RoutedController extends AppController
+class RoutedController extends RoutedBaseController
 {
     use RoutedActionsTrait;
 }

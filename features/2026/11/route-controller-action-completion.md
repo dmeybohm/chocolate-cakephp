@@ -33,8 +33,9 @@ Pinned by `RouteTargetTest` in `src/test/php` on 3.10, 4.6 and 5.4 (see the cata
   route it parses, connect() defaults included, so `'controller' => 'articles'` and
   `'action' => 'view_all'` dispatch on a dashed route and fail on a plain `Route`. The plugin
   offers the class's own spelling and may resolve the inflected spellings for navigation.
-- `plugin` is the plugin's CamelCase name, `'plugin' => 'DebugKit'`, and selects the plugin's
-  `Controller` namespace in place of the app's. Inside a `plugin()` scope a `connect()` target
+- `plugin` is the plugin's CamelCase name, `'plugin' => 'DebugKit'`, or `'Acme/Vendored'` for
+  a vendor-namespaced plugin, and selects the plugin's `Controller` namespace in place of the
+  app's. Inside a `plugin()` scope a `connect()` target
   may not name another plugin, and `'plugin' => false` is rejected the same way
   (`BadMethodCallException`); `'plugin' => null` connects an app route.
 - `prefix` selects a sub-namespace under `Controller`. CakePHP 4 and 5 want it CamelCase,
@@ -45,9 +46,9 @@ Pinned by `RouteTargetTest` in `src/test/php` on 3.10, 4.6 and 5.4 (see the cata
   prefix, with a deprecation; CakePHP 5 uses it verbatim, so `'admin'` is a missing controller.
   `'prefix' => null` inside a prefix scope connects the unprefixed controller on every version;
   `'prefix' => false` does the same on 3 and 4 and is rejected on 5.
-- `action` is the method name as written, camelCase. An action must be a public method the
-  controller does not inherit from `Cake\Controller\Controller`; 4 and 5 match it
-  case-sensitively, 3 does not. The underscored spelling only works through `DashedRoute`.
+- `action` is the method name as written, camelCase. An action is any public method, inherited
+  from the app's own base classes or traits included, that `Cake\Controller\Controller` does
+  not declare; 4 and 5 match it case-sensitively, 3 does not. The underscored spelling only works through `DashedRoute`.
 - `RouteBuilder::scope()`, `prefix()` and `plugin()` each run a closure with a builder whose
   `_params` carry the `plugin` and `prefix` of every enclosing scope. `connect()` merges the
   target array over those params, so inside `$routes->prefix('Admin', function ($builder) {
@@ -69,7 +70,11 @@ Pinned by `RouteTargetTest` in `src/test/php` on 3.10, 4.6 and 5.4 (see the cata
   and `Controller::redirect()`. A key left out of such an array is filled from the current
   request, so `['action' => 'edit']` in `ArticlesController` targets the same controller, and
   the request's `plugin` and `prefix` are kept unless the array has the key; `false` and
-  `null` both leave them. The `prefix` key is matched against the route case-sensitively, so
+  `null` both leave them. With no `action` key the action is `index`, unless the `controller`
+  key is the request's controller name, in which case the request's action is copied, even
+  when a `plugin` key names another plugin. `Html->link()`, `Form->postLink()`,
+  `Url->build()`, `Form->create()`'s `url` option and `Controller::redirect()` all build the
+  array the same way. The `prefix` key is matched against the route case-sensitively, so
   only the version's own spelling builds a URL; on a dashed route the `plugin` and
   `controller` keys match in any case.
 
@@ -265,5 +270,12 @@ What the tests corrected in the first reading of the sources:
 - The route the URL builder picks is the first one whose name bucket matches, which made a
   test of `Router::url(['action' => 'view_all'])` depend on route order; it was dropped as it
   pinned the fixture rather than the framework.
+
+Added a second round, 10 more tests per version, after the first results: the URL-taking
+helper calls and `redirect()` build like `Router::url()` (which fixes step 3's method list),
+how a missing `action` key defaults (step 4's enclosing-controller default has to use the
+request's action, not `index`, when the controller names match), inherited and framework
+methods as actions (step 4's action list is every public method not declared by
+`Cake\Controller\Controller`), and vendor-namespaced plugin keys and scopes.
 
 Next: step 2, the route target model and `getControllerSubclasses`.

@@ -2,6 +2,7 @@
 
 namespace App\Test\TestCase;
 
+use Acme\Vendored\Controller\RoutedController as VendoredRoutedController;
 use App\Controller\Admin\CasedController as AdminCasedController;
 use App\Controller\Admin\Reports\RoutedController as AdminReportsRoutedController;
 use App\Controller\Admin\RoutedController as AdminRoutedController;
@@ -261,5 +262,68 @@ class RouteTargetTest extends TestCase
     {
         $this->get('/rt/url?plugin=probe&controller=routed&action=index');
         $this->assertResponseEquals('/rt/keyed-plugin');
+    }
+
+    public function testInheritedActionDispatches()
+    {
+        $this->get('/rt/inherited');
+        $this->assertResponseEquals(RoutedController::class . '::inherited');
+    }
+
+    public function testBaseControllerMethodIsNotAnAction()
+    {
+        $this->expectException(MissingActionException::class);
+        $this->get('/rt/base-method');
+    }
+
+    public function testVendorPluginKeySelectsTheNestedNamespace()
+    {
+        $this->get('/rt/keyed-vendor-plugin');
+        $this->assertResponseEquals(VendoredRoutedController::class . '::index');
+    }
+
+    public function testVendorPluginScopeAppliesToItsRoutes()
+    {
+        $this->get('/rt/acme/vendored/scoped');
+        $this->assertResponseEquals(VendoredRoutedController::class . '::index');
+    }
+
+    public function testStringTargetTakesAVendorPlugin()
+    {
+        $this->get('/rt/string-vendor-plugin');
+        $this->assertResponseEquals(VendoredRoutedController::class . '::index');
+    }
+
+    public function testUrlNoActionKeyCopiesTheRequestActionForTheSameController()
+    {
+        $this->get('/rt/url?controller=Routed');
+        $this->assertResponseEquals('/rt/url');
+    }
+
+    public function testUrlNoActionKeyCopiesTheRequestActionAcrossPlugins()
+    {
+        $this->get('/rt/url?plugin=Probe&controller=Routed');
+        $this->assertResponseEquals('/rt/probe/url');
+    }
+
+    public function testUrlNoActionKeyDefaultsToIndexForAnotherController()
+    {
+        $this->get('/rt/url?controller=Other');
+        $this->assertResponseEquals('/rt/other');
+    }
+
+    public function testHelpersBuildUrlsLikeRouterUrl()
+    {
+        $this->get('/rt/links');
+        $this->assertResponseContains('link:<a href="/rt/camel">x</a>');
+        $this->assertResponseRegExp('#postLink:<form[^>]* action="/rt/camel"#');
+        $this->assertResponseContains('build:/rt/camel');
+        $this->assertResponseRegExp('#create:<form[^>]* action="/rt/camel"#');
+    }
+
+    public function testControllerRedirectBuildsUrlsLikeRouterUrl()
+    {
+        $this->get('/rt/redirecting');
+        $this->assertHeader('Location', 'http://localhost/rt/camel');
     }
 }

@@ -20,6 +20,15 @@ trait RoutedActionsTrait
         return $this->response->withStringBody(static::class . '::' . __FUNCTION__);
     }
 
+    public function links()
+    {
+    }
+
+    public function redirecting()
+    {
+        return $this->redirect(['action' => 'viewAll']);
+    }
+
     public function params()
     {
         $params = [];
