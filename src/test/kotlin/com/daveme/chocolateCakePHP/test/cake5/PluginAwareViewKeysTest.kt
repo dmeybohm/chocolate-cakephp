@@ -283,6 +283,7 @@ class PluginAwareViewKeysTest : Cake5BaseTestCase() {
             pluginName = "Vendored", namespace = "\\Vendored", pluginPath = "vendor/acme/vendored"
         ))
         settings.loadState(state)
+        myFixture.addFileToProject("$appSource/Application.php", "<?php namespace App; class Application {}")
         val file = template("cake5/vendor/acme/vendored/templates/Articles/index")
         assertEquals("Vendored", viewFile(file).plugin)
         assertEquals("Articles/index", viewFile(file).templateKey)

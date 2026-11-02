@@ -19,7 +19,7 @@ class ViewVariableIndex : FileBasedIndexExtension<ViewVariablesKey, ViewVariable
         ViewVariableRawVarsExternalizer
 
     override fun getVersion(): Int {
-        return 23
+        return 24
     }
 
     override fun getInputFilter(): FileBasedIndex.InputFilter {

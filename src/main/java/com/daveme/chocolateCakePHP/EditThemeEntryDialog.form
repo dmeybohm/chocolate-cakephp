@@ -24,7 +24,7 @@
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Theme Path from Project Root"/>
+              <text value="Theme Path from App Root"/>
             </properties>
           </component>
           <component id="655a8" class="javax.swing.JTextField" binding="themePathTextField">
