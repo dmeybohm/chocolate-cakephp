@@ -96,8 +96,8 @@ Add `RouteTargetTest` to `src/test/php` for 3, 4 and 5, recording:
 - A nested prefix target, `'Admin/Reports'` on 4 and 5 and its 3.x spelling, reaches the nested
   namespace.
 - `'plugin' => 'Probe'` reaches `Probe\Controller\...`; a `connect()` inside `plugin('Probe', ...)`
-  with no `plugin` key reaches the plugin controller; `'plugin' => false` inside it reaches the
-  app.
+  with no `plugin` key reaches the plugin controller; `'plugin' => null` inside it reaches the
+  app, and `'plugin' => false` or another plugin's name is rejected.
 - A `connect()` inside `prefix('Admin', ...)` with no `prefix` key reaches the prefixed
   controller, and one inside `scope('/x', ['prefix' => 'Admin'], ...)` does too.
 - `'action' => 'viewAll'` dispatches to `viewAll()`; whether `'view_all'` or `'view-all'` do,
@@ -125,7 +125,19 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
   4), reading the first argument for `prefix()` and `plugin()` and the `prefix`/`plugin` keys of
   the array argument for `scope()`. Outer prefixes join inner ones with `/`. A closure passed by
   variable is not followed.
-- `resolvedTarget = scope + target`, with an explicit "none" in the target winning.
+- `RouteContext(plugin: String?, prefix: String?, action: String?)` for a URL-building array,
+  standing in for the request the URL is built in: the enclosing controller's plugin from the
+  file's location (`cakeThreePluginName`) and its prefix from the namespace segments between
+  `Controller` and the class, with the enclosing method as the action when the array is inside
+  a controller action. In a view file the controllers come from `RenderingControllers`, and the
+  action is unknown. Anywhere else the context is empty.
+- `resolvedTarget = defaults + target`, where the defaults are the `RouteScope` in a route
+  builder call and the `RouteContext` in a URL-building call, and an explicit "none" in the
+  target wins. A missing `controller` key takes the context's controller. A missing `action`
+  key is the request's action at runtime when the `controller` key is the request's controller
+  name, and `index` otherwise; the model records the enclosing method's name when the
+  controller matches and the context has one, and leaves the action unknown when it does not,
+  rather than guessing.
 - Controller FQNs for a resolved target: `${namespace}\Controller\${prefixPath}\${Name}Controller`
   where the namespace is the app's, or the configured plugin's by name
   (`findPluginConfigByName`, `effectivePluginName`), and `prefixPath` is the prefix with `/`
@@ -168,13 +180,18 @@ Gated on `settings.cake3Enabled` and `DumbService`.
 
 - `controller`: every controller from `getControllerSubclasses` whose `(plugin, prefix)` matches
   the resolved scope and the sibling keys of the same array; the lookup string is the bare name,
-  with the FQN as type text and the class icon. When the array has no `plugin` key and no
-  enclosing plugin scope, app controllers are offered; a `plugin` key limits it to that plugin.
+  with the FQN as type text and the class icon. With no `plugin` or `prefix` key, the resolved
+  defaults decide: the scope closures in a route builder call, and the enclosing controller's
+  plugin and prefix in a URL-building call, so a link in a plugin controller's template offers
+  that plugin's controllers. Only a route builder call outside any scope falls back to the
+  app's controllers. A `plugin` key limits the list to that plugin.
 - `action`: the public non-static methods of the controllers the resolved target names,
-  excluding `Cake\Controller\Controller`'s own methods and `cakeSkipRenderingMethods`
-  (`isCustomizableViewMethod`), with the method icon and the class as type text. When the
-  array has no `controller` key, the controller is defaulted from the enclosing class if it is a
-  controller, and from `RenderingControllers` if the file is a view file.
+  inherited ones included, whose declaring class is not `Cake\Controller\Controller`, which is
+  the rule `isAction()` applies. `PhpClass.methods` includes inherited methods and each knows
+  its containing class, so the check is on the declaring FQN. `isCustomizableViewMethod` and
+  `cakeSkipRenderingMethods` serve the template gutter markers and stay as they are. The method
+  icon and the class as type text. When the array has no `controller` key, the controller comes
+  from the resolved defaults above.
 - `plugin`: configured plugin names (`cakeThreePluginConfigs`) plus directory names under the
   `plugins` directory.
 - `prefix`: the distinct prefix paths of the known controllers, in the version's spelling.
@@ -203,10 +220,13 @@ and cake3 copies. Fixtures:
 
 Cases, each for completion and for goto: controller at top level; controller inside
 `prefix('Admin', ...)` offers only `Reports`; controller with `'prefix' => 'Admin'` in the
-array; controller inside `plugin('TestPlugin', ...)` offers only `Widgets`; `'plugin' => false`
-inside it offers app controllers; action after a controller key; action with no controller key
-inside a controller class; `Router::url()` and `$this->Html->link()` in a template; `resources()`;
-`'Movie::artist'` string defaults; nothing offered for an unrelated method's array.
+array; controller inside `plugin('TestPlugin', ...)` offers only `Widgets`; `'plugin' => null`
+inside it offers app controllers; `'plugin' => false` or another plugin's name inside it offers
+nothing, since the route is rejected at runtime; action after a controller key; action with no
+controller key inside a controller class; `Router::url()` and `$this->Html->link()` in a
+template, and in a plugin controller's template where they offer the plugin's controllers;
+`resources()`; `'Movie::artist'` string defaults; nothing offered for an unrelated method's
+array.
 
 ## CakePHP 2
 
