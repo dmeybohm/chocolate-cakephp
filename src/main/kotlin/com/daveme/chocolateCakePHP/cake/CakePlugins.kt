@@ -25,7 +25,7 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
     }
     return generateSequence(file.parent) { it.parent }
         .takeWhile { it != projectDir }
-        .firstNotNullOfOrNull { configuredCakeTwoPluginOfDirectory(it, settings) }
+        .firstNotNullOfOrNull { configuredCakeTwoPluginOfDirectory(it, projectDir, settings) }
         ?.pluginName
 }
 
@@ -33,7 +33,11 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
  * The configured CakePHP 2 plugin whose directory [directory] is. Plugin paths are matched as path
  * suffixes, since they are relative to an app root that may be nested in the project.
  */
-fun configuredCakeTwoPluginOfDirectory(directory: VirtualFile, settings: Settings): CakeTwoPluginConfig? =
+fun configuredCakeTwoPluginOfDirectory(
+    directory: VirtualFile,
+    projectDir: VirtualFile?,
+    settings: Settings
+): CakeTwoPluginConfig? =
     settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>()
         .firstOrNull { isDirectoryOfPluginPath(directory, it.pluginPath) }
 
