@@ -125,19 +125,22 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
   4), reading the first argument for `prefix()` and `plugin()` and the `prefix`/`plugin` keys of
   the array argument for `scope()`. Outer prefixes join inner ones with `/`. A closure passed by
   variable is not followed.
-- `RouteContext(plugin: String?, prefix: String?, action: String?)` for a URL-building array,
-  standing in for the request the URL is built in: the enclosing controller's plugin from the
-  file's location (`cakeThreePluginName`) and its prefix from the namespace segments between
-  `Controller` and the class, with the enclosing method as the action when the array is inside
-  a controller action. In a view file the controllers come from `RenderingControllers`, and the
-  action is unknown. Anywhere else the context is empty.
-- `resolvedTarget = defaults + target`, where the defaults are the `RouteScope` in a route
-  builder call and the `RouteContext` in a URL-building call, and an explicit "none" in the
-  target wins. A missing `controller` key takes the context's controller. A missing `action`
-  key is the request's action at runtime when the `controller` key is the request's controller
-  name, and `index` otherwise; the model records the enclosing method's name when the
-  controller matches and the context has one, and leaves the action unknown when it does not,
-  rather than guessing.
+- `RouteContext(candidates: List<RouteContextController>)` for a URL-building array, standing
+  in for the request the URL is built in. Each `RouteContextController(plugin, prefix,
+  controller, action)` is one controller the array may run under: inside a controller class
+  there is one, with the plugin from the file's location (`cakeThreePluginName`), the prefix
+  from the namespace segments between `Controller` and the class, the class's short name, and
+  the enclosing method's name as the action when the array is inside a controller action. In a
+  view file there is one per rendering controller from `RenderingControllers`, each with an
+  unknown action. Anywhere else the list is empty.
+- `resolvedTargets = defaults + target`, one per candidate, where the defaults are the
+  `RouteScope` in a route builder call and each `RouteContextController` in a URL-building
+  call, and an explicit "none" in the target wins. A missing `controller` key takes the
+  candidate's controller. A missing `action` key is, following the runtime rule, the
+  candidate's action when the controller key is absent or names the candidate's controller,
+  and `index` when it names another controller. The candidate's action may itself be unknown,
+  as in a view file, in which case the action stays unknown rather than guessed. Action
+  completion and navigation run against every resolved target and merge the results.
 - Controller FQNs for a resolved target: `${namespace}\Controller\${prefixPath}\${Name}Controller`
   where the namespace is the app's, or the configured plugin's by name
   (`findPluginConfigByName`, `effectivePluginName`), and `prefixPath` is the prefix with `/`
