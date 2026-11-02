@@ -76,4 +76,11 @@ class TemplateResolutionTest extends ControllerTestCase {
 		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/rendercamel'));
 	}
 
+	public function testRenderNameWithSlashIsNotUnderscored() {
+		$this->assertSame('app:Widgets/Sub/viewAll', $this->renderedBy('/widgets/rendersub'));
+	}
+
+	public function testViewPropertyNameIsUnderscored() {
+		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/viewproperty'));
+	}
 }

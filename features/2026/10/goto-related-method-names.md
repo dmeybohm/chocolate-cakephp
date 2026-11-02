@@ -28,7 +28,8 @@ A name passed to `render()` is underscored too, on every version: `render('viewA
 `view_all` (`testCamelCaseRenderNameRendersUnderscoredTemplate`). The plugin passes
 `convertCase = false` for explicit names on every version, so it links `render('viewAll')` to
 `viewAll`. The framework only underscores a name with no slash (`_getTemplateFileName()`, and
-`_getViewFileName()` on Cake 2), so `render('Widgets/viewAll')` is used as is. Explicit names
+`_getViewFileName()` on Cake 2), so `render('Sub/viewAll')` is used as is, relative to the controller's template directory
+(`Widgets/Sub/viewAll`). Explicit names
 reach the plugin in two ways:
 
 - The index keys `render()` calls, view builder calls and `view` field assignments through
@@ -56,7 +57,7 @@ reach the plugin in two ways:
    has merged, so this no longer waits on it.
 6. Before changing explicit names, add assumption tests for what this plan relies on but has not
    pinned:
-   - A name with a slash, `render('Widgets/viewAll')`, is used as is.
+   - A name with a slash, `render('Sub/viewAll')`, is used as is.
    - `setTemplate('viewAll')` is underscored, alone and after `setTemplatePath()` (3, 4, 5).
    - `$this->view = 'viewAll'` is underscored (2).
    - A cell's `render('viewAll')` is underscored (3, 4, 5).
@@ -69,7 +70,7 @@ reach the plugin in two ways:
    - Do the same for cell templates in `CellGotoDeclarationHandler`.
    - The `ViewFileIndex` version bump from step 3 covers the index change.
 8. Test on cake5, then mirror to the other versions: `render('viewAll')` links `view_all` to the
-   action and navigates to it, `render('Widgets/viewAll')` still links `Widgets/viewAll`, and a
+   action and navigates to it, `render('Sub/viewAll')` still links `Widgets/Sub/viewAll`, and a
    camelCase element name is unchanged.
 
 ## Implementation Progress
@@ -85,3 +86,18 @@ instead. Steps 3 to 5 now fix that on this branch.
 
 Added `testCamelCaseRenderNameRendersUnderscoredTemplate`, which shows the same underscoring
 for a name passed to `render()`, on every version.
+
+Added the step 6 assumption tests. Every one matched the plan's expectation, so step 7 needs no
+change:
+
+- `testRenderNameWithSlashIsNotUnderscored`: `render('Sub/viewAll')` renders
+  `Widgets/Sub/viewAll` on every version.
+- `testBuilderSetTemplateNameIsUnderscored` and
+  `testBuilderSetTemplateAfterSetTemplatePathIsUnderscored`: `setTemplate('viewAll')` renders
+  `view_all`, in the directory `setTemplatePath()` names (3, 4, 5). The plugin joins the two into
+  `/Gadgets/viewAll`, so step 7 has to underscore the name passed to `setTemplate()` before
+  joining, not decide from the joined path.
+- `testViewPropertyNameIsUnderscored`: `$this->view = 'viewAll'` renders `view_all` (2).
+- `testCellRenderNameIsUnderscored`: a cell's `render('viewAll')` renders `view_all` (3, 4, 5).
+- `testCamelCaseElementNameIsNotUnderscored` and `testCamelCaseLayoutNameIsNotUnderscored`:
+  element and layout names are used as is on every version.

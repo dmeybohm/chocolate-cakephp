@@ -88,4 +88,27 @@ class WidgetsController extends AppController
     {
         $this->render('viewAll');
     }
+
+    public function rendersub(): void
+    {
+        $this->render('Sub/viewAll');
+    }
+
+    public function camelelement(): void
+    {
+    }
+
+    public function buildercamel(): void
+    {
+        $this->viewBuilder()->setTemplate('viewAll');
+    }
+
+    public function builderpathcamel(): void
+    {
+        $this->viewBuilder()->setTemplatePath('Gadgets')->setTemplate('viewAll');
+    }
+
+    public function cellrendercamel(): void
+    {
+    }
 }

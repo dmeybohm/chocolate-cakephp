@@ -130,4 +130,10 @@ class LayoutResolutionTest extends TestCase
         $this->expectExceptionMessage('layout');
         $this->get('/framed/shorthand');
     }
+
+    public function testCamelCaseLayoutNameIsNotUnderscored(): void
+    {
+        $this->get('/framed/camellayout');
+        $this->assertResponseEquals('camel:body');
+    }
 }

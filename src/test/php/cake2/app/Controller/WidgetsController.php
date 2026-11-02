@@ -52,4 +52,14 @@ class WidgetsController extends AppController {
 		$this->render('viewAll');
 	}
 
+	public function rendersub() {
+		$this->render('Sub/viewAll');
+	}
+
+	public function camelelement() {
+	}
+
+	public function viewproperty() {
+		$this->view = 'viewAll';
+	}
 }

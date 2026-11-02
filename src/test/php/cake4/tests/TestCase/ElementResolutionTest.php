@@ -94,4 +94,10 @@ class ElementResolutionTest extends TestCase
         $this->get('/probe/things/crossinner');
         $this->assertResponseEquals('plugin:element/shared');
     }
+
+    public function testCamelCaseElementNameIsNotUnderscored(): void
+    {
+        $this->get('/widgets/camelelement');
+        $this->assertResponseEquals('app:element/camelElement');
+    }
 }

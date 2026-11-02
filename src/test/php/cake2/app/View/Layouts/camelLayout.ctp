@@ -1,0 +1,1 @@
+camel:<?php echo $this->fetch('content');

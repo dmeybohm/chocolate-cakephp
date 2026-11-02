@@ -117,4 +117,22 @@ class TemplateResolutionTest extends TestCase
         $this->get('/widgets/rendercamel');
         $this->assertResponseEquals('app:Widgets/view_all');
     }
+
+    public function testRenderNameWithSlashIsNotUnderscored(): void
+    {
+        $this->get('/widgets/rendersub');
+        $this->assertResponseEquals('app:Widgets/Sub/viewAll');
+    }
+
+    public function testBuilderSetTemplateNameIsUnderscored(): void
+    {
+        $this->get('/widgets/buildercamel');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
+
+    public function testBuilderSetTemplateAfterSetTemplatePathIsUnderscored(): void
+    {
+        $this->get('/widgets/builderpathcamel');
+        $this->assertResponseEquals('app:Gadgets/view_all');
+    }
 }
