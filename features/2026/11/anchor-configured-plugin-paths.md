@@ -78,8 +78,9 @@ contains no `app`, so the anchor alone would stop recognising a config that the 
 accepts today. Lookup does not resolve such a path (it looks for `cake2/cake2/lib/Shop`), which is
 left as it is; see Not in scope.
 
-The check reads the VFS, as the old project-directory lookup did; it does not depend on the IDE
-project directory, so it holds under a nested root.
+The check reads the VFS, as the old project-directory lookup did. It anchors to the app root, not
+the IDE project directory, so it holds under a nested root; the project directory is used only for
+the legacy paths above.
 
 ## Plan
 
@@ -120,8 +121,11 @@ project directory, so it holds under a nested root.
    and verifies the remaining root contains it and is not under a `plugins` directory. Route `cakeThreePluginName`'s inline suffix match
    through the same function, so the CakePHP 2 and 3+ rules cannot drift apart again.
    `isInConfiguredPlugin` picks the app directory by the config's version.
-4. Reword both texts in `PluginForm.form` (lines 62 and 104) to say paths are relative to the app
-   root, the directory containing `app` or `src`, which is usually the project root.
+4. Reword the settings UI so it gives one instruction: paths are relative to the app root, the
+   directory containing `app` or `src`, which is usually the project root. That covers the plugin
+   and theme explanations in `PluginForm.form` (lines 62 and 104), and the field labels "Plugin
+   Path from Project Root" in `EditPluginEntryDialog.form` (line 78) and "Theme Path from Project
+   Root" in `EditThemeEntryDialog.form` (line 27), which become "... from App Root".
 5. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since plugin recognition reaches
    their keys through `templatesDirectoryOfViewFile`, `isCakeTwoController` and
    `pluginOfClassFile`. After #321 they are at 29 and 23.
