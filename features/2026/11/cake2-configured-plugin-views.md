@@ -75,6 +75,6 @@ nothing. The controller's index keys are right (`Layouts/admin`), so the miss is
   [cake2-plugin-settings](../10/cake2-plugin-settings.md) would create configs for them, and step
   3 then covers them with no further change. Hard-coding the directory here would give plugin
   identity a second source.
-- Reindexing on settings changes. Nothing in the plugin requests a rebuild when settings change, so
-  adding a plugin config leaves its view files' index entries stale until they are edited. The
-  controller side already reads `pluginConfigs` while indexing and has the same limitation.
+- Reindexing on settings changes. Nothing new is needed: `PluginForm` already requests a rebuild of
+  the view file and view variable indexes when the plugin configs change, so adding a plugin config
+  reindexes its view files, as it does its controllers.
