@@ -47,4 +47,9 @@ class FramedController extends AppController {
 		$this->layout = 'Probe.plugin_only_layout';
 		$this->render('body');
 	}
+
+	public function camellayout() {
+		$this->autoLayout = true;
+		$this->render('body', 'camelLayout');
+	}
 }

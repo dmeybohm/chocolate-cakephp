@@ -45,4 +45,21 @@ class WidgetsController extends AppController {
 	public function prefixedinner() {
 		$this->render('Probe.inner');
 	}
+
+	public function viewAll() {
+	}
+	public function rendercamel() {
+		$this->render('viewAll');
+	}
+
+	public function rendersub() {
+		$this->render('Sub/viewAll');
+	}
+
+	public function camelelement() {
+	}
+
+	public function viewproperty() {
+		$this->view = 'viewAll';
+	}
 }

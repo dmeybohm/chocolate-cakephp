@@ -1,0 +1,1 @@
+camel:<?= $this->fetch('content') ?>

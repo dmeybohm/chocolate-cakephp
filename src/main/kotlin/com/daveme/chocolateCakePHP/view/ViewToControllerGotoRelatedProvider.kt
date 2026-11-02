@@ -86,7 +86,7 @@ class ViewToControllerGotoRelatedProvider : GotoRelatedProvider() {
         (element as? Field)?.containingClass?.name?.let { return it }
 
         // Try to get method name
-        val method = PsiTreeUtil.getParentOfType(element, Method::class.java)
+        val method = PsiTreeUtil.getParentOfType(element, Method::class.java, false)
         if (method != null) {
             val containingClass = method.containingClass
             return if (containingClass != null) {

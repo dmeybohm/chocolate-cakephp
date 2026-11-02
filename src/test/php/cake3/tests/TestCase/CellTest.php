@@ -140,4 +140,10 @@ class CellTest extends TestCase
         $this->expectExceptionMessage('AliasedHelper');
         $this->get('/widgets/showcell?name=Lamp::helper');
     }
+
+    public function testCellRenderNameIsUnderscored()
+    {
+        $this->get('/widgets/cellrendercamel');
+        $this->assertResponseEquals('app:cell/Lamp/view_all');
+    }
 }

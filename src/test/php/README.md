@@ -58,6 +58,12 @@ Relied on by view navigation, the controller action line marker and view file cr
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
+| A camelCase action's implicit template is the underscored action name: `viewAll` renders `view_all` | `testCamelCaseActionRendersImplicitTemplate` | Same |
+| A camelCase name passed to `render()` is underscored: `render('viewAll')` renders `view_all` | `testCamelCaseRenderNameRendersUnderscoredTemplate` | Same |
+| A name with a slash is not underscored, and is relative to the controller's template directory: `render('Sub/viewAll')` in `Widgets` renders `Widgets/Sub/viewAll` | `testRenderNameWithSlashIsNotUnderscored` | Same |
+| The builder's `setTemplate('viewAll')` renders `view_all` | `testBuilderSetTemplateNameIsUnderscored` | 3, 4, 5 |
+| `setTemplate('viewAll')` after `setTemplatePath('Gadgets')` renders `Gadgets/view_all` | `testBuilderSetTemplateAfterSetTemplatePathIsUnderscored` | 3, 4, 5 |
+| `$this->view = 'viewAll'` renders `view_all` | `testViewPropertyNameIsUnderscored` | 2 |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 
 ### `LayoutResolutionTest`
@@ -78,6 +84,7 @@ Relied on by layout navigation.
 | A view's `layout()` names the layout | `testViewLayoutMethodNamesLayout` | 3, deprecated |
 | A view has no `layout()` method | `testViewHasNoLayoutMethod` | 4, 5 |
 | A data view renders without a layout, even when one is named | `testDataViewRendersWithoutLayout` | Same |
+| A camelCase layout name is not underscored: `camelLayout` is `camelLayout` | `testCamelCaseLayoutNameIsNotUnderscored` | Same |
 | A layout path selects a subdirectory of the layout directory | `testLayoutPathSelectsSubdirectory` | Same |
 | A plugin controller's unprefixed layout is found in the plugin first | `testPluginControllerPrefersPluginLayout` | Same |
 | A plugin controller's layout missing from the plugin falls back to the app's | `testPluginControllerFallsBackToAppLayout` | Same |
@@ -106,6 +113,7 @@ Relied on by element navigation and element related usages.
 | An unprefixed element in an app template rendered by a plugin controller is the plugin's | `testElementInFallbackTemplateResolvesInControllerPlugin` | Same |
 | An unprefixed element in a plugin template rendered by an app controller is the app's | `testElementInPrefixedTemplateResolvesInControllerPlugin` | Same |
 | An unprefixed element in another plugin's template is the controller plugin's | `testElementInOtherPluginTemplateResolvesInControllerPlugin` | Same |
+| A camelCase element name is not underscored: `camelElement` is `camelElement` | `testCamelCaseElementNameIsNotUnderscored` | Same |
 
 ### `CellTest`
 
@@ -134,6 +142,7 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | A controller's helper reaches the template of a cell called from its view | `testControllerHelperReachesCellTemplate` | Same |
 | A controller's helper reaches an element in that cell's template | `testControllerHelperReachesElementInCellTemplate` | Same |
 | A cell template lacks a helper its caller's controller did not add | `testCellTemplateHasNoHelperItsCallerLacks` | Same |
+| A cell's `render('viewAll')` renders `view_all` | `testCellRenderNameIsUnderscored` | Same |
 
 ### `ViewHelperTest`
 

@@ -55,9 +55,21 @@ fun addViewFilenameExtension(
         is CakeThreeTemplatesDir ->
             "${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cakeTemplateExtension}"
         is CakeTwoTemplatesDir ->
-            "${name}.${settings.cake2TemplateExtension}"
+            "${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cake2TemplateExtension}"
     }
 
+}
+
+/**
+ * The template name CakePHP looks up for a name given in code. A name with no slash has its
+ * template part underscored, after any plugin prefix, and a name with a slash is used as written.
+ */
+fun renderedTemplateName(name: String): String {
+    if (name.contains('/')) {
+        return name
+    }
+    val pluginEnd = name.indexOf('.') + 1
+    return name.substring(0, pluginEnd) + name.substring(pluginEnd).camelCaseToUnderscore()
 }
 
 fun actionNameFromPath(path: String): ActionName {
@@ -312,6 +324,7 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             // Extract the string parameter (or every branch of a ternary / match)
             val parameterList = methodRef.parameterList
             val parameterValues = templateNamesFromExpression(parameterList?.parameters?.getOrNull(0))
+                .map { if (methodName == "setTemplate") renderedTemplateName(it) else it }
             if (parameterValues.isEmpty()) {
                 return@mapNotNull null
             }
@@ -344,6 +357,7 @@ fun findViewBuilderCalls(element: PsiElement): List<ViewBuilderCall> {
             // Either may be a ternary / match, so combine every path with every template.
             val pathValues = templateNamesFromExpression(receiverMethodRef.parameterList?.parameters?.getOrNull(0))
             val templateValues = templateNamesFromExpression(methodRef.parameterList?.parameters?.getOrNull(0))
+                .map { renderedTemplateName(it) }
             if (pathValues.isEmpty() || templateValues.isEmpty()) {
                 return@mapNotNull null
             }
@@ -466,7 +480,7 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
         if (it.name != "render") {
             return@flatMap emptyList()
         }
-        templateNamesFromExpression(it.parameterList?.getParameter(0)).map { name -> actionNameFromPath(name) }
+        templateNamesFromExpression(it.parameterList?.getParameter(0)).map { name -> actionNameFromPath(renderedTemplateName(name)) }
     }
 
     // Collect ViewBuilder action names (setTemplate/setTemplatePath)
@@ -485,7 +499,7 @@ fun actionNamesFromControllerMethod(method: Method): ActionNames {
         }
 
         // Get the assigned value(s)
-        templateNamesFromExpression(assignment.value).map { name -> actionNameFromPath(name) }
+        templateNamesFromExpression(assignment.value).map { name -> actionNameFromPath(renderedTemplateName(name)) }
     }
 
     // Combine all action names
@@ -509,7 +523,7 @@ fun actionNamesFromRenderCall(methodReference: MethodReference): ActionNames? {
         return null
     }
     val templateNames = templateNamesFromExpression(methodReference.parameterList?.getParameter(0))
-    return actionNamesFromTemplateNames(templateNames)
+    return actionNamesFromTemplateNames(templateNames.map { renderedTemplateName(it) })
 }
 
 /**
@@ -576,7 +590,7 @@ fun actionNamesFromViewAssignment(assignmentExpression: AssignmentExpression): A
 
     // Get the assigned value(s)
     val templateNames = templateNamesFromExpression(assignmentExpression.value)
-    return actionNamesFromTemplateNames(templateNames)
+    return actionNamesFromTemplateNames(templateNames.map { renderedTemplateName(it) })
 }
 
 fun viewFilenameToActionName(

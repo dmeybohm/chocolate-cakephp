@@ -135,4 +135,10 @@ class LayoutResolutionTest extends TestCase
         });
         $this->assertResponseEquals('layout:shorthand');
     }
+
+    public function testCamelCaseLayoutNameIsNotUnderscored()
+    {
+        $this->get('/framed/camellayout');
+        $this->assertResponseEquals('camel:body');
+    }
 }
