@@ -274,9 +274,8 @@ fun fullExplicitViewPath(
 
 fun fullImplicitViewPath(
     viewPathPrefix: ViewPathPrefix,
-    controllerInfo: ControllerInfo,
     methodName: String
 ): String {
-    val viewPath = methodName.conditionalCamelCaseToUnderscore(!controllerInfo.isCakeTwo)
+    val viewPath = methodName.camelCaseToUnderscore()
     return "${viewPathPrefix.prefix}${viewPath}"
 }

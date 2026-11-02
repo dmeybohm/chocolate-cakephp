@@ -216,6 +216,7 @@ fun allViewPathsFromController(
     allTemplatePaths: AllTemplatePaths,
     settings: Settings,
     actionNames: ActionNames,
+    convertDefaultCase: Boolean = true,
 ): AllViewPaths {
     // Cells render a single template, never a data view
     val dataViewExtensions = if (controllerPath is CellPath) emptyList() else settings.dataViewExtensions
@@ -234,7 +235,7 @@ fun allViewPathsFromController(
             label = it.uppercase(),
             controllerPath = controllerPath,
             actionName = actionName,
-            convertCase = true
+            convertCase = convertDefaultCase
         )
     }
     val otherViewPaths = actionNames.otherActionNames.flatMap { actionName ->
@@ -255,7 +256,7 @@ fun allViewPathsFromController(
             altLabel = actionNames.defaultActionName.path,
             controllerPath = controllerPath,
             actionName = actionNames.defaultActionName,
-            convertCase = true,
+            convertCase = convertDefaultCase,
         ),
         otherViewPaths = otherViewPaths,
         dataViewPaths = dataViewPaths,
@@ -276,6 +277,7 @@ fun allViewPathsFromPluginTemplate(
     settings: Settings,
     actionNames: ActionNames,
     pluginConfig: PluginConfig,
+    convertDefaultCase: Boolean = true,
 ): AllViewPaths? {
     val pluginTemplatePaths = allTemplatePaths.pluginTemplatePaths(pluginConfig)
         ?: return null
@@ -291,7 +293,7 @@ fun allViewPathsFromPluginTemplate(
             altLabel = actionNames.defaultActionName.path,
             controllerPath = emptyControllerPath,
             actionName = actionNames.defaultActionName,
-            convertCase = true,
+            convertCase = convertDefaultCase,
         ),
         otherViewPaths = listOf(),
         dataViewPaths = listOf(),

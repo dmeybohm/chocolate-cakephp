@@ -71,7 +71,8 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
             actionNames,
             relatedLookupInfo,
             element,
-            useAltLabel = true
+            useAltLabel = true,
+            convertDefaultCase = false
         )
     }
 
@@ -114,7 +115,8 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
             actionNames,
             relatedLookupInfo,
             element,
-            useAltLabel = true
+            useAltLabel = true,
+            convertDefaultCase = false
         )
     }
 
@@ -174,7 +176,8 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
             actionNames,
             relatedLookupInfo,
             element,
-            useAltLabel = true
+            useAltLabel = true,
+            convertDefaultCase = false
         )
     }
 
@@ -212,7 +215,8 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
         actionNames: ActionNames,
         relatedLookupInfo: RelatedLookupInfo,
         element: PsiElement,
-        useAltLabel: Boolean = false
+        useAltLabel: Boolean = false,
+        convertDefaultCase: Boolean = true
     ): RelatedItemLineMarkerInfo<PsiElement>? {
         val settings = relatedLookupInfo.settings
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
@@ -228,7 +232,8 @@ class ControllerMethodLineMarker : RelatedItemLineMarkerProvider() {
             relatedLookupInfo.ownerPath,
             allTemplatePaths,
             settings,
-            actionNames
+            actionNames,
+            convertDefaultCase
         )
         val files = viewFilesFromAllViewPaths(
             project = relatedLookupInfo.project,

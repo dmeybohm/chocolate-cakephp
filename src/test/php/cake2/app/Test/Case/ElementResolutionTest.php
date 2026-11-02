@@ -64,4 +64,8 @@ class ElementResolutionTest extends ControllerTestCase {
 	public function testElementInOtherPluginTemplateResolvesInControllerPlugin() {
 		$this->assertSame('plugin:element/shared', $this->renderedBy('/probe/things/crossinner'));
 	}
+
+	public function testCamelCaseElementNameIsNotUnderscored() {
+		$this->assertSame('app:element/camelElement', $this->renderedBy('/widgets/camelelement'));
+	}
 }

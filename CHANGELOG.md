@@ -17,6 +17,10 @@
 - If both CakePHP 2 and CakePHP 3+ are enabled, check the version column in the plugin settings: an existing CakePHP 2 plugin with no namespace outside the CakePHP 2 app directory is treated as CakePHP 3+ until you select CakePHP 2 for it
 - A table locator alias without a plugin prefix now navigates only to the app's table, as CakePHP loads it, and completion inserts the `Plugin.Table` alias for plugin tables
 
+### Fixed
+- Label an implicitly rendered controller action with its method name in "Go to related" from a template
+- Link and navigate to the underscored template CakePHP renders for a camelCase name in `render()`, `setTemplate()`, `$this->view` and a cell's `render()`, and for a camelCase action on CakePHP 2, while keeping names with a slash as written
+
 ## [1.1.0] - 2026-04-09
 
 ### Added
