@@ -83,10 +83,21 @@ project directory, so it holds under a nested root.
 
 ## Plan
 
-1. No assumption test is needed. What a configured path is relative to is the plugin's own
-   convention, not CakePHP's: `CakePlugin::load()` takes an absolute `path`, and
-   `testPluginLoadedWithExplicitPathRendersItsTemplate` already pins that a plugin loaded from any
-   path renders its own templates. The convention is settled under Path convention above.
+1. Assumption tests on CakePHP 3, 4 and 5, before the plugin code, each with a row in the
+   catalogue in `src/test/php/README.md`:
+   - A plugin loaded with an explicit `path` outside `plugins/` renders its own template. Extend
+     `testPluginLoadedWithExplicitPathRendersItsTemplate`, today CakePHP 2 only, to 3, 4 and 5 with
+     a plugin at `{root}/packages/Pathed`, as the CakePHP 2 fixture has: `Plugin::load()` with
+     `path` on 3, `addPlugin()` with `path` on 4 and 5, rendering from `{path}/src/Template` on 3
+     and `{path}/templates` on 4 and 5. The cake5 `vendor/acme/blog` tests rely on this.
+   - A plugin whose only copy is inside another plugin's `vendor/`, at
+     `plugins/Foo/vendor/acme/blog`, is not found when loaded by name with no path: expected
+     `MissingPluginException`. This backs the plugin-root exclusion: CakePHP looks only in the
+     plugin paths and the Composer plugin manifest, so such a copy is never the plugin it loads.
+
+   The path convention, its application under every app root, and the fallback for paths entered
+   relative to the project root are the plugin's own settings rules, not CakePHP behaviour:
+   `CakePlugin::load()` and `addPlugin()` take absolute paths. They need no assumption test.
 2. Tests, expected to fail first:
    - cake2: with `lib/Shop` configured under `cake2/`, a view at `examples/lib/Shop/View/...` has no
      templates directory and no plugin name, and a controller at `examples/lib/Shop/Controller/...`
