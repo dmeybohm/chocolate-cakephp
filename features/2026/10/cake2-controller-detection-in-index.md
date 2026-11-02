@@ -1,44 +1,79 @@
-# CakePHP 2 controller detection depends on sibling directories while indexing
+# CakePHP 2 controller detection depends on sibling directories
 
 ## Status
 
-Recorded 2026-10-31 while planning [view-index-bugs](view-index-bugs.md). Not investigated beyond
-what is written here.
+Recorded 2026-10-31 while planning [view-index-bugs](view-index-bugs.md). Investigated and planned
+2026-11-02; not yet fixed.
 
 ## The bug
 
-`isCakeTwoController` (`ViewFileIndexService.kt`) decides whether a controller file is a CakePHP 2
-controller by walking up to its `Controller` directory, checking that the directory above matches
-the configured CakePHP 2 app directory, and then reading `topDir.children` and
-`topSourceDir.children` to confirm that no `templates` or `Template` directory exists beside it.
+With CakePHP 2 and 3+ both enabled, `isCakeTwoController` (`ViewFileIndexService.kt`) classifies an
+app controller as CakePHP 2 when the directory above its `Controller` directory matches
+`cake2AppDirectory` and no entry named `templates` sits beside that directory and none named
+`Template` sits inside it. It compares `nameWithoutExtension`, so a file such as `templates.json`
+counts as well as a directory.
 
-Its only caller is `lookupControllerFileInfo`, which `TemplateDirStructure.ofSourceFile` calls for
-controllers when both CakePHP 2 and 3 are enabled, to choose the CakePHP 2 structure or the 3+ one.
-The indexers reach that while indexing a controller: `ViewFileDataIndexer` through
-`referencePluginContext` (how a `Plugin.name` reference is split) and `layoutStructuresOf` (which
-versions' layouts a controller can name), and the view variable index through `pluginOfClassFile`
-(which plugin the controller belongs to).
+That goes wrong in two ways:
 
-The index framework reindexes a file only when its own content changes. The existence of a sibling
-`templates` or `Template` directory is not part of the file, so a controller indexed before that
-directory exists is classified as a CakePHP 2 controller and keeps that classification until it is
-edited. The same class of bug as the element directory dependency in `view-index-bugs`, in a
-different feature.
+- **Immediately.** A CakePHP 2 app with a `templates` entry beside it, such as a repo partway through
+  a 2 to 4 migration with `app/` next to `src/` and `templates/`, has every CakePHP 2 app controller
+  classified as 3+, even in a fresh index.
+- **With indexing order.** When `cake2AppDirectory` also names the 3+ app directory, a 3+ controller
+  indexed before its `templates` directory exists is classified as CakePHP 2. The index reindexes a
+  file only when its own content changes, so it keeps that classification until it is edited. This
+  is the same class of bug as the element directory dependency in `view-index-bugs`.
 
-## When it applies
+CakePHP 2 plugin controllers are not affected: `isCakeTwoPluginDirectory` recognises them from their
+path and settings before the sibling check.
 
-Only when CakePHP 2 is enabled alongside CakePHP 3+, and only for a project whose CakePHP 2 app
-directory setting also matches a directory in the 3+ layout. With CakePHP 2 alone every controller is
-treated as a CakePHP 2 one without this check.
+## What the user sees
 
-## Not yet known
+The classification reaches the index only through `TemplateDirStructure.ofSourceFile`. Of its uses
+while indexing a controller, only one changes the result:
 
-- Whether a real project hits this: it needs a fresh checkout or a new project where controllers
-  are indexed before the templates directory exists, under mixed-version settings.
-- What the user would see; probably layout and plugin-prefixed references stored under the wrong
-  version's keys, so navigation from those calls misses until the controller is edited.
-- Whether the version can be decided from the controller file's own path and the settings alone, or
-  whether it needs the templates directory and so belongs at lookup time.
+- `layoutStructuresOf` picks the layout keys: `Layouts/` for CakePHP 2, or `Layout/` and `layout/`
+  for 3+. A misclassified controller's layouts are stored under the other version's keys, so
+  navigation between a layout and the action that names it misses.
+- `referencePluginContext` only calls `resolveName`, which no structure overrides, so the split of a
+  `Plugin.name` reference is the same either way.
+- `pluginOfClassFile` returns null for an app controller under both `cakeTwoPluginName` and
+  `cakeThreePluginName`.
+
+## Reproduction
+
+Settings: CakePHP 2 enabled, `cake3ForceEnabled`, `cake2AppDirectory = "app"`, `appDirectory = "src"`.
+
+```
+cake2/templates/Posts/index.php          # any entry named templates
+cake2/app/Controller/PostsController.php # viewAll() { $this->layout = 'admin'; }
+cake2/app/View/Layouts/admin.ctp
+```
+
+Go to related from `admin.ctp` should list `PostsController::viewAll()`. It lists nothing. Without
+the `templates` file it works.
+
+## Plan
+
+1. Regression tests in `cake2/BothVersionsLayoutNavigationTest`, both expected to fail first:
+   - `test app controller keeps the CakePHP 2 conventions beside a templates directory`: the
+     reproduction above.
+   - A 3+ controller indexed before its `templates` directory exists, with `cake2AppDirectory` and
+     `appDirectory` naming the same directory: add the controller, then
+     `templates/layout/admin.php`, and assert the layout is related to the action.
+2. Decide the version from the controller's path and the settings alone. After the plugin check, a
+   controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and not the 3+
+   `appDirectory`. Generalise `matchesCake2AppDirectory` to take the configured path, so nested
+   values such as `src/app` match the same way for both settings. Remove the sibling lookups.
+3. When both settings name the same directory, the path cannot tell the versions apart. Index that
+   controller's layouts under every structure (`CakeTwo` and both 3+ ones) in `layoutStructuresOf`,
+   as it already does for CakePHP 3 and 4. A key only matches a layout that exists, so the extra keys
+   cost a false link only if the same layout name exists in both versions' layout directories.
+   Nothing else in the index depends on the choice for an app controller.
+4. Bump the `ViewFileIndex` version, since stored keys change.
+5. Run the `cake2` tests, then the other versions' layout navigation tests.
+
+No assumption test applies: the classification depends on how the project is laid out and
+configured, not on what CakePHP does at runtime.
 
 ## Implementation Progress
 
@@ -60,3 +95,8 @@ Merged `origin/main` twice (2026-11-02). What changed for this bug:
 An assumption test for the same behaviour was added here and then removed again, as it duplicated
 the one from #317. No other assumption test applies: what is left depends on how the project is laid
 out and configured, not on what CakePHP does at runtime.
+
+A review pointed out that the bug also misclassifies a CakePHP 2 controller straight away, not only
+depending on indexing order, and that only the layout keys change. Both were confirmed in the code,
+and the first was reproduced by the first regression test of the plan, which fails as expected and
+passes once the `templates` file is removed. The plan above was written from that.

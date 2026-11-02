@@ -35,4 +35,17 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
         assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(layout))
         assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(template))
     }
+
+    fun `test app controller keeps the CakePHP 2 conventions beside a templates directory`() {
+        myFixture.addFileToProject("cake2/templates/Posts/index.php", "<?php echo 1;")
+        myFixture.addFileToProject("cake2/app/Controller/PostsController.php", """
+            <?php
+            class PostsController extends AppController {
+                public function viewAll() { ${'$'}this->layout = 'admin'; }
+            }
+        """.trimIndent())
+        val layout = myFixture.addFileToProject("cake2/app/View/Layouts/admin.ctp", "<?php echo 1;")
+
+        assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(layout))
+    }
 }
