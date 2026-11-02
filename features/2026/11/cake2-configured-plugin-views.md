@@ -107,6 +107,14 @@ exactly this setup because navigating from the layout fails here.
    When the project directory is the app root, the suffix matches everything the relative lookup
    did, so nothing recognised today is lost. The directory-name clause of `cakeTwoPluginName`
    stays first, as it is.
+
+   Two details of today's check to keep: a configured path is trimmed of slashes and skipped when
+   blank, as `isCakeTwoPluginDirectory` and `cakeThreePluginName` do (a saved path may carry a
+   trailing slash, as `SettingsTest` shows with `app/Plugin/DebugKit/`); and
+   `isCakeTwoController` still accepts `{app}/Plugin/{Name}` and `{app}/plugins/{Name}` with no
+   config, through its directory-name clause. The existing
+   `test plugin controller keeps the CakePHP 2 conventions` in `BothVersionsLayoutNavigationTest`
+   catches a regression in the second.
 4. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since both indexers call
    `templatesDirectoryOfViewFile`, and `cakeTwoPluginName` reaches stored keys through
    `pluginOfClassFile`. After #320 they are at 28 and 22.
@@ -165,3 +173,7 @@ controller side already match as suffixes, so the project-directory lookup was t
 Step 3 now defines the suffix rule once in `CakePlugins.kt` and routes `templatesDirectoryOfViewFile`,
 `isCakeTwoController`, `cakeTwoPluginName` and `isInConfiguredPlugin` through it, and step 2 adds a
 `lib/Shop` test that checks navigation and `viewFileOf`'s plugin name together. No plugin code yet.
+
+A re-review found no blocking issue, and asked that the shared helper keep two behaviours of the
+current controller check: accepting `app/Plugin/{Name}` without a config, and trimming slashes from
+configured paths. Both are now recorded under step 3.
