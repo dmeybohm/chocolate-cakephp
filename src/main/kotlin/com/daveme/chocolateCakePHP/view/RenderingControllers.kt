@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.view
 
+import com.daveme.chocolateCakePHP.CakePhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.isAnyCellClass
@@ -7,6 +8,7 @@ import com.daveme.chocolateCakePHP.isAnyControllerClass
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Key
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
@@ -36,7 +38,15 @@ object RenderingControllers {
         val cache = CachedValuesManager.getManager(project).getCachedValue(
             project,
             CACHE_KEY,
-            { CachedValueProvider.Result.create(ConcurrentHashMap<ViewFile, List<String>>(), tracker) },
+            {
+                CachedValueProvider.Result.create(
+                    ConcurrentHashMap<ViewFile, List<String>>(),
+                    tracker,
+                    ProjectRootManager.getInstance(project),
+                    project.getService(CakePhpFilesModificationTracker::class.java),
+                    Settings.getInstance(project).modificationTracker,
+                )
+            },
             false
         )
         return cache.getOrPut(viewFile) { Search(project).find(viewFile) }
@@ -62,7 +72,7 @@ object RenderingControllers {
             while (queue.isNotEmpty() && visited.size <= MAX_INCLUDING_FILES) {
                 ProgressManager.checkCanceled()
                 val (current, pending) = queue.removeFirst()
-                // Any controller may render a layout, so whatever a layout includes gets them all:
+                // Any controller of the project may render a layout, so whatever a layout includes gets them all:
                 if (current.structure.isLayoutKey(current.templateKey)) {
                     allControllers(current.structure)
                         .filter { pendingResolve(pending, pluginOf(current, it)) }
@@ -113,12 +123,15 @@ object RenderingControllers {
         private fun pluginOf(viewFile: ViewFile, phpClass: PhpClass): String? =
             phpClass.containingFile?.virtualFile?.let { resolution.pluginOf(viewFile.structure, it) }
 
+        private fun isProjectController(phpClass: PhpClass): Boolean =
+            phpClass.containingFile?.virtualFile?.let { resolution.isProjectFile(it) } == true
+
         private fun allControllers(structure: TemplateDirStructure): List<PhpClass> {
             val framework = structure.frameworkControllerClass?.let { phpIndex.getAllSubclasses(it) }.orEmpty()
             val app = structure.appControllerClass?.let {
                 phpIndex.getClassesByFQN(it) + phpIndex.getAllSubclasses(it)
             }.orEmpty()
-            return (framework + app).distinctBy { it.fqn }
+            return (framework + app).filter { isProjectController(it) }.distinctBy { it.fqn }
         }
     }
 }

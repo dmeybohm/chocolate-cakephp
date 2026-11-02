@@ -57,11 +57,10 @@ class ControllerSideHelperTest : Cake4BaseTestCase() {
         assertEquals(setOf(movieHelper), fmtTypesIn("cake4/templates/Movie/index.php"))
     }
 
-    fun `test a layout keeps the convention type as the framework's ErrorController settles nothing`() {
+    fun `test a layout unions the aliases without the convention type when every project controller settles it`() {
         controller(fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
         controller(fmtInInitialize("ArtistFormatter") + "\npublic function index() {}", name = "Artist")
-        val types = fmtTypesIn("cake4/templates/layout/default.php")
-        assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cake4/templates/layout/default.php"))
     }
 
     fun `test a helpers property on the view class is ignored`() {

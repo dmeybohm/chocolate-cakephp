@@ -1,11 +1,13 @@
 package com.daveme.chocolateCakePHP.view
 
 import com.daveme.chocolateCakePHP.Settings
+import com.daveme.chocolateCakePHP.cake.isInConfiguredPlugin
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.viewfileindex.PsiElementAndPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
@@ -58,6 +60,7 @@ fun viewFileOf(project: Project, settings: Settings, file: VirtualFile): ViewFil
  */
 class ViewFileResolution(private val project: Project, private val settings: Settings) {
     private val projectDir = project.guessProjectDir()
+    private val fileIndex = ProjectFileIndex.getInstance(project)
     private val existing = HashMap<ViewFile, Boolean>()
 
     /**
@@ -65,6 +68,13 @@ class ViewFileResolution(private val project: Project, private val settings: Set
      */
     fun pluginOf(structure: TemplateDirStructure, file: VirtualFile): String? =
         structure.pluginOf(file, projectDir, settings)
+
+    /**
+     * Whether [file] belongs to the project rather than to one of its libraries: it is in project
+     * content, or under a configured plugin's path.
+     */
+    fun isProjectFile(file: VirtualFile): Boolean =
+        fileIndex.isInContent(file) || isInConfiguredPlugin(file, projectDir, settings)
 
     /**
      * Whether a name resolving in [referencePlugin], or in the app when null, finds [viewFile]:
