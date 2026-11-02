@@ -45,7 +45,4 @@ class WidgetsController extends AppController {
 	public function prefixedinner() {
 		$this->render('Probe.inner');
 	}
-
-	public function camelCase() {
-	}
 }
