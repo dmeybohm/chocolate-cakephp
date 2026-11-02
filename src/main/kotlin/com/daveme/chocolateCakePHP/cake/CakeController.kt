@@ -55,7 +55,7 @@ fun addViewFilenameExtension(
         is CakeThreeTemplatesDir ->
             "${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cakeTemplateExtension}"
         is CakeTwoTemplatesDir ->
-            "${name}.${settings.cake2TemplateExtension}"
+            "${name.conditionalCamelCaseToUnderscore(convertCase)}.${settings.cake2TemplateExtension}"
     }
 
 }

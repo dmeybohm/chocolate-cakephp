@@ -30,9 +30,9 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
             }
         """.trimIndent())
         val layout = myFixture.addFileToProject("cake2/app/Plugin/Blog/View/Layouts/admin.ctp", "<?php echo 1;")
-        val template = myFixture.addFileToProject("cake2/app/Plugin/Blog/View/Posts/viewAll.ctp", "<?php echo 1;")
+        val template = myFixture.addFileToProject("cake2/app/Plugin/Blog/View/Posts/view_all.ctp", "<?php echo 1;")
 
         assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(layout))
-        assertEquals(1, navigation.related(template).size)
+        assertEquals(setOf("Controllers: PostsController::viewAll()"), navigation.related(template))
     }
 }

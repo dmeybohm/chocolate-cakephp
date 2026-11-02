@@ -900,12 +900,9 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, controllerFile)
             ?: return
 
-        val controllerInfo = lookupControllerFileInfo(controllerFile, settings)
-
         methods.forEach { method ->
             val fullViewPath = fullImplicitViewPath(
                 viewPathPrefix,
-                controllerInfo,
                 method.name
             )
             val oldList = result.getOrDefault(fullViewPath, emptyList())
