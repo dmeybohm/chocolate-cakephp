@@ -4,8 +4,8 @@
 
 Planned 2026-11-02, from a gap found while planning
 [cake2-controller-detection-in-index](../10/cake2-controller-detection-in-index.md). Merged
-`origin/main` the same day, after #319 and #320 landed, and added the assumption test; see
-Implementation Progress. Plugin code not started.
+`origin/main` the same day, after #319 and #320 landed, added the assumption test, and implemented; see
+Implementation Progress.
 
 ## The bug
 
@@ -177,3 +177,23 @@ Step 3 now defines the suffix rule once in `CakePlugins.kt` and routes `template
 A re-review found no blocking issue, and asked that the shared helper keep two behaviours of the
 current controller check: accepting `app/Plugin/{Name}` without a config, and trimming slashes from
 configured paths. Both are now recorded under step 3.
+
+### Session #4
+
+Implemented steps 2 to 4.
+
+- Tests: `ConfiguredPluginViewsTest` (cake2) configures `Blog` at `plugins/Blog` and `Shop` at
+  `lib/Shop/`, with a trailing slash to pin the trimming. It covers go to related from a
+  `plugins/Blog` template and layout, the same from `lib/Shop` plus `viewFileOf` naming the plugin
+  `Shop`, an element call in a `plugins/Blog` view indexed under `Elements/nav` by both indexers,
+  and an unconfigured `plugins/Forum` view having no templates directory.
+  `BothVersionsLayoutNavigationTest` gained the mixed mode navigation test beside #320's
+  indexer-keys test. All but the unconfigured case failed before the fix.
+- Rule: `configuredCakeTwoPluginOfDirectory` in `CakePlugins.kt` returns the CakePHP 2 config whose
+  trimmed, non-blank path the directory's path ends with. `templatesDirectoryOfViewFile` accepts a
+  `View` directory whose parent it matches; `isCakeTwoPluginDirectory` uses it for its configured
+  clause, keeping the directory-name clause; `cakeTwoPluginName` uses it for its configured clause,
+  walking up to the project directory after the directory-name walk; and `isInConfiguredPlugin`
+  now matches every config as a suffix, so its two version branches became one.
+- `ViewFileIndex` is at 29 and `ViewVariableIndex` at 23.
+- Added a changelog entry under Fixed.
