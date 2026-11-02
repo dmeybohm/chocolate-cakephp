@@ -7,6 +7,7 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.ModificationTracker
+import com.intellij.openapi.util.SimpleModificationTracker
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.CachedValueProvider
@@ -254,6 +255,13 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
 
     private var state = SettingsState()
 
+    /**
+     * Changes whenever a settings state is loaded.
+     */
+    val modificationTracker: ModificationTracker get() = tracker
+
+    private val tracker = SimpleModificationTracker()
+
     override fun dispose() {
         // nothing here, but maybe should keep track of things to dispose that use this?
     }
@@ -408,6 +416,7 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
 
     override fun loadState(newState: SettingsState) {
         XmlSerializerUtil.copyBean(newState, this.state)
+        tracker.incModificationCount()
     }
 
     companion object {
