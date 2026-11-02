@@ -12,10 +12,12 @@ controller by walking up to its `Controller` directory, checking that the direct
 the configured CakePHP 2 app directory, and then reading `topDir.children` and
 `topSourceDir.children` to confirm that no `templates` or `Template` directory exists beside it.
 
-`ViewFileDataIndexer` reaches it through `lookupControllerFileInfo`, which `TemplateDirStructure.ofSourceFile`
-calls for controllers when both CakePHP 2 and 3 are enabled, and `indexImplicitRender` uses the
-result to choose between the CakePHP 2 and 3+ view path conventions (`fullImplicitViewPath` converts
-the action name to underscores only for 3+).
+Its only caller is `lookupControllerFileInfo`, which `TemplateDirStructure.ofSourceFile` calls for
+controllers when both CakePHP 2 and 3 are enabled, to choose the CakePHP 2 structure or the 3+ one.
+The indexers reach that while indexing a controller: `ViewFileDataIndexer` through
+`referencePluginContext` (how a `Plugin.name` reference is split) and `layoutStructuresOf` (which
+versions' layouts a controller can name), and the view variable index through `pluginOfClassFile`
+(which plugin the controller belongs to).
 
 The index framework reindexes a file only when its own content changes. The existence of a sibling
 `templates` or `Template` directory is not part of the file, so a controller indexed before that
@@ -33,8 +35,8 @@ treated as a CakePHP 2 one without this check.
 
 - Whether a real project hits this: it needs a fresh checkout or a new project where controllers
   are indexed before the templates directory exists, under mixed-version settings.
-- What the user would see; probably implicit render references stored under the wrong key, so
-  controller-to-view navigation misses until the controller is edited.
+- What the user would see; probably layout and plugin-prefixed references stored under the wrong
+  version's keys, so navigation from those calls misses until the controller is edited.
 - Whether the version can be decided from the controller file's own path and the settings alone, or
   whether it needs the templates directory and so belongs at lookup time.
 
@@ -42,29 +44,19 @@ treated as a CakePHP 2 one without this check.
 
 ### Session #1
 
-Merged `origin/main` (2026-11-02). What changed for this bug:
+Merged `origin/main` twice (2026-11-02). What changed for this bug:
 
 - #309 (`view-index-bugs`) fixed the element directory dependency by deriving the prefix from the
   file's own templates directory, not a sibling lookup. It did not touch `isCakeTwoController`.
 - 3b3ed077 added `isCakeTwoPluginDirectory`, so CakePHP 2 plugin controllers are now recognised from
   their path and settings alone. The sibling `templates`/`Template` check is still there for app
   controllers, so the bug remains for them.
+- #317 ([goto-related-method-names](goto-related-method-names.md)) pinned with
+  `testCamelCaseActionRendersImplicitTemplate` that CakePHP 2 underscores an implicit template name
+  as 3+ does, so `fullImplicitViewPath` now always underscores and `indexImplicitRender` no longer
+  calls `lookupControllerFileInfo`. That removed the implicit render keys from this bug. The
+  `ofSourceFile` uses described above are what is left.
 
-Added the assumption test `testCamelCaseActionResolvesToImplicitTemplate` on 2 to 5. It was written
-expecting CakePHP 2 to keep the action name as it is, as `fullImplicitViewPath` assumes, and it
-failed: CakePHP 2.10.24 looked for `Widgets/camel_case.ctp`. `View::_getViewFileName` runs
-`Inflector::underscore` on any template name without a slash, the same as 3+. The test now records
-that, and it passes on every version.
-
-What follows from that:
-
-- The implicit render key does not depend on the version. `fullImplicitViewPath` could always
-  underscore, which removes one of the two places the indexer reads `isCakeTwo`.
-- The other place remains: `TemplateDirStructure.ofSourceFile` (via `ReferencePluginContext` in
-  `ViewFileDataIndexer` and `pluginOfClassFile` in the view variable index) still uses
-  `lookupControllerFileInfo` to pick the CakePHP 2 structure for a controller. That structure decides
-  how plugins are named, so the sibling directory dependency stays in the index until it is fixed too.
-- A separate bug, not limited to the index: CakePHP 2 navigation and view creation never underscore
-  (`addViewFilenameExtension`'s `CakeTwoTemplatesDir` branch, and the `isCakeTwo` flag in
-  `fullImplicitViewPath`). A CakePHP 2 action `fooBar` is linked to `fooBar.ctp`, but CakePHP renders
-  `foo_bar.ctp`. Lowercase-only action names are unaffected. This probably needs its own branch.
+An assumption test for the same behaviour was added here and then removed again, as it duplicated
+the one from #317. No other assumption test applies: what is left depends on how the project is laid
+out and configured, not on what CakePHP does at runtime.
