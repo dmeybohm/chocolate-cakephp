@@ -19,7 +19,8 @@ project, so the rules that recognise a configured plugin from a file match its p
 - `cakeThreePluginName` (`CakePlugins.kt`), which matches `cakeThreePluginConfigs` inline.
 
 A suffix alone also matches a directory under some other root. With `lib/Shop` configured for
-`cake2/lib/Shop`, an unrelated `examples/lib/Shop/View/index.ctp` is taken as Shop's view and named
+`cake2/lib/Shop`, an unrelated `examples/lib/Shop/View/index.ctp`, where `examples/` is not an
+app, is taken as Shop's view and named
 `Shop`, and `examples/lib/Shop/Controller/*` as Shop's controllers. The shorter the configured
 path, the more it matches: a path of just `Shop` matches every directory named `Shop`.
 
@@ -29,6 +30,27 @@ the configured one. Recognition is the half that cannot do this, since it starts
 no app root yet: a plugin outside the app directory, like `lib/Shop`, has no app directory above
 it to walk up to.
 
+## Path convention
+
+A configured plugin or theme path is relative to the app root: the directory that contains the app
+directory (`cake2AppDirectory` for CakePHP 2, `appDirectory` for 3+). With the app at `cake2/app`
+and the plugin at `cake2/lib/Shop`, the path is `lib/Shop`, not `cake2/lib/Shop`; with a CakePHP 5
+app at `cake5/src`, its plugins are `plugins/Blog` and `vendor/acme/blog`. When the app root is the
+project root, as it usually is, the two readings give the same path.
+
+This is what the code already does: `pluginAndThemeTemplatePaths` resolves each path from the
+`AppRootDirectory` of the file it starts from, which `appRootDirectoryFromViewFile` finds by walking
+up to a directory containing the app directory, falling back to the project root. The test fixtures
+and #321 use it too. The settings form is the odd one out: `PluginForm.form` tells users plugin
+paths (line 62) and theme paths (line 104) are "relative to the project root", and
+`EditPluginEntryDialog` saves what is typed without validating it.
+
+Settings are project-wide, so a configured path applies relative to every app root in the project.
+The lookup side already treats it that way: from a view in a second app, `examples/app`,
+navigation looks for `examples/lib/Shop`. Recognition follows it, so `examples/lib/Shop` is that
+app's configured plugin when `examples/app` exists. Tying a path to one app root would break
+projects with several apps, with no principled way to pick the root.
+
 ## The rule
 
 A directory is a configured plugin's directory when its path ends with `"/" + pluginPath`, and the
@@ -37,8 +59,8 @@ version uses. For a `CakeTwoPluginConfig` that is `cake2AppDirectory`; for a `Ca
 `appDirectory`. Both are resolved with `findRelativeFile`, as `appRootDirectoryFromViewFile`
 does, so nested settings such as `src/app` work.
 
-`cake2/lib/Shop` passes, because `cake2/app` exists. `examples/lib/Shop` fails, because
-`examples/app` does not. A config for `app/Plugin/DebugKit/` still passes, since its root is the one
+`cake2/lib/Shop` passes, because `cake2/app` exists. `examples/lib/Shop` fails when `examples/app`
+does not exist, and passes when it does, by the path convention above. A config for `app/Plugin/DebugKit/` still passes, since its root is the one
 holding `app`.
 
 The remaining root must also not be a plugin itself, judged by its parent being named `plugins`.
@@ -49,6 +71,13 @@ under `plugins/`. A CakePHP 2 plugin never contains `app`, so this only changes 
 configs accept, but it applies to both. Only the directory-name test is used: excluding roots that
 are configured plugins would make the rule call itself, for a nesting that is unlikely.
 
+For settings entered under the form's old wording, a remaining root that is the IDE project
+directory itself is also accepted. With the app nested at `cake2/app`, a user who followed "relative
+to the project root" entered `cake2/lib/Shop`; cutting that off leaves the project directory, which
+contains no `app`, so the anchor alone would stop recognising a config that the suffix match
+accepts today. Lookup does not resolve such a path (it looks for `cake2/cake2/lib/Shop`), which is
+left as it is; see Not in scope.
+
 The check reads the VFS, as the old project-directory lookup did; it does not depend on the IDE
 project directory, so it holds under a nested root.
 
@@ -57,8 +86,7 @@ project directory, so it holds under a nested root.
 1. No assumption test is needed. What a configured path is relative to is the plugin's own
    convention, not CakePHP's: `CakePlugin::load()` takes an absolute `path`, and
    `testPluginLoadedWithExplicitPathRendersItsTemplate` already pins that a plugin loaded from any
-   path renders its own templates. Confirm with the settings form (`PluginForm`) that paths are
-   saved relative to the app root and cannot point above it; if they can, record that case here.
+   path renders its own templates. The convention is settled under Path convention above.
 2. Tests, expected to fail first:
    - cake2: with `lib/Shop` configured under `cake2/`, a view at `examples/lib/Shop/View/...` has no
      templates directory and no plugin name, and a controller at `examples/lib/Shop/Controller/...`
@@ -72,19 +100,31 @@ project directory, so it holds under a nested root.
    - cake5: with `vendor/acme/blog` configured, files under `plugins/Foo/vendor/acme/blog`, where
      `plugins/Foo` has its own `src`, are not named `blog` by `cakeThreePluginName` and are not
      counted by `isInConfiguredPlugin`, while the copy under the app root still is.
+   - cake2: with both `cake2/app` and `examples/app` present, `examples/lib/Shop` is recognised as
+     `Shop`, pinning that a configured path applies under every app root. This one passes before
+     the change too; it guards the convention.
+   - cake2: a config entered relative to the project root, `cake2/lib/Shop`, is still recognised
+     with the app at `cake2/app`.
 3. Replace `isDirectoryOfPluginPath` with a check that takes the config's app directory setting
    and verifies the remaining root contains it and is not under a `plugins` directory. Route `cakeThreePluginName`'s inline suffix match
    through the same function, so the CakePHP 2 and 3+ rules cannot drift apart again.
    `isInConfiguredPlugin` picks the app directory by the config's version.
-4. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since plugin recognition reaches
+4. Reword both texts in `PluginForm.form` (lines 62 and 104) to say paths are relative to the app
+   root, the directory containing `app` or `src`, which is usually the project root.
+5. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since plugin recognition reaches
    their keys through `templatesDirectoryOfViewFile`, `isCakeTwoController` and
    `pluginOfClassFile`. After #321 they are at 29 and 23.
-5. Targeted tests per version, then the full suite before opening the PR.
+6. Targeted tests per version, then the full suite before opening the PR.
 
 ## Not in scope
 
 - The directory-name clauses (`Plugin`/`plugins` for CakePHP 2, `plugins` and the override
   directory for 3+). They name a plugin from its location, not from a config, and match how
   CakePHP itself searches.
+- Making lookup resolve paths entered relative to the project root. Recognition keeps accepting
+  them, but navigation into such a plugin already fails and still will. Migrating saved settings,
+  or validating paths in `EditPluginEntryDialog`, would be the fix.
+- Paths containing `..`. A suffix with `..` never matches a VFS path, so such a plugin is not
+  recognised, as it is not today.
 - Cost: the extra lookup runs only for directories whose path already ends with a configured path,
   so it should not show up in indexing. Revisit only if profiling says otherwise.
