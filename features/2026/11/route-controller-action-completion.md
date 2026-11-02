@@ -137,10 +137,14 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
 - `resolvedTargets = defaults + target`, one per candidate, where the defaults are the
   `RouteScope` in a route builder call and each `RouteContextController` in a URL-building
   call, and an explicit "none" in the target wins. When the candidate list is empty the
-  defaults are empty too (no plugin, no prefix, no controller, no action), so the array's own
-  keys still resolve: a fully specified URL array outside any controller or view yields one
-  target, and one with no `controller` key yields a target whose controller is unknown, which
-  offers app controllers for the `controller` key and nothing for `action`. A missing
+  defaults are unknown rather than "none": the request a URL array outside any controller or
+  view is built in may belong to a plugin or a prefix, so an omitted `plugin` or `prefix` key
+  stays unknown and only explicit keys resolve. A fully specified URL array still yields one
+  target. With an unknown plugin or prefix the `controller` key is matched by name across the
+  app, every plugin and every prefix, and its completion offers all of them with the namespace
+  as type text, rather than assuming the app. With no `controller` key the controller is
+  unknown and `action` offers nothing. An omitted `action` key with an explicit `controller`
+  key also stays unknown when there is no candidate to compare the controller with. A missing
   `controller` key otherwise takes the candidate's controller. A missing `action` key is, following the runtime rule, the
   candidate's action when the controller key is absent or names the candidate's controller,
   and `index` when it names another controller. The candidate's action may itself be unknown,
