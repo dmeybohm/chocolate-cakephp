@@ -65,6 +65,12 @@ change:
   autodetected app directory comes from `composer.json` through `CakePhpFilesModificationTracker`,
   which joins too.
 
+The settings forms already react to a plugin config change, but only by requesting a rebuild of
+the view file and view variable indexes (`PluginForm.requestIndexRebuild`, and the same in
+`ConfigForm` and `DataViewsForm`). That reindexes files; it fires no VFS events, so
+`PhpFilesModificationTracker` does not move and a `CachedValue` depending on it is not dropped.
+The rebuild keeps the indexes right, and the tracker keeps the caches over them right.
+
 The plugin-path gap exists today: `resolvesTo` and `pluginOf` already read the plugin configs
 inside the same cache, so a changed path keeps a stale result until a PHP file changes. The new
 dependencies fix that as well. `ViewHelperReceivers` has caches with the same single dependency;
