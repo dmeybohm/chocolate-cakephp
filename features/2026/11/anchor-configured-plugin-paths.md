@@ -41,6 +41,14 @@ does, so nested settings such as `src/app` work.
 `examples/app` does not. A config for `app/Plugin/DebugKit/` still passes, since its root is the one
 holding `app`.
 
+The remaining root must also not be a plugin itself, judged by its parent being named `plugins`.
+A CakePHP 3+ plugin has its own `src`, so without this the decoy comes back one level down: with
+`vendor/acme/blog` configured, `plugins/Foo/vendor/acme/blog` leaves `plugins/Foo`, which contains
+`src` and would pass. That copy appears when `composer install` is run inside a plugin checked out
+under `plugins/`. A CakePHP 2 plugin never contains `app`, so this only changes what CakePHP 3+
+configs accept, but it applies to both. Only the directory-name test is used: excluding roots that
+are configured plugins would make the rule call itself, for a nesting that is unlikely.
+
 The check reads the VFS, as the old project-directory lookup did; it does not depend on the IDE
 project directory, so it holds under a nested root.
 
@@ -61,8 +69,11 @@ project directory, so it holds under a nested root.
      branch of `isInConfiguredPlugin`, using a configured plugin path beside an `src` directory and
      an unrelated copy elsewhere in the project.
    - A nested `cake2AppDirectory` (`src/app`) still recognises its configured plugin.
+   - cake5: with `vendor/acme/blog` configured, files under `plugins/Foo/vendor/acme/blog`, where
+     `plugins/Foo` has its own `src`, are not named `blog` by `cakeThreePluginName` and are not
+     counted by `isInConfiguredPlugin`, while the copy under the app root still is.
 3. Replace `isDirectoryOfPluginPath` with a check that takes the config's app directory setting
-   and verifies the remaining root contains it. Route `cakeThreePluginName`'s inline suffix match
+   and verifies the remaining root contains it and is not under a `plugins` directory. Route `cakeThreePluginName`'s inline suffix match
    through the same function, so the CakePHP 2 and 3+ rules cannot drift apart again.
    `isInConfiguredPlugin` picks the app directory by the config's version.
 4. Bump the `ViewFileIndex` and `ViewVariableIndex` versions, since plugin recognition reaches
