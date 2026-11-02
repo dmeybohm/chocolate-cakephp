@@ -5,7 +5,7 @@
 Planned 2026-11-02, from review feedback on #321
 ([cake2-configured-plugin-views](cake2-configured-plugin-views.md)). Branched from
 `cake2-configured-plugin-views`, since it builds on that branch's shared CakePHP 2 rule; rebase
-target is `main` once #321 merges. No code yet.
+target is `main` once #321 merges. Assumption tests added; see Implementation Progress.
 
 ## The problem
 
@@ -139,3 +139,27 @@ project directory, so it holds under a nested root.
   recognised, as it is not today.
 - Cost: the extra lookup runs only for directories whose path already ends with a configured path,
   so it should not show up in indexing. Revisit only if profiling says otherwise.
+
+## Implementation Progress
+
+### Session #1
+
+Added the assumption tests of step 1, in `TemplateResolutionTest` on CakePHP 3, 4 and 5. Both pass,
+and agree with the plan.
+
+- `testPluginLoadedWithExplicitPathRendersItsTemplate` now runs on every version. The apps add a
+  `Pathed` plugin with `addPlugin('Pathed', ['path' => ROOT/packages/Pathed/])`, routed at
+  `/pathed`, and `/pathed/trinkets/index` renders `pathed:Trinkets/index` from
+  `packages/Pathed/src/Template` on 3 and `packages/Pathed/templates` on 4 and 5. So a configured
+  CakePHP 3+ plugin's templates are its own wherever it sits, which the cake5 `vendor/acme/blog`
+  tests rely on. (CakePHP 3.10 has `addPlugin()` too, so all three use it.)
+- `testPluginInsideAnotherPluginsVendorDirectoryIsNotFound`: `plugins/Nester` is a plugin with its
+  own `vendor/acme/nested` and a `vendor/cakephp-plugins.php` listing it, as `composer install`
+  inside the plugin would leave. `addPlugin('Acme/Nested')` throws `MissingPluginException`
+  ("could not be found"), while `Nester` itself loads from `plugins/Nester/`. CakePHP does not
+  search a plugin's own `vendor` or read its manifest, so such a copy is never a plugin it loads,
+  which is what the plugin-root exclusion assumes.
+
+The full assumption suite passes on 2, 3, 4 and 5. The one PHPUnit warning on CakePHP 4 is
+`ViewHelperTest::testControllerHelpersPropertyRaisesWarning`'s existing deprecation notice. No
+plugin code yet.
