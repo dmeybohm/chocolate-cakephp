@@ -193,6 +193,13 @@ Implemented steps 2 to 5.
   had no file under the app directory, so its fixture had no app root. Each now adds an
   `Application.php` under the app source directory, as a real app has.
 
+- The full suite then failed in `cake5/ControllerSideHelperTest`'s two tests of a configured
+  plugin attached as a library (from #319). Their fixture writes `vendor/test/test_plugin` to a
+  temporary directory outside the project with no app directory beside it, so the anchor found no
+  app root. In a real project Composer's `vendor/` sits under the app root, beside `src`, so
+  `libraryController` now also creates the app directory in the temporary directory. The full suite
+  then passed (1792 tests).
+
 One behaviour to note: a configured plugin of an app nested in the project is now recognised only
 when the app directory setting matches the app's layout. When the app root is the project
 directory, the fallback accepts it regardless.
