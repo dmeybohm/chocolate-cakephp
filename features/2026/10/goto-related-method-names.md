@@ -27,7 +27,17 @@ as is in two places, so it links `viewAll` to `viewAll.ctp`:
 A name passed to `render()` is underscored too, on every version: `render('viewAll')` renders
 `view_all` (`testCamelCaseRenderNameRendersUnderscoredTemplate`). The plugin passes
 `convertCase = false` for explicit names on every version, so it links `render('viewAll')` to
-`viewAll`. That is not part of this plan yet.
+`viewAll`. The framework only underscores a name with no slash (`_getTemplateFileName()`, and
+`_getViewFileName()` on Cake 2), so `render('Widgets/viewAll')` is used as is. Explicit names
+reach the plugin in two ways:
+
+- The index keys `render()` calls, view builder calls and `view` field assignments through
+  `fullExplicitViewPath()`. `setViewPath()` indexes element calls the same way, and elements are
+  not underscored.
+- Navigation from an action builds the explicit names' files in the "other" view paths of
+  `allViewPathsFromController()`, with `convertCase = false`. Cell templates go through
+  `CellGotoDeclarationHandler`, also with `convertCase = false`. `ActionName` splits a path into
+  a prefix and a name, so it no longer says whether the name the framework saw had a slash.
 
 ## Plan
 
@@ -44,6 +54,23 @@ A name passed to `render()` is underscored too, on every version: `render('viewA
 5. Rename the template in `BothVersionsLayoutNavigationTest` to `view_all.ctp` and tighten its
    assertion to expect `Controllers: PostsController::viewAll()`. Layout navigation references
    has merged, so this no longer waits on it.
+6. Before changing explicit names, add assumption tests for what this plan relies on but has not
+   pinned:
+   - A name with a slash, `render('Widgets/viewAll')`, is used as is.
+   - `setTemplate('viewAll')` is underscored, alone and after `setTemplatePath()` (3, 4, 5).
+   - `$this->view = 'viewAll'` is underscored (2).
+   - A cell's `render('viewAll')` is underscored (3, 4, 5).
+   - A camelCase element or layout name is not underscored.
+7. Underscore explicit template names that have no slash, adjusting to what step 6 finds:
+   - In the index, convert the name of template references before `fullExplicitViewPath()`,
+     leaving element calls alone.
+   - In navigation, convert the "other" view paths whose name had no slash. Keep that fact on
+     `ActionName`, or convert before the path is split.
+   - Do the same for cell templates in `CellGotoDeclarationHandler`.
+   - The `ViewFileIndex` version bump from step 3 covers the index change.
+8. Test on cake5, then mirror to the other versions: `render('viewAll')` links `view_all` to the
+   action and navigates to it, `render('Widgets/viewAll')` still links `Widgets/viewAll`, and a
+   camelCase element name is unchanged.
 
 ## Implementation Progress
 
