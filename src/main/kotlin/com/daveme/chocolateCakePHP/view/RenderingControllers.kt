@@ -75,7 +75,6 @@ object RenderingControllers {
                 // Any controller of the project may render a layout, so whatever a layout includes gets them all:
                 if (current.structure.isLayoutKey(current.templateKey)) {
                     allControllers(current.structure)
-                        .filter { isProjectController(it) }
                         .filter { pendingResolve(pending, pluginOf(current, it)) }
                         .mapTo(controllers) { it.fqn }
                     continue
@@ -132,7 +131,7 @@ object RenderingControllers {
             val app = structure.appControllerClass?.let {
                 phpIndex.getClassesByFQN(it) + phpIndex.getAllSubclasses(it)
             }.orEmpty()
-            return (framework + app).distinctBy { it.fqn }
+            return (framework + app).filter { isProjectController(it) }.distinctBy { it.fqn }
         }
     }
 }

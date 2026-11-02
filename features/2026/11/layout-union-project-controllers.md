@@ -158,3 +158,12 @@ branch first, or rebase this one onto `main` once it lands.
   pass. The full suite is left to CI.
 - Follow-up, unchanged here: `ViewHelperReceivers` caches still depend on
   `PhpFilesModificationTracker` alone.
+
+### Session #2
+
+- Review: the project filter ran after `allControllers` dropped duplicate FQNs, so when a library
+  copy of a project controller came first, both copies were lost. The filter now runs inside
+  `allControllers`, before `distinctBy`.
+- New cake5 test: a project controller counts in a layout when a library has a copy of it. It adds
+  the library copy after the project file, the order in which the index returns the library copy
+  first, and fails without the fix.

@@ -177,28 +177,32 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
     }
 
     /**
-     * A controller of the configured `TestPlugin`, in a directory attached as a library rather than in project content.
+     * A controller in a directory attached as a library rather than in project content.
      */
-    private fun libraryPluginController(name: String, body: String) {
-        val tempDir = FileUtil.createTempDirectory("library_plugin", null)
+    private fun libraryController(libraryPath: String, namespace: String, name: String, body: String) {
+        val tempDir = FileUtil.createTempDirectory("library", null)
         Disposer.register(testRootDisposable) { FileUtil.delete(tempDir) }
         VfsRootAccess.allowRootAccess(testRootDisposable, tempDir.path)
-        val pluginDir = File(tempDir, "vendor/test/test_plugin")
-        File(pluginDir, "src/Controller/${name}Controller.php").apply {
+        val libraryDir = File(tempDir, libraryPath)
+        File(libraryDir, "src/Controller/${name}Controller.php").apply {
             parentFile.mkdirs()
             writeText("""
                 <?php
-                namespace TestPlugin\Controller;
+                namespace $namespace\Controller;
                 class ${name}Controller extends \Cake\Controller\Controller {
                     $body
                 }
             """.trimIndent())
         }
-        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(pluginDir)!!
-        val library = PsiTestUtil.addProjectLibrary(module, "test/test_plugin", listOf(root), emptyList())
+        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(libraryDir)!!
+        val library = PsiTestUtil.addProjectLibrary(module, libraryPath, listOf(root), emptyList())
         Disposer.register(testRootDisposable) { PsiTestUtil.removeLibrary(module, library) }
-        assertNotEmpty(PhpIndex.getInstance(project).getClassesByFQN("\\TestPlugin\\Controller\\${name}Controller"))
+        assertTrue(PhpIndex.getInstance(project).getClassesByFQN("\\$namespace\\Controller\\${name}Controller")
+            .any { it.containingFile.virtualFile.path.startsWith(tempDir.path) })
     }
+
+    private fun libraryPluginController(name: String, body: String) =
+        libraryController("vendor/test/test_plugin", "TestPlugin", name, body)
 
     private fun setPluginPath(pluginPath: String) {
         val settings = Settings.getInstance(project)
@@ -212,6 +216,13 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
         libraryPluginController("Posts", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
         assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test a project controller counts in a layout when a library has a copy of it`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryController("vendor/test/copy", "App", "Movie", "public function index() {}")
+        assertEquals(setOf(movieHelper), fmtTypesIn("layout/default"))
     }
 
     fun `test changing the plugin path drops a library controller from a layout`() {
