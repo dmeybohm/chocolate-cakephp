@@ -2,8 +2,8 @@
 
 ## Status
 
-Recorded 2026-10-31 while planning [view-index-bugs](view-index-bugs.md). Investigated and planned
-2026-11-02; not yet fixed.
+Recorded 2026-10-31 while planning [view-index-bugs](view-index-bugs.md). Investigated, planned and
+fixed 2026-11-02.
 
 ## The bug
 
@@ -145,3 +145,13 @@ compare trailing path components: `src/app` matches both `src/app` and `app`. Th
 `appDirectory` is `app`. The rule now prefers the setting with more components, with a test for each
 direction of the overlap.
 
+
+### Session #2
+
+Implemented steps 2 and 3 of the plan. `isCakeTwoController` no longer looks at sibling entries: after
+the plugin check, a controller is CakePHP 2 when its app directory matches `cake2AppDirectory` and
+either does not match `appDirectory` or `cake2AppDirectory` has more path components. `ViewFileIndex`
+is at version 28.
+
+All five tests in `BothVersionsLayoutNavigationTest` pass, including the two that failed before the
+fix. The `cake2` tests and the cake3, cake4 and cake5 `LayoutNavigationTest` pass (266 tests).
