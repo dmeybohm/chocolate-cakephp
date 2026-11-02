@@ -72,5 +72,8 @@ class TemplateResolutionTest extends ControllerTestCase {
 	public function testCamelCaseActionRendersImplicitTemplate() {
 		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/viewAll'));
 	}
+	public function testCamelCaseRenderNameRendersUnderscoredTemplate() {
+		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/rendercamel'));
+	}
 
 }

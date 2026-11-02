@@ -24,6 +24,11 @@ as is in two places, so it links `viewAll` to `viewAll.ctp`:
 
 `BothVersionsLayoutNavigationTest` pins the current behavior with a `viewAll.ctp` template.
 
+A name passed to `render()` is underscored too, on every version: `render('viewAll')` renders
+`view_all` (`testCamelCaseRenderNameRendersUnderscoredTemplate`). The plugin passes
+`convertCase = false` for explicit names on every version, so it links `render('viewAll')` to
+`viewAll`. That is not part of this plan yet.
+
 ## Plan
 
 1. Pass `strict = false` to `getParentOfType` in `computeCustomName`.
@@ -50,3 +55,6 @@ Merged `origin/main`, which brought in the assumption suite, and added
 too, so the plugin's Cake 2 handling, which keeps the action name as is
 (`fullImplicitViewPath()` and `addViewFilenameExtension()`), links `viewAll` to `viewAll.ctp`
 instead. Steps 3 to 5 now fix that on this branch.
+
+Added `testCamelCaseRenderNameRendersUnderscoredTemplate`, which shows the same underscoring
+for a name passed to `render()`, on every version.

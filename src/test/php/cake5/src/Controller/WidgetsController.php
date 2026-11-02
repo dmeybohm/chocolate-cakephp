@@ -83,4 +83,9 @@ class WidgetsController extends AppController
     public function viewAll(): void
     {
     }
+
+    public function rendercamel(): void
+    {
+        $this->render('viewAll');
+    }
 }

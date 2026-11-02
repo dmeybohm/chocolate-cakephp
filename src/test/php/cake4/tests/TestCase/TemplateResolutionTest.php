@@ -111,4 +111,10 @@ class TemplateResolutionTest extends TestCase
         $this->get('/widgets/view-all');
         $this->assertResponseEquals('app:Widgets/view_all');
     }
+
+    public function testCamelCaseRenderNameRendersUnderscoredTemplate(): void
+    {
+        $this->get('/widgets/rendercamel');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
 }
