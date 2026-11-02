@@ -5,6 +5,7 @@ import com.daveme.chocolateCakePHP.cake.isCakeControllerFile
 import com.daveme.chocolateCakePHP.cake.cellDirNameFromSourceFile
 import com.daveme.chocolateCakePHP.cake.isCakeCellFile
 import com.daveme.chocolateCakePHP.cake.parseCellName
+import com.daveme.chocolateCakePHP.cake.renderedTemplateName
 import com.daveme.chocolateCakePHP.cake.TemplatesDir
 import com.daveme.chocolateCakePHP.cake.templatesDirectoryOfViewFile
 import com.daveme.chocolateCakePHP.view.TemplateDirStructure
@@ -737,7 +738,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         val viewPathPrefix = viewPathPrefixFromSourceFile(projectDir, virtualFile)
             ?: return
 
-        setViewPath(renderCalls, viewPathPrefix, result, pluginContext)
+        setViewPath(renderCalls, viewPathPrefix, result, pluginContext, ::renderedTemplateName)
     }
 
     private fun indexElementCalls(
@@ -750,7 +751,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
             return
         }
 
-        setViewPath(elementCalls, elementPathPrefix(templatesDir), result, pluginContext)
+        setViewPath(elementCalls, elementPathPrefix(templatesDir), result, pluginContext) { it }
     }
 
     private fun indexViewFieldAssignments(
@@ -770,7 +771,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         for (assignment in fieldAssignments) {
             for (assignedValue in assignment.assignedValues) {
                 val (path, plugin) = pluginContext?.split(assignedValue) ?: (assignedValue to null)
-                val renderPath = RenderPath(path)
+                val renderPath = RenderPath(renderedTemplateName(path))
 
                 if (renderPath.path.isEmpty()) {
                     continue
@@ -821,15 +822,16 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
                         // Note: We don't index setTemplatePath calls directly
                     }
                     "setTemplate" -> {
+                        val templateNames = call.parameterValues.map { renderedTemplateName(it) }
                         // Build the final paths combining setTemplatePath (if any) with setTemplate
                         val finalPaths = if (currentTemplatePaths != null) {
                             // setTemplatePath provides an absolute path from templates root
                             // Prefix with "/" to make it absolute so it's not combined with controller path
                             currentTemplatePaths.flatMap { templatePath ->
-                                call.parameterValues.map { "/$templatePath/$it" }
+                                templateNames.map { "/$templatePath/$it" }
                             }
                         } else {
-                            call.parameterValues
+                            templateNames
                         }
 
                         for (finalPath in finalPaths) {
@@ -867,7 +869,7 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         for (reference in cellReferences) {
             for (cellString in reference.cellNames) {
                 val cellName = parseCellName(cellString) ?: continue
-                val templates = reference.templates
+                val templates = reference.templates?.map { renderedTemplateName(it) }
                     ?: listOf(cellName.actionOrDefault.camelCaseToUnderscore())
                 for (template in templates) {
                     if (template.isEmpty() || template.startsWith("/")) {
@@ -921,12 +923,13 @@ object ViewFileDataIndexer : DataIndexer<String, List<ViewReferenceData>, FileCo
         methodCalls: List<MethodCallInfo>,
         viewPathPrefix: ViewPathPrefix,
         result: MutableMap<String, List<ViewReferenceData>>,
-        pluginContext: ReferencePluginContext?
+        pluginContext: ReferencePluginContext?,
+        fileName: (String) -> String
     ) {
         for (methodCall in methodCalls) {
             for (parameterText in methodCall.firstParameterValues) {
                 val (path, plugin) = pluginContext?.split(parameterText) ?: (parameterText to null)
-                val content = RenderPath(path)
+                val content = RenderPath(fileName(path))
 
                 if (content.path.isEmpty()) {
                     continue

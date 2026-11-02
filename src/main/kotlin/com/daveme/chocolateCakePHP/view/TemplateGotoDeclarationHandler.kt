@@ -38,12 +38,16 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             is PluginLookupResult.PluginFound -> {
                 val pluginActionName = actionNameFromPath(result.resourcePath)
                 val pluginActionNames = ActionNames(defaultActionName = pluginActionName)
-                allViewPathsFromPluginTemplate(allTemplatesPaths, settings, pluginActionNames, result.pluginConfig)
+                allViewPathsFromPluginTemplate(
+                    allTemplatesPaths, settings, pluginActionNames, result.pluginConfig, convertDefaultCase = false
+                )
                     ?: return null
             }
             is PluginLookupResult.NoPlugin -> {
                 val actionNames = ActionNames(defaultActionName = actionNameFromPath(result.originalPath))
-                allViewPathsFromController(controllerPath, allTemplatesPaths, settings, actionNames)
+                allViewPathsFromController(
+                    controllerPath, allTemplatesPaths, settings, actionNames, convertDefaultCase = false
+                )
             }
         }
         return TemplatePathResolution(allViewPaths, result)
@@ -102,7 +106,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
         }
 
         // Navigate to the branch that was clicked, not every branch
-        return navigateToViews(psiElement, settings, listOf(stringLiteral.contents))
+        return navigateToViews(psiElement, settings, listOf(renderedTemplateName(stringLiteral.contents)))
     }
 
     private fun handleViewFieldAssignment(psiElement: PsiElement, settings: Settings): Array<PsiElement>? {
@@ -129,7 +133,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             ?: return null
 
         // Get the assigned view name
-        val viewName = stringLiteral.contents
+        val viewName = renderedTemplateName(stringLiteral.contents)
 
         val topSourceDirectory = topSourceDirectoryFromSourceFile(
             settings,
@@ -183,7 +187,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
             if (thisVar.name != "this") return null
 
             // Navigate with combined paths
-            val viewContents = stringLiteral.contents
+            val viewContents = renderedTemplateName(stringLiteral.contents)
             val viewNames = pathValues.map { "/" + joinViewPath(it, viewContents) }
 
             return navigateToViews(psiElement, settings, viewNames)
@@ -206,7 +210,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
                 val templateValues = templateNamesFromExpression(chainedSetTemplate.parameterList?.parameters?.getOrNull(0))
                 if (templateValues.isEmpty()) return null
                 val viewContents = stringLiteral.contents
-                val viewNames = templateValues.map { "/" + joinViewPath(viewContents, it) }
+                val viewNames = templateValues.map { "/" + joinViewPath(viewContents, renderedTemplateName(it)) }
 
                 return navigateToViews(psiElement, settings, viewNames)
             }
@@ -231,7 +235,7 @@ class TemplateGotoDeclarationHandler : GotoDeclarationHandler {
 
         // Get the template name or path, as well as
         // the previous `setTemplatePath call, if any (which may itself be a ternary / match):
-        val viewContents = stringLiteral.contents
+        val viewContents = renderedTemplateName(stringLiteral.contents)
         val templatePaths = getTemplatePathsPreceding(stringLiteral)
         val viewNames = if (templatePaths.isNotEmpty()) {
             // Prepend "/" to make it absolute so the controller path is not prepended
