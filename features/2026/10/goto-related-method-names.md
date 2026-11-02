@@ -118,3 +118,34 @@ change:
 - `testCellRenderNameIsUnderscored`: a cell's `render('viewAll')` renders `view_all` (3, 4, 5).
 - `testCamelCaseElementNameIsNotUnderscored` and `testCamelCaseLayoutNameIsNotUnderscored`:
   element and layout names are used as is on every version.
+
+### Session #2
+
+Implemented steps 1 to 8.
+
+- Steps 1 and 2: `computeCustomName` finds the method with `strict = false`, so an implicit
+  render is labelled `Controllers: WidgetsController::viewAll()`. Tested on every version in a
+  new `TemplateNameCaseTest`.
+- Steps 3 to 5: Cake 2 underscores implicit action names, in the index and in navigation from
+  an action. `BothVersionsLayoutNavigationTest` now uses `view_all.ctp` and expects the method
+  name.
+- Step 7: `renderedTemplateName()` in `CakeController.kt` gives the name CakePHP looks up: the
+  template part of a name with no slash is underscored, after any plugin prefix, and a name with
+  a slash is used as written. Each explicit name is converted once, where it is read:
+  - In the index: `render()` calls, `view` assignments, `setTemplate()` names before they are
+    joined with `setTemplatePath()`, and explicit cell templates. Element calls are left alone.
+  - In navigation: the explicit names of `actionNamesFromControllerMethod()` and the single
+    call builders, `setTemplate()` names in `findViewBuilderCalls()`, Go to Declaration and
+    cell Go to Declaration.
+  - Where an explicit name takes the default action name's place, `allViewPathsFromController()`
+    and `allViewPathsFromPluginTemplate()` take `convertDefaultCase = false`, so the name is not
+    converted a second time. That covers `TemplateGotoDeclarationHandler` and the line markers on
+    a `render()` call, a `setTemplate()` call and a `view` assignment, which had the same slash
+    bug as Go to Declaration.
+- The `ViewFileIndex` version is 27, not the 26 from step 3, since a build of the step 3 commit
+  would already hold a version 26 index without the explicit name keys.
+- Step 8: `TemplateNameCaseTest` covers "go to related", the method line marker and Go to
+  Declaration for each form on each version where it exists, and a camelCase element name kept
+  as written. On Cake 5, six of its eight tests fail without step 7.
+
+The full Gradle suite passes: 1766 tests.
