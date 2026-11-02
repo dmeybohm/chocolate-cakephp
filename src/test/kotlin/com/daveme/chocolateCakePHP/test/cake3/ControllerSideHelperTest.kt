@@ -55,11 +55,10 @@ class ControllerSideHelperTest : Cake3BaseTestCase() {
         assertEquals(setOf(movieHelper), fmtTypesIn("cake3/src/Template/Movie/index.ctp"))
     }
 
-    fun `test a layout keeps the convention type as the framework's ErrorController settles nothing`() {
+    fun `test a layout unions the aliases without the convention type when every project controller settles it`() {
         controller("public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];")
         controller("public ${'$'}helpers = ['Fmt' => ['className' => 'ArtistFormatter']];", name = "Artist")
-        val types = fmtTypesIn("cake3/src/Template/Layout/default.ctp")
-        assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cake3/src/Template/Layout/default.ctp"))
     }
 
     fun `test setHelpers on the view builder resolves in the template`() {

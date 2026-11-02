@@ -1,14 +1,23 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
+import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.codeInsight.lookup.LookupElementPresentation
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
+import java.io.File
 
 class ControllerSideHelperTest : Cake5BaseTestCase() {
 
@@ -73,6 +82,10 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         myFixture.addFileToProject("$templates/$path.php", code)
         myFixture.configureFromTempProjectFile("$templates/$path.php")
         myFixture.editor.caretModel.moveToOffset(code.indexOf(field) + 1)
+        return fmtTypesAtCaret()
+    }
+
+    private fun fmtTypesAtCaret(): Set<String> {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
@@ -163,6 +176,66 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         assertTrue(fmtTypesIn("layout/default").contains(artistHelper))
     }
 
+    /**
+     * A controller in a directory attached as a library rather than in project content.
+     */
+    private fun libraryController(libraryPath: String, namespace: String, name: String, body: String) {
+        val tempDir = FileUtil.createTempDirectory("library", null)
+        Disposer.register(testRootDisposable) { FileUtil.delete(tempDir) }
+        VfsRootAccess.allowRootAccess(testRootDisposable, tempDir.path)
+        val libraryDir = File(tempDir, libraryPath)
+        File(libraryDir, "src/Controller/${name}Controller.php").apply {
+            parentFile.mkdirs()
+            writeText("""
+                <?php
+                namespace $namespace\Controller;
+                class ${name}Controller extends \Cake\Controller\Controller {
+                    $body
+                }
+            """.trimIndent())
+        }
+        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(libraryDir)!!
+        val library = PsiTestUtil.addProjectLibrary(module, libraryPath, listOf(root), emptyList())
+        Disposer.register(testRootDisposable) { PsiTestUtil.removeLibrary(module, library) }
+        assertTrue(PhpIndex.getInstance(project).getClassesByFQN("\\$namespace\\Controller\\${name}Controller")
+            .any { it.containingFile.virtualFile.path.startsWith(tempDir.path) })
+    }
+
+    private fun libraryPluginController(name: String, body: String) =
+        libraryController("vendor/test/test_plugin", "TestPlugin", name, body)
+
+    private fun setPluginPath(pluginPath: String) {
+        val settings = Settings.getInstance(project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(CakeThreePluginConfig(namespace = "\\TestPlugin", pluginPath = pluginPath))
+        settings.loadState(state)
+    }
+
+    fun `test a configured plugin's controller in a library counts in a layout`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryPluginController("Posts", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test a project controller counts in a layout when a library has a copy of it`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryController("vendor/test/copy", "App", "Movie", "public function index() {}")
+        assertEquals(setOf(movieHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test changing the plugin path drops a library controller from a layout`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryPluginController("Posts", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+        setPluginPath("vendor/test/other_plugin")
+        assertEquals(setOf(movieHelper), fmtTypesAtCaret())
+        setPluginPath("vendor/test/test_plugin")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesAtCaret())
+    }
+
     fun `test controllers that only reach the framework through AppController count in a layout`() {
         appView()
         controller("App", "")
@@ -170,12 +243,11 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         assertTrue(fmtTypesIn("layout/default").contains(movieHelper))
     }
 
-    fun `test a layout keeps the convention type as the framework's ErrorController settles nothing`() {
+    fun `test a layout unions the aliases without the convention type when every project controller settles it`() {
         appView()
         controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
         controller("Artist", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
-        val types = fmtTypesIn("layout/default")
-        assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
     }
 
     fun `test a helper AppController adds in initialize settles the type in a subclass's template`() {

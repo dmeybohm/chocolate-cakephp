@@ -1,5 +1,6 @@
 package com.daveme.chocolateCakePHP.cake
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
@@ -64,3 +65,19 @@ fun cakeThreePluginName(
     }
     return null
 }
+
+/**
+ * Whether [file] is under the path of a configured plugin, matched the way the plugin name rules
+ * for its CakePHP version match it.
+ */
+fun isInConfiguredPlugin(file: VirtualFile, projectDir: VirtualFile?, settings: Settings): Boolean =
+    settings.pluginConfigs.any { pluginConfig ->
+        val pluginPath = pluginConfig.pluginPath.trim('/')
+        pluginPath.isNotEmpty() && when (pluginConfig) {
+            is CakeTwoPluginConfig -> projectDir?.findFileByRelativePath(pluginPath)
+                ?.let { VfsUtil.isAncestor(it, file, false) } == true
+            is CakeThreePluginConfig -> generateSequence(file.parent) { it.parent }
+                .takeWhile { it != projectDir }
+                .any { it.path.endsWith("/$pluginPath") }
+        }
+    }
