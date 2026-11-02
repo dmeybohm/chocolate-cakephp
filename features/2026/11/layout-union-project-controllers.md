@@ -60,8 +60,10 @@ change:
 - Which roots are libraries. `ProjectRootManager` is a `SimpleModificationTracker` that is bumped
   on every root change, so it joins the cached value's dependencies.
 - The configured plugin paths. `Settings` has no tracker, and its properties are read-only views
-  over the state, so `loadState()` is the only write path, for the settings UI as well as the tests.
-  Add a `SimpleModificationTracker` to `Settings`, bumped in `loadState()`, and depend on it. The
+  over the state, so `loadState()` is the settings UI's only write path. Add a
+  `SimpleModificationTracker` to `Settings`, bumped in `loadState()`, and depend on it. The state
+  object `getState()` returns is mutable, and some `SettingsTest` cases assign its `pluginConfigs`
+  directly; such writes bypass the tracker, so the tests here load a state instead. The
   autodetected app directory comes from `composer.json` through `CakePhpFilesModificationTracker`,
   which joins too.
 
