@@ -299,14 +299,16 @@ Acted on what the assumption suite showed:
 
 ### Session #3
 
-Added the cake5 tests the CakePHP 2 `AppControllerHelperTest` has and this suite lacked:
+Added the tests the CakePHP 2 `AppControllerHelperTest` has and this suite lacked, on cake 5, 4 and
+3 (where the deprecated `$helpers` property is the source):
 
 - A helper `AppController` adds in `initialize()` settles the type in a subclass's template.
 - An exact-set layout union. With the real framework attached it can't drop the convention type:
   `Cake\Controller\ErrorController` extends the framework controller and configures nothing, so it
   is in every layout union and leaves the alias unsettled. `ControllerSideHelperTest` pins that the
   convention type stays, and `FrameworkNotIndexedControllerHelperTest` pins that it drops when only
-  app controllers settle the alias, which shows the framework controller is the cause.
+  app controllers settle the alias, which shows the framework controller is the cause. Each version
+  has both.
 
 Not changed: whether library controllers such as `ErrorController` should count in the union. On a
 real project it always keeps the convention type in cake 3 to 5 layouts, so dropping it would be

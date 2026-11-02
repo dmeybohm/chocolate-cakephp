@@ -7,20 +7,23 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class ControllerSideHelperTest : Cake4BaseTestCase() {
 
     private val movieHelper = "\\App\\View\\Helper\\MovieFormatterHelper"
+    private val artistHelper = "\\App\\View\\Helper\\ArtistFormatterHelper"
+    private val conventionHelper = "\\App\\View\\Helper\\FmtHelper"
 
     override fun setUpTestFiles() {
         myFixture.addFileToProject("cake4/src4/View/Helper/MovieFormatterHelper.php", """
             <?php
             namespace App\View\Helper;
             class MovieFormatterHelper extends \Cake\View\Helper {}
+            class ArtistFormatterHelper extends \Cake\View\Helper {}
         """.trimIndent())
     }
 
-    private fun controller(body: String) {
-        myFixture.addFileToProject("cake4/src4/Controller/MovieController.php", """
+    private fun controller(body: String, name: String = "Movie", parent: String = "\\Cake\\Controller\\Controller") {
+        myFixture.addFileToProject("cake4/src4/Controller/${name}Controller.php", """
             <?php
             namespace App\Controller;
-            class MovieController extends \Cake\Controller\Controller {
+            class ${name}Controller extends $parent {
                 $body
             }
         """.trimIndent())
@@ -43,6 +46,22 @@ class ControllerSideHelperTest : Cake4BaseTestCase() {
         controller("public function index() { \$this->viewBuilder()->addHelper('Fmt', ['className' => 'MovieFormatter']); }")
         assertTrue(fmtTypesIn("cake4/templates/Movie/index.php").contains(movieHelper))
         assertTrue(fmtTypesIn("cake4/templates/layout/default.php").contains(movieHelper))
+    }
+
+    private fun fmtInInitialize(helperClass: String) =
+        "public function initialize(): void { \$this->viewBuilder()->addHelper('Fmt', ['className' => '$helperClass']); }"
+
+    fun `test a helper AppController adds in initialize settles the type in a subclass's template`() {
+        controller(fmtInInitialize("MovieFormatter"), name = "App")
+        controller("public function index() {}", parent = "AppController")
+        assertEquals(setOf(movieHelper), fmtTypesIn("cake4/templates/Movie/index.php"))
+    }
+
+    fun `test a layout keeps the convention type as the framework's ErrorController settles nothing`() {
+        controller(fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        controller(fmtInInitialize("ArtistFormatter") + "\npublic function index() {}", name = "Artist")
+        val types = fmtTypesIn("cake4/templates/layout/default.php")
+        assertTrue("$types", types.containsAll(listOf(movieHelper, artistHelper, conventionHelper)))
     }
 
     fun `test a helpers property on the view class is ignored`() {
