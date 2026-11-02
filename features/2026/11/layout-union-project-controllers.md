@@ -51,6 +51,25 @@ is excluded as well. The configured-plugin-path clause exists for that case.
 The lookup runs inside the cached search that `RenderingControllers.of` starts from a read action,
 so `ProjectFileIndex` can be queried where `allControllers` already resolves each class's file.
 
+### Cache invalidation
+
+`RenderingControllers.of` caches its results on `PhpFilesModificationTracker` alone. The filter
+reads two more inputs, and a change to either must drop the cache without waiting for a PHP file to
+change:
+
+- Which roots are libraries. `ProjectRootManager` is a `SimpleModificationTracker` that is bumped
+  on every root change, so it joins the cached value's dependencies.
+- The configured plugin paths. `Settings` has no tracker, and its properties are read-only views
+  over the state, so `loadState()` is the only write path, for the settings UI as well as the tests.
+  Add a `SimpleModificationTracker` to `Settings`, bumped in `loadState()`, and depend on it. The
+  autodetected app directory comes from `composer.json` through `CakePhpFilesModificationTracker`,
+  which joins too.
+
+The plugin-path gap exists today: `resolvesTo` and `pluginOf` already read the plugin configs
+inside the same cache, so a changed path keeps a stale result until a PHP file changes. The new
+dependencies fix that as well. `ViewHelperReceivers` has caches with the same single dependency;
+they are left as they are here and noted as a follow-up.
+
 ### What this gives up
 
 - A layout inside a library, such as a vendor plugin's own `templates/layout/default.php`, no
@@ -64,20 +83,32 @@ so `ProjectFileIndex` can be queried where `allControllers` already resolves eac
 2. Filter `allControllers` in `RenderingControllers` to project controllers, through a small
    `isProjectFile(file)` on `ViewFileResolution` or beside `pluginOf`, which already takes the
    settings and the project directory.
-3. Flip the three `test a layout keeps the convention type as the framework's ErrorController
+3. Add the settings tracker, and make the `RenderingControllers` cache depend on it,
+   `ProjectRootManager` and `CakePhpFilesModificationTracker` alongside `PhpFilesModificationTracker`.
+4. Flip the three `test a layout keeps the convention type as the framework's ErrorController
    settles nothing` tests to assert the exact union without the convention type. Drop the
    `FrameworkNotIndexedControllerHelperTest` classes on cake3 and cake4, which only existed to show
    the cause, and the matching test on cake5, keeping its any-depth test.
-4. Run the cake3, cake4 and cake5 `ControllerSideHelperTest` classes and the cake2 layout helper
+5. Run the cake3, cake4 and cake5 `ControllerSideHelperTest` classes and the cake2 layout helper
    tests, then leave the full suite to CI.
 
 ## Tests
 
 - A layout unions the aliases without the convention type when every app controller settles the
   alias, with the real framework attached, on cake 3, 4 and 5.
-- A controller under the configured plugin path (`vendor/test/test_plugin`) still counts in a layout
-  union. In the test fixture that path is in content, so this pins the clause without exercising the
-  library case; the library case is pinned by `ErrorController`'s absence.
+- A controller of a configured plugin that is a library still counts in a layout union. The fixture's
+  `vendor/test/test_plugin` is in project content, so it would pass even if the filter ignored the
+  configured paths. Instead the test writes a controller to a temporary directory on disk whose path
+  ends in `vendor/test/test_plugin/src/Controller`, which `cakeThreePluginName` matches as a suffix,
+  attaches that directory with `PsiTestUtil.addProjectLibrary` (the overload that returns the
+  `Library`, removed again in `tearDown` since the light project is shared), checks the file is
+  indexed, and asserts the plugin controller's alias is in the layout union. `ErrorController`'s
+  absence in the same union pins the library exclusion.
+- Changing the configuration drops the cache. After the lookup above, load a settings state whose
+  plugin path no longer names that directory, with no PHP file changed in between, and assert the
+  library controller's alias leaves the union. Then restore the path and assert it returns. A root
+  change is not tested: adding and removing the library in the test above already goes through
+  `ProjectRootManager`, and the platform bumps it.
 - A plugin controller under `plugins/{Name}` still counts, which the existing
   `test a plugin controller bypassing AppController counts in a layout` covers.
 - The cake2 `AppControllerHelperTest` and `DirectControllerHelperTest` are unchanged and still pass.
