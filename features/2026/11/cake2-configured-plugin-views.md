@@ -4,7 +4,8 @@
 
 Planned 2026-11-02, from a gap found while planning
 [cake2-controller-detection-in-index](../10/cake2-controller-detection-in-index.md). Merged
-`origin/main` the same day, after #319 and #320 landed; see Implementation Progress. Not started.
+`origin/main` the same day, after #319 and #320 landed, and added the assumption test; see
+Implementation Progress. Plugin code not started.
 
 ## The bug
 
@@ -57,7 +58,9 @@ exactly this setup because navigating from the layout fails here.
 
 1. Assumption test on CakePHP 2: a plugin loaded with `CakePlugin::load('Name', array('path' => ...))`
    from a directory outside the app renders templates from its own `View` directory. This is what a
-   configured plugin stands for. The `{root}/plugins` case is already pinned:
+   configured plugin stands for. Done: `testPluginLoadedWithExplicitPathRendersItsTemplate` loads
+   the `Pathed` plugin from `{root}/packages/Pathed`, a directory that is neither `app/Plugin` nor
+   `plugins`, and passes. The `{root}/plugins` case was already pinned:
    `testRootPluginsDirectoryPluginRendersItsTemplate` landed with #320, loading the `Rooted` plugin
    with no path.
 2. Tests, on cake2, expected to fail first:
@@ -67,7 +70,10 @@ exactly this setup because navigating from the layout fails here.
      indexer-keys test in `BothVersionsLayoutNavigationTest`, which configures the plugin by loading
      a settings state with a `CakeTwoPluginConfig`. Since #319 a layout lists only project
      controllers, those in content or under a configured plugin path, which the fixture's controller
-     is.
+     is. The tests keep `plugins/Blog`, so `cakeTwoPluginName` names the plugin from the directory
+     and only the templates directory lookup is under test; the framework side of a path outside
+     those directories is pinned by the assumption test, and the plugin side is noted under Not in
+     scope.
    - An element call in a configured plugin's view is indexed under `Elements/`, following
      `ElementReferenceIndexingTest`.
    - A view file of an unconfigured `{root}/plugins` plugin still has no templates directory, so the
@@ -116,3 +122,12 @@ The merge touched no code on this branch. What changed for this plan:
   at 28, so step 4 bumps from there.
 - #319 filters a layout's controllers to project ones through `isInConfiguredPlugin`, and added
   `Settings.modificationTracker`, which the cache invalidation note above now relies on.
+
+### Session #2
+
+Added the assumption test of step 1. `app/Config/bootstrap.php` loads a fourth plugin, `Pathed`,
+with an explicit `path` of `{root}/packages/Pathed/`, and
+`testPluginLoadedWithExplicitPathRendersItsTemplate` renders `pathed:Trinkets/index` from
+`/pathed/trinkets/index`. It passes on CakePHP 2.10.24, so a configured plugin's `View` directory
+is its templates directory wherever the plugin sits. The full CakePHP 2 assumption suite still
+passes (48 tests). No plugin code yet.

@@ -87,4 +87,8 @@ class TemplateResolutionTest extends ControllerTestCase {
 	public function testRootPluginsDirectoryPluginRendersItsTemplate() {
 		$this->assertSame('rooted:Gizmos/index', $this->renderedBy('/rooted/gizmos/index'));
 	}
+
+	public function testPluginLoadedWithExplicitPathRendersItsTemplate() {
+		$this->assertSame('pathed:Trinkets/index', $this->renderedBy('/pathed/trinkets/index'));
+	}
 }
