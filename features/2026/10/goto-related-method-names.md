@@ -39,6 +39,14 @@ reach the plugin in two ways:
   `allViewPathsFromController()`, with `convertCase = false`. Cell templates go through
   `CellGotoDeclarationHandler`, also with `convertCase = false`. `ActionName` splits a path into
   a prefix and a name, so it no longer says whether the name the framework saw had a slash.
+- Go to Declaration on a `render()` name, a `view` assignment or a view builder call goes through
+  `resolveTemplateViewPaths()` in `TemplateGotoDeclarationHandler`, which makes the name the
+  default action name, where case conversion is on. So `render('viewAll')` already reaches
+  `view_all` on 3, 4 and 5, but `render('Sub/viewAll')` is converted to `Sub/view_all` too.
+  On Cake 2 nothing is converted until step 3, which would then convert both.
+- `indexCellReferences()` keys cell templates separately from `fullExplicitViewPath()`. It
+  underscores the implicit cell action, but keys an explicit `render('viewAll')` as `viewAll`,
+  so "go to related" from a cell's `view_all` misses it.
 
 ## Plan
 
@@ -68,10 +76,19 @@ reach the plugin in two ways:
    - In navigation, convert the "other" view paths whose name had no slash. Keep that fact on
      `ActionName`, or convert before the path is split.
    - Do the same for cell templates in `CellGotoDeclarationHandler`.
+   - In `TemplateGotoDeclarationHandler`, convert only a name with no slash, in both the
+     `NoPlugin` and `PluginFound` branches of `resolveTemplateViewPaths()`. A view builder name
+     joined with its `setTemplatePath()` must still be converted, so decide from the
+     `setTemplate()` name, not the joined path.
+   - In `indexCellReferences()`, underscore explicit cell template names that have no slash.
    - The `ViewFileIndex` version bump from step 3 covers the index change.
 8. Test on cake5, then mirror to the other versions: `render('viewAll')` links `view_all` to the
    action and navigates to it, `render('Sub/viewAll')` still links `Widgets/Sub/viewAll`, and a
-   camelCase element name is unchanged.
+   camelCase element name is unchanged. Also test:
+   - Go to Declaration on `render('viewAll')` opens `view_all`, on `render('Sub/viewAll')`
+     opens `Sub/viewAll`, and on `setTemplatePath('Gadgets')->setTemplate('viewAll')` opens
+     `Gadgets/view_all`.
+   - "Go to related" from a cell's `view_all` lists the `cell()->render('viewAll')` call.
 
 ## Implementation Progress
 
