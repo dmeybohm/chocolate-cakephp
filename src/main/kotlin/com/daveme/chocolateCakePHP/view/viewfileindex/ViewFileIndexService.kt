@@ -146,9 +146,7 @@ private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings)
         pluginsDir.parent?.let { matchesCake2AppDirectory(it, settings) } == true) {
         return true
     }
-    return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().any {
-        it.pluginPath.isNotBlank() && directory.path.endsWith("/" + it.pluginPath.trim('/'))
-    }
+    return configuredCakeTwoPluginOfDirectory(directory, settings) != null
 }
 
 object ViewFileIndexService {
