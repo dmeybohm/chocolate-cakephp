@@ -200,6 +200,9 @@ fun templatesDirectoryOfViewFile(
                 if (greatGrandparent != null && matchesCake2AppDirectory(greatGrandparent, settings)) {
                     return CakeTwoTemplatesDir(child)
                 }
+                if (parent != null && configuredCakeTwoPluginOfDirectory(parent, settings) != null) {
+                    return CakeTwoTemplatesDir(child)
+                }
             }
             // themes:
             // For themed views like app/View/Themed/MyTheme/Movie/view.ctp,

@@ -4,7 +4,6 @@ import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 
 internal val cakeTwoPluginDirectoryNames = setOf("Plugin", "plugins")
@@ -24,13 +23,23 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
         }
         current = parent
     }
-    if (projectDir == null) {
-        return null
-    }
-    return settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>().firstOrNull { pluginConfig ->
-        val pluginDir = projectDir.findFileByRelativePath(pluginConfig.pluginPath)
-        pluginConfig.pluginPath.isNotEmpty() && pluginDir != null && VfsUtil.isAncestor(pluginDir, file, false)
-    }?.pluginName
+    return generateSequence(file.parent) { it.parent }
+        .takeWhile { it != projectDir }
+        .firstNotNullOfOrNull { configuredCakeTwoPluginOfDirectory(it, settings) }
+        ?.pluginName
+}
+
+/**
+ * The configured CakePHP 2 plugin whose directory [directory] is. Plugin paths are matched as path
+ * suffixes, since they are relative to an app root that may be nested in the project.
+ */
+fun configuredCakeTwoPluginOfDirectory(directory: VirtualFile, settings: Settings): CakeTwoPluginConfig? =
+    settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>()
+        .firstOrNull { isDirectoryOfPluginPath(directory, it.pluginPath) }
+
+private fun isDirectoryOfPluginPath(directory: VirtualFile, pluginPath: String): Boolean {
+    val path = pluginPath.trim('/')
+    return path.isNotEmpty() && directory.path.endsWith("/$path")
 }
 
 private val cakeThreeTemplateDirectoryNames = setOf("templates", "Template")
@@ -71,13 +80,6 @@ fun cakeThreePluginName(
  * for its CakePHP version match it.
  */
 fun isInConfiguredPlugin(file: VirtualFile, projectDir: VirtualFile?, settings: Settings): Boolean =
-    settings.pluginConfigs.any { pluginConfig ->
-        val pluginPath = pluginConfig.pluginPath.trim('/')
-        pluginPath.isNotEmpty() && when (pluginConfig) {
-            is CakeTwoPluginConfig -> projectDir?.findFileByRelativePath(pluginPath)
-                ?.let { VfsUtil.isAncestor(it, file, false) } == true
-            is CakeThreePluginConfig -> generateSequence(file.parent) { it.parent }
-                .takeWhile { it != projectDir }
-                .any { it.path.endsWith("/$pluginPath") }
-        }
-    }
+    generateSequence(file.parent) { it.parent }
+        .takeWhile { it != projectDir }
+        .any { directory -> settings.pluginConfigs.any { isDirectoryOfPluginPath(directory, it.pluginPath) } }
