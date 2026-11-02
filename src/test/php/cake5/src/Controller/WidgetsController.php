@@ -23,6 +23,10 @@ class WidgetsController extends AppController
         $this->render('Probe.only_in_plugin');
     }
 
+    public function wrongcaseelement(): void
+    {
+    }
+
     public function pluginelement(): void
     {
     }

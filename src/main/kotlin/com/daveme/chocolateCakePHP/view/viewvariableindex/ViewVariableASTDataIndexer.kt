@@ -12,12 +12,11 @@ import com.daveme.chocolateCakePHP.view.viewfileindex.RenderPath
 import com.daveme.chocolateCakePHP.view.viewfileindex.TemplateNameContext
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewPathPrefix
-import com.daveme.chocolateCakePHP.view.viewfileindex.elementPathPrefixFromSourceFile
+import com.daveme.chocolateCakePHP.view.viewfileindex.elementPathPrefix
 import com.daveme.chocolateCakePHP.view.viewfileindex.extractTemplateNames
 import com.daveme.chocolateCakePHP.view.viewfileindex.fullExplicitViewPath
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.util.indexing.DataIndexer
@@ -87,9 +86,8 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
         if (!text.contains("element", ignoreCase = true) && !text.contains("set", ignoreCase = true)) {
             return
         }
-        val projectDir = project.guessProjectDir() ?: return
         val ownKey = ViewFileIndexService.canonicalizeFilenameToKey(templatesDir, settings, virtualFile.path)
-        val elementPrefix = elementPathPrefixFromSourceFile(projectDir, virtualFile)
+        val elementPrefix = elementPathPrefix(templatesDir)
         val rootNode = psiFile.node ?: return
         val ctx = TemplateNameContext()
         val structure = TemplateDirStructure.of(templatesDir)
@@ -107,11 +105,11 @@ object ViewVariableASTDataIndexer : DataIndexer<ViewVariablesKey, ViewVariablesW
     private fun indexElementCall(
         result: MutableMap<String, ViewVariablesWithRawVars>,
         call: MethodCallParts,
-        elementPrefix: ViewPathPrefix?,
+        elementPrefix: ViewPathPrefix,
         ctx: TemplateNameContext,
         structure: TemplateDirStructure
     ) {
-        if (elementPrefix == null || call.parameters.size < 2) {
+        if (call.parameters.size < 2) {
             return
         }
         val names = extractTemplateNames(call.parameters[0], ctx)

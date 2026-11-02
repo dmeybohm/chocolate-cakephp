@@ -60,6 +60,34 @@ Relied on by view navigation, the controller action line marker and view file cr
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 
+### `LayoutResolutionTest`
+
+Relied on by layout navigation.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `render()`'s second argument names the layout | `testRenderSecondArgumentNamesLayout` | Same |
+| A `render()` with a layout, called from a template, wraps its own output, and the outer layout wraps it again | `testRenderFromTemplateWrapsItsOutputAgainInTheOuterLayout` | Same |
+| The builder's `setLayout()` names the layout | `testBuilderSetLayoutNamesLayout` | 3, 4, 5 |
+| Builder setters chained after `setLayout()` all apply | `testChainedBuilderSettersAllApply` | 3, 4, 5 |
+| The builder's `layout()` names the layout | `testBuilderLayoutNamesLayout` | 3, deprecated |
+| The builder has no `layout()` method | `testBuilderHasNoLayoutMethod` | 4, 5 |
+| A controller's `layout` property, declared or assigned, names the layout | `testControllerLayoutPropertyNamesLayout`, `testControllerLayoutAssignmentNamesLayout` | 2, 3 (deprecated) |
+| A controller's `layout` property, declared or assigned, has no effect | `testControllerLayoutPropertyHasNoEffect`, `testControllerLayoutAssignmentHasNoEffect` | 4, 5 |
+| `$this->layout = 'x'` in a template wraps it | `testLayoutAssignedInTemplateWraps` | 3, 4, 5. 2: `testLayoutNamedFromTemplateWraps` |
+| A view's `layout()` names the layout | `testViewLayoutMethodNamesLayout` | 3, deprecated |
+| A view has no `layout()` method | `testViewHasNoLayoutMethod` | 4, 5 |
+| A data view renders without a layout, even when one is named | `testDataViewRendersWithoutLayout` | Same |
+| A layout path selects a subdirectory of the layout directory | `testLayoutPathSelectsSubdirectory` | Same |
+| A plugin controller's unprefixed layout is found in the plugin first | `testPluginControllerPrefersPluginLayout` | Same |
+| A plugin controller's layout missing from the plugin falls back to the app's | `testPluginControllerFallsBackToAppLayout` | Same |
+| The app's override directory wins over the plugin's own layout | `testAppOverrideWinsOverPluginLayout` | Same |
+| An app controller's unprefixed layout does not reach a plugin's | `testAppControllerDoesNotReachPluginLayoutUnprefixed` | Same |
+| An app controller's `Plugin.name` layout finds the plugin's | `testAppControllerReachesPluginLayoutWithPrefix` | Same |
+| A layout named in a cell class has no effect | `testLayoutNamedInCellClassHasNoEffect` | 3, 4, 5 |
+| A layout named in a cell template has no effect | `testLayoutNamedInCellTemplateHasNoEffect` | 4, 5 |
+| A layout named in a cell template wraps the cell | `testLayoutNamedInCellTemplateWraps` | 3 |
+
 ### `ElementResolutionTest`
 
 Relied on by element navigation and element related usages.
@@ -69,6 +97,7 @@ Relied on by element navigation and element related usages.
 | A plugin template prefers the plugin's element | `testPluginTemplatePrefersPluginElement` | Same |
 | A plugin template falls back to the app's element | `testPluginTemplateFallsBackToAppElement` | Same |
 | An app template's unprefixed element does not reach a plugin | `testAppTemplateDoesNotReachPluginElementUnprefixed` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
+| An element in a wrongly-cased directory is not found, on a case-sensitive filesystem | `testWronglyCasedElementDirectoryIsNotFound` | 3, 4, 5: `MissingElementException`. 2: a notice, with the page still rendered |
 | An app template's `Plugin.name` element finds the plugin's element | `testAppTemplateRendersPrefixedPluginElement` | Same |
 | A `Plugin.name` element missing from the plugin falls back to the app's element | `testPrefixedElementFallsBackToAppElement` | Same |
 | A plugin template's element of another plugin finds that plugin's element | `testPluginTemplateRendersOtherPluginElement` | Same |
@@ -117,6 +146,8 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | A view class's `loadHelper()` wins over a controller's helper of the same alias without options | `testViewLoadHelperWinsOverControllerHelperWithoutOptions` | Same |
 | A view class's `loadHelper()` raises an error when a controller gives the same alias another `className` | `testViewLoadHelperConflictsWithControllerClassName` | Same |
 | The builder's helpers replace a `$helpers` property declared on the view class | `testControllerBuilderReplacesViewHelpersProperty` | Same |
+| The controller's helpers replace a `$helpers` property declared on the view class | `testControllerHelpersReplaceViewHelpersProperty` | 2 only |
+| A view built by hand, with no helpers passed, keeps its `$helpers` property | `testViewBuiltByHandKeepsHelpersProperty` | Same, and 2 |
 | A controller's helper reaches a layout and an element in it | `testControllerHelperReachesLayoutAndItsElement` | Same |
 | A cell's own `viewBuilder()` helper reaches its template | `testCellOwnHelperReachesItsTemplate` | Same |
 | An app controller's helper reaches a plugin cell's template | `testControllerHelperReachesPluginCellTemplate` | Same |
@@ -165,3 +196,70 @@ tests are 4 and 5 only.
 | An alias with an empty plugin part, `.Table`, loads the app's table | `testEmptyPluginSegmentLoadsAppTable` | Same |
 | A bare `fetchTable()` in a plugin cell loads the app's table | `testPluginCellBareFetchTableLoadsAppTable` | 4, 5 |
 | A plugin cell's `fetchTable()` of another plugin loads that plugin's table | `testPluginCellLoadsOtherPluginTable` | 4, 5 |
+
+### `EntityAccessorTest`
+
+Relied on by entity virtual field types, completion and navigation
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md)). CakePHP 2 has no
+entities, so "Same" here means 3, 4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `_getFullName()` answers `full_name`, `fullName` and `FullName` | `testGetterAnswersSnakeCamelAndTitleNames` | Same |
+| A getter receives the stored value of the same field, or `null` | `testGetterReceivesStoredValueOrNull` | Same |
+| A public `_get*` method is an accessor | `testPublicGetterIsFound` | Same |
+| A private `_get*` method on an entity extending `Entity` is not | `testPrivateGetterIsNotFound` | Same |
+| A private `_get*` method on a parent entity is not | `testPrivateGetterOnParentIsNotFound` | Same |
+| A parent entity's protected getter is inherited | `testParentGetterIsInherited` | Same |
+| A trait's protected getter is an accessor | `testTraitGetterIsFound` | Same |
+| A child's getter overrides the parent's of the same name | `testChildGetterOverridesParent` | Same |
+| Accessors on a class that uses `EntityTrait` directly, instead of extending `Entity` | `testGettersOnClassUsingEntityTraitDirectly` | 3, 4: found, its private getter included, because the scope is the class itself. 5: none at all, because the trait's `static::class === self::class` guard resolves to the using class |
+| On a child of that class, the parent's protected and private getters are found and the child's private getter is not | `testGettersOnChildOfClassUsingEntityTraitDirectly` | Same |
+| `_setNickname()` runs on `$entity->nickname = ...` | `testSetterRunsOnAssignment` | Same |
+| The field name is `Inflector::underscore()` of the method suffix: `_getURLSlug` is `u_r_l_slug`, `_getName2` is `name2` | `testGetterNameIsUnderscoredLikeInflector` | Same |
+| `getNotAField()` is not an accessor | `testMethodWithoutUnderscoreIsNotAccessor` | Same |
+| `$_virtual` is not needed for access; it only adds the field to `toArray()` | `testVirtualPropertyIsNotNeededForAccess` | Same |
+| `has()` and `isset()` are true for a getter returning a value | `testHasAndIssetOnAccessorReturningValue` | Same |
+| `has()` and `isset()` for a getter returning `null` | `testHasAndIssetOnAccessorReturningNull` | 3, 4: both false. 5: `has()` true because the accessor exists, `isset()` false |
+
+### `EntityAssociationPropertyTest`
+
+Relied on by entity association property types, completion and navigation
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md), step 6). "Same"
+means 3, 4 and 5. The tests create `users` and `reviews` tables in the in-memory SQLite
+connection, because `getProperty()` reads the source table's schema.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| A `belongsTo` property is the singular, underscored alias: `Authors` is `author`, `ReviewAuthors` is `review_author`, `People` is `person` | `testBelongsToPropertyIsSingularUnderscored` | Same |
+| A `hasOne` property is the singular, underscored alias | `testHasOnePropertyIsSingularUnderscored` | Same |
+| A `hasMany` property is the underscored alias: `ReviewComments` is `review_comments` | `testHasManyPropertyIsUnderscoredAlias` | Same |
+| A `belongsToMany` property is the underscored alias | `testBelongsToManyPropertyIsUnderscoredAlias` | Same |
+| A `Plugin.Alias` association's property drops the plugin | `testPluginPrefixIsDroppedFromProperty` | Same |
+| The `propertyName` option replaces the derived name | `testPropertyNameOptionOverrides` | Same |
+| The property's entity is the target table's entity class, so `className` decides it and a plugin target gives the plugin's entity | `testTargetEntityIsTargetTablesEntityClass` | Same |
+| A target with no table class gives `Cake\ORM\Entity` | `testTargetWithoutTableClassUsesBaseEntity` | Same |
+| A `belongsTo` property holds the target entity, or `null` when nothing matched | `testBelongsToPropertyHoldsTargetEntityOrNull` | Same |
+| A `hasOne` property holds the target entity, or `null` when nothing matched | `testHasOnePropertyHoldsTargetEntityOrNull` | Same |
+| A `hasMany` property holds an array of target entities, empty when nothing matched | `testHasManyPropertyHoldsArrayOfTargetEntities` | Same |
+| An accessor named for an association property receives the association's value | `testAccessorReceivesAssociationValue` | Same |
+| A child's `initialize()` replaces its parent's association of the same alias, so only the child's property exists | `testChildInitializeReplacesParentAssociationOfSameAlias` | 3, 4 |
+| A query method's association replaces the one of the same alias only once it runs, so either property can exist | `testQueryMethodReplacesAssociationOfSameAliasWhenItRuns` | 3, 4 |
+| A child's `initialize()` that does not call its parent's has only its own association of the alias | `testChildInitializeWithoutParentCallSkipsParentAssociation` | 5 |
+| Configuring an alias a second time during `initialize()` throws | `testConfiguringAnAliasTwiceInInitializeThrows` | 5 |
+| A query method configuring an alias that already exists throws | `testQueryMethodConfiguringAnExistingAliasThrows` | 5 |
+
+### `InflectorTest`
+
+Relied on by the plugin's `Inflector` port and the `camelCaseToUnderscore()`,
+`tableToEntityClass()` and `entityToTableClass()` helpers, which derive virtual field names,
+association property names and entity and table class names
+([entity-virtual-fields](../../../features/2026/10/entity-virtual-fields.md)). "Same" means 3,
+4 and 5.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| `underscore()` puts an underscore before each capital after the first character and lowercases: `fullName` and `FullName` are `full_name`, `uRLSlug` is `u_r_l_slug`, `name2` stays `name2` | `testUnderscoreOfCamelCaseNames` | Same |
+| `singularize()` handles the irregular, special and uncountable plurals: `People` is `Person`, `Movies` is `Movie`, `Categories` is `Category`, `Statuses` is `Status`, `Sheep` stays | `testSingularizeIrregularAndSpecialPlurals` | Same |
+| `pluralize()` inverts them | `testPluralizeIrregularAndSpecialSingulars` | Same |
+| A table's default entity class is the singularized alias, so `PeopleTable` has `Person` | `testTableEntityClassIsTheSingularizedAlias` | Same |

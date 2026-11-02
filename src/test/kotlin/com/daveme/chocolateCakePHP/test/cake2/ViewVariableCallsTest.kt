@@ -11,7 +11,7 @@ import java.io.*
 class ViewVariableCallsTest : Cake2BaseTestCase() {
     private val root = "cake2/app/View"
     private val extension = "ctp"
-    private val elementKey = "Element/review"
+    private val elementKey = "Elements/review"
     private val settings get() = Settings.getInstance(project)
 
     override fun setUpTestFiles() {
@@ -249,7 +249,7 @@ class ViewVariableCallsTest : Cake2BaseTestCase() {
 
     fun `test repeated render calls do not exhaust the lookup budget`() {
         controller("${'$'}this->set('fromController', 1);")
-        myFixture.addFileToProject("$root/Element/outer.$extension", "<?php " + "${'$'}this->element('review');".repeat(4))
+        myFixture.addFileToProject("$root/Elements/outer.$extension", "<?php " + "${'$'}this->element('review');".repeat(4))
         caller("${'$'}this->element('outer');".repeat(4))
         assertTrue(exists("fromController"))
         assertTrue(variables().containsKey("fromController"))
@@ -257,7 +257,7 @@ class ViewVariableCallsTest : Cake2BaseTestCase() {
     }
 
     fun `test nearer and outer set on one render path union their types`() {
-        myFixture.addFileToProject("$root/Element/outer.$extension",
+        myFixture.addFileToProject("$root/Elements/outer.$extension",
             "<?php ${'$'}this->set('x', 1); ${'$'}this->element('review');")
         caller("${'$'}this->set('x', 'outer'); ${'$'}this->element('outer');")
 
@@ -272,7 +272,7 @@ class ViewVariableCallsTest : Cake2BaseTestCase() {
     }
 
     fun `test nested elements apply the cutoff at each render`() {
-        myFixture.addFileToProject("$root/Element/outer.$extension", "<?php ${'$'}this->element('review');")
+        myFixture.addFileToProject("$root/Elements/outer.$extension", "<?php ${'$'}this->element('review');")
         caller("${'$'}this->set('a', 1); ${'$'}this->element('outer'); ${'$'}this->set('b', 2);")
         assertEquals(setOf("a"), variables().keys)
         assertFalse(exists("b"))

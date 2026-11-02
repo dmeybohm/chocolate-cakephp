@@ -67,7 +67,7 @@ object ViewHelperReceivers {
      */
     fun loadedHelpers(project: Project, viewFile: ViewFile): LoadedMembers {
         val loaded = ConfiguredMemberService.loadedMembers(
-            project, of(project, viewFile), setOf(MemberKind.HELPER), ignoredProperties(project, viewFile)
+            project, of(project, viewFile), setOf(MemberKind.HELPER), ignoredProperties(viewFile)
         )
         return loaded.copy(members = loaded.members.mapValues { (alias, member) ->
             helperMemberType(project, viewFile, alias) ?: member
@@ -82,7 +82,7 @@ object ViewHelperReceivers {
     fun helperMemberType(project: Project, viewFile: ViewFile, fieldName: String): MemberTypeResult? {
         val settings = Settings.getInstance(project)
         val viewClasses = viewFile.structure.viewClassReceivers(settings)
-        val ignored = ignoredProperties(project, viewFile)
+        val ignored = ignoredProperties(viewFile)
         val viewClassType = helperType(project, viewClasses, fieldName, ignored)
         // View::initialize() runs after the controller's helpers reach the view, so its load wins:
         if (viewClassType != null && viewClassType.hasInitializeLoad) {
@@ -130,11 +130,8 @@ object ViewHelperReceivers {
         ConfiguredMemberService.memberType(project, receivers, setOf(MemberKind.HELPER), fieldName, ignoredProperties)
             ?.takeIf { it.classFqns.isNotEmpty() }
 
-    // The builder always passes the view its helpers, which replaces a property on the view class:
-    private fun ignoredProperties(project: Project, viewFile: ViewFile): (String) -> Set<String> {
-        val viewClasses = viewFile.structure.viewClassReceivers(Settings.getInstance(project))
-        return { receiver ->
-            if (receiver in viewClasses || !viewFile.structure.readsHelpersProperty) helpersProperty else emptySet()
-        }
+    private fun ignoredProperties(viewFile: ViewFile): (String) -> Set<String> {
+        val ignored = if (viewFile.structure.readsHelpersProperty) emptySet() else helpersProperty
+        return { ignored }
     }
 }

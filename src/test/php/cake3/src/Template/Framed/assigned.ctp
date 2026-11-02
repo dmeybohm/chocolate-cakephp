@@ -1,0 +1,1 @@
+<?php $this->layout = 'probe'; ?>assigned

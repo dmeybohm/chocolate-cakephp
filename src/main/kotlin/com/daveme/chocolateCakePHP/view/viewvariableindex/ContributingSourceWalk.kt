@@ -19,7 +19,8 @@ import com.jetbrains.php.lang.psi.elements.Method
  *
  * An unprefixed name in a template or element resolves in the plugin of the rendering class, so a
  * hop through one can only be decided once the walk reaches the class. Whatever that hop
- * contributes waits until then. A file nothing renders decides by its own plugin.
+ * contributes waits until then. A file nothing renders decides by its own plugin, and a layout counts
+ * as one, since what names it says nothing about the variables it gets.
  */
 internal class ContributingSourceWalk(
     private val project: Project,
@@ -51,10 +52,15 @@ internal class ContributingSourceWalk(
         val queue = ArrayDeque<Step>()
         val nodes = mutableSetOf(rootNode)
         val references = HashMap<String, List<PsiElementAndPath>>()
-        fun referencesTo(viewFile: ViewFile) = references.getOrPut(viewFile.templateKey) {
-            // A cell template renders in its own view, so its callers' variables do not reach it
-            ViewFileIndexService.referencingElementsInSmartReadAction(project, viewFile.templateKey)
-                .filterNot { it.isCellRender }
+        fun referencesTo(viewFile: ViewFile): List<PsiElementAndPath> {
+            if (viewFile.structure.isLayoutKey(viewFile.templateKey)) {
+                return emptyList()
+            }
+            return references.getOrPut(viewFile.templateKey) {
+                // A cell template renders in its own view, so its callers' variables do not reach it
+                ViewFileIndexService.referencingElementsInSmartReadAction(project, viewFile.templateKey)
+                    .filterNot { it.isCellRender }
+            }
         }
         referencesTo(root).mapTo(queue) { Step(it, rootNode) }
 
