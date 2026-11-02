@@ -20,26 +20,34 @@ offer the wrong controllers inside a plugin's routes file.
 
 ## How CakePHP resolves a route target
 
-To be confirmed by the assumption tests in the first step. From the 3.x, 4.x and 5.x sources
-(`Cake\Routing\RouteBuilder`, `Cake\Routing\Router`, `Cake\Controller\ControllerFactory`):
+Pinned by `RouteTargetTest` in `src/test/php` on 3.10, 4.6 and 5.4 (see the catalogue in
+`src/test/php/README.md`). Session #1 below lists where the first reading of the sources was wrong.
 
 - A target array has string keys `plugin`, `prefix`, `controller`, `action`, plus `_name`,
   `_method`, `_ext`, `?`, `#` and positional passed arguments. Only the four named keys matter
   here.
 - `controller` is the class's short name without the `Controller` suffix, CamelCase:
-  `'controller' => 'Articles'` is `App\Controller\ArticlesController`. The factory does not
-  inflect it, so `'articles'` is a different (missing) class.
+  `'controller' => 'Articles'` is `App\Controller\ArticlesController`. The controller factory
+  does not inflect it and refuses a name starting in lower case, but `DashedRoute` (the
+  application skeleton's route class) camelizes the `controller` and `action` params of every
+  route it parses, connect() defaults included, so `'controller' => 'articles'` and
+  `'action' => 'view_all'` dispatch on a dashed route and fail on a plain `Route`. The plugin
+  offers the class's own spelling and may resolve the inflected spellings for navigation.
 - `plugin` is the plugin's CamelCase name, `'plugin' => 'DebugKit'`, and selects the plugin's
-  `Controller` namespace in place of the app's. `'plugin' => false` or `null` inside a plugin
-  scope targets the app.
+  `Controller` namespace in place of the app's. Inside a `plugin()` scope a `connect()` target
+  may not name another plugin, and `'plugin' => false` is rejected the same way
+  (`BadMethodCallException`); `'plugin' => null` connects an app route.
 - `prefix` selects a sub-namespace under `Controller`. CakePHP 4 and 5 want it CamelCase,
   `'prefix' => 'Admin'`, and nested prefixes are slash-joined, `'Admin/Reports'`, mapping to
   `App\Controller\Admin\Reports\...`. CakePHP 3 underscores it: `RouteBuilder::prefix()`
   calls `Inflector::underscore()`, so the key is `'admin'` and the factory camelizes each
-  segment back. `'prefix' => false` inside a prefix scope targets the unprefixed controller.
-- `action` is the method name as written, camelCase. `DashedRoute` and `InflectedRoute` only
-  change how the name appears in the URL. An action must be a public method the controller
-  does not inherit from `Cake\Controller\Controller`.
+  segment back, so `'Admin'` dispatches on 3 as well. CakePHP 4 still camelizes a lower case
+  prefix, with a deprecation; CakePHP 5 uses it verbatim, so `'admin'` is a missing controller.
+  `'prefix' => null` inside a prefix scope connects the unprefixed controller on every version;
+  `'prefix' => false` does the same on 3 and 4 and is rejected on 5.
+- `action` is the method name as written, camelCase. An action must be a public method the
+  controller does not inherit from `Cake\Controller\Controller`; 4 and 5 match it
+  case-sensitively, 3 does not. The underscored spelling only works through `DashedRoute`.
 - `RouteBuilder::scope()`, `prefix()` and `plugin()` each run a closure with a builder whose
   `_params` carry the `plugin` and `prefix` of every enclosing scope. `connect()` merges the
   target array over those params, so inside `$routes->prefix('Admin', function ($builder) {
@@ -48,8 +56,8 @@ To be confirmed by the assumption tests in the first step. From the 3.x, 4.x and
   `scope('/path', ['plugin' => 'X'], ...)` set the same params through the array argument.
   `prefix()` nests: `prefix('Admin', ...)` around `prefix('Reports', ...)` gives
   `'Admin/Reports'`.
-- `connect()`'s defaults may also be a string, `'Articles::index'`, parsed by `parseDefaults()`
-  as `Controller::action` with an optional `Plugin.` in front. This form exists in 3.6+.
+- `connect()`'s defaults may also be a string, `'[Plugin.][Prefix/]Controller::action'`, on all
+  three versions. CakePHP 3 lowercases the prefix part, matching its `prefix()` convention.
 - `get()`, `post()`, `put()`, `patch()`, `delete()`, `head()` and `options()` take the same
   target as their second argument, as does `redirect()`. `resources('Articles')` takes a bare
   controller name as its first argument and connects the index/add/view/edit/delete actions to
@@ -59,8 +67,11 @@ To be confirmed by the assumption tests in the first step. From the 3.x, 4.x and
 - Away from the routes file, the array goes to `Router::url()`, `$this->Url->build()`,
   `$this->Html->link()`, `$this->Form->postLink()`, `$this->Form->create($x, ['url' => [...]])`
   and `Controller::redirect()`. A key left out of such an array is filled from the current
-  request, so `['action' => 'edit']` in `ArticlesController` targets the same controller.
-  `Router::url()` with no `plugin` key inside a plugin request keeps the request's plugin.
+  request, so `['action' => 'edit']` in `ArticlesController` targets the same controller, and
+  the request's `plugin` and `prefix` are kept unless the array has the key; `false` and
+  `null` both leave them. The `prefix` key is matched against the route case-sensitively, so
+  only the version's own spelling builds a URL; on a dashed route the `plugin` and
+  `controller` keys match in any case.
 
 CakePHP 2 differs in every naming rule (see "CakePHP 2" below), which is why it is a separate
 branch.
@@ -100,8 +111,9 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
 
 - `RouteTarget(plugin: String?, prefix: String?, controller: String?, action: String?)` parsed
   from an `ArrayCreationExpression` whose keys are string literals. Non-literal values and
-  unknown keys are ignored. A `false`/`null` value for `plugin` or `prefix` records an explicit
-  "none", distinct from absent, so an inner key can cancel an outer scope.
+  unknown keys are ignored. A `null` value for `plugin` or `prefix`, or `false` for `prefix` on
+  3 and 4, records an explicit "none", distinct from absent, so an inner key can cancel an
+  outer scope. In a URL-building array `false` means the same as `null`.
 - `RouteScope(plugin: String?, prefix: String?)` from the enclosing closures: walk up from the
   array through `Closure` → `ParameterList` → `MethodReference` named `prefix`, `plugin` or
   `scope` whose receiver is a `RouteBuilder` (instance, or the static `Router::` form on 3 and
@@ -112,7 +124,8 @@ which already exist in `src/test/php/cake5/src/Controller/Admin`.
 - Controller FQNs for a resolved target: `${namespace}\Controller\${prefixPath}\${Name}Controller`
   where the namespace is the app's, or the configured plugin's by name
   (`findPluginConfigByName`, `effectivePluginName`), and `prefixPath` is the prefix with `/`
-  turned into `\`, camelized per segment on CakePHP 3 so an underscored `'admin'` still resolves.
+  turned into `\`, camelized per segment on CakePHP 3 and 4 so an underscored `'admin'` still
+  resolves, and used verbatim on 5.
   This extends `controllerTypeFromControllerName` rather than replacing it.
 - The reverse, for completion: from a controller `PhpClass` under one of the known namespaces,
   its `(plugin, prefix, name)`, the same way `cellNameFromClassFqn` strips a namespace prefix.
@@ -227,3 +240,30 @@ classes.
 - Inspections flagging an unknown controller or action.
 - URL strings (`'/articles/view'`) and `linkFromPath()`'s `Controller::action` path form, which
   could reuse the `Controller::action` parsing later.
+
+## Implementation Progress
+
+### Session #1
+
+Wrote `RouteTargetTest` for CakePHP 3, 4 and 5 (36 tests each, all passing) with `Routed`
+controllers in the app, under `Admin` and `Admin/Reports`, and in the Probe plugin, a shared
+`RoutedActionsTrait` that reports the dispatched class and method, the request params and the
+URL `Router::url()` builds, and a `/rt` route scope in each `config/routes.php` that connects
+the targets under test ahead of the fallbacks. The catalogue rows are in `src/test/php/README.md`.
+
+What the tests corrected in the first reading of the sources:
+
+- `DashedRoute` camelizes the `controller` and `action` params of a route's own defaults when
+  it parses a request, so lower case and underscored keys dispatch on the skeleton's route class;
+  only a plain `Route` refuses them.
+- `'plugin' => false` inside a `plugin()` scope is a `BadMethodCallException`, not a way to
+  target the app; `null` is.
+- `'prefix' => false` is rejected on 5 (`Route` asserts the type); `null` escapes a prefix scope
+  on every version.
+- Cake 4 still camelizes a lower case prefix on dispatch, with a deprecation; only 5 is strict.
+- Cake 3 reports an app request's `plugin` param as `false`, not `null`.
+- The route the URL builder picks is the first one whose name bucket matches, which made a
+  test of `Router::url(['action' => 'view_all'])` depend on route order; it was dropped as it
+  pinned the fixture rather than the framework.
+
+Next: step 2, the route target model and `getControllerSubclasses`.
