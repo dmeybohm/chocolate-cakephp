@@ -37,3 +37,34 @@ treated as a CakePHP 2 one without this check.
   controller-to-view navigation misses until the controller is edited.
 - Whether the version can be decided from the controller file's own path and the settings alone, or
   whether it needs the templates directory and so belongs at lookup time.
+
+## Implementation Progress
+
+### Session #1
+
+Merged `origin/main` (2026-11-02). What changed for this bug:
+
+- #309 (`view-index-bugs`) fixed the element directory dependency by deriving the prefix from the
+  file's own templates directory, not a sibling lookup. It did not touch `isCakeTwoController`.
+- 3b3ed077 added `isCakeTwoPluginDirectory`, so CakePHP 2 plugin controllers are now recognised from
+  their path and settings alone. The sibling `templates`/`Template` check is still there for app
+  controllers, so the bug remains for them.
+
+Added the assumption test `testCamelCaseActionResolvesToImplicitTemplate` on 2 to 5. It was written
+expecting CakePHP 2 to keep the action name as it is, as `fullImplicitViewPath` assumes, and it
+failed: CakePHP 2.10.24 looked for `Widgets/camel_case.ctp`. `View::_getViewFileName` runs
+`Inflector::underscore` on any template name without a slash, the same as 3+. The test now records
+that, and it passes on every version.
+
+What follows from that:
+
+- The implicit render key does not depend on the version. `fullImplicitViewPath` could always
+  underscore, which removes one of the two places the indexer reads `isCakeTwo`.
+- The other place remains: `TemplateDirStructure.ofSourceFile` (via `ReferencePluginContext` in
+  `ViewFileDataIndexer` and `pluginOfClassFile` in the view variable index) still uses
+  `lookupControllerFileInfo` to pick the CakePHP 2 structure for a controller. That structure decides
+  how plugins are named, so the sibling directory dependency stays in the index until it is fixed too.
+- A separate bug, not limited to the index: CakePHP 2 navigation and view creation never underscore
+  (`addViewFilenameExtension`'s `CakeTwoTemplatesDir` branch, and the `isCakeTwo` flag in
+  `fullImplicitViewPath`). A CakePHP 2 action `fooBar` is linked to `fooBar.ctp`, but CakePHP renders
+  `foo_bar.ctp`. Lowercase-only action names are unaffected. This probably needs its own branch.

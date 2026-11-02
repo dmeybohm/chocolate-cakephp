@@ -78,4 +78,8 @@ class WidgetsController extends AppController
         $this->viewBuilder()->setHelpers(['Aliased' => ['className' => 'Marker']]);
         $this->set('name', $this->getRequest()->getQuery('name'));
     }
+
+    public function camelCase()
+    {
+    }
 }
