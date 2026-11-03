@@ -2,9 +2,10 @@
 
 ## Status
 
-Planned 2026-11-02. Supersedes [anchor-configured-plugin-paths](anchor-configured-plugin-paths.md),
-which is closed without merging; its problem statement, assumption tests and decoy scenarios carry
-over here. Branched from `main` after #321.
+Planned 2026-11-02; revised the same day after review (see Review below). Supersedes the unmerged
+branch `anchor-configured-plugin-paths` (on `origin`, last commit cce3fce0), whose feature log is not
+on this branch; the problem statement below is self-contained and its assumption tests and decoy
+scenarios are carried over here. Branched from `main` after #321.
 
 ## The problem
 
@@ -20,7 +21,9 @@ The superseded branch tried to anchor the suffix to an "app root", found by chec
 directory left after removing the path contains the app directory. In CakePHP 3+ every plugin also
 has a `src` directory, so that test cannot tell an app from a plugin, and the exclusions it needed
 (a parent named `plugins`, a fallback to the project directory for paths typed the old way) were
-each found leaky in review. The underlying fault is that the plugin never settled what "the app" is.
+each found leaky in review: with `vendor/acme/blog` configured, a copy at
+`packages/Parent/vendor/acme/blog` was still Blog whenever `packages/Parent/src` existed. The
+underlying fault is that the plugin never settled what "the app" is.
 
 ### How the app root drifted
 
@@ -41,10 +44,10 @@ inferred from layout, is what this branch replaces.
   `ROOT`. It holds `composer.json`, `vendor/`, `config/`, `plugins/` and the app directory. There is
   exactly one per running application. CakePHP finds plugins from it, by name under `ROOT/plugins/`
   and through `vendor/cakephp-plugins.php`, whose paths Composer's plugin installer writes from the
-  composer.json directory. The IDE plugin already defines the app from this file: autodetection
-  takes the CakePHP version from its `require`, the app directory from its `psr-4` mapping, and the
-  namespace from the `config/app.php` beside it. Today its location is hardcoded as the project
-  directory.
+  composer.json directory (pinned by `testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory`).
+  The IDE plugin already defines the app from this file: autodetection takes the CakePHP version
+  from its `require`, the app directory from its `psr-4` mapping, and the namespace from the
+  `config/app.php` beside it. Today its location is hardcoded as the project directory.
 - **App directory.** `ROOT/src` (CakePHP 3+) or `ROOT/app` (CakePHP 2), named by the `appDirectory`
   and `cake2AppDirectory` settings. The setting has a second role: `appOrSrcDirectoryFromSourceFile`
   walks up from a source file matching any child by that name, so inside a plugin it matches the
@@ -80,30 +83,46 @@ What the model gives up is several apps in one project sharing a configuration, 
 plugin outside `ROOT`. Neither is something CakePHP does: an application has one `ROOT`, and the
 paths Composer records are under it. See Not in scope for the plugin-typed project.
 
+### Two path bases
+
+`TemplatesDirWithPath.templatesPath` is a string shown in the navigation popup and typed back into
+`CreateViewFileAction`, which resolves it from the project directory. Today the main template paths
+are project-relative (`pathRelativeToProjectRoot`), while the plugin and theme paths are the
+configured path plus `templates`, so relative to the app root. With the app at the project root the
+two agree; with `cake5/composer.json` configured, creating a view in a configured plugin would look
+for `vendor/acme/blog/templates` under the project directory and fail. Under the model every
+`templatesPath` is project-relative, computed from the resolved directory as the main paths already
+are, and `AllTemplatePaths.pluginTemplatePaths`, which today picks a plugin's paths by string prefix,
+picks them by directory: the templates directory is under `findRelativeFile(root, pluginPath)`.
+Index keys are unaffected: `canonicalizeFilenameToKey` strips the templates directory's own path.
+`allViewPathsToFiles` in `CakeView.kt`, which also resolves from the project directory, has no
+callers and goes.
+
 ## Plan
 
 1. Assumption test on CakePHP 3, 4 and 5, before the plugin code, with a row in the catalogue in
-   `src/test/php/README.md`: a plugin installed by Composer is found from `ROOT`. Add
-   `cakephp/plugin-installer` and a local `path` repository for a package typed `cakephp-plugin`
-   (the `packages/Pathed` plugin from the superseded branch, given a composer.json), and assert that
-   `PluginCollection::findPath()` returns a directory under `ROOT/vendor/`, and that the generated
-   `vendor/cakephp-plugins.php` builds its paths from the composer.json directory. This is the fact
-   that makes composer.json the anchor for configured paths. The superseded branch's two tests, the
-   explicit-path plugin and the nested vendor copy CakePHP refuses to load, come across unchanged.
+   `src/test/php/README.md`: a plugin installed by Composer is found from `ROOT`. Done; see Session #1.
 2. Tests, expected to fail first:
    - cake2 and cake5 `AnchoredPluginPathTest` from the superseded branch, with the same scenarios:
      the copy under `ROOT` is the plugin; `examples/lib/Shop`, `examples/vendor/acme/blog`,
      `plugins/Foo/vendor/acme/blog` and `packages/Parent/vendor/acme/blog` are not. The "applies
      under every app root" and "nested app directory anchors" cases go, since the model has one
      `ROOT`; the nested app directory case becomes a `src/app` setting resolved from `ROOT`.
-   - A `SettingsTest` case: `ROOT` is the directory of `composerJsonPath`, and the project
-     directory when the file is missing.
-   - An autodetection test with the composer.json at `cake5/composer.json` and the setting pointing
-     at it, to pin that autodetection reads from the configured file.
+   - `SettingsTest`: `ROOT` is the directory of `composerJsonPath`, and the project directory when
+     the file is missing.
+   - `AutoDetectionGatingTest`: with two composer files present, one requiring CakePHP 4 and one
+     CakePHP 2, switching `composerJsonPath` between them changes the detected version without any
+     file changing. This pins the cache dependency of step 3.
+   - cake5: from a controller under `cake5/src5`, navigation reaches a template in the configured
+     `cake5/vendor/acme/blog/templates`, and the popup's path for creating a view there is
+     project-relative, with `composerJsonPath` set to `cake5/composer.json`. This pins the path
+     base reconciliation of step 5.
 3. Add `composerJsonPath` to `SettingsState`, and a `rootDirectory` accessor on `Settings` that
    resolves it and falls back to the project directory. Route `autodetectCakePhp` and
-   `checkNamespaceInAppConfig` through it, and widen `CakePhpFilesModificationTracker` to watch the
-   configured file and the `config/app.php` beside it rather than the project root's.
+   `checkNamespaceInAppConfig` through it. The autodetection cache in `CakePhpAutoDetector`
+   depends only on `CakePhpFilesModificationTracker`, so a changed setting would not refresh it:
+   add `Settings.modificationTracker` as a second dependency, and widen the file tracker to watch
+   the configured file and the `config/app.php` beside it rather than the project root's.
 4. Resolve from `ROOT` everywhere a configured path is used:
    - `appRootDirectoryFromViewFile` returns `ROOT`; the walk goes.
    - `allTemplatePathsFromTopSourceDirectory` uses `ROOT` instead of the top source directory's
@@ -113,27 +132,32 @@ paths Composer records are under it. See Not in scope for the plugin-typed proje
      The suffix match, `isDirectoryOfPluginPath`, goes. The directory-name clauses (`Plugin`,
      `plugins`, the override directory) are layout rules for units and stay.
    - The asset handlers already take the app root from `appRootDirectoryFromViewFile`.
-5. Test fixtures: each version's base test case sets `composerJsonPath` to `cakeN/composer.json`
+5. Make every `templatesPath` project-relative and `pluginTemplatePaths` match by directory, as
+   under Two path bases; delete `allViewPathsToFiles`.
+6. Test fixtures: each version's base test case sets `composerJsonPath` to `cakeN/composer.json`
    (and the `_nested` variants theirs), and a minimal composer.json fixture requiring that CakePHP
    version is added under each fixture root and copied in `setUp`. The 49 configured paths in the
    suite and the fixture file references stay as written. `test configured vendor plugin is a
-   plugin` in the cake3, cake4 and cake5 `PluginAwareViewKeysTest` needs no `Application.php` any
-   more.
-6. `ControllerSideHelperTest`'s three library tests from #319 attach `vendor/test/test_plugin` from
+   plugin` in the cake3, cake4 and cake5 `PluginAwareViewKeysTest` needs no `Application.php`.
+7. `ControllerSideHelperTest`'s three library tests from #319 attach `vendor/test/test_plugin` from
    a temporary directory outside the project, which only matched through the suffix. Under the model
    a plugin outside `ROOT` is not the configured plugin. Rework the fixture so the library sits under
    `ROOT` in the test project while still attached as a library rather than content, or if the light
    fixture cannot do that, narrow the tests to a library under `ROOT` with a heavier fixture. The
    feature these tests pin, controllers in libraries counting in a layout, is unchanged for the
    real case of Composer's `vendor/` under `ROOT`.
-7. Settings UI: a "composer.json" field with a default button on `ConfigForm.form`, beside the
-   autodetection checkboxes, and reword the plugin and theme path explanations in `PluginForm.form`
-   (lines 62 and 104) and the "from Project Root" labels in `EditPluginEntryDialog.form` and
-   `EditThemeEntryDialog.form` to say the paths are relative to the directory containing
-   composer.json.
-8. Bump `ViewFileIndex` (29) and `ViewVariableIndex` (23), since plugin identity reaches their keys.
-9. Changelog entry under Changed, with the migration note below. Targeted tests per version, then
-   the full suite before opening the PR.
+8. Settings UI: a "composer.json" field with a default button on `ConfigForm.form`, beside the
+   autodetection checkboxes. `ConfigForm.apply` compares the indexing-relevant settings before and
+   after and requests a rebuild of `ViewFileIndex` and `ViewVariableIndex` when one changed;
+   `composerJsonPath` joins that comparison, since moving `ROOT` changes plugin identity even when
+   the detected version does not. Reword the plugin and theme path explanations in
+   `PluginForm.form` (lines 62 and 104) and the "from Project Root" labels in
+   `EditPluginEntryDialog.form` and `EditThemeEntryDialog.form` to say the paths are relative to
+   the directory containing composer.json.
+9. Bump `ViewFileIndex` (29) and `ViewVariableIndex` (23), since plugin identity reaches their keys
+   and existing indexes were built under the suffix rule.
+10. Changelog entry under Changed, with the migration note below. Targeted tests per version, then
+    the full suite before opening the PR.
 
 ## Migration
 
@@ -156,6 +180,22 @@ nothing. Recognition never worked for the first group before #321, which is unre
 - **Paths containing `..`.** Not resolved today and not needed under the model.
 - **Validating or migrating saved plugin paths** in `EditPluginEntryDialog`.
 
+## Review
+
+A review of the first plan raised four points, each checked against the code:
+
+1. The autodetection cache (`CakePhpAutoDetector.autoDetectedValues`) depends only on the file
+   tracker, so changing `composerJsonPath` would not refresh it. Step 3 adds the settings tracker as
+   a dependency and step 2 pins it with two composer files.
+2. Template paths are stored relative to the app root but resolved from the project directory. The
+   reviewer named `allViewPathsToFiles`, which turns out to have no callers; the live consumer is
+   `CreateViewFileAction`, through the popup's `fullPath`. Two path bases and step 5 reconcile them,
+   and step 2 pins navigation and the create path through a configured plugin under a nested `ROOT`.
+3. `ConfigForm` requests an index rebuild only for the settings it compares, and an index version
+   bump covers upgrades, not a user moving `ROOT`. Step 8 adds the field to the comparison.
+4. The status section linked a feature log that exists only on the superseded branch. It now names
+   the branch and commit, and the problem statement carries the rationale itself.
+
 ## Implementation Progress
 
 ### Session #1
@@ -171,4 +211,5 @@ every version the generated `vendor/cakephp-plugins.php` sets `$baseDir` to the 
 anchored at the composer.json directory, which is what the model takes `ROOT` to be. The lock files
 moved with `composer update acme/installed cakephp/plugin-installer`. `findPath` is static on
 CakePHP 3 and an instance method on 4 and 5, so the test calls it on an instance. The
-`TemplateResolutionTest` classes pass on 3, 4 and 5. No plugin code yet.
+`TemplateResolutionTest` classes pass on 3, 4 and 5, and the full assumption suites on 3, 4 and 5
+pass, with the one pre-existing deprecation warning on CakePHP 4. No plugin code yet.
