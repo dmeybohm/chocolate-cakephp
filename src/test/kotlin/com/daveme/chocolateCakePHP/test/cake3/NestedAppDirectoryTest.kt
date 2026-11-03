@@ -13,7 +13,7 @@ class NestedAppDirectoryTest : BaseTestCase() {
 
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
-        newState.cake3Enabled = true
+        newState.autoDetect = true
         newState.cake3ForceEnabled = true  // Force enable to bypass auto-detection
         newState.cake2Enabled = false
         newState.appDirectory = "app/src"  // Nested path

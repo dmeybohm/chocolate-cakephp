@@ -19,7 +19,7 @@ class AutoDetectionGatingTest : BaseTestCase() {
 
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
-        newState.cake3Enabled = true
+        newState.autoDetect = true
         newState.cake3ForceEnabled = false  // Rely on detection
         newState.cake2Enabled = false
         // appDirectory left at its default; the nested path must come from composer.json.

@@ -57,6 +57,18 @@ class PluginConfigSerializationTest : TestCase() {
         val state = SettingsState(cake2Enabled = true)
         assertEquals(state, roundTrip(state))
     }
+
+    fun `test auto-detect is saved under its old name`() {
+        val xml = JDOMUtil.write(XmlSerializer.serialize(SettingsState(autoDetect = false)))
+        assertTrue(xml, xml.contains("name=\"cake3Enabled\""))
+
+        val saved = JDOMUtil.load("""
+            <ChocolateCakePHPSettings>
+              <option name="cake3Enabled" value="false" />
+            </ChocolateCakePHPSettings>
+        """.trimIndent())
+        assertFalse(XmlSerializer.deserialize(saved, SettingsState::class.java).autoDetect)
+    }
 }
 
 /**

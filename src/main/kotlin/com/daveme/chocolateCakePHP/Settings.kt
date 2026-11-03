@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.OptionTag
 import com.intellij.util.xmlb.annotations.Property
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.XCollection
@@ -149,8 +150,10 @@ data class SettingsState(
     var cake2TemplateExtension: String = "ctp",
     // force enables CakePHP 2, whatever is detected:
     var cake2Enabled: Boolean = false,
-    // auto-detects every CakePHP version from composer.json:
-    var cake3Enabled: Boolean = true,
+    // Auto-detects every CakePHP version from composer.json. Saved under its
+    // old name, from when it only auto-detected CakePHP 3+:
+    @OptionTag("cake3Enabled")
+    var autoDetect: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
 
     // deprecated: superseded by pluginConfigs
@@ -271,7 +274,7 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val cakeTemplateExtension get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled) {
+        return if (state.autoDetect && !state.cake3ForceEnabled) {
             DEFAULT_CAKE3_TEMPLATE_EXTENSION
         } else {
             state.cakeTemplateExtension
@@ -279,14 +282,14 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val appDirectory get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+        return if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().appDirectory
         else
             state.appDirectory
     }
 
     val appNamespace get(): String {
-        val namespace = if (state.cake3Enabled && !state.cake3ForceEnabled)
+        val namespace = if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().namespace
         else
             state.appNamespace
@@ -317,17 +320,17 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     fun configuredDirectory(path: String): VirtualFile? =
         configuredDirectory(rootDirectory, path)
 
-    val autoDetect get() = state.cake3Enabled
+    val autoDetect get() = state.autoDetect
 
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
     val cake2Enabled get() = cake2ForceEnabled ||
-            (state.cake3Enabled && getAutoDetectedValues().cake2Present)
+            (state.autoDetect && getAutoDetectedValues().cake2Present)
     val cake2Detected get() = getAutoDetectedValues().cake2Present
     val cake2ForceEnabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
-            (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
+            (state.autoDetect && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 

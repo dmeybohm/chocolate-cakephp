@@ -73,7 +73,7 @@ class ConfigForm implements SearchableConfigurable {
 
         newState.setComposerJsonPath(pathNormalize(composerJsonPathTextField.getText()));
 
-        newState.setCake3Enabled(enableAutoDetectCheckBox.isSelected());
+        newState.setAutoDetect(enableAutoDetectCheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
         newState.setAppDirectory(pathNormalize(appDirectoryTextField.getText()));
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());

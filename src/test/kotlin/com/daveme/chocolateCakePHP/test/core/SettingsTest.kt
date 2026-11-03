@@ -267,7 +267,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(settings.cake3Enabled)
 
         val noAutoDetect = Settings.getDefaults(project).state.copy()
-        noAutoDetect.cake3Enabled = false
+        noAutoDetect.autoDetect = false
         settings.loadState(noAutoDetect)
         assertFalse(settings.cake2Enabled)
 
@@ -280,7 +280,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(settings.cake3Detected)
 
         val noAutoDetect = Settings.getDefaults(project).state.copy()
-        noAutoDetect.cake3Enabled = false
+        noAutoDetect.autoDetect = false
         settings.loadState(noAutoDetect)
         detectedFor("^2.10 || ^3.0")
         assertTrue(settings.cake2Detected)
@@ -293,7 +293,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
         val settings = Settings.getInstance(project)
         val forced = Settings.getDefaults(project).state.copy()
         forced.cake2Enabled = true
-        forced.cake3Enabled = false
+        forced.autoDetect = false
         settings.loadState(forced)
         assertTrue(settings.cake2Enabled)
         assertTrue(settings.cake2ForceEnabled)
@@ -304,7 +304,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
     fun `test auto-detect off disables both versions`() {
         val settings = Settings.getInstance(project)
         val noAutoDetect = Settings.getDefaults(project).state.copy()
-        noAutoDetect.cake3Enabled = false
+        noAutoDetect.autoDetect = false
         settings.loadState(noAutoDetect)
         detectedFor("^2.0 || ^3.0")
         assertFalse(settings.cake2Enabled)

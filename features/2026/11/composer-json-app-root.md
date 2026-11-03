@@ -331,4 +331,8 @@ removed; the XML serializer ignores the stale element in saved files. `Settings.
 and each "Detected" label moves up beside its section title. A project that had turned off only
 CakePHP 2 auto-detection detects CakePHP 2 again, which the changelog says. `SettingsTest` replaces
 `test cakephp 3 auto-detect off does not hide cakephp 2 detection` with `test auto-detect off
-disables both versions`, and its other auto-detect tests set `cake3Enabled` instead.
+disables both versions`, and its other auto-detect tests set the auto-detect field instead.
+
+The state field is then renamed from `cake3Enabled` to `autoDetect`. `@OptionTag("cake3Enabled")` keeps
+the name it is saved under, so existing settings files load unchanged.
+`PluginConfigSerializationTest` checks that it is written and read under the old name.
