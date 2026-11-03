@@ -426,8 +426,10 @@ A second review round, three changes:
   major, an operator form takes it from its upper bound (`<4.0` allows up to 3, `<4.1` up to 4)
   and a hyphen range from its end, with the highest across `||` alternatives winning. A lower
   bound is optional, so `<5.0` gives 4. Only a constraint with an alternative that has no upper
-  bound, such as `>=4.0` or `dev-master`, is unknown, and then the configured setting applies, which defaults to 5. The enable flags keep
-  using `constraintMajorVersions`, where the lower bound is the right question.
+  bound, such as `>=4.0` or `dev-master`, is unknown, and then the configured setting applies,
+  which defaults to 5. The enable flags read each alternative the same way, as the highest major
+  it allows when it is bounded and its lower bound otherwise, so `<3.0` detects CakePHP 2 and not
+  3+, and `>=2.0 <6.0` detects 3+.
 - The controller name is resolved as written. `DashedRoute` camelizes a lower case key but a
   plain `Route` does not, and the route class is not known to the plugin, so navigation no
   longer camelizes it either; completion offers the class's spelling anyway.
