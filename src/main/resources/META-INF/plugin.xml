@@ -55,6 +55,7 @@
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.controller.ControllerComponentsGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.entity.EntityVirtualFieldGotoDeclarationHandler" />
+        <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.routing.RouteTargetGotoDeclarationHandler" />
 
         <codeInsight.lineMarkerProvider language="PHP" implementationClass="com.daveme.chocolateCakePHP.controller.ControllerMethodLineMarker" />
         <gotoRelatedProvider implementation="com.daveme.chocolateCakePHP.view.ViewToControllerGotoRelatedProvider" />

@@ -373,4 +373,13 @@ unprefixed controllers not at all, since a string target cannot cancel the scope
 The `plugin` key offers the configured plugin names and the plugins of every known controller,
 which covers plugins found by namespace alone, rather than scanning the `plugins` directory.
 
-Next: step 5, the goto declaration handler.
+### Session #5
+
+Step 5 is `routing/RouteTargetGotoDeclarationHandler.kt`, registered in `plugin.xml`, with
+`RouteTargetGotoDeclarationTest` (cake5), all passing on the first run. An `action` key goes to
+the method by exact name first and case-insensitively otherwise, since that is what dispatches
+on CakePHP 3 and what reflection finds on every version; framework methods are never targets.
+A `prefix` key goes to the directory of the controllers in that prefix. In the string form the
+caret's side of `::` picks the class or the method. A `plugin` key has no target, as planned.
+
+Next: step 6, the cake4 and cake3 copies of the tests.
