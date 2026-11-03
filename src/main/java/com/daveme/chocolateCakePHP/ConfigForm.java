@@ -18,12 +18,11 @@ import static com.daveme.chocolateCakePHP.StringsKt.pathNormalize;
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
     private JPanel topPanel;
-    private JCheckBox enableAutoDetectCake3CheckBox;
+    private JCheckBox enableAutoDetectCheckBox;
     private JCheckBox forceEnableCakePHP3CheckBox;
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
     private JButton templateExtensionDefaultButton;
-    private JCheckBox enableAutoDetectCake2CheckBox;
     private JCheckBox enableCake2SupportCheckBox;
     private JTextField cake2AppDirectoryTextField;
     private JButton cake2AppDirectoryDefaultButton;
@@ -49,14 +48,13 @@ class ConfigForm implements SearchableConfigurable {
         composerJsonPathTextField.setText(settings.getComposerJsonPath());
 
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
-        enableAutoDetectCake3CheckBox.setSelected(settings.getCake3AutoDetect());
+        enableAutoDetectCheckBox.setSelected(settings.getAutoDetect());
         showDetected(cake3DetectedLabel, settings.getCake3Detected());
         updateCake3SettingsVisibility();
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
-        enableAutoDetectCake2CheckBox.setSelected(settings.getCake2AutoDetect());
         showDetected(cake2DetectedLabel, settings.getCake2Detected());
         enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
@@ -75,13 +73,12 @@ class ConfigForm implements SearchableConfigurable {
 
         newState.setComposerJsonPath(pathNormalize(composerJsonPathTextField.getText()));
 
-        newState.setCake3Enabled(enableAutoDetectCake3CheckBox.isSelected());
+        newState.setCake3Enabled(enableAutoDetectCheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
         newState.setAppDirectory(pathNormalize(appDirectoryTextField.getText()));
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());
 
-        newState.setCake2AutoDetect(enableAutoDetectCake2CheckBox.isSelected());
         newState.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         newState.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
         newState.setCake2AppDirectory(pathNormalize(cake2AppDirectoryTextField.getText()));
@@ -133,13 +130,10 @@ class ConfigForm implements SearchableConfigurable {
             this.updateCake3SettingsVisibility()
         );
 
-        enableAutoDetectCake3CheckBox.addActionListener(e ->
-            this.updateCake3SettingsVisibility()
-        );
-
-        enableAutoDetectCake2CheckBox.addActionListener(e ->
-            this.updateCake2SettingsVisibility()
-        );
+        enableAutoDetectCheckBox.addActionListener(e -> {
+            this.updateCake3SettingsVisibility();
+            this.updateCake2SettingsVisibility();
+        });
 
         enableCake2SupportCheckBox.addActionListener(e ->
             this.updateCake2SettingsVisibility()
@@ -149,17 +143,15 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void updateCake3SettingsVisibility() {
-        boolean visible = enableAutoDetectCake3CheckBox.isSelected() ||
+        boolean visible = enableAutoDetectCheckBox.isSelected() ||
                 forceEnableCakePHP3CheckBox.isSelected();
         cake3Panel.setVisible(visible);
-        enableAutoDetectCake3CheckBox.setEnabled(!forceEnableCakePHP3CheckBox.isSelected());
         updateCake3SettingEditability();
     }
 
     private void updateCake2SettingsVisibility() {
-        cake2Panel.setVisible(enableAutoDetectCake2CheckBox.isSelected() ||
+        cake2Panel.setVisible(enableAutoDetectCheckBox.isSelected() ||
                 enableCake2SupportCheckBox.isSelected());
-        enableAutoDetectCake2CheckBox.setEnabled(!enableCake2SupportCheckBox.isSelected());
     }
 
     private void updateCake3SettingEditability() {
@@ -198,7 +190,7 @@ class ConfigForm implements SearchableConfigurable {
         // Ensure namespace starts with backslash:
         String namespace = appNamespaceTextField.getText();
         if (
-                settings.getCake3AutoDetect() &&
+                settings.getAutoDetect() &&
                 !namespace.isEmpty() &&
                 !namespace.startsWith("\\")
         ) {

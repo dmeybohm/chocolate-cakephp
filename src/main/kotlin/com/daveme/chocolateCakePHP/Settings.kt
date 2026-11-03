@@ -149,7 +149,7 @@ data class SettingsState(
     var cake2TemplateExtension: String = "ctp",
     // force enables CakePHP 2, whatever is detected:
     var cake2Enabled: Boolean = false,
-    var cake2AutoDetect: Boolean = true,
+    // auto-detects every CakePHP version from composer.json:
     var cake3Enabled: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
 
@@ -317,17 +317,17 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     fun configuredDirectory(path: String): VirtualFile? =
         configuredDirectory(rootDirectory, path)
 
+    val autoDetect get() = state.cake3Enabled
+
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
     val cake2Enabled get() = cake2ForceEnabled ||
-            (state.cake2AutoDetect && getAutoDetectedValues().cake2Present)
-    val cake2AutoDetect get() = state.cake2AutoDetect
+            (state.cake3Enabled && getAutoDetectedValues().cake2Present)
     val cake2Detected get() = getAutoDetectedValues().cake2Present
     val cake2ForceEnabled get() = state.cake2Enabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
-    val cake3AutoDetect get() = state.cake3Enabled
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 

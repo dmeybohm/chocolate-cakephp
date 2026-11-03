@@ -319,3 +319,16 @@ Steps 2 to 10, except the full suite run, which CI does on #323.
   entry under Changed has the migration note.
 
 The cake2, cake3, cake4 and cake5 packages and `SettingsTest` pass locally.
+
+### Session #3
+
+One auto-detect setting. The CakePHP 2 and CakePHP 3+ auto-detect checkboxes become one "Auto-detect
+CakePHP from composer.json" checkbox in the composer.json section of `ConfigForm`, since both read the
+same file. It is stored in the existing `cake3Enabled` state field, so saved projects keep their
+value, and `Settings.cake2Enabled` now reads that field too. `SettingsState.cake2AutoDetect` is
+removed; the XML serializer ignores the stale element in saved files. `Settings.autoDetect` replaces
+`cake2AutoDetect` and `cake3AutoDetect`. The force-enable checkboxes stay in their version sections,
+and each "Detected" label moves up beside its section title. A project that had turned off only
+CakePHP 2 auto-detection detects CakePHP 2 again, which the changelog says. `SettingsTest` replaces
+`test cakephp 3 auto-detect off does not hide cakephp 2 detection` with `test auto-detect off
+disables both versions`, and its other auto-detect tests set `cake3Enabled` instead.
