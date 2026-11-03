@@ -130,6 +130,6 @@ class AnchoredPluginPathTest : Cake5BaseTestCase() {
             blog,
             convertDefaultCase = false,
         )!!
-        assertEquals("cake5/vendor/acme/blog/templates", allViewPaths.defaultViewPath.templatePath)
+        assertEquals("cake5/vendor/acme/blog/templates/Posts/missing.php", allViewPaths.defaultViewPath.fullPath)
     }
 }

@@ -18,10 +18,7 @@ data class ControllerPath(
     val prefix: String
 ) : ViewOwnerPath {
     override val viewPath: String get() =
-        if (prefix.isEmpty())
-            "${name}/"
-        else
-            "${prefix}/${name}/"
+        listOf(prefix, name).filter { it.isNotEmpty() }.joinToString("") { "$it/" }
 }
 
 /**
