@@ -365,18 +365,3 @@ fun allViewPathsFromPluginElementPath(
         dataViewPaths = listOf()
     )
 }
-
-fun allViewPathsToFiles(
-    project: Project,
-    allViewPaths: AllViewPaths
-): Collection<PsiFile> {
-    val projectRoot: VirtualFile = project.guessProjectDir()
-        ?: return setOf()
-    val files = allViewPaths.all.mapNotNull { viewPath ->
-        val templatePath = findRelativeFile(projectRoot, viewPath.templatePath)
-            ?: return@mapNotNull null
-        findRelativeFile(templatePath, viewPath.pathWithoutTemplate)
-    }.toList()
-
-    return virtualFilesToPsiFiles(project, files)
-}

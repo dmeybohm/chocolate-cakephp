@@ -9,15 +9,12 @@ import com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
-import java.io.File
 
 class ControllerSideHelperTest : Cake5BaseTestCase() {
 
@@ -177,28 +174,25 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
     }
 
     /**
-     * A controller in a directory attached as a library rather than in project content.
+     * A controller in a directory under the app attached as a library rather than in project
+     * content, as a Composer package in an excluded `vendor` directory is.
      */
     private fun libraryController(libraryPath: String, namespace: String, name: String, body: String) {
-        val tempDir = FileUtil.createTempDirectory("library", null)
-        Disposer.register(testRootDisposable) { FileUtil.delete(tempDir) }
-        VfsRootAccess.allowRootAccess(testRootDisposable, tempDir.path)
-        val libraryDir = File(tempDir, libraryPath)
-        File(libraryDir, "src/Controller/${name}Controller.php").apply {
-            parentFile.mkdirs()
-            writeText("""
-                <?php
-                namespace $namespace\Controller;
-                class ${name}Controller extends \Cake\Controller\Controller {
-                    $body
-                }
-            """.trimIndent())
-        }
-        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(libraryDir)!!
+        myFixture.addFileToProject("cake5/$libraryPath/src/Controller/${name}Controller.php", """
+            <?php
+            namespace $namespace\Controller;
+            class ${name}Controller extends \Cake\Controller\Controller {
+                $body
+            }
+        """.trimIndent())
+        val root = myFixture.findFileInTempDir("cake5/$libraryPath")
+        PsiTestUtil.addExcludedRoot(module, root)
+        Disposer.register(testRootDisposable) { PsiTestUtil.removeExcludedRoot(module, root) }
         val library = PsiTestUtil.addProjectLibrary(module, libraryPath, listOf(root), emptyList())
         Disposer.register(testRootDisposable) { PsiTestUtil.removeLibrary(module, library) }
+        assertFalse(ProjectFileIndex.getInstance(project).isInContent(root))
         assertTrue(PhpIndex.getInstance(project).getClassesByFQN("\\$namespace\\Controller\\${name}Controller")
-            .any { it.containingFile.virtualFile.path.startsWith(tempDir.path) })
+            .any { it.containingFile.virtualFile.path.startsWith(root.path) })
     }
 
     private fun libraryPluginController(name: String, body: String) =

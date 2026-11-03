@@ -21,7 +21,9 @@ class BothVersionsLayoutNavigationTest : BaseTestCase() {
         state.cake3ForceEnabled = true
         state.cake2AppDirectory = "app"
         state.appDirectory = "src"
+        state.composerJsonPath = "cake2/composer.json"
         settings.loadState(state)
+        myFixture.copyFileToProject("cake2/composer.json")
         myFixture.configureByFiles("cake2/app/Controller/AppController.php")
     }
 

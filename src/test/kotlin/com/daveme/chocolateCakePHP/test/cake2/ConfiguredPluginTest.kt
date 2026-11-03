@@ -63,6 +63,6 @@ class ConfiguredPluginTest : Cake2BaseTestCase() {
         val topDir = topSourceDirectoryFromSourceFile(settings, viewFile.parent)!!
         val pluginPaths = allTemplatePathsFromTopSourceDirectory(project, settings, topDir)!!
             .pluginAndThemeTemplatePaths.paths.map { it.templatesPath }
-        assertEquals(listOf("lib/Shop/View"), pluginPaths)
+        assertEquals(listOf("cake2/lib/Shop/View"), pluginPaths)
     }
 }

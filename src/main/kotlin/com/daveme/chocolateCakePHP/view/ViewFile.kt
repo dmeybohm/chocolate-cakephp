@@ -74,7 +74,7 @@ class ViewFileResolution(private val project: Project, private val settings: Set
      * content, or under a configured plugin's path.
      */
     fun isProjectFile(file: VirtualFile): Boolean =
-        fileIndex.isInContent(file) || isInConfiguredPlugin(file, projectDir, settings)
+        fileIndex.isInContent(file) || isInConfiguredPlugin(file, settings)
 
     /**
      * Whether a name resolving in [referencePlugin], or in the app when null, finds [viewFile]:

@@ -15,7 +15,9 @@ abstract class Cake2BaseTestCase : BaseTestCase() {
         newState.cake2Enabled = true
         newState.cake3Enabled = false
         newState.cake2AppDirectory = "app"
+        newState.composerJsonPath = "cake2/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake2/composer.json")
 
         setUpTestFiles()
     }

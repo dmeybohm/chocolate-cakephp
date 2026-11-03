@@ -17,7 +17,9 @@ class NestedAppDirectoryTest : BaseTestCase() {
         newState.cake3ForceEnabled = true  // Force enable to bypass auto-detection
         newState.cake2Enabled = false
         newState.appDirectory = "app/src"  // Nested path
+        newState.composerJsonPath = "cake3_nested/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake3_nested/composer.json")
 
         setUpTestFiles()
     }

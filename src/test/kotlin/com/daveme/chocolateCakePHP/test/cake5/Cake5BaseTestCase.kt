@@ -21,7 +21,9 @@ abstract class Cake5BaseTestCase : BaseTestCase()  {
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"
         ))
+        newState.composerJsonPath = "cake5/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake5/composer.json")
 
         setUpTestFiles()
     }

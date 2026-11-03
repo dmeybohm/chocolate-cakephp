@@ -22,7 +22,9 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"
         ))
+        newState.composerJsonPath = "cake4/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake4/composer.json")
 
         setUpTestFiles()
     }
