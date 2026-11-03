@@ -51,8 +51,8 @@ class RouteTargetGotoDeclarationHandler : GotoDeclarationHandler {
             is RouteTargetPosition.ArrayKey -> arrayKeyTargets(phpIndex, settings, position)
             is RouteTargetPosition.StringTarget -> stringTargets(phpIndex, settings, position, literal, offset)
             is RouteTargetPosition.Resources -> {
-                val resolved = resolveInScope(RouteTarget(controller = literal.contents), routeScopeOf(position.call))
-                routeTargetControllers(phpIndex, settings, resolved).toList()
+                val resolved = resolveInScope(settings, RouteTarget(controller = literal.contents), routeScopeOf(position.call))
+                resolved?.let { routeTargetControllers(phpIndex, settings, it).toList() }.orEmpty()
             }
         }
         return targets.distinct().toTypedArray()
@@ -65,7 +65,7 @@ class RouteTargetGotoDeclarationHandler : GotoDeclarationHandler {
     ): List<PsiElement> {
         val target = routeTargetFromArray(position.array)
         val resolved = when (position.kind) {
-            RouteTargetCallKind.ROUTE_BUILDER -> listOf(resolveInScope(target, routeScopeOf(position.array)))
+            RouteTargetCallKind.ROUTE_BUILDER -> listOfNotNull(resolveInScope(settings, target, routeScopeOf(position.array)))
             RouteTargetCallKind.URL_BUILDER -> resolveInContext(target, routeContextOf(settings, position.array))
         }
         return when (position.key) {
@@ -85,7 +85,7 @@ class RouteTargetGotoDeclarationHandler : GotoDeclarationHandler {
     ): List<PsiElement> {
         val contents = literal.contents
         val target = routeTargetFromString(contents) ?: return emptyList()
-        val resolved = resolveInScope(target, routeScopeOf(position.call))
+        val resolved = resolveInScope(settings, target, routeScopeOf(position.call)) ?: return emptyList()
         val separator = contents.indexOf("::")
         val caretInValue = offset - literal.textRange.startOffset - literal.valueRange.startOffset
         return if (separator >= 0 && caretInValue > separator + 1)
@@ -100,8 +100,7 @@ class RouteTargetGotoDeclarationHandler : GotoDeclarationHandler {
     private fun actionsOf(phpIndex: PhpIndex, settings: Settings, target: ResolvedRouteTarget): List<PsiElement> {
         val action = target.action ?: return emptyList()
         return controllersOf(phpIndex, settings, target).flatMap { controllerClass ->
-            val actions = routeActions(phpIndex, controllerClass)
-            actions.filter { it.name == action }.ifEmpty { actions.filter { it.name.equals(action, ignoreCase = true) } }
+            routeActions(phpIndex, controllerClass).filter { it.name == action }
         }
     }
 
@@ -112,7 +111,7 @@ class RouteTargetGotoDeclarationHandler : GotoDeclarationHandler {
         }
         val inPrefix = target.copy(controller = null, action = null)
         return phpIndex.getControllerSubclasses(settings)
-            .filter { phpClass -> routeControllerNameFromClass(settings, phpClass)?.let { inPrefix.matches(it) } ?: false }
+            .filter { phpClass -> routeControllerNameFromClass(settings, phpClass)?.let { inPrefix.matches(settings, it) } ?: false }
             .mapNotNull { it.containingFile?.containingDirectory }
             .distinct()
     }

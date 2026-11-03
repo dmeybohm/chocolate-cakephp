@@ -392,4 +392,27 @@ completion offers the namespace spelling, `Admin`, on every version, since the s
 tell CakePHP 3 from 4 and 5; on 3 the user lowercases it for URL building to match the scope.
 All 28 tests per version pass unchanged otherwise.
 
-Remaining before a PR: the full local test run and the changelog entry.
+### Session #7
+
+After review of the PR, the three places where the model treated 3, 4 and 5 alike are now
+version-aware, which supersedes the Session #2 and #6 notes about the settings not telling the
+versions apart:
+
+- `Settings.cakeMajorVersion` is the highest CakePHP 3+ major version composer.json allows when
+  auto-detected, and otherwise a new `CakePHP Version` setting in the 3+ panel, which defaults to
+  5 and serves the force-enabled project and a constraint with no version. The detected label
+  shows the version. The test bases copy a composer.json fixture, so the cake3, cake4 and cake5
+  tests each see their own version.
+- A prefix is camelized per segment on 3 and 4 and read as written from 5 on, in both
+  `controllerClassFqn` and `matches`. The index finds classes case-insensitively, as PHP does,
+  so a class found by FQN is also checked for the exact spelling, since the autoloader maps
+  the namespace to a path. The controller name is still camelized on `-` as `DashedRoute` does.
+- `'prefix' => false` is its own key state. The route builder rejects it from 5 on, so
+  `resolveInScope` yields no target there and an explicit none on 3 and 4; in a URL array it is
+  an explicit none everywhere. `'plugin' => false` in the route builder is rejected on every
+  version.
+- The case-insensitive action fallback in navigation is gone: an `action` key goes to the method
+  of that exact name, which is what dispatches on 4 and 5.
+
+`RouteTargetPrefixSpellingTest` in cake3 and cake4 pins the camelized side, and the cake5 model,
+completion and goto tests the strict side.

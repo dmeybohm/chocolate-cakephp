@@ -122,4 +122,9 @@ class RouteTargetGotoDeclarationTest : Cake5BaseTestCase() {
         """.trimIndent())
         assertEmpty(targets())
     }
+
+    fun `test a mis-cased action key has no target`() {
+        configureRoutes("""${'$'}routes->connect('/x', ['controller' => 'Movie', 'action' => 'filmdir<caret>ector']);""")
+        assertEmpty(targets())
+    }
 }

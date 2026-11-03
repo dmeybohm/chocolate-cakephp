@@ -28,11 +28,13 @@ const val CONTROLLER_PARENT_CLASS = "\\Cake\\Controller\\Controller"
 private val routeScopeMethods = setOf("scope", "prefix", "plugin")
 
 /**
- * The `plugin` or `prefix` key of a route target array: left out, explicitly none, or a name.
+ * The `plugin` or `prefix` key of a route target array: left out, `null`, `false`, or a name.
+ * `null` is an explicit none everywhere; what `false` means depends on the call and the version.
  */
 sealed class RouteKey {
     object Absent : RouteKey()
     object None : RouteKey()
+    object False : RouteKey()
     data class Named(val name: String) : RouteKey()
 }
 
@@ -93,7 +95,7 @@ private val stringRouteTarget =
 
 /**
  * The route target an array literal spells out. Keys and values that are not literals are left
- * out, and `null` or `false` for `plugin` or `prefix` is an explicit none.
+ * out.
  */
 fun routeTargetFromArray(array: ArrayCreationExpression): RouteTarget {
     var target = RouteTarget()
@@ -101,10 +103,10 @@ fun routeTargetFromArray(array: ArrayCreationExpression): RouteTarget {
         val key = (element.key as? StringLiteralExpression)?.contents ?: continue
         val value = element.value
         val literal = (value as? StringLiteralExpression)?.contents
-        val isNone = value is ConstantReference && value.name?.lowercase() in setOf("null", "false")
+        val constant = (value as? ConstantReference)?.name?.lowercase()
         target = when (key) {
-            "plugin" -> target.copy(plugin = routeKey(literal, isNone))
-            "prefix" -> target.copy(prefix = routeKey(literal, isNone))
+            "plugin" -> target.copy(plugin = routeKey(literal, constant))
+            "prefix" -> target.copy(prefix = routeKey(literal, constant))
             "controller" -> target.copy(controller = literal)
             "action" -> target.copy(action = literal)
             else -> target
@@ -113,8 +115,9 @@ fun routeTargetFromArray(array: ArrayCreationExpression): RouteTarget {
     return target
 }
 
-private fun routeKey(literal: String?, isNone: Boolean): RouteKey = when {
-    isNone -> RouteKey.None
+private fun routeKey(literal: String?, constant: String?): RouteKey = when {
+    constant == "null" -> RouteKey.None
+    constant == "false" -> RouteKey.False
     literal != null -> RouteKey.Named(literal)
     else -> RouteKey.Absent
 }
@@ -215,15 +218,21 @@ fun routeContextOf(settings: Settings, element: PsiElement): List<RouteContextCo
 
 /**
  * [target] as connected inside [scope]: the scope fills in the plugin and prefix the target
- * leaves out, and an explicit none in the target wins.
+ * leaves out, and an explicit none in the target wins. Null for a target the route builder
+ * rejects: `'plugin' => false` on every version, and `'prefix' => false` from CakePHP 5 on,
+ * where it is an explicit none on 3 and 4.
  */
-fun resolveInScope(target: RouteTarget, scope: RouteScope): ResolvedRouteTarget =
-    ResolvedRouteTarget(
+fun resolveInScope(settings: Settings, target: RouteTarget, scope: RouteScope): ResolvedRouteTarget? {
+    if (target.plugin == RouteKey.False || (target.prefix == RouteKey.False && settings.cakeMajorVersion >= 5)) {
+        return null
+    }
+    return ResolvedRouteTarget(
         plugin = resolveKey(target.plugin, RouteValue.Known(scope.plugin)),
         prefix = resolveKey(target.prefix, RouteValue.Known(scope.prefix)),
         controller = target.controller,
         action = target.action,
     )
+}
 
 /**
  * [target] as built in the request of each of [candidates], following `Router::url()`: the
@@ -257,7 +266,7 @@ fun resolveInContext(target: RouteTarget, candidates: List<RouteContextControlle
 
 private fun resolveKey(key: RouteKey, default: RouteValue): RouteValue = when (key) {
     is RouteKey.Named -> RouteValue.Known(key.name)
-    RouteKey.None -> RouteValue.Known(null)
+    RouteKey.None, RouteKey.False -> RouteValue.Known(null)
     RouteKey.Absent -> default
 }
 
@@ -303,7 +312,8 @@ fun routeControllerNameFromClass(settings: Settings, phpClass: PhpClass): RouteC
 
 /**
  * The class name a route target resolves to when its plugin, prefix and controller are all
- * known, or null otherwise.
+ * known, or null otherwise. The controller name is camelized on `-` as `DashedRoute` does when
+ * it parses a request, so `reports` names `ReportsController`.
  */
 fun controllerClassFqn(settings: Settings, target: ResolvedRouteTarget): String? {
     val plugin = when (val value = target.plugin) {
@@ -320,15 +330,17 @@ fun controllerClassFqn(settings: Settings, target: ResolvedRouteTarget): String?
         else -> (settings.findPluginConfigByName(plugin) as? CakeThreePluginConfig)?.namespace
             ?: ("\\" + plugin.replace('/', '\\'))
     }
-    val prefixPath = prefix?.split('/')?.joinToString("\\") { camelize(it) }?.let { "$it\\" } ?: ""
-    return "${namespace}\\Controller\\${prefixPath}${controller}Controller"
+    val prefixPath = prefix?.let { prefixNamespace(settings, it) + "\\" } ?: ""
+    val className = controller.split('-').joinToString("") { it.latinCapitalize() }
+    return "${namespace}\\Controller\\${prefixPath}${className}Controller"
 }
 
 /**
  * Whether a controller named [name] is one [target] can resolve to. Unknown parts of the target
- * match anything; a prefix matches camelized per segment, which is how CakePHP 3 and 4 read it.
+ * match anything. A prefix matches camelized per segment on CakePHP 3 and 4, which read it
+ * that way, and as written from 5 on, where `admin` is a missing controller.
  */
-fun ResolvedRouteTarget.matches(name: RouteControllerName): Boolean {
+fun ResolvedRouteTarget.matches(settings: Settings, name: RouteControllerName): Boolean {
     if (controller != null && !controller.equals(name.name, ignoreCase = true)) {
         return false
     }
@@ -338,7 +350,8 @@ fun ResolvedRouteTarget.matches(name: RouteControllerName): Boolean {
     }
     val prefixMatches = when (val prefix = prefix) {
         RouteValue.Unknown -> true
-        is RouteValue.Known -> camelizePrefix(prefix.name) == camelizePrefix(name.prefix)
+        is RouteValue.Known -> prefix.name?.let { prefixNamespace(settings, it) } ==
+            name.prefix?.let { prefixNamespace(settings, it) }
     }
     return pluginMatches && prefixMatches
 }
@@ -349,13 +362,15 @@ fun ResolvedRouteTarget.matches(name: RouteControllerName): Boolean {
  */
 fun routeTargetControllers(phpIndex: PhpIndex, settings: Settings, target: ResolvedRouteTarget): Collection<PhpClass> {
     controllerClassFqn(settings, target)?.let { fqn ->
-        return phpIndex.getClassesByFQN(fqn)
+        // The index finds classes case-insensitively, as PHP does, but the autoloader maps the
+        // namespace to a path, so only the exact spelling loads:
+        return phpIndex.getClassesByFQN(fqn).filter { it.fqn == fqn }
     }
     if (target.controller == null) {
         return emptyList()
     }
     return phpIndex.getControllerSubclasses(settings).filter { phpClass ->
-        routeControllerNameFromClass(settings, phpClass)?.let { target.matches(it) } ?: false
+        routeControllerNameFromClass(settings, phpClass)?.let { target.matches(settings, it) } ?: false
     }
 }
 
@@ -391,7 +406,8 @@ private fun methodsWithTraits(phpClass: PhpClass, visited: MutableSet<String> = 
     return phpClass.ownMethods.toList() + phpClass.traits.flatMap { methodsWithTraits(it, visited) }
 }
 
-private fun camelize(segment: String): String = segment.underscoreToCamelCase().latinCapitalize()
-
-private fun camelizePrefix(prefix: String?): String? =
-    prefix?.split('/')?.joinToString("/") { camelize(it) }
+// The namespace path a prefix selects: each segment camelized before CakePHP 5, verbatim from 5 on
+private fun prefixNamespace(settings: Settings, prefix: String): String =
+    prefix.split('/').joinToString("\\") {
+        if (settings.cakeMajorVersion >= 5) it else it.underscoreToCamelCase().latinCapitalize()
+    }

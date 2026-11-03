@@ -67,12 +67,12 @@ class RouteTargetModelTest : Cake5BaseTestCase() {
         )
     }
 
-    fun `test null and false plugin and prefix keys are an explicit none`() {
+    fun `test null and false plugin and prefix keys are told apart`() {
         configureRoutes("""
             ${'$'}routes->connect('/x', ['plugin' => null, 'prefix' => false, 'controller' => 'Re<caret>ports']);
         """)
         assertEquals(
-            RouteTarget(RouteKey.None, RouteKey.None, "Reports", null),
+            RouteTarget(RouteKey.None, RouteKey.False, "Reports", null),
             routeTargetFromArray(arrayAtCaret())
         )
     }
@@ -124,11 +124,25 @@ class RouteTargetModelTest : Cake5BaseTestCase() {
         val scope = RouteScope("Probe", "Admin")
         assertEquals(
             ResolvedRouteTarget(RouteValue.Known("Probe"), RouteValue.Known("Admin"), "Reports", "index"),
-            resolveInScope(RouteTarget(controller = "Reports", action = "index"), scope)
+            resolveInScope(settings, RouteTarget(controller = "Reports", action = "index"), scope)
         )
         assertEquals(
             ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known("Admin/Reports"), null, null),
-            resolveInScope(RouteTarget(plugin = RouteKey.None, prefix = RouteKey.Named("Admin/Reports")), scope)
+            resolveInScope(settings, RouteTarget(plugin = RouteKey.None, prefix = RouteKey.Named("Admin/Reports")), scope)
+        )
+    }
+
+    fun `test a false plugin or prefix key is rejected by the route builder`() {
+        val scope = RouteScope("Probe", "Admin")
+        assertNull(resolveInScope(settings, RouteTarget(plugin = RouteKey.False, controller = "Reports"), scope))
+        assertNull(resolveInScope(settings, RouteTarget(prefix = RouteKey.False, controller = "Reports"), scope))
+    }
+
+    fun `test a false plugin or prefix key in a url array is an explicit none`() {
+        val candidate = RouteContextController("Probe", "Admin", "Reports", "index")
+        assertEquals(
+            listOf(ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known(null), "Reports", "index")),
+            resolveInContext(RouteTarget(plugin = RouteKey.False, prefix = RouteKey.False, controller = "Reports"), listOf(candidate))
         )
     }
 
@@ -252,8 +266,13 @@ class RouteTargetModelTest : Cake5BaseTestCase() {
             controllerClassFqn(settings, ResolvedRouteTarget(RouteValue.Known("TestPlugin"), RouteValue.Known(null), "Widgets", null))
         )
         assertEquals(
-            "\\Acme\\Vendored\\Controller\\Admin\\ThingsController",
-            controllerClassFqn(settings, ResolvedRouteTarget(RouteValue.Known("Acme/Vendored"), RouteValue.Known("admin"), "Things", null))
+            "\\Acme\\Vendored\\Controller\\Admin\\Reports\\ThingsController",
+            controllerClassFqn(settings, ResolvedRouteTarget(RouteValue.Known("Acme/Vendored"), RouteValue.Known("Admin/Reports"), "Things", null))
+        )
+        // CakePHP 5 reads the prefix as written, so a lower case one names a class that does not exist
+        assertEquals(
+            "\\App\\Controller\\admin\\ReportsController",
+            controllerClassFqn(settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known("admin"), "Reports", null))
         )
         assertNull(controllerClassFqn(settings, ResolvedRouteTarget(RouteValue.Unknown, RouteValue.Known(null), "Movie", null)))
     }
@@ -265,9 +284,14 @@ class RouteTargetModelTest : Cake5BaseTestCase() {
         assertEquals(listOf("\\TestPlugin\\Controller\\WidgetsController"), fqns)
 
         val known = routeTargetControllers(
-            phpIndex, settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known("admin"), "Reports", null)
+            phpIndex, settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known("Admin"), "Reports", null)
         ).map { it.fqn }
         assertEquals(listOf("\\App\\Controller\\Admin\\ReportsController"), known)
+
+        val lowerCase = routeTargetControllers(
+            phpIndex, settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known("admin"), "Reports", null)
+        )
+        assertEmpty(lowerCase)
 
         val none = routeTargetControllers(
             phpIndex, settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known(null), "Widgets", null)

@@ -185,4 +185,31 @@ class RouteTargetCompletionTest : Cake5BaseTestCase() {
             assertDoesntContain(result, "artist", "meta")
         }
     }
+
+    fun `test a lower case prefix key offers nothing on CakePHP 5`() {
+        val result = completeRoutes("""${'$'}routes->connect('/x', ['prefix' => 'admin', 'controller' => '<caret>']);""")
+        assertTrue("Expected no completions, got $result", result.isNullOrEmpty())
+    }
+
+    fun `test false plugin and prefix keys in the route builder offer nothing on CakePHP 5`() {
+        val plugin = completeRoutes("""
+            ${'$'}routes->plugin('TestPlugin', function (${'$'}builder) {
+                ${'$'}builder->connect('/x', ['plugin' => false, 'controller' => '<caret>']);
+            });
+        """)
+        assertTrue("Expected no completions, got $plugin", plugin.isNullOrEmpty())
+
+        val prefix = completeRoutes("""
+            ${'$'}routes->prefix('Admin', function (${'$'}builder) {
+                ${'$'}builder->connect('/x', ['prefix' => false, 'controller' => '<caret>']);
+            });
+        """)
+        assertTrue("Expected no completions, got $prefix", prefix.isNullOrEmpty())
+    }
+
+    fun `test a false prefix key in a url array leaves the request prefix`() {
+        val result = completeTemplate("""echo ${'$'}this->Url->build(['prefix' => false, 'controller' => '<caret>']);""")
+        assertNotNull(result)
+        assertContainsElements(result!!, "Movie", "Article")
+    }
 }

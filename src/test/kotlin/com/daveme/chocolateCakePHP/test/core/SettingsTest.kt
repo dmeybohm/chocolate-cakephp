@@ -496,4 +496,29 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertNull(resultByNamespace)
     }
 
+    // ========== CakePHP major version ==========
+
+    fun `test major version comes from composer json when detected`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"^4.3\""))
+        assertEquals(4, detected().cake3OrLaterMajorVersion)
+        assertEquals(4, Settings.getInstance(project).cakeMajorVersion)
+    }
+
+    fun `test major version is the configured one when composer json gives none`() {
+        primeDetector()
+        val settings = Settings.getInstance(project)
+        assertNull(detected().cake3OrLaterMajorVersion)
+        assertEquals(5, settings.cakeMajorVersion)
+        settings.loadState(settings.state.copy(cakeMajorVersion = 3))
+        assertEquals(3, settings.cakeMajorVersion)
+    }
+
+    fun `test major version is the configured one when auto-detection is off`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson())
+        val settings = Settings.getInstance(project)
+        settings.loadState(settings.state.copy(autoDetect = false, cake3ForceEnabled = true, cakeMajorVersion = 4))
+        assertEquals(4, settings.cakeMajorVersion)
+    }
 }

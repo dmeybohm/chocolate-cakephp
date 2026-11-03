@@ -104,7 +104,7 @@ class RouteTargetCompletionContributor : CompletionContributor() {
                 }
             }
             val targets = when (position.kind) {
-                RouteTargetCallKind.ROUTE_BUILDER -> listOf(resolveInScope(target, routeScopeOf(position.array)))
+                RouteTargetCallKind.ROUTE_BUILDER -> listOfNotNull(resolveInScope(settings, target, routeScopeOf(position.array)))
                 RouteTargetCallKind.URL_BUILDER -> resolveInContext(target, routeContextOf(settings, position.array))
             }
             when (position.key) {
@@ -117,7 +117,7 @@ class RouteTargetCompletionContributor : CompletionContributor() {
 
         private fun controllerNames(targets: List<ResolvedRouteTarget>) {
             for ((phpClass, name) in controllers) {
-                if (targets.any { it.copy(controller = null).matches(name) }) {
+                if (targets.any { it.copy(controller = null).matches(settings, name) }) {
                     addController(name.name, phpClass)
                 }
             }
@@ -153,7 +153,7 @@ class RouteTargetCompletionContributor : CompletionContributor() {
             val prefixes = linkedSetOf<String>()
             for ((_, name) in controllers) {
                 val prefix = name.prefix ?: continue
-                if (targets.any { it.copy(controller = null, prefix = RouteValue.Unknown).matches(name) }) {
+                if (targets.any { it.copy(controller = null, prefix = RouteValue.Unknown).matches(settings, name) }) {
                     prefixes.add(prefix)
                 }
             }
@@ -172,7 +172,7 @@ class RouteTargetCompletionContributor : CompletionContributor() {
             if (typed.contains("::")) {
                 val controllerPart = typed.substringBefore("::")
                 val target = routeTargetFromString("$controllerPart::index") ?: return
-                val resolved = resolveInScope(target, scope)
+                val resolved = resolveInScope(settings, target, scope) ?: return
                 val seen = HashSet<String>()
                 for (controllerClass in routeTargetControllers(phpIndex, settings, resolved)) {
                     for (method in routeActions(phpIndex, controllerClass)) {
@@ -209,12 +209,12 @@ class RouteTargetCompletionContributor : CompletionContributor() {
         }
 
         private fun samePrefix(scopePrefix: String?, name: RouteControllerName): Boolean =
-            ResolvedRouteTarget(RouteValue.Unknown, RouteValue.Known(scopePrefix), null, null).matches(name)
+            ResolvedRouteTarget(RouteValue.Unknown, RouteValue.Known(scopePrefix), null, null).matches(settings, name)
 
         fun resources(position: RouteTargetPosition.Resources) {
-            val resolved = resolveInScope(RouteTarget(), routeScopeOf(position.call))
+            val resolved = resolveInScope(settings, RouteTarget(), routeScopeOf(position.call)) ?: return
             for ((phpClass, name) in controllers) {
-                if (resolved.matches(name)) {
+                if (resolved.matches(settings, name)) {
                     addController(name.name, phpClass)
                 }
             }

@@ -185,4 +185,29 @@ class RouteTargetCompletionTest : Cake3BaseTestCase() {
             assertDoesntContain(result, "artist", "meta")
         }
     }
+
+    fun `test a lower case prefix key is camelized`() {
+        val result = completeRoutes("""${'$'}routes->connect('/x', ['prefix' => 'admin', 'controller' => '<caret>']);""")
+        assertEquals(listOf("Reports"), result)
+    }
+
+    fun `test a false prefix key inside a prefix scope offers the unprefixed controllers`() {
+        val result = completeRoutes("""
+            ${'$'}routes->prefix('admin', function (${'$'}builder) {
+                ${'$'}builder->connect('/x', ['prefix' => false, 'controller' => '<caret>']);
+            });
+        """)
+        assertNotNull(result)
+        assertContainsElements(result!!, "Movie", "Article")
+        assertDoesntContain(result, "Reports")
+    }
+
+    fun `test a false plugin key inside a plugin scope offers nothing`() {
+        val result = completeRoutes("""
+            ${'$'}routes->plugin('TestPlugin', function (${'$'}builder) {
+                ${'$'}builder->connect('/x', ['plugin' => false, 'controller' => '<caret>']);
+            });
+        """)
+        assertTrue("Expected no completions, got $result", result.isNullOrEmpty())
+    }
 }
