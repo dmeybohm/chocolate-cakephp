@@ -351,4 +351,26 @@ and the arrays and keys that are left alone.
 - A key or value of a hash element, like the closure of a scope call, sits inside a wrapper
   node, so the hash element is found by ancestor and checked to report the literal as its value.
 
-Next: step 4, the completion contributor.
+### Session #4
+
+Step 4 is `routing/RouteTargetCompletionContributor.kt`, registered in `plugin.xml`, with
+`RouteTargetCompletionTest` (cake5) covering the cases listed in step 6. Three things the first
+run taught:
+
+- The framework's own controllers (`Cake\Controller\ErrorController` and the like) are
+  subclasses of the base class too, and showed up as a `Cake` plugin. `getControllerSubclasses`
+  now leaves out everything under the `Cake` namespace.
+- Completion runs on a copy of the file, whose virtual file is not a view file, so
+  `routeContextOf` looks up the original file through `PsiFile.getOriginalFile()`.
+- A sole completion item is not inserted automatically when nothing has been typed yet, so the
+  single-item tests assert on the lookup list rather than the inserted text.
+
+The `Controller::action` string form is completed relative to the enclosing scope: inside a
+`plugin()` scope only that plugin's controllers, written without the plugin part; inside a
+`prefix()` scope the scope's own controllers written bare, other prefixes written in full, and
+unprefixed controllers not at all, since a string target cannot cancel the scope's prefix.
+
+The `plugin` key offers the configured plugin names and the plugins of every known controller,
+which covers plugins found by namespace alone, rather than scanning the `plugins` directory.
+
+Next: step 5, the goto declaration handler.

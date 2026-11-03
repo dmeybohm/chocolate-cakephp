@@ -147,14 +147,16 @@ fun PhpIndex.getCellSubclasses(settings: Settings): Collection<PhpClass> {
 
 /**
  * The controllers a route target can name: the concrete subclasses of the CakePHP 3+ base
- * controller, leaving out `AppController` and classes not named as controllers.
+ * controller, leaving out the framework's own, `AppController` and classes not named as
+ * controllers.
  */
 fun PhpIndex.getControllerSubclasses(settings: Settings): Collection<PhpClass> {
     if (!settings.cake3Enabled) {
         return emptyList()
     }
     return getAllSubclassesRecursively(CONTROLLER_PARENT_CLASS).filter {
-        !it.isAbstract && it.name != "AppController" && it.name.endsWith("Controller")
+        !it.isAbstract && it.name != "AppController" && it.name.endsWith("Controller") &&
+            !it.fqn.startsWith("\\Cake\\", ignoreCase = true)
     }
 }
 

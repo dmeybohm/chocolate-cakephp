@@ -42,6 +42,7 @@
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.model.ContainCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.view.CellCompletionContributor" />
         <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.entity.EntityVirtualFieldCompletionContributor" />
+        <completion.contributor language="PHP" implementationClass="com.daveme.chocolateCakePHP.routing.RouteTargetCompletionContributor" />
 
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.ElementGotoDeclarationHandler" />
         <gotoDeclarationHandler implementation="com.daveme.chocolateCakePHP.view.CellGotoDeclarationHandler" />

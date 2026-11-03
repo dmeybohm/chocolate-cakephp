@@ -202,7 +202,8 @@ fun routeContextOf(settings: Settings, element: PsiElement): List<RouteContextCo
             ?.takeIf { it.access.isPublic && !it.isStatic }
         return listOf(RouteContextController(name.plugin, name.prefix, name.name, method?.name))
     }
-    val file = element.containingFile?.virtualFile ?: return emptyList()
+    // During completion the element is in a copy of the file, so look up the original:
+    val file = element.containingFile?.originalFile?.virtualFile ?: return emptyList()
     val viewFile = viewFileOf(project, settings, file) ?: return emptyList()
     val phpIndex = PhpIndex.getInstance(project)
     return RenderingControllers.of(project, viewFile)
