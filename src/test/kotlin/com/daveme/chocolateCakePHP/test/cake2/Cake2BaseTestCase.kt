@@ -12,7 +12,7 @@ abstract class Cake2BaseTestCase : BaseTestCase() {
 
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
-        newState.cake2Enabled = true
+        newState.cake2ForceEnabled = true
         newState.autoDetect = false
         newState.cake2AppDirectory = "app"
         newState.composerJsonPath = "cake2/composer.json"

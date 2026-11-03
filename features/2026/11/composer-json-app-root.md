@@ -336,3 +336,8 @@ disables both versions`, and its other auto-detect tests set the auto-detect fie
 The state field is then renamed from `cake3Enabled` to `autoDetect`. `@OptionTag("cake3Enabled")` keeps
 the name it is saved under, so existing settings files load unchanged.
 `PluginConfigSerializationTest` checks that it is written and read under the old name.
+
+The CakePHP 2 force-enable state field is renamed the same way, from `cake2Enabled` to
+`cake2ForceEnabled`, keeping `cake2Enabled` as its saved name. Before this, `state.cake2Enabled`
+meant forced while `Settings.cake2Enabled` meant forced or detected. The new name matches
+`cake3ForceEnabled` and the `Settings.cake2ForceEnabled` getter that already read it.

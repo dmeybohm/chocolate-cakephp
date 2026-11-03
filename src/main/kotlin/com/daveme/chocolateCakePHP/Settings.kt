@@ -148,8 +148,9 @@ data class SettingsState(
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
-    // force enables CakePHP 2, whatever is detected:
-    var cake2Enabled: Boolean = false,
+    // Force enables CakePHP 2, whatever is detected. Saved under its old name:
+    @OptionTag("cake2Enabled")
+    var cake2ForceEnabled: Boolean = false,
     // Auto-detects every CakePHP version from composer.json. Saved under its
     // old name, from when it only auto-detected CakePHP 3+:
     @OptionTag("cake3Enabled")
@@ -328,7 +329,7 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     val cake2Enabled get() = cake2ForceEnabled ||
             (state.autoDetect && getAutoDetectedValues().cake2Present)
     val cake2Detected get() = getAutoDetectedValues().cake2Present
-    val cake2ForceEnabled get() = state.cake2Enabled
+    val cake2ForceEnabled get() = state.cake2ForceEnabled
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.autoDetect && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent

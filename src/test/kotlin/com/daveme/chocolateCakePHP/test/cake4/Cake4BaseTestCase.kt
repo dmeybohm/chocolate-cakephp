@@ -15,7 +15,7 @@ abstract class Cake4BaseTestCase : BaseTestCase() {
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
         newState.cake3ForceEnabled = true
-        newState.cake2Enabled = false
+        newState.cake2ForceEnabled = false
         newState.appDirectory = "src4"
         newState.pluginConfigs = listOf(CakeThreePluginConfig(
             pluginName = "TestPlugin",

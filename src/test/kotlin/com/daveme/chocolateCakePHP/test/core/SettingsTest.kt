@@ -292,7 +292,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
     fun `test cakephp 2 force enable works without composer json`() {
         val settings = Settings.getInstance(project)
         val forced = Settings.getDefaults(project).state.copy()
-        forced.cake2Enabled = true
+        forced.cake2ForceEnabled = true
         forced.autoDetect = false
         settings.loadState(forced)
         assertTrue(settings.cake2Enabled)
@@ -352,7 +352,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry with a namespace is cakephp 3 whatever its path`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(namespace = "\\Foo", pluginPath = "app/Plugin/Foo"))
         }
         assertEquals(
@@ -389,7 +389,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry without a namespace is cakephp 2 when only cakephp 2 is enabled`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(pluginPath = "plugins/Foo"))
         }
         assertEquals(listOf(CakeTwoPluginConfig(pluginName = "Foo", pluginPath = "plugins/Foo")), settings.pluginConfigs)
@@ -397,7 +397,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry without a namespace is cakephp 3 otherwise`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.cake3ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(pluginPath = "plugins/Foo"))
         }
@@ -406,7 +406,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test cakephp 2 legacy entry with no name and no path is dropped`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig())
         }
         assertEquals(listOf<PluginConfig>(), settings.pluginConfigs)
