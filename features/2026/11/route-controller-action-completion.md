@@ -424,9 +424,9 @@ A second review round, three changes:
 - The detected major version is the highest one the constraint allows, from
   `constraintSpecificMajorVersion`: a plain form (exact, wildcard, caret or tilde) names its own
   major, an operator form takes it from its upper bound (`<4.0` allows up to 3, `<4.1` up to 4)
-  and a hyphen range from its end, with the highest across `||` alternatives winning. Only a
-  constraint with an alternative that has no upper bound, such as `>=4.0` or `dev-master`, is
-  unknown, and then the configured setting applies, which defaults to 5. The enable flags keep
+  and a hyphen range from its end, with the highest across `||` alternatives winning. A lower
+  bound is optional, so `<5.0` gives 4. Only a constraint with an alternative that has no upper
+  bound, such as `>=4.0` or `dev-master`, is unknown, and then the configured setting applies, which defaults to 5. The enable flags keep
   using `constraintMajorVersions`, where the lower bound is the right question.
 - The controller name is resolved as written. `DashedRoute` camelizes a lower case key but a
   plain `Route` does not, and the route class is not known to the plugin, so navigation no

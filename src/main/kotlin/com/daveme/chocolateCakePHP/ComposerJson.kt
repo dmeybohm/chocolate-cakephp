@@ -64,14 +64,16 @@ fun constraintMajorVersions(constraint: String): Set<Int> =
 private val PLAIN_CONSTRAINT = Regex("""^\s*[\^~]?v?(\d+)(?:\.(?:\d+|\*|x))*\s*$""")
 private val HYPHEN_RANGE = Regex("""^\s*v?\d+(?:\.\d+)*\s+-\s+v?(\d+)(?:\.\d+)*\s*$""")
 private val UPPER_BOUND = Regex("""(<=?)\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?""")
+private val LOWER_BOUND = Regex(""">=?\s*v?(\d+)""")
 
 /**
  * The highest major version a Composer version constraint allows, or null
  * when it cannot be told: a plain form (`5.0.*`, `^4.3`, `~3.10`) names its
  * own major, an operator form takes it from its upper bound (`<4.0` allows
- * up to 3, `<4.1` or `<=4.0` up to 4) and a hyphen range from its end. An
- * alternative with no upper bound, such as `>=4.0` or `dev-master`, allows
- * anything, so the whole constraint is unknown.
+ * up to 3, `<4.1` or `<=4.0` up to 4) and a hyphen range from its end. A
+ * lower bound is optional, so `<5.0` allows up to 4. An alternative with no
+ * upper bound, such as `>=4.0` or `dev-master`, allows anything, so the
+ * whole constraint is unknown.
  */
 fun constraintSpecificMajorVersion(constraint: String): Int? {
     val majors = constraint.split(ALTERNATIVE_SEPARATOR).map { alternativeHighestMajor(it) }
@@ -86,7 +88,7 @@ private fun alternativeHighestMajor(alternative: String): Int? {
         val startsTheMajor = (minor.ifEmpty { "0" }.toInt() == 0) && (patch.ifEmpty { "0" }.toInt() == 0)
         if (operator == "<" && startsTheMajor) major.toInt() - 1 else major.toInt()
     }.minOrNull() ?: return null
-    val lower = LEADING_MAJOR_VERSION.find(alternative)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+    val lower = LOWER_BOUND.findAll(alternative).mapNotNull { it.groupValues[1].toIntOrNull() }.maxOrNull() ?: 0
     return upper.takeIf { it >= lower }
 }
 
