@@ -24,6 +24,14 @@ scripts/run-cakephp-assumption-tests.sh check-pins                # compare pins
    file, so an assertion identifies exactly what rendered.
 3. Add a row to the catalogue below.
 
+## Composer-installed plugins
+
+`cakeN/packages/Installed` is a `cakephp-plugin` package the app requires through a `path`
+repository, so `composer install` copies it into `vendor/acme/installed` and
+`cakephp/plugin-installer` records it in `vendor/cakephp-plugins.php`, as it would for a plugin
+from Packagist. The package carries an explicit `version`, since a path repository otherwise
+offers only a dev version.
+
 ## Moving a pin
 
 Change the version in `build.gradle.kts` and in `cakeN/composer.json`, then run `composer update`
@@ -65,6 +73,11 @@ Relied on by view navigation, the controller action line marker and view file cr
 | `setTemplate('viewAll')` after `setTemplatePath('Gadgets')` renders `Gadgets/view_all` | `testBuilderSetTemplateAfterSetTemplatePathIsUnderscored` | 3, 4, 5 |
 | `$this->view = 'viewAll'` renders `view_all` | `testViewPropertyNameIsUnderscored` | 2 |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
+| A plugin in the `plugins` directory beside the app directory is found, and renders its own template | `testRootPluginsDirectoryPluginRendersItsTemplate` | 2 only |
+| A plugin loaded with an explicit `path` outside the app directory renders its own template | `testPluginLoadedWithExplicitPathRendersItsTemplate` | Same. 3: from `{path}/src/Template`. 4, 5: from `{path}/templates` |
+| A plugin whose only copy is in another plugin's `vendor` directory is not found by name, even when that directory has its own `cakephp-plugins.php` | `testPluginInsideAnotherPluginsVendorDirectoryIsNotFound` | 3, 4, 5 |
+| A plugin installed by Composer is found at `ROOT/vendor/{vendor}/{package}/` through `vendor/cakephp-plugins.php`, whose paths are built from the directory holding `composer.json` | `testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory` | 3, 4, 5 |
+| A plugin directory under `ROOT/plugins/` is found by name when the Composer manifest has no entry for it, through `App.paths.plugins` | `testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry` | 3, 4, 5 |
 
 ### `LayoutResolutionTest`
 

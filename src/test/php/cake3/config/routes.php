@@ -72,6 +72,9 @@ Router::prefix('admin', function ($routes) {
 Router::plugin('Probe', ['path' => '/probe'], function ($routes) {
     $routes->fallbacks();
 });
+Router::plugin('Pathed', ['path' => '/pathed'], function ($routes) {
+    $routes->fallbacks();
+});
 Router::scope('/', function ($routes) {
     $routes->fallbacks();
 });

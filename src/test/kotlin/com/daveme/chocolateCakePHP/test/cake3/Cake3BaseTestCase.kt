@@ -15,14 +15,16 @@ abstract class Cake3BaseTestCase : BaseTestCase() {
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
         newState.cake3ForceEnabled = true
-        newState.cake2Enabled = false
+        newState.cake2ForceEnabled = false
         newState.appDirectory = "src"
         newState.pluginConfigs = listOf(CakeThreePluginConfig(
             pluginName = "TestPlugin",
             namespace = "\\TestPlugin",
             pluginPath = "vendor/test/test_plugin"
         ))
+        newState.composerJsonPath = "cake3/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake3/composer.json")
 
         setUpTestFiles()
     }

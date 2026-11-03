@@ -1,0 +1,12 @@
+{
+    "name": "acme/installed",
+    "description": "A plugin installed by Composer for the Chocolate CakePHP assumption tests",
+    "type": "cakephp-plugin",
+    "version": "1.0.0",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Acme\\Installed\\": "src/"
+        }
+    }
+}

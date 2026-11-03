@@ -32,6 +32,17 @@ fun findRelativeFile(dir: VirtualFile?, childPath: String): VirtualFile? {
     return VfsUtil.findRelativeFile(dir, *pathPartsArray)
 }
 
+/**
+ * The directory a configured path names under [rootDirectory], or null for a blank path, which
+ * names no directory.
+ */
+fun configuredDirectory(rootDirectory: VirtualFile?, path: String): VirtualFile? {
+    if (path.trim('/').isBlank()) {
+        return null
+    }
+    return findRelativeFile(rootDirectory, path)
+}
+
 fun pathRelativeToProject(project: Project, virtualFile: VirtualFile): String? {
     val projectVirtualFile = project.guessProjectDir() ?: return null
     return pathRelativeToProjectRoot(projectVirtualFile, virtualFile)

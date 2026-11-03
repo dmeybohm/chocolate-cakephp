@@ -18,6 +18,7 @@ class Application extends BaseApplication
         $this->addPlugin('Probe');
         $this->addPlugin('Other');
         $this->addPlugin('Acme/Vendored');
+        $this->addPlugin('Pathed', ['path' => ROOT . DS . 'packages' . DS . 'Pathed' . DS]);
     }
 
     public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue

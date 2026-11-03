@@ -83,4 +83,12 @@ class TemplateResolutionTest extends ControllerTestCase {
 	public function testViewPropertyNameIsUnderscored() {
 		$this->assertSame('app:Widgets/view_all', $this->renderedBy('/widgets/viewproperty'));
 	}
+
+	public function testRootPluginsDirectoryPluginRendersItsTemplate() {
+		$this->assertSame('rooted:Gizmos/index', $this->renderedBy('/rooted/gizmos/index'));
+	}
+
+	public function testPluginLoadedWithExplicitPathRendersItsTemplate() {
+		$this->assertSame('pathed:Trinkets/index', $this->renderedBy('/pathed/trinkets/index'));
+	}
 }
