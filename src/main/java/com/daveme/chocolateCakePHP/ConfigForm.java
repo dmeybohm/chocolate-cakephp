@@ -37,12 +37,16 @@ class ConfigForm implements SearchableConfigurable {
     private JLabel cakeTwoTitle;
     private JLabel cake3DetectedLabel;
     private JLabel cake2DetectedLabel;
+    private JTextField composerJsonPathTextField;
+    private JButton composerJsonPathDefaultButton;
 
     public ConfigForm(Project project) {
         this.project = project;
     }
 
     private void loadSettingsToUI(@NotNull Settings settings) {
+        composerJsonPathTextField.setText(settings.getComposerJsonPath());
+
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
         enableAutoDetectCake3CheckBox.setSelected(settings.getCake3AutoDetect());
         showDetected(cake3DetectedLabel, settings.getCake3Detected());
@@ -67,6 +71,8 @@ class ConfigForm implements SearchableConfigurable {
     private void applyToSettings(@NotNull Settings settings) {
         SettingsState origState = settings.getState();
         SettingsState newState = copySettingsState(origState);
+
+        newState.setComposerJsonPath(composerJsonPathTextField.getText());
 
         newState.setCake3Enabled(enableAutoDetectCake3CheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
@@ -103,6 +109,9 @@ class ConfigForm implements SearchableConfigurable {
         loadSettingsToUI(settings);
         final Settings defaults = Settings.getDefaults(project);
 
+        composerJsonPathDefaultButton.addActionListener(e ->
+                this.composerJsonPathTextField.setText(defaults.getComposerJsonPath())
+        );
         appNamespaceDefaultButton.addActionListener(e ->
                 this.appNamespaceTextField.setText(defaults.getAppNamespace())
         );
@@ -183,6 +192,7 @@ class ConfigForm implements SearchableConfigurable {
         String oldAppDir = settings.getAppDirectory();
         String oldCake2AppDir = settings.getCake2AppDirectory();
         String oldAppNamespace = settings.getAppNamespace();
+        String oldComposerJsonPath = settings.getComposerJsonPath();
 
         // Ensure namespace starts with backslash:
         String namespace = appNamespaceTextField.getText();
@@ -213,7 +223,8 @@ class ConfigForm implements SearchableConfigurable {
                 !oldCake2TemplateExt.equals(settings.getCake2TemplateExtension()) ||
                 !oldAppDir.equals(settings.getAppDirectory()) ||
                 !oldCake2AppDir.equals(settings.getCake2AppDirectory()) ||
-                !oldAppNamespace.equals(settings.getAppNamespace())) {
+                !oldAppNamespace.equals(settings.getAppNamespace()) ||
+                !oldComposerJsonPath.equals(settings.getComposerJsonPath())) {
                 needsReindex = true;
             }
         }
