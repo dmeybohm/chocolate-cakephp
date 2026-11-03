@@ -522,19 +522,30 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertEquals(4, settings.cakeMajorVersion)
     }
 
-    fun `test major version from a range constraint is the configured one`() {
+    fun `test major version from a range is the highest it allows`() {
         primeDetector()
-        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \">=4.0 <6.0\""))
-        assertTrue(detected().cake3OrLaterPresent)
-        assertNull(detected().cake3OrLaterMajorVersion)
-        assertEquals(5, Settings.getInstance(project).cakeMajorVersion)
+        for ((constraint, expected) in listOf(
+            ">=4.0 <6.0" to 5,
+            ">=3.0 <4.0" to 3,
+            ">=4.0 <5.0" to 4,
+            ">=4.0 <4.1" to 4,
+            ">=4.0 <=4.5" to 4,
+            ">=3.5,<4" to 3,
+            "3.0 - 4.0" to 4,
+            "^4.5 || ^5.0" to 5,
+            "~3.10 || >=4.0 <6.0" to 5,
+        )) {
+            writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"$constraint\""))
+            assertEquals(constraint, expected, detected().cake3OrLaterMajorVersion)
+        }
     }
 
-    fun `test major version from alternatives is the highest plain one`() {
+    fun `test major version with no upper bound is the configured one`() {
         primeDetector()
-        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"^4.5 || ^5.0\""))
-        assertEquals(5, detected().cake3OrLaterMajorVersion)
-        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"~3.10 || >=4.0 <6.0\""))
-        assertEquals(3, detected().cake3OrLaterMajorVersion)
+        for (constraint in listOf(">=4.0", "^4.5 || >=5.0", "dev-master", "*")) {
+            writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"$constraint\""))
+            assertNull(constraint, detected().cake3OrLaterMajorVersion)
+        }
+        assertEquals(5, Settings.getInstance(project).cakeMajorVersion)
     }
 }

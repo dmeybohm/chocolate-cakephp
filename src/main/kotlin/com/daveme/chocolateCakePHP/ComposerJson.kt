@@ -19,7 +19,7 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
  * - [ComposerInfo.cakePhpMajorVersions] is the set of major versions the
  *   `cakephp/cakephp` constraint in `require` allows, or null if absent.
  * - [ComposerInfo.cakePhpSpecificMajorVersion] is the highest major version
- *   among the constraint's plain alternatives, or null when it has none.
+ *   the constraint allows, or null when an alternative has no upper bound.
  * - [ComposerInfo.cakePhpUnversionedAlternative] is true when that constraint
  *   has an alternative with no version number, such as `dev-master`.
  * - [ComposerInfo.appDirectory] is the directory mapped to [namespace] under
@@ -62,19 +62,33 @@ fun constraintMajorVersions(constraint: String): Set<Int> =
         .toSet()
 
 private val PLAIN_CONSTRAINT = Regex("""^\s*[\^~]?v?(\d+)(?:\.(?:\d+|\*|x))*\s*$""")
+private val HYPHEN_RANGE = Regex("""^\s*v?\d+(?:\.\d+)*\s+-\s+v?(\d+)(?:\.\d+)*\s*$""")
+private val UPPER_BOUND = Regex("""(<=?)\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?""")
 
 /**
- * The highest major version among the plain alternatives of a Composer
- * version constraint: an exact version, a wildcard, or a caret or tilde
- * form, such as `5.0.*`, `^4.3` or `~3.10`. Alternatives written with
- * comparison operators or as ranges, such as `>=4.0 <6.0`, allow more than
- * their lower bound says, so they contribute nothing. Null when no
- * alternative is plain.
+ * The highest major version a Composer version constraint allows, or null
+ * when it cannot be told: a plain form (`5.0.*`, `^4.3`, `~3.10`) names its
+ * own major, an operator form takes it from its upper bound (`<4.0` allows
+ * up to 3, `<4.1` or `<=4.0` up to 4) and a hyphen range from its end. An
+ * alternative with no upper bound, such as `>=4.0` or `dev-master`, allows
+ * anything, so the whole constraint is unknown.
  */
-fun constraintSpecificMajorVersion(constraint: String): Int? =
-    constraint.split(ALTERNATIVE_SEPARATOR)
-        .mapNotNull { PLAIN_CONSTRAINT.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull() }
-        .maxOrNull()
+fun constraintSpecificMajorVersion(constraint: String): Int? {
+    val majors = constraint.split(ALTERNATIVE_SEPARATOR).map { alternativeHighestMajor(it) }
+    return if (majors.all { it != null }) majors.filterNotNull().maxOrNull() else null
+}
+
+private fun alternativeHighestMajor(alternative: String): Int? {
+    PLAIN_CONSTRAINT.matchEntire(alternative)?.let { return it.groupValues[1].toInt() }
+    HYPHEN_RANGE.matchEntire(alternative)?.let { return it.groupValues[1].toInt() }
+    val upper = UPPER_BOUND.findAll(alternative).map { match ->
+        val (operator, major, minor, patch) = match.destructured
+        val startsTheMajor = (minor.ifEmpty { "0" }.toInt() == 0) && (patch.ifEmpty { "0" }.toInt() == 0)
+        if (operator == "<" && startsTheMajor) major.toInt() - 1 else major.toInt()
+    }.minOrNull() ?: return null
+    val lower = LEADING_MAJOR_VERSION.find(alternative)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+    return upper.takeIf { it >= lower }
+}
 
 /**
  * Whether a Composer version constraint has an alternative that does not
