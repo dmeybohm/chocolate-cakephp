@@ -11,6 +11,7 @@
 - Support `Plugin.Table` aliases and the `className` option in `fetchTable()`, `getTableLocator()->get()` and `TableRegistry::get()`, for return types, navigation and completion
 - Resolve helpers configured from CakePHP 3 to 5 controllers, through `viewBuilder()` and CakePHP 3's `$helpers` property, in the templates and elements they render, in cells those call, and in layouts, and helpers configured from cells in their own templates
 - Type, complete and navigate entity virtual fields from their `_get` and `_set` accessors, and the properties an entity gets from its table's associations, on CakePHP 3 to 5, and stop the magic property warning on them
+- Complete and navigate the `controller`, `action`, `plugin` and `prefix` keys of route target arrays in `connect()`, the HTTP verb methods, `redirect()` and `resources()` on a route builder, following the enclosing `scope()`, `prefix()` and `plugin()` closures, and in `Router::url()`, `$this->Html->link()`, `$this->Form->postLink()`, `$this->Form->create()`'s `url` option, `$this->Url->build()` and `$this->redirect()`, following the enclosing controller or the template's rendering controllers, on CakePHP 3 to 5
 
 ### Changed
 - Keep the view variables and related items of app and plugin classes with the same name apart, following how CakePHP falls back from a plugin to the app, and support templates in the app's plugin override directory

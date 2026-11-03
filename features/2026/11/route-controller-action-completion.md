@@ -382,4 +382,14 @@ on CakePHP 3 and what reflection finds on every version; framework methods are n
 A `prefix` key goes to the directory of the controllers in that prefix. In the string form the
 caret's side of `::` picks the class or the method. A `plugin` key has no target, as planned.
 
-Next: step 6, the cake4 and cake3 copies of the tests.
+### Session #6
+
+Step 6: the cake4 and cake3 copies of the completion and goto declaration tests, with the
+`Admin/ReportsController`, plugin `WidgetsController` and `config/routes.php` fixtures in each
+tree. The cake3 copies spell the prefix `admin` in `prefix()` scopes and `prefix` keys, as
+CakePHP 3 does, and resolve the same classes through the camelized match. The `prefix` key
+completion offers the namespace spelling, `Admin`, on every version, since the settings do not
+tell CakePHP 3 from 4 and 5; on 3 the user lowercases it for URL building to match the scope.
+All 28 tests per version pass unchanged otherwise.
+
+Remaining before a PR: the full local test run and the changelog entry.
