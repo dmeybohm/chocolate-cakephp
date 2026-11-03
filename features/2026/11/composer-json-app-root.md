@@ -123,7 +123,7 @@ callers and goes.
      under every app root" and "nested app directory anchors" cases go, since the model has one
      `ROOT`; the nested app directory case becomes a `src/app` setting resolved from `ROOT`.
    - `SettingsTest`: `ROOT` is the directory of `composerJsonPath`, and the project directory when
-     the file is missing.
+     the file is missing; `cake5\composer.json` resolves the same file as `cake5/composer.json`.
    - `AutoDetectionGatingTest`: with two composer files present, one requiring CakePHP 4 and one
      CakePHP 2, switching `composerJsonPath` between them changes the detected version without any
      file changing. This pins the cache dependency of step 3.
@@ -145,6 +145,10 @@ callers and goes.
    depends only on `CakePhpFilesModificationTracker`, so a changed setting would not refresh it:
    add `Settings.modificationTracker` as a second dependency, and widen the file tracker to watch
    the configured file and the `config/app.php` beside it rather than the project root's.
+   Normalise backslashes in the setting to slashes before resolving it: `findRelativeFile` splits
+   on `/` only, so a Windows user typing `src\composer.json` would otherwise get a silent fallback
+   to the project directory. The user in #267 tried `src\app` for the app directory before
+   `src/app` worked, so the form text for the new field says to use forward slashes as well.
 4. Resolve from `ROOT` everywhere a configured path is used, through one function that returns the
    configured directory or null for a blank path (Blank paths):
    - `appRootDirectoryFromViewFile` returns `ROOT`; the walk goes.
