@@ -11,6 +11,7 @@ class RouteTargetCompletionTest : Cake5BaseTestCase() {
             "cake5/src5/Controller/ArticleController.php",
             "cake5/src5/Controller/Admin/ReportsController.php",
             "cake5/vendor/test/test_plugin/src/Controller/WidgetsController.php",
+            "cake5/vendor/acme/vendored/src/Controller/ThingsController.php",
             "cake5/templates/Movie/artist.php",
         )
     }
@@ -141,7 +142,8 @@ class RouteTargetCompletionTest : Cake5BaseTestCase() {
         val result = completeRoutes("""
             ${'$'}routes->connect('/x', ['plugin' => '<caret>', 'controller' => 'Widgets']);
         """)
-        assertEquals(listOf("TestPlugin"), result)
+        assertNotNull(result)
+        assertContainsElements(result!!, "TestPlugin", "Acme/Vendored")
 
         val prefixes = completeRoutes("""
             ${'$'}routes->connect('/x', ['prefix' => '<caret>', 'controller' => 'Reports']);
@@ -211,5 +213,20 @@ class RouteTargetCompletionTest : Cake5BaseTestCase() {
         val result = completeTemplate("""echo ${'$'}this->Url->build(['prefix' => false, 'controller' => '<caret>']);""")
         assertNotNull(result)
         assertContainsElements(result!!, "Movie", "Article")
+    }
+
+    fun `test plugin key inside a plugin scope offers only that plugin`() {
+        val result = completeRoutes("""
+            ${'$'}routes->plugin('TestPlugin', function (${'$'}builder) {
+                ${'$'}builder->connect('/x', ['plugin' => '<caret>', 'controller' => 'Widgets']);
+            });
+        """)
+        assertEquals(listOf("TestPlugin"), result)
+    }
+
+    fun `test controller key outside any scope leaves out other plugins' controllers`() {
+        val result = completeRoutes("""${'$'}routes->connect('/x', ['controller' => '<caret>']);""")
+        assertNotNull(result)
+        assertDoesntContain(result!!, "Things", "Widgets")
     }
 }

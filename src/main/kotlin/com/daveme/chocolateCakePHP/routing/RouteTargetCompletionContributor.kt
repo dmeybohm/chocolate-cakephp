@@ -103,14 +103,18 @@ class RouteTargetCompletionContributor : CompletionContributor() {
                     else -> it.copy(prefix = RouteKey.Absent)
                 }
             }
+            val scope = when (position.kind) {
+                RouteTargetCallKind.ROUTE_BUILDER -> routeScopeOf(position.array)
+                RouteTargetCallKind.URL_BUILDER -> null
+            }
             val targets = when (position.kind) {
-                RouteTargetCallKind.ROUTE_BUILDER -> listOfNotNull(resolveInScope(settings, target, routeScopeOf(position.array)))
+                RouteTargetCallKind.ROUTE_BUILDER -> listOfNotNull(resolveInScope(settings, target, scope!!))
                 RouteTargetCallKind.URL_BUILDER -> resolveInContext(target, routeContextOf(settings, position.array))
             }
             when (position.key) {
                 "controller" -> controllerNames(targets)
                 "action" -> actions(targets)
-                "plugin" -> plugins()
+                "plugin" -> plugins(scope)
                 "prefix" -> prefixes(targets)
             }
         }
@@ -140,10 +144,16 @@ class RouteTargetCompletionContributor : CompletionContributor() {
             }
         }
 
-        private fun plugins() {
+        // A route inside a plugin() scope may only name that plugin; elsewhere any plugin:
+        private fun plugins(scope: RouteScope?) {
             val names = linkedSetOf<String>()
-            settings.cakeThreePluginConfigs.mapTo(names) { it.effectivePluginName() }
-            controllers.mapNotNullTo(names) { it.second.plugin }
+            val scopePlugin = scope?.plugin
+            if (scopePlugin != null) {
+                names.add(scopePlugin)
+            } else {
+                settings.cakeThreePluginConfigs.mapTo(names) { it.effectivePluginName() }
+                controllers.mapNotNullTo(names) { it.second.plugin }
+            }
             for (name in names.filter { it.isNotBlank() }) {
                 resultSet.addElement(LookupElementBuilder.create(name).withIcon(AllIcons.Nodes.Folder))
             }

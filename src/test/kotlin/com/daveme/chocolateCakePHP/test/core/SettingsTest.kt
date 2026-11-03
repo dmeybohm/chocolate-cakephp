@@ -521,4 +521,20 @@ class SettingsTest() : HeavyPlatformTestCase() {
         settings.loadState(settings.state.copy(autoDetect = false, cake3ForceEnabled = true, cakeMajorVersion = 4))
         assertEquals(4, settings.cakeMajorVersion)
     }
+
+    fun `test major version from a range constraint is the configured one`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \">=4.0 <6.0\""))
+        assertTrue(detected().cake3OrLaterPresent)
+        assertNull(detected().cake3OrLaterMajorVersion)
+        assertEquals(5, Settings.getInstance(project).cakeMajorVersion)
+    }
+
+    fun `test major version from alternatives is the highest plain one`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"^4.5 || ^5.0\""))
+        assertEquals(5, detected().cake3OrLaterMajorVersion)
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"~3.10 || >=4.0 <6.0\""))
+        assertEquals(3, detected().cake3OrLaterMajorVersion)
+    }
 }

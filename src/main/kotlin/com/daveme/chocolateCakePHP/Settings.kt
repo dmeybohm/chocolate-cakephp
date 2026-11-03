@@ -183,7 +183,8 @@ fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 data class CakeAutoDetectedValues(
     val cake2Present: Boolean = false,
     val cake3OrLaterPresent: Boolean = false,
-    // The highest CakePHP 3+ major version composer.json allows, or null when it gives none:
+    // The highest CakePHP 3+ major version a plain composer.json constraint names, or null
+    // when the constraint is a range or gives none:
     val cake3OrLaterMajorVersion: Int? = null,
     val namespace: String = DEFAULT_NAMESPACE,
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
@@ -235,7 +236,7 @@ class CakePhpAutoDetector(val project: Project)
             // An alternative with no version, such as a branch, is taken as CakePHP 3+:
             cake3OrLaterPresent = majorVersions != null &&
                     (composerInfo.cakePhpUnversionedAlternative || majorVersions.any { it >= 3 }),
-            cake3OrLaterMajorVersion = majorVersions?.filter { it >= 3 }?.maxOrNull(),
+            cake3OrLaterMajorVersion = composerInfo.cakePhpSpecificMajorVersion?.takeIf { it >= 3 },
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )

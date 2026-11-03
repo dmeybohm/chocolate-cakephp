@@ -312,8 +312,8 @@ fun routeControllerNameFromClass(settings: Settings, phpClass: PhpClass): RouteC
 
 /**
  * The class name a route target resolves to when its plugin, prefix and controller are all
- * known, or null otherwise. The controller name is camelized on `-` as `DashedRoute` does when
- * it parses a request, so `reports` names `ReportsController`.
+ * known, or null otherwise. The controller name is taken as written: `DashedRoute` camelizes
+ * a lower case one, but a plain `Route` does not, and the route class is not known here.
  */
 fun controllerClassFqn(settings: Settings, target: ResolvedRouteTarget): String? {
     val plugin = when (val value = target.plugin) {
@@ -331,8 +331,7 @@ fun controllerClassFqn(settings: Settings, target: ResolvedRouteTarget): String?
             ?: ("\\" + plugin.replace('/', '\\'))
     }
     val prefixPath = prefix?.let { prefixNamespace(settings, it) + "\\" } ?: ""
-    val className = controller.split('-').joinToString("") { it.latinCapitalize() }
-    return "${namespace}\\Controller\\${prefixPath}${className}Controller"
+    return "${namespace}\\Controller\\${prefixPath}${controller}Controller"
 }
 
 /**
@@ -341,7 +340,7 @@ fun controllerClassFqn(settings: Settings, target: ResolvedRouteTarget): String?
  * that way, and as written from 5 on, where `admin` is a missing controller.
  */
 fun ResolvedRouteTarget.matches(settings: Settings, name: RouteControllerName): Boolean {
-    if (controller != null && !controller.equals(name.name, ignoreCase = true)) {
+    if (controller != null && controller != name.name) {
         return false
     }
     val pluginMatches = when (val plugin = plugin) {

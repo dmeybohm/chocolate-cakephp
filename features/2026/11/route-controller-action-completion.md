@@ -416,3 +416,19 @@ versions apart:
 
 `RouteTargetPrefixSpellingTest` in cake3 and cake4 pins the camelized side, and the cake5 model,
 completion and goto tests the strict side.
+
+### Session #8
+
+A second review round, three changes:
+
+- The detected major version comes only from plain constraint forms (exact, wildcard, caret or
+  tilde) in `constraintSpecificMajorVersion`, taking the highest across `||` alternatives. A
+  range such as `>=4.0 <6.0` allows more than its lower bound, so it names no version and the
+  configured setting applies, which defaults to 5. The enable flags keep using
+  `constraintMajorVersions`, where the lower bound is the right question.
+- The controller name is resolved as written. `DashedRoute` camelizes a lower case key but a
+  plain `Route` does not, and the route class is not known to the plugin, so navigation no
+  longer camelizes it either; completion offers the class's spelling anyway.
+- Inside a `plugin()` scope the `plugin` key completion offers only that scope's plugin, since
+  the route builder rejects any other. A second plugin controller fixture, found by namespace
+  alone under `vendor/acme/vendored`, covers it.

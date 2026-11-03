@@ -305,4 +305,15 @@ class RouteTargetModelTest : Cake5BaseTestCase() {
         assertContainsElements(actions, "artist", "filmDirector", "meta")
         assertDoesntContain(actions, "initialize", "beforeFilter", "redirect", "render", "set", "fetchTable")
     }
+
+    fun `test a lower case controller key names no class`() {
+        val found = routeTargetControllers(
+            phpIndex, settings, ResolvedRouteTarget(RouteValue.Known(null), RouteValue.Known(null), "movie", null)
+        )
+        assertEmpty(found)
+        val unknown = routeTargetControllers(
+            phpIndex, settings, ResolvedRouteTarget(RouteValue.Unknown, RouteValue.Unknown, "widgets", null)
+        )
+        assertEmpty(unknown)
+    }
 }

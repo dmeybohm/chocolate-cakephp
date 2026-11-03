@@ -5,6 +5,7 @@ package com.daveme.chocolateCakePHP
  */
 data class ComposerInfo(
     val cakePhpMajorVersions: Set<Int>? = null,
+    val cakePhpSpecificMajorVersion: Int? = null,
     val cakePhpUnversionedAlternative: Boolean = false,
     val appDirectory: String? = null,
 )
@@ -17,6 +18,8 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
  *
  * - [ComposerInfo.cakePhpMajorVersions] is the set of major versions the
  *   `cakephp/cakephp` constraint in `require` allows, or null if absent.
+ * - [ComposerInfo.cakePhpSpecificMajorVersion] is the highest major version
+ *   among the constraint's plain alternatives, or null when it has none.
  * - [ComposerInfo.cakePhpUnversionedAlternative] is true when that constraint
  *   has an alternative with no version number, such as `dev-master`.
  * - [ComposerInfo.appDirectory] is the directory mapped to [namespace] under
@@ -35,6 +38,7 @@ fun parseComposerJson(contents: String, namespace: String): ComposerInfo {
         ?.let { it.value ?: "" }
     return ComposerInfo(
         cakePhpMajorVersions = cakePhpConstraint?.let { constraintMajorVersions(it) },
+        cakePhpSpecificMajorVersion = cakePhpConstraint?.let { constraintSpecificMajorVersion(it) },
         cakePhpUnversionedAlternative = cakePhpConstraint
             ?.let { hasUnversionedAlternative(it) } ?: false,
         appDirectory = membersOfLastObject(entries, PSR4_PATH)
@@ -56,6 +60,21 @@ fun constraintMajorVersions(constraint: String): Set<Int> =
     constraint.split(ALTERNATIVE_SEPARATOR)
         .mapNotNull { leadingMajorVersion(it) }
         .toSet()
+
+private val PLAIN_CONSTRAINT = Regex("""^\s*[\^~]?v?(\d+)(?:\.(?:\d+|\*|x))*\s*$""")
+
+/**
+ * The highest major version among the plain alternatives of a Composer
+ * version constraint: an exact version, a wildcard, or a caret or tilde
+ * form, such as `5.0.*`, `^4.3` or `~3.10`. Alternatives written with
+ * comparison operators or as ranges, such as `>=4.0 <6.0`, allow more than
+ * their lower bound says, so they contribute nothing. Null when no
+ * alternative is plain.
+ */
+fun constraintSpecificMajorVersion(constraint: String): Int? =
+    constraint.split(ALTERNATIVE_SEPARATOR)
+        .mapNotNull { PLAIN_CONSTRAINT.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull() }
+        .maxOrNull()
 
 /**
  * Whether a Composer version constraint has an alternative that does not
