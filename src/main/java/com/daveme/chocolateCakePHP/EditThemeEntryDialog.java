@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.function.Consumer;
 
+import static com.daveme.chocolateCakePHP.StringsKt.pathNormalize;
+
 public class EditThemeEntryDialog extends DialogWrapper {
     private JPanel contentPane;
     private JLabel assetsPathLabel;
@@ -62,8 +64,8 @@ public class EditThemeEntryDialog extends DialogWrapper {
 
     public ThemeConfig getThemeConfig() {
         return new ThemeConfig(
-            themePathTextField.getText(),
-            assetsPathTextField.getText()
+            pathNormalize(themePathTextField.getText()),
+            pathNormalize(assetsPathTextField.getText())
         );
     }
 }

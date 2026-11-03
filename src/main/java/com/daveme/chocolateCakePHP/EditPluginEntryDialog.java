@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static com.daveme.chocolateCakePHP.SettingsKt.effectivePluginName;
+import static com.daveme.chocolateCakePHP.StringsKt.pathNormalize;
 
 public class EditPluginEntryDialog extends DialogWrapper {
     private static final String CAKE_THREE_VERSION = "CakePHP 3+";
@@ -88,7 +89,7 @@ public class EditPluginEntryDialog extends DialogWrapper {
     @Override
     protected void doOKAction() {
         if (isCakeTwoSelected() && pluginNameTextField.getText().isBlank()) {
-            String fromPath = pluginPathTextField.getText().replaceAll("/+$", "");
+            String fromPath = pathNormalize(pluginPathTextField.getText()).replaceAll("/+$", "");
             pluginNameTextField.setText(fromPath.substring(fromPath.lastIndexOf('/') + 1));
             if (pluginNameTextField.getText().isBlank()) {
                 setErrorText("A CakePHP 2 plugin needs a name.", pluginNameTextField);
@@ -137,9 +138,9 @@ public class EditPluginEntryDialog extends DialogWrapper {
         return new PluginEntry(
             pluginNameTextField.getText(),
             namespaceTextField.getText(),
-            pluginPathTextField.getText(),
-            assetsPathTextField.getText(),
-            sourcePathTextField.getText(),
+            pathNormalize(pluginPathTextField.getText()),
+            pathNormalize(assetsPathTextField.getText()),
+            pathNormalize(sourcePathTextField.getText()),
             isCakeTwoSelected()
         ).toPluginConfig();
     }

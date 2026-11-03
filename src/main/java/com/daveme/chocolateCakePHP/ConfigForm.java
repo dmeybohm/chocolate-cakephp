@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 
 import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+import static com.daveme.chocolateCakePHP.StringsKt.pathNormalize;
 
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
@@ -72,18 +73,18 @@ class ConfigForm implements SearchableConfigurable {
         SettingsState origState = settings.getState();
         SettingsState newState = copySettingsState(origState);
 
-        newState.setComposerJsonPath(composerJsonPathTextField.getText());
+        newState.setComposerJsonPath(pathNormalize(composerJsonPathTextField.getText()));
 
         newState.setCake3Enabled(enableAutoDetectCake3CheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
-        newState.setAppDirectory(appDirectoryTextField.getText());
+        newState.setAppDirectory(pathNormalize(appDirectoryTextField.getText()));
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());
 
         newState.setCake2AutoDetect(enableAutoDetectCake2CheckBox.isSelected());
         newState.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
         newState.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
-        newState.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+        newState.setCake2AppDirectory(pathNormalize(cake2AppDirectoryTextField.getText()));
 
         settings.loadState(newState);
     }

@@ -49,7 +49,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="&lt;html&gt;The composer.json of the CakePHP application, relative to the project directory. CakePHP is auto-detected from it, and plugin and theme paths are relative to the directory containing it.&lt;/html&gt;"/>
+              <text value="&lt;html&gt;The composer.json of the CakePHP application, relative to the project directory, using forward slashes (e.g. &lt;code&gt;app/composer.json&lt;/code&gt;). CakePHP is auto-detected from it, and plugin and theme paths are relative to the directory containing it.&lt;/html&gt;"/>
             </properties>
           </component>
         </children>

@@ -294,9 +294,9 @@ Steps 2 to 10, except the full suite run, which CI does on #323.
 - **Tests.** cake2 and cake5 `AnchoredPluginPathTest` cover the decoys, the fallback to the project
   directory, the blank `pluginNamespaces` entry, navigation from `src5` to `cake5/vendor/acme/blog`,
   and the project-relative create path. These tests use the new API, so they could not be run against
-  the suffix rule. The create path test checks `templatePath` rather than `fullPath`, because a plugin
-  view path's `fullPath` has a double slash (`templates//Posts/missing.php`), which predates this
-  branch. `SettingsTest` covers `rootDirectory`, and `AutoDetectionGatingTest` covers switching
+  the suffix rule. The create path test checks the whole `fullPath`. A plugin view path used to get a
+  double slash (`templates//Posts/missing.php`) from `ControllerPath`'s `viewPath` with an empty name
+  and prefix. That predates this branch, and `viewPath` is now empty in that case. `SettingsTest` covers `rootDirectory`, and `AutoDetectionGatingTest` covers switching
   between two composer files and creating and deleting the configured one. With the settings tracker
   dependency removed and the file tracker narrowed back to the project root, both of those tests
   fail, so they pin what they are meant to.
@@ -310,7 +310,11 @@ Steps 2 to 10, except the full suite run, which CI does on #323.
   pass unchanged.
 - **UI.** `ConfigForm` has a composer.json row with a Default button above the CakePHP 3+ section, and
   `apply` requests an index rebuild when the path changes. The plugin and theme explanations and the
-  edit dialog labels now say paths are relative to the composer.json directory.
+  edit dialog labels now say paths are relative to the composer.json directory. Every path field in
+  `ConfigForm`, `EditPluginEntryDialog` and `EditThemeEntryDialog` goes through
+  `String.pathNormalize()` in `Strings.kt`, which turns backslashes into slashes, so a Windows user's
+  `cake5\composer.json` or `src\app` is stored as `cake5/composer.json` or `src/app`. It is tested
+  in `StringsTest` rather than `SettingsTest`, since settings now hold normalised paths.
 - **Indexes and changelog.** `ViewFileIndex` is at 30 and `ViewVariableIndex` at 24. The changelog
   entry under Changed has the migration note.
 
