@@ -80,8 +80,22 @@ disagree, and no directory-name test is left for a decoy to slip past:
   project directory as before.
 
 What the model gives up is several apps in one project sharing a configuration, and a configured
-plugin outside `ROOT`. Neither is something CakePHP does: an application has one `ROOT`, and the
-paths Composer records are under it. See Not in scope for the plugin-typed project.
+plugin outside `ROOT`. Both are scope limits chosen here, not framework facts: CakePHP has one
+`ROOT` per application and Composer records plugin paths under it (the assumption tests pin that),
+but `addPlugin()` accepts any absolute path, so a plugin outside `ROOT` is possible and is simply
+not supported by a configured path. See Not in scope.
+
+### Blank paths
+
+A configured plugin's path can be blank: `synthesizePluginEntries` turns each deprecated
+`pluginNamespaces` entry into a `CakeThreePluginConfig` with an empty path, and a saved entry can be
+blank too. `findRelativeFile(root, "")` is `ROOT` itself, so a containment test on a blank path would
+claim every file under `ROOT` for that plugin, and every configured template directory. Everywhere
+the model resolves a configured path, a blank path resolves to nothing: it names no directory for
+recognition, matches no template directory in `pluginTemplatePaths`, and contributes no template
+paths in `pluginAndThemeTemplatePaths`. The suffix rule today guards the same way, with
+`path.isNotEmpty()` in `isDirectoryOfPluginPath` and the `isNotBlank` filter in
+`cakeThreePluginName`; the guard moves to the one resolving function so it cannot be forgotten.
 
 ### Two path bases
 
@@ -113,6 +127,14 @@ callers and goes.
    - `AutoDetectionGatingTest`: with two composer files present, one requiring CakePHP 4 and one
      CakePHP 2, switching `composerJsonPath` between them changes the detected version without any
      file changing. This pins the cache dependency of step 3.
+   - `AutoDetectionGatingTest`: with `composerJsonPath` set to `cake5/composer.json` and no such
+     file, nothing is detected and `ROOT` is the project directory; creating the file turns
+     detection on and moves `ROOT` to `cake5`, and deleting it turns detection off again, with no
+     settings change in between. This pins the widened file tracker of step 3 and the fallback.
+   - A blank configured path identifies no directory: with a `pluginNamespaces` entry (synthesised
+     with an empty path) alongside a real configured plugin, `isInConfiguredPlugin` is false for an
+     app file, `pluginTemplatePaths` for the blank entry is null, and the app's own `templates`
+     directory is not offered as a plugin's. One test for recognition and one for template paths.
    - cake5: from a controller under `cake5/src5`, navigation reaches a template in the configured
      `cake5/vendor/acme/blog/templates`, and the popup's path for creating a view there is
      project-relative, with `composerJsonPath` set to `cake5/composer.json`. This pins the path
@@ -123,7 +145,8 @@ callers and goes.
    depends only on `CakePhpFilesModificationTracker`, so a changed setting would not refresh it:
    add `Settings.modificationTracker` as a second dependency, and widen the file tracker to watch
    the configured file and the `config/app.php` beside it rather than the project root's.
-4. Resolve from `ROOT` everywhere a configured path is used:
+4. Resolve from `ROOT` everywhere a configured path is used, through one function that returns the
+   configured directory or null for a blank path (Blank paths):
    - `appRootDirectoryFromViewFile` returns `ROOT`; the walk goes.
    - `allTemplatePathsFromTopSourceDirectory` uses `ROOT` instead of the top source directory's
      parent.
@@ -133,7 +156,8 @@ callers and goes.
      `plugins`, the override directory) are layout rules for units and stay.
    - The asset handlers already take the app root from `appRootDirectoryFromViewFile`.
 5. Make every `templatesPath` project-relative and `pluginTemplatePaths` match by directory, as
-   under Two path bases; delete `allViewPathsToFiles`.
+   under Two path bases, with a blank path matching nothing (Blank paths); delete
+   `allViewPathsToFiles`.
 6. Test fixtures: each version's base test case sets `composerJsonPath` to `cakeN/composer.json`
    (and the `_nested` variants theirs), and a minimal composer.json fixture requiring that CakePHP
    version is added under each fixture root and copied in `setUp`. The 49 configured paths in the
@@ -195,6 +219,17 @@ A review of the first plan raised four points, each checked against the code:
    bump covers upgrades, not a user moving `ROOT`. Step 8 adds the field to the comparison.
 4. The status section linked a feature log that exists only on the superseded branch. It now names
    the branch and commit, and the problem statement carries the rationale itself.
+
+A second review of the revised plan raised two points and a wording correction:
+
+1. A blank configured path, which `pluginNamespaces` entries produce, would resolve to `ROOT` and
+   select every template directory under it. Blank paths and the tests in step 2 settle that a blank
+   path resolves to nothing.
+2. The cache test only switched between existing files, so the widened file tracker was unpinned.
+   Step 2 adds a test that creates and deletes the configured file after the setting is made.
+3. The model claimed plugins outside `ROOT` are not something CakePHP does. The assumption tests
+   establish where Composer installs plugins, not a limit on `addPlugin()` paths, so the model now
+   states that as a scope limit.
 
 ## Implementation Progress
 
