@@ -266,3 +266,48 @@ rests on. Added `testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry` o
 `Configure::write('plugins', [])`, which every version takes as the manifest already loaded,
 `findPath('Probe')` still returns `ROOT/plugins/Probe/` from the scan. Passes on all three. No plugin
 code yet.
+
+### Session #2
+
+Steps 2 to 10, except the full suite run, which CI does on #323.
+
+- **Settings.** `SettingsState.composerJsonPath` defaults to `composer.json`. `Settings.composerJsonFile`
+  is that file when it exists, and `Settings.rootDirectory` is its directory or the project directory.
+  The one resolving function is `configuredDirectory(root, path)` in `Files.kt`, which returns null for
+  a blank path; `Settings.configuredDirectory(path)` calls it with `rootDirectory`, and
+  `AllTemplatePaths.pluginTemplatePaths` calls it with the root its plugin paths were resolved from.
+  Autodetection reads the configured file and the `config/app.php` beside it. Its cache also depends
+  on `Settings.modificationTracker`, and `CakePhpFilesModificationTracker` watches the configured
+  file's path, read at event time, plus any directory holding it, so creating or deleting `cake5/`
+  counts too.
+- **Recognition.** The configured clauses of `cakeTwoPluginName`, `cakeThreePluginName` and
+  `configuredCakeTwoPluginOfDirectory` compare a directory with the resolved one. `isInConfiguredPlugin`
+  tests `VfsUtil.isAncestor` and no longer takes the project directory. `isDirectoryOfPluginPath` is gone.
+- **Template paths.** `allTemplatePathsFromTopSourceDirectory` resolves plugin and theme paths from
+  `rootDirectory`. Every `templatesPath` is computed with `pathRelativeToProjectRoot`, and
+  `pluginTemplatePaths` picks a plugin's paths by directory containment. `appRootDirectoryFromViewFile`
+  returns `rootDirectory` for a view file. `allViewPathsToFiles` is deleted.
+- **Tests.** cake2 and cake5 `AnchoredPluginPathTest` cover the decoys, the fallback to the project
+  directory, the blank `pluginNamespaces` entry, navigation from `src5` to `cake5/vendor/acme/blog`,
+  and the project-relative create path. These tests use the new API, so they could not be run against
+  the suffix rule. The create path test checks `templatePath` rather than `fullPath`, because a plugin
+  view path's `fullPath` has a double slash (`templates//Posts/missing.php`), which predates this
+  branch. `SettingsTest` covers `rootDirectory`, and `AutoDetectionGatingTest` covers switching
+  between two composer files and creating and deleting the configured one. With the settings tracker
+  dependency removed and the file tracker narrowed back to the project root, both of those tests
+  fail, so they pin what they are meant to.
+- **Fixtures.** Each `cakeN` and `cakeN_nested` fixture has a composer.json requiring its version.
+  The base test cases, the `NestedAppDirectoryTest`s and `BothVersionsLayoutNavigationTest` set
+  `composerJsonPath` and copy it. The only expectation that changed is `ConfiguredPluginTest`'s
+  template path, which became `cake2/lib/Shop/View`.
+- **Library fixture (step 7).** `ControllerSideHelperTest.libraryController` adds the library under
+  `cake5/` in the light fixture, excludes it from content and attaches it as a project library, as
+  Composer's `vendor/` is. It asserts that the directory is not in content. The three library tests
+  pass unchanged.
+- **UI.** `ConfigForm` has a composer.json row with a Default button above the CakePHP 3+ section, and
+  `apply` requests an index rebuild when the path changes. The plugin and theme explanations and the
+  edit dialog labels now say paths are relative to the composer.json directory.
+- **Indexes and changelog.** `ViewFileIndex` is at 30 and `ViewVariableIndex` at 24. The changelog
+  entry under Changed has the migration note.
+
+The cake2, cake3, cake4 and cake5 packages and `SettingsTest` pass locally.
