@@ -79,6 +79,25 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(detected().cake3OrLaterPresent)
     }
 
+    private fun setComposerJsonPath(path: String) {
+        val settings = Settings.getInstance(project)
+        settings.loadState(settings.state.copy(composerJsonPath = path))
+    }
+
+    // ========== Root directory tests ==========
+
+    fun `test root directory is the directory of the configured composer json`() {
+        val composerJson = writeProjectFile("app/composer.json", composerJson())
+        setComposerJsonPath("app/composer.json")
+        assertEquals(composerJson.parent, Settings.getInstance(project).rootDirectory)
+    }
+
+    fun `test root directory is the project directory when the configured composer json is missing`() {
+        writeProjectFile("composer.json", composerJson())
+        setComposerJsonPath("app/composer.json")
+        assertEquals(orCreateProjectBaseDir, Settings.getInstance(project).rootDirectory)
+    }
+
     // ========== Auto-detection tests ==========
 
     fun `test autodetect works when composer json is not present`() {
@@ -248,7 +267,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(settings.cake3Enabled)
 
         val noAutoDetect = Settings.getDefaults(project).state.copy()
-        noAutoDetect.cake2AutoDetect = false
+        noAutoDetect.autoDetect = false
         settings.loadState(noAutoDetect)
         assertFalse(settings.cake2Enabled)
 
@@ -261,8 +280,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(settings.cake3Detected)
 
         val noAutoDetect = Settings.getDefaults(project).state.copy()
-        noAutoDetect.cake2AutoDetect = false
-        noAutoDetect.cake3Enabled = false
+        noAutoDetect.autoDetect = false
         settings.loadState(noAutoDetect)
         detectedFor("^2.10 || ^3.0")
         assertTrue(settings.cake2Detected)
@@ -274,8 +292,8 @@ class SettingsTest() : HeavyPlatformTestCase() {
     fun `test cakephp 2 force enable works without composer json`() {
         val settings = Settings.getInstance(project)
         val forced = Settings.getDefaults(project).state.copy()
-        forced.cake2Enabled = true
-        forced.cake2AutoDetect = false
+        forced.cake2ForceEnabled = true
+        forced.autoDetect = false
         settings.loadState(forced)
         assertTrue(settings.cake2Enabled)
         assertTrue(settings.cake2ForceEnabled)
@@ -283,13 +301,13 @@ class SettingsTest() : HeavyPlatformTestCase() {
         settings.loadState(Settings.getDefaults(project).state.copy())
     }
 
-    fun `test cakephp 3 auto-detect off does not hide cakephp 2 detection`() {
+    fun `test auto-detect off disables both versions`() {
         val settings = Settings.getInstance(project)
-        val noCake3 = Settings.getDefaults(project).state.copy()
-        noCake3.cake3Enabled = false
-        settings.loadState(noCake3)
-        detectedFor("^2.0")
-        assertTrue(settings.cake2Enabled)
+        val noAutoDetect = Settings.getDefaults(project).state.copy()
+        noAutoDetect.autoDetect = false
+        settings.loadState(noAutoDetect)
+        detectedFor("^2.0 || ^3.0")
+        assertFalse(settings.cake2Enabled)
         assertFalse(settings.cake3Enabled)
 
         settings.loadState(Settings.getDefaults(project).state.copy())
@@ -334,7 +352,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry with a namespace is cakephp 3 whatever its path`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(namespace = "\\Foo", pluginPath = "app/Plugin/Foo"))
         }
         assertEquals(
@@ -371,7 +389,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry without a namespace is cakephp 2 when only cakephp 2 is enabled`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(pluginPath = "plugins/Foo"))
         }
         assertEquals(listOf(CakeTwoPluginConfig(pluginName = "Foo", pluginPath = "plugins/Foo")), settings.pluginConfigs)
@@ -379,7 +397,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test legacy entry without a namespace is cakephp 3 otherwise`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.cake3ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig(pluginPath = "plugins/Foo"))
         }
@@ -388,7 +406,7 @@ class SettingsTest() : HeavyPlatformTestCase() {
 
     fun `test cakephp 2 legacy entry with no name and no path is dropped`() {
         val settings = loadedWith {
-            it.cake2Enabled = true
+            it.cake2ForceEnabled = true
             it.pluginConfigs = listOf(LegacyPluginConfig())
         }
         assertEquals(listOf<PluginConfig>(), settings.pluginConfigs)

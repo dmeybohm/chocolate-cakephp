@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.OptionTag
 import com.intellij.util.xmlb.annotations.Property
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.XCollection
@@ -24,6 +25,8 @@ private const val DEFAULT_NAMESPACE = "\\App"
 private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
+
+const val DEFAULT_COMPOSER_JSON_PATH = "composer.json"
 
 fun defaultPluginConfig(): PluginConfig {
     return CakeThreePluginConfig()
@@ -138,16 +141,20 @@ data class ThemeConfig (
 ) : ThemeOrPluginConfig
 
 data class SettingsState(
+    var composerJsonPath: String = DEFAULT_COMPOSER_JSON_PATH,
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
     var appDirectory: String = DEFAULT_APP_DIRECTORY,
     var appNamespace: String = DEFAULT_NAMESPACE,
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
-    // force enables CakePHP 2, whatever is detected:
-    var cake2Enabled: Boolean = false,
-    var cake2AutoDetect: Boolean = true,
-    var cake3Enabled: Boolean = true,
+    // Force enables CakePHP 2, whatever is detected. Saved under its old name:
+    @OptionTag("cake2Enabled")
+    var cake2ForceEnabled: Boolean = false,
+    // Auto-detects every CakePHP version from composer.json. Saved under its
+    // old name, from when it only auto-detected CakePHP 3+:
+    @OptionTag("cake3Enabled")
+    var autoDetect: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
 
     // deprecated: superseded by pluginConfigs
@@ -196,13 +203,14 @@ class CakePhpAutoDetector(val project: Project)
         get() = CachedValuesManager.getManager(project).getCachedValue(project) {
             val result = autodetectCakePhp()
             val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
-            CachedValueProvider.Result.create(result, tracker)
+            val settingsTracker = Settings.getInstance(project).modificationTracker
+            CachedValueProvider.Result.create(result, tracker, settingsTracker)
         }
 
     private fun autodetectCakePhp(): CakeAutoDetectedValues {
-        val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
-        val composerJson = topDir.findFileByRelativePath("composer.json")
+        val composerJson = Settings.getInstance(project).composerJsonFile
             ?: return CakeAutoDetectedValues()
+        val rootDir = composerJson.parent ?: return CakeAutoDetectedValues()
 
         val composerContents = try {
             String(composerJson.contentsToByteArray(), StandardCharsets.UTF_8)
@@ -210,7 +218,7 @@ class CakePhpAutoDetector(val project: Project)
             return CakeAutoDetectedValues()
         }
 
-        val namespace = checkNamespaceInAppConfig(topDir)
+        val namespace = checkNamespaceInAppConfig(rootDir)
 
         val composerInfo = parseComposerJson(composerContents, namespace)
 
@@ -226,8 +234,8 @@ class CakePhpAutoDetector(val project: Project)
         )
     }
 
-    private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {
-        val appConfig = topDir.findFileByRelativePath("config/app.php") ?: return DEFAULT_NAMESPACE
+    private fun checkNamespaceInAppConfig(rootDir: VirtualFile): String {
+        val appConfig = rootDir.findFileByRelativePath("config/app.php") ?: return DEFAULT_NAMESPACE
 
         val contents = try {
             String(appConfig.contentsToByteArray(), StandardCharsets.UTF_8)
@@ -267,7 +275,7 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val cakeTemplateExtension get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled) {
+        return if (state.autoDetect && !state.cake3ForceEnabled) {
             DEFAULT_CAKE3_TEMPLATE_EXTENSION
         } else {
             state.cakeTemplateExtension
@@ -275,31 +283,55 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val appDirectory get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+        return if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().appDirectory
         else
             state.appDirectory
     }
 
     val appNamespace get(): String {
-        val namespace = if (state.cake3Enabled && !state.cake3ForceEnabled)
+        val namespace = if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().namespace
         else
             state.appNamespace
         return namespace.absoluteClassName()
     }
 
+    val composerJsonPath get() = state.composerJsonPath
+
+    /**
+     * The configured composer.json, if it exists.
+     */
+    val composerJsonFile: VirtualFile?
+        get() {
+            val projectDir = project.guessProjectDir() ?: return null
+            return findRelativeFile(projectDir, composerJsonPath)?.takeIf { !it.isDirectory }
+        }
+
+    /**
+     * The directory of the CakePHP application, which configured paths are relative to: the
+     * directory of the configured composer.json, or the project directory when it is missing.
+     */
+    val rootDirectory: VirtualFile?
+        get() = composerJsonFile?.parent ?: project.guessProjectDir()
+
+    /**
+     * The directory a configured path names under [rootDirectory].
+     */
+    fun configuredDirectory(path: String): VirtualFile? =
+        configuredDirectory(rootDirectory, path)
+
+    val autoDetect get() = state.autoDetect
+
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
     val cake2Enabled get() = cake2ForceEnabled ||
-            (state.cake2AutoDetect && getAutoDetectedValues().cake2Present)
-    val cake2AutoDetect get() = state.cake2AutoDetect
+            (state.autoDetect && getAutoDetectedValues().cake2Present)
     val cake2Detected get() = getAutoDetectedValues().cake2Present
-    val cake2ForceEnabled get() = state.cake2Enabled
+    val cake2ForceEnabled get() = state.cake2ForceEnabled
     val cake3Enabled get() = cake3ForceEnabled ||
-            (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
-    val cake3AutoDetect get() = state.cake3Enabled
+            (state.autoDetect && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 

@@ -15,7 +15,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 
 /**
- * Tracks modifications to composer.json and config/app.php files in the project root.
+ * Tracks modifications to the configured composer.json and the config/app.php beside it.
  *
  * This is used to invalidate the CakePHP autodetection cache when these files are
  * created or deleted, even if they didn't exist when the cache was first created.
@@ -27,11 +27,9 @@ class CakePhpFilesModificationTracker(private val project: Project) : SimpleModi
         val connection = project.messageBus.connect(this)
         connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                val projectDir = project.guessProjectDir() ?: return
-                val projectPath = projectDir.path
-
+                val targets = targetPaths() ?: return
                 for (e in events) {
-                    if (affectsTarget(e, projectPath)) {
+                    if (affectsTarget(e, targets)) {
                         incModificationCount()
                         break
                     }
@@ -40,14 +38,21 @@ class CakePhpFilesModificationTracker(private val project: Project) : SimpleModi
         })
     }
 
-    private fun affectsTarget(e: VFileEvent, projectPath: String): Boolean {
-        // Handle create/delete by path
+    private fun targetPaths(): List<String>? {
+        val projectPath = project.guessProjectDir()?.path ?: return null
+        val composerJsonPath = Settings.getInstance(project).composerJsonPath
+            .split('/').filter { it.isNotEmpty() }.joinToString("/")
+        val rootPath = listOf(projectPath, composerJsonPath.substringBeforeLast('/', ""))
+            .filter { it.isNotEmpty() }.joinToString("/")
+        return listOf("$projectPath/$composerJsonPath", "$rootPath/config/app.php")
+    }
+
+    private fun affectsTarget(e: VFileEvent, targets: List<String>): Boolean {
+        fun isTargetOrAncestor(path: String) = targets.any { it == path || it.startsWith("$path/") }
+
+        // Handle create/delete by path, including a directory holding a target
         when (e) {
-            is VFileCreateEvent, is VFileDeleteEvent -> {
-                val p = e.path
-                return p == "$projectPath/composer.json" ||
-                        p == "$projectPath/config/app.php"
-            }
+            is VFileCreateEvent, is VFileDeleteEvent -> return isTargetOrAncestor(e.path)
         }
 
         // For events with a file object (content change, rename, move)
@@ -58,8 +63,7 @@ class CakePhpFilesModificationTracker(private val project: Project) : SimpleModi
             else -> null
         } ?: return false
 
-        val path = file.path
-        if (path == "$projectPath/composer.json" || path == "$projectPath/config/app.php") {
+        if (isTargetOrAncestor(file.path)) {
             return true
         }
 
@@ -67,14 +71,10 @@ class CakePhpFilesModificationTracker(private val project: Project) : SimpleModi
         if (e is VFilePropertyChangeEvent && e.isRename) {
             val newName = e.newValue as? String ?: return false
             val parentPath = file.parent?.path ?: return false
-            val newPath = "$parentPath/$newName"
-            return newPath == "$projectPath/composer.json" ||
-                    newPath == "$projectPath/config/app.php"
+            return isTargetOrAncestor("$parentPath/$newName")
         }
         if (e is VFileMoveEvent) {
-            val newPath = e.newParent.path + "/" + e.file.name
-            return newPath == "$projectPath/composer.json" ||
-                    newPath == "$projectPath/config/app.php"
+            return isTargetOrAncestor(e.newParent.path + "/" + e.file.name)
         }
 
         return false

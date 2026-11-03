@@ -13,11 +13,13 @@ class NestedAppDirectoryTest : BaseTestCase() {
 
         val originalSettings = Settings.getInstance(myFixture.project)
         val newState = Settings.getDefaults(myFixture.project).state.copy()
-        newState.cake3Enabled = true
+        newState.autoDetect = true
         newState.cake3ForceEnabled = true  // Force enable to bypass auto-detection
-        newState.cake2Enabled = false
+        newState.cake2ForceEnabled = false
         newState.appDirectory = "app/src4"  // Nested path
+        newState.composerJsonPath = "cake4_nested/composer.json"
         originalSettings.loadState(newState)
+        myFixture.copyFileToProject("cake4_nested/composer.json")
 
         setUpTestFiles()
     }

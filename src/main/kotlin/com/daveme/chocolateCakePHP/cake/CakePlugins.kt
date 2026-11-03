@@ -4,6 +4,7 @@ import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 
 internal val cakeTwoPluginDirectoryNames = setOf("Plugin", "plugins")
@@ -30,25 +31,18 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
 }
 
 /**
- * The configured CakePHP 2 plugin whose directory [directory] is. Plugin paths are matched as path
- * suffixes, since they are relative to an app root that may be nested in the project.
+ * The configured CakePHP 2 plugin whose directory [directory] is.
  */
 fun configuredCakeTwoPluginOfDirectory(directory: VirtualFile, settings: Settings): CakeTwoPluginConfig? =
     settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>()
-        .firstOrNull { isDirectoryOfPluginPath(directory, it.pluginPath) }
-
-private fun isDirectoryOfPluginPath(directory: VirtualFile, pluginPath: String): Boolean {
-    val path = pluginPath.trim('/')
-    return path.isNotEmpty() && directory.path.endsWith("/$path")
-}
+        .firstOrNull { settings.configuredDirectory(it.pluginPath) == directory }
 
 private val cakeThreeTemplateDirectoryNames = setOf("templates", "Template")
 
 /**
  * The CakePHP 3+ plugin [file] belongs to, from its path: a configured plugin's path, a directory
- * under the `plugins` directory, or the app's [overrideDirectory] for a plugin. Plugin paths are
- * matched as path suffixes, since they are relative to an app root that may be nested in the
- * project. Null for a file of the app itself.
+ * under the `plugins` directory, or the app's [overrideDirectory] for a plugin. Null for a file of
+ * the app itself.
  */
 fun cakeThreePluginName(
     file: VirtualFile,
@@ -56,13 +50,14 @@ fun cakeThreePluginName(
     settings: Settings,
     overrideDirectory: String
 ): String? {
-    val configs = settings.cakeThreePluginConfigs
-        .filter { it.pluginPath.isNotBlank() && it.effectivePluginName().isNotBlank() }
+    val configuredDirectories = settings.cakeThreePluginConfigs
+        .filter { it.effectivePluginName().isNotBlank() }
+        .mapNotNull { config -> settings.configuredDirectory(config.pluginPath)?.let { it to config } }
     var current: VirtualFile? = file.parent
     while (current != null && current != projectDir) {
         val directory = current
-        configs.firstOrNull { directory.path.endsWith("/" + it.pluginPath.trim('/')) }
-            ?.let { return it.effectivePluginName() }
+        configuredDirectories.firstOrNull { it.first == directory }
+            ?.let { return it.second.effectivePluginName() }
         val parent = directory.parent
         if (parent?.name == "plugins") {
             return directory.name
@@ -76,10 +71,9 @@ fun cakeThreePluginName(
 }
 
 /**
- * Whether [file] is under the path of a configured plugin, matched the way the plugin name rules
- * for its CakePHP version match it.
+ * Whether [file] is under the directory of a configured plugin.
  */
-fun isInConfiguredPlugin(file: VirtualFile, projectDir: VirtualFile?, settings: Settings): Boolean =
-    generateSequence(file.parent) { it.parent }
-        .takeWhile { it != projectDir }
-        .any { directory -> settings.pluginConfigs.any { isDirectoryOfPluginPath(directory, it.pluginPath) } }
+fun isInConfiguredPlugin(file: VirtualFile, settings: Settings): Boolean =
+    settings.pluginConfigs.any { config ->
+        settings.configuredDirectory(config.pluginPath)?.let { VfsUtil.isAncestor(it, file, true) } == true
+    }

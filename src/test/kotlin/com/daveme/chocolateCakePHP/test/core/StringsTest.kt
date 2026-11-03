@@ -6,6 +6,7 @@ import com.daveme.chocolateCakePHP.removeImmediateParentDir
 import com.daveme.chocolateCakePHP.joinViewPath
 import com.daveme.chocolateCakePHP.camelCaseToUnderscore
 import com.daveme.chocolateCakePHP.entityToTableClass
+import com.daveme.chocolateCakePHP.pathNormalize
 import junit.framework.TestCase
 
 class StringsTest : BaseTestCase() {
@@ -126,5 +127,10 @@ class StringsTest : BaseTestCase() {
         assertEquals("\\TestPlugin\\Model\\Table\\RatingsTable", "\\TestPlugin\\Model\\Entity\\Rating".entityToTableClass())
         assertEquals("\\App\\Model\\Table\\PeopleTable", "\\App\\Model\\Entity\\Person".entityToTableClass())
         assertNull("\\App\\Model\\Review".entityToTableClass())
+    }
+
+    fun `test pathNormalize takes backslashes as path separators`() {
+        assertEquals("cake5/composer.json", "cake5\\composer.json".pathNormalize())
+        assertEquals("src/app", "src/app".pathNormalize())
     }
 }

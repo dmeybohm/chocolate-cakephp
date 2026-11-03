@@ -2,6 +2,12 @@ package com.daveme.chocolateCakePHP
 
 import java.util.*
 
+/**
+ * A path typed into the settings, with backslashes taken as path separators.
+ */
+fun String.pathNormalize(): String =
+    this.replace('\\', '/')
+
 fun String.startsWithUppercaseCharacter(): Boolean =
     this.isNotEmpty() && Character.isUpperCase(this[0])
 

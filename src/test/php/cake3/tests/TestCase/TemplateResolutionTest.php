@@ -2,6 +2,10 @@
 
 namespace App\Test\TestCase;
 
+use App\Application;
+use Cake\Core\Configure;
+use Cake\Core\Exception\MissingPluginException;
+use Cake\Core\PluginCollection;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingTemplateException;
@@ -134,5 +138,39 @@ class TemplateResolutionTest extends TestCase
     {
         $this->get('/widgets/builderpathcamel');
         $this->assertResponseEquals('app:Gadgets/view_all');
+    }
+
+    public function testPluginLoadedWithExplicitPathRendersItsTemplate()
+    {
+        $this->get('/pathed/trinkets/index');
+        $this->assertResponseEquals('pathed:Trinkets/index');
+    }
+
+    public function testPluginInsideAnotherPluginsVendorDirectoryIsNotFound()
+    {
+        $this->expectException(MissingPluginException::class);
+        (new Application(CONFIG))->addPlugin('Acme/Nested');
+    }
+
+    public function testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory()
+    {
+        $this->assertFileExists(ROOT . DS . 'composer.json');
+        $this->assertSame(
+            ROOT . DS . 'vendor' . DS . 'acme' . DS . 'installed' . DS,
+            (new PluginCollection())->findPath('Acme/Installed')
+        );
+        $this->assertContains(
+            "\$baseDir . '/vendor/acme/installed/'",
+            file_get_contents(ROOT . DS . 'vendor' . DS . 'cakephp-plugins.php')
+        );
+    }
+
+    public function testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry()
+    {
+        Configure::write('plugins', []);
+        $this->assertSame(
+            ROOT . DS . 'plugins' . DS . 'Probe' . DS,
+            (new PluginCollection())->findPath('Probe')
+        );
     }
 }
