@@ -15,8 +15,7 @@
             "Probe\\": "plugins/Probe/src/",
             "Other\\": "plugins/Other/src/",
             "Acme\\Vendored\\": "plugins/Acme/Vendored/src/",
-            "Unloaded\\": "plugins/Unloaded/src/",
-            "Pathed\\": "packages/Pathed/src/"
+            "Unloaded\\": "plugins/Unloaded/src/"
         }
     },
     "autoload-dev": {

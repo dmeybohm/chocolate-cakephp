@@ -66,8 +66,7 @@ Relied on by view navigation, the controller action line marker and view file cr
 | `$this->view = 'viewAll'` renders `view_all` | `testViewPropertyNameIsUnderscored` | 2 |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
 | A plugin in the `plugins` directory beside the app directory is found, and renders its own template | `testRootPluginsDirectoryPluginRendersItsTemplate` | 2 only |
-| A plugin loaded with an explicit `path` outside the app directory renders its own template | `testPluginLoadedWithExplicitPathRendersItsTemplate` | Same. 3: from `{path}/src/Template`. 4, 5: from `{path}/templates` |
-| A plugin whose only copy is in another plugin's `vendor` directory is not found by name, even when that directory has its own `cakephp-plugins.php` | `testPluginInsideAnotherPluginsVendorDirectoryIsNotFound` | 3, 4, 5 |
+| A plugin loaded with an explicit `path` outside the app directory renders its own template | `testPluginLoadedWithExplicitPathRendersItsTemplate` | 2 only |
 
 ### `LayoutResolutionTest`
 

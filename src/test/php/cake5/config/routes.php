@@ -12,9 +12,6 @@ return static function (RouteBuilder $routes): void {
     $routes->plugin('Probe', ['path' => '/probe'], static function (RouteBuilder $builder): void {
         $builder->fallbacks();
     });
-    $routes->plugin('Pathed', ['path' => '/pathed'], static function (RouteBuilder $builder): void {
-        $builder->fallbacks();
-    });
     $routes->scope('/', static function (RouteBuilder $builder): void {
         $builder->fallbacks();
     });

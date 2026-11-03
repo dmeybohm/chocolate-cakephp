@@ -2,10 +2,8 @@ package com.daveme.chocolateCakePHP.cake
 
 import com.daveme.chocolateCakePHP.CakeThreePluginConfig
 import com.daveme.chocolateCakePHP.CakeTwoPluginConfig
-import com.daveme.chocolateCakePHP.PluginConfig
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.effectivePluginName
-import com.daveme.chocolateCakePHP.findRelativeFile
 import com.intellij.openapi.vfs.VirtualFile
 
 internal val cakeTwoPluginDirectoryNames = setOf("Plugin", "plugins")
@@ -27,53 +25,30 @@ fun cakeTwoPluginName(file: VirtualFile, projectDir: VirtualFile?, settings: Set
     }
     return generateSequence(file.parent) { it.parent }
         .takeWhile { it != projectDir }
-        .firstNotNullOfOrNull { configuredCakeTwoPluginOfDirectory(it, projectDir, settings) }
+        .firstNotNullOfOrNull { configuredCakeTwoPluginOfDirectory(it, settings) }
         ?.pluginName
 }
 
 /**
- * The configured CakePHP 2 plugin whose directory [directory] is.
+ * The configured CakePHP 2 plugin whose directory [directory] is. Plugin paths are matched as path
+ * suffixes, since they are relative to an app root that may be nested in the project.
  */
-fun configuredCakeTwoPluginOfDirectory(
-    directory: VirtualFile,
-    projectDir: VirtualFile?,
-    settings: Settings
-): CakeTwoPluginConfig? =
+fun configuredCakeTwoPluginOfDirectory(directory: VirtualFile, settings: Settings): CakeTwoPluginConfig? =
     settings.pluginConfigs.filterIsInstance<CakeTwoPluginConfig>()
-        .firstOrNull { isDirectoryOfConfiguredPlugin(directory, it, projectDir, settings) }
+        .firstOrNull { isDirectoryOfPluginPath(directory, it.pluginPath) }
 
-/**
- * Whether [directory] is the directory of the configured plugin [pluginConfig]: the plugin's path
- * from an app root of its CakePHP version that is not itself a plugin, or from the project directory.
- */
-fun isDirectoryOfConfiguredPlugin(
-    directory: VirtualFile,
-    pluginConfig: PluginConfig,
-    projectDir: VirtualFile?,
-    settings: Settings
-): Boolean {
-    val path = pluginConfig.pluginPath.trim('/')
-    if (path.isEmpty() || !directory.path.endsWith("/$path")) {
-        return false
-    }
-    val root = generateSequence(directory) { it.parent }.elementAtOrNull(path.split('/').size)
-        ?: return false
-    if (root == projectDir) {
-        return true
-    }
-    val appDirectory = when (pluginConfig) {
-        is CakeTwoPluginConfig -> settings.cake2AppDirectory
-        is CakeThreePluginConfig -> settings.appDirectory
-    }
-    return root.parent?.name != "plugins" && findRelativeFile(root, appDirectory)?.isDirectory == true
+private fun isDirectoryOfPluginPath(directory: VirtualFile, pluginPath: String): Boolean {
+    val path = pluginPath.trim('/')
+    return path.isNotEmpty() && directory.path.endsWith("/$path")
 }
 
 private val cakeThreeTemplateDirectoryNames = setOf("templates", "Template")
 
 /**
  * The CakePHP 3+ plugin [file] belongs to, from its path: a configured plugin's path, a directory
- * under the `plugins` directory, or the app's [overrideDirectory] for a plugin. Null for a file of
- * the app itself.
+ * under the `plugins` directory, or the app's [overrideDirectory] for a plugin. Plugin paths are
+ * matched as path suffixes, since they are relative to an app root that may be nested in the
+ * project. Null for a file of the app itself.
  */
 fun cakeThreePluginName(
     file: VirtualFile,
@@ -86,7 +61,7 @@ fun cakeThreePluginName(
     var current: VirtualFile? = file.parent
     while (current != null && current != projectDir) {
         val directory = current
-        configs.firstOrNull { isDirectoryOfConfiguredPlugin(directory, it, projectDir, settings) }
+        configs.firstOrNull { directory.path.endsWith("/" + it.pluginPath.trim('/')) }
             ?.let { return it.effectivePluginName() }
         val parent = directory.parent
         if (parent?.name == "plugins") {
@@ -101,11 +76,10 @@ fun cakeThreePluginName(
 }
 
 /**
- * Whether [file] is under the directory of a configured plugin.
+ * Whether [file] is under the path of a configured plugin, matched the way the plugin name rules
+ * for its CakePHP version match it.
  */
 fun isInConfiguredPlugin(file: VirtualFile, projectDir: VirtualFile?, settings: Settings): Boolean =
     generateSequence(file.parent) { it.parent }
         .takeWhile { it != projectDir }
-        .any { directory ->
-            settings.pluginConfigs.any { isDirectoryOfConfiguredPlugin(directory, it, projectDir, settings) }
-        }
+        .any { directory -> settings.pluginConfigs.any { isDirectoryOfPluginPath(directory, it.pluginPath) } }

@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase;
 
-use App\Application;
-use Cake\Core\Exception\MissingPluginException;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingTemplateException;
@@ -136,17 +134,5 @@ class TemplateResolutionTest extends TestCase
     {
         $this->get('/widgets/builderpathcamel');
         $this->assertResponseEquals('app:Gadgets/view_all');
-    }
-
-    public function testPluginLoadedWithExplicitPathRendersItsTemplate(): void
-    {
-        $this->get('/pathed/trinkets/index');
-        $this->assertResponseEquals('pathed:Trinkets/index');
-    }
-
-    public function testPluginInsideAnotherPluginsVendorDirectoryIsNotFound(): void
-    {
-        $this->expectException(MissingPluginException::class);
-        (new Application(CONFIG))->addPlugin('Acme/Nested');
     }
 }

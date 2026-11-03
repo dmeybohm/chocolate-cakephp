@@ -87,10 +87,10 @@ data class ControllerInfo(
     val isCakeTwo: Boolean
 )
 
-fun lookupControllerFileInfo(controllerFile: VirtualFile, projectDir: VirtualFile?, settings: Settings): ControllerInfo {
+fun lookupControllerFileInfo(controllerFile: VirtualFile, settings: Settings): ControllerInfo {
     return ControllerInfo(
         controllerFile,
-        isCakeTwoController(controllerFile, projectDir, settings)
+        isCakeTwoController(controllerFile, settings)
     )
 }
 
@@ -116,7 +116,6 @@ private fun matchesCake2AppDirectory(directory: VirtualFile, settings: Settings)
 
 private fun isCakeTwoController(
     controllerFile: VirtualFile,
-    projectDir: VirtualFile?,
     settings: Settings
 ): Boolean {
     var controllerDir: VirtualFile? = controllerFile.parent
@@ -127,7 +126,7 @@ private fun isCakeTwoController(
         return false
     }
     val topSourceDir = controllerDir.parent ?: return false
-    if (isCakeTwoPluginDirectory(topSourceDir, projectDir, settings)) {
+    if (isCakeTwoPluginDirectory(topSourceDir, settings)) {
         return true
     }
     if (!matchesCake2AppDirectory(topSourceDir, settings)) {
@@ -141,13 +140,13 @@ private fun isCakeTwoController(
 private fun pathComponentCount(path: String): Int = path.split("/").size
 
 // CakePHP 3+ plugins have `src` between the plugin and its `Controller` directory, so they don't match:
-private fun isCakeTwoPluginDirectory(directory: VirtualFile, projectDir: VirtualFile?, settings: Settings): Boolean {
+private fun isCakeTwoPluginDirectory(directory: VirtualFile, settings: Settings): Boolean {
     val pluginsDir = directory.parent
     if (pluginsDir != null && pluginsDir.name in cakeTwoPluginDirectoryNames &&
         pluginsDir.parent?.let { matchesCake2AppDirectory(it, settings) } == true) {
         return true
     }
-    return configuredCakeTwoPluginOfDirectory(directory, projectDir, settings) != null
+    return configuredCakeTwoPluginOfDirectory(directory, settings) != null
 }
 
 object ViewFileIndexService {

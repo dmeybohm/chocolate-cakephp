@@ -203,3 +203,15 @@ Implemented steps 2 to 5.
 One behaviour to note: a configured plugin of an app nested in the project is now recognised only
 when the app directory setting matches the app's layout. When the app root is the project
 directory, the fallback accepts it regardless.
+
+### Session #3
+
+Went in a different direction, so the implementation is reverted. Only this feature log is kept, as
+a record of the plan and of what was tried.
+
+- Reverted: the anchored `isDirectoryOfConfiguredPlugin` rule and its callers in `CakePlugins.kt`,
+  `CakePaths.kt`, `TemplateDirStructure.kt` and the view file and variable indexes; the settings UI
+  wording; the changelog entry; the `AnchoredPluginPathTest` tests and the fixture adjustments in
+  `PluginAwareViewKeysTest` and `ControllerSideHelperTest`; and the `Pathed`, `Nester` and
+  `Installed` assumption test fixtures with their `TemplateResolutionTest` cases.
+- Code and tests are back to what they were where the branch left `main`.

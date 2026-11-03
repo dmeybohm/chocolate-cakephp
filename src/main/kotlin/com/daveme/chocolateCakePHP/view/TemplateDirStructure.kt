@@ -191,7 +191,7 @@ sealed class TemplateDirStructure(val id: Char) {
             // A plugin controller is not under the app directory, so with only CakePHP 2
             // enabled every controller is a CakePHP 2 one:
             return if (settings.cake2Enabled &&
-                (!settings.cake3Enabled || lookupControllerFileInfo(file, project.guessProjectDir(), settings).isCakeTwo))
+                (!settings.cake3Enabled || lookupControllerFileInfo(file, settings).isCakeTwo))
                 CakeTwo
             else
                 cakeFour
