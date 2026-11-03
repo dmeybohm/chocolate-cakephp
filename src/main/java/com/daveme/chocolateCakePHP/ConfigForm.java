@@ -39,6 +39,7 @@ class ConfigForm implements SearchableConfigurable {
     private JLabel cake2DetectedLabel;
     private JTextField composerJsonPathTextField;
     private JButton composerJsonPathDefaultButton;
+    private JComboBox<Integer> cakeVersionComboBox;
 
     public ConfigForm(Project project) {
         this.project = project;
@@ -49,21 +50,26 @@ class ConfigForm implements SearchableConfigurable {
 
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
         enableAutoDetectCheckBox.setSelected(settings.getAutoDetect());
-        showDetected(cake3DetectedLabel, settings.getCake3Detected());
+        showDetected(cake3DetectedLabel, settings.getCake3Detected(), settings.getCake3DetectedMajorVersion());
         updateCake3SettingsVisibility();
+        cakeVersionComboBox.setModel(new DefaultComboBoxModel<>(new Integer[]{3, 4, 5}));
+        cakeVersionComboBox.setSelectedItem(settings.getState().getCakeMajorVersion());
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
-        showDetected(cake2DetectedLabel, settings.getCake2Detected());
+        showDetected(cake2DetectedLabel, settings.getCake2Detected(), null);
         enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
 
-    private static void showDetected(JLabel label, boolean detected) {
-        label.setText(detected ? "Detected: yes" : "Detected: no");
+    private static void showDetected(JLabel label, boolean detected, @Nullable Integer majorVersion) {
+        String text = !detected ? "Detected: no"
+                : majorVersion == null ? "Detected: yes"
+                : "Detected: CakePHP " + majorVersion;
+        label.setText(text);
         label.setIcon(detected ? AllIcons.General.InspectionsOK : AllIcons.General.Error);
     }
 
@@ -75,6 +81,10 @@ class ConfigForm implements SearchableConfigurable {
 
         newState.setAutoDetect(enableAutoDetectCheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
+        Integer version = (Integer) cakeVersionComboBox.getSelectedItem();
+        if (version != null) {
+            newState.setCakeMajorVersion(version);
+        }
         newState.setAppDirectory(pathNormalize(appDirectoryTextField.getText()));
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());

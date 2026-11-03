@@ -5,6 +5,7 @@ package com.daveme.chocolateCakePHP
  */
 data class ComposerInfo(
     val cakePhpMajorVersions: Set<Int>? = null,
+    val cakePhpSpecificMajorVersion: Int? = null,
     val cakePhpUnversionedAlternative: Boolean = false,
     val appDirectory: String? = null,
 )
@@ -17,6 +18,8 @@ private val PSR4_PATH = listOf("autoload", "psr-4")
  *
  * - [ComposerInfo.cakePhpMajorVersions] is the set of major versions the
  *   `cakephp/cakephp` constraint in `require` allows, or null if absent.
+ * - [ComposerInfo.cakePhpSpecificMajorVersion] is the highest major version
+ *   the constraint allows, or null when an alternative has no upper bound.
  * - [ComposerInfo.cakePhpUnversionedAlternative] is true when that constraint
  *   has an alternative with no version number, such as `dev-master`.
  * - [ComposerInfo.appDirectory] is the directory mapped to [namespace] under
@@ -35,6 +38,7 @@ fun parseComposerJson(contents: String, namespace: String): ComposerInfo {
         ?.let { it.value ?: "" }
     return ComposerInfo(
         cakePhpMajorVersions = cakePhpConstraint?.let { constraintMajorVersions(it) },
+        cakePhpSpecificMajorVersion = cakePhpConstraint?.let { constraintSpecificMajorVersion(it) },
         cakePhpUnversionedAlternative = cakePhpConstraint
             ?.let { hasUnversionedAlternative(it) } ?: false,
         appDirectory = membersOfLastObject(entries, PSR4_PATH)
@@ -48,14 +52,47 @@ private val ALTERNATIVE_SEPARATOR = Regex("""\|\|?""")
 private val LEADING_MAJOR_VERSION = Regex("""^[<>=!^~\s]*v?(\d+)""")
 
 /**
- * The major versions a Composer version constraint allows, read from the
- * lower bound of each `||` alternative. Alternatives that do not start with
- * a version number, such as `dev-master` or `*`, contribute nothing.
+ * The major versions a Composer version constraint selects, one per `||`
+ * alternative: the highest a bounded alternative allows, which is what
+ * Composer installs, and otherwise the alternative's lower bound.
+ * Alternatives that do not start with a version number, such as
+ * `dev-master` or `*`, contribute nothing.
  */
 fun constraintMajorVersions(constraint: String): Set<Int> =
     constraint.split(ALTERNATIVE_SEPARATOR)
-        .mapNotNull { leadingMajorVersion(it) }
+        .mapNotNull { alternativeHighestMajor(it) ?: leadingMajorVersion(it) }
         .toSet()
+
+private val PLAIN_CONSTRAINT = Regex("""^\s*[\^~]?v?(\d+)(?:\.(?:\d+|\*|x))*\s*$""")
+private val HYPHEN_RANGE = Regex("""^\s*v?\d+(?:\.\d+)*\s+-\s+v?(\d+)(?:\.\d+)*\s*$""")
+private val UPPER_BOUND = Regex("""(<=?)\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?""")
+private val LOWER_BOUND = Regex(""">=?\s*v?(\d+)""")
+
+/**
+ * The highest major version a Composer version constraint allows, or null
+ * when it cannot be told: a plain form (`5.0.*`, `^4.3`, `~3.10`) names its
+ * own major, an operator form takes it from its upper bound (`<4.0` allows
+ * up to 3, `<4.1` or `<=4.0` up to 4) and a hyphen range from its end. A
+ * lower bound is optional, so `<5.0` allows up to 4. An alternative with no
+ * upper bound, such as `>=4.0` or `dev-master`, allows anything, so the
+ * whole constraint is unknown.
+ */
+fun constraintSpecificMajorVersion(constraint: String): Int? {
+    val majors = constraint.split(ALTERNATIVE_SEPARATOR).map { alternativeHighestMajor(it) }
+    return if (majors.all { it != null }) majors.filterNotNull().maxOrNull() else null
+}
+
+private fun alternativeHighestMajor(alternative: String): Int? {
+    PLAIN_CONSTRAINT.matchEntire(alternative)?.let { return it.groupValues[1].toInt() }
+    HYPHEN_RANGE.matchEntire(alternative)?.let { return it.groupValues[1].toInt() }
+    val upper = UPPER_BOUND.findAll(alternative).map { match ->
+        val (operator, major, minor, patch) = match.destructured
+        val startsTheMajor = (minor.ifEmpty { "0" }.toInt() == 0) && (patch.ifEmpty { "0" }.toInt() == 0)
+        if (operator == "<" && startsTheMajor) major.toInt() - 1 else major.toInt()
+    }.minOrNull() ?: return null
+    val lower = LOWER_BOUND.findAll(alternative).mapNotNull { it.groupValues[1].toIntOrNull() }.maxOrNull() ?: 0
+    return upper.takeIf { it >= lower }
+}
 
 /**
  * Whether a Composer version constraint has an alternative that does not

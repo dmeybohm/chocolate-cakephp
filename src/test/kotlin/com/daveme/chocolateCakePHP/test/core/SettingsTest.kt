@@ -496,4 +496,67 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertNull(resultByNamespace)
     }
 
+    // ========== CakePHP major version ==========
+
+    fun `test major version comes from composer json when detected`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"^4.3\""))
+        assertEquals(4, detected().cake3OrLaterMajorVersion)
+        assertEquals(4, Settings.getInstance(project).cakeMajorVersion)
+    }
+
+    fun `test major version is the configured one when composer json gives none`() {
+        primeDetector()
+        val settings = Settings.getInstance(project)
+        assertNull(detected().cake3OrLaterMajorVersion)
+        assertEquals(5, settings.cakeMajorVersion)
+        settings.loadState(settings.state.copy(cakeMajorVersion = 3))
+        assertEquals(3, settings.cakeMajorVersion)
+    }
+
+    fun `test major version is the configured one when auto-detection is off`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson())
+        val settings = Settings.getInstance(project)
+        settings.loadState(settings.state.copy(autoDetect = false, cake3ForceEnabled = true, cakeMajorVersion = 4))
+        assertEquals(4, settings.cakeMajorVersion)
+    }
+
+    fun `test major version from a range is the highest it allows`() {
+        primeDetector()
+        for ((constraint, expected) in listOf(
+            ">=4.0 <6.0" to 5,
+            ">=3.0 <4.0" to 3,
+            ">=4.0 <5.0" to 4,
+            ">=4.0 <4.1" to 4,
+            ">=4.0 <=4.5" to 4,
+            ">=3.5,<4" to 3,
+            "3.0 - 4.0" to 4,
+            "<5.0" to 4,
+            "<=4.5" to 4,
+            "<4" to 3,
+            ">4.5 <6" to 5,
+            "^4.5 || ^5.0" to 5,
+            "~3.10 || >=4.0 <6.0" to 5,
+        )) {
+            writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"$constraint\""))
+            assertEquals(constraint, expected, detected().cake3OrLaterMajorVersion)
+        }
+    }
+
+    fun `test major version with no upper bound is the configured one`() {
+        primeDetector()
+        for (constraint in listOf(">=4.0", "^4.5 || >=5.0", "dev-master", "*")) {
+            writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"$constraint\""))
+            assertNull(constraint, detected().cake3OrLaterMajorVersion)
+        }
+        assertEquals(5, Settings.getInstance(project).cakeMajorVersion)
+    }
+
+    fun `test an upper bound below 3 detects CakePHP 2 and not 3`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"<3.0\""))
+        assertTrue(detected().cake2Present)
+        assertFalse(detected().cake3OrLaterPresent)
+    }
 }

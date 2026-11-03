@@ -26,6 +26,8 @@ private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
 
+private const val DEFAULT_CAKE3_MAJOR_VERSION = 5
+
 const val DEFAULT_COMPOSER_JSON_PATH = "composer.json"
 
 fun defaultPluginConfig(): PluginConfig {
@@ -156,6 +158,8 @@ data class SettingsState(
     @OptionTag("cake3Enabled")
     var autoDetect: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
+    // The CakePHP 3+ major version to assume when composer.json does not give one:
+    var cakeMajorVersion: Int = DEFAULT_CAKE3_MAJOR_VERSION,
 
     // deprecated: superseded by pluginConfigs
     var pluginNamespaces: List<String> = listOf(),
@@ -179,6 +183,9 @@ fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 data class CakeAutoDetectedValues(
     val cake2Present: Boolean = false,
     val cake3OrLaterPresent: Boolean = false,
+    // The highest CakePHP 3+ major version composer.json allows, or null when its constraint
+    // has no upper bound:
+    val cake3OrLaterMajorVersion: Int? = null,
     val namespace: String = DEFAULT_NAMESPACE,
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
@@ -229,6 +236,7 @@ class CakePhpAutoDetector(val project: Project)
             // An alternative with no version, such as a branch, is taken as CakePHP 3+:
             cake3OrLaterPresent = majorVersions != null &&
                     (composerInfo.cakePhpUnversionedAlternative || majorVersions.any { it >= 3 }),
+            cake3OrLaterMajorVersion = composerInfo.cakePhpSpecificMajorVersion?.takeIf { it >= 3 },
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )
@@ -333,6 +341,14 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     val cake3Enabled get() = cake3ForceEnabled ||
             (state.autoDetect && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
+    val cake3DetectedMajorVersion: Int?
+        get() = if (state.autoDetect) getAutoDetectedValues().cake3OrLaterMajorVersion else null
+
+    /**
+     * The CakePHP 3+ major version the project uses: the one composer.json allows when it is
+     * auto-detected, and otherwise the configured one.
+     */
+    val cakeMajorVersion: Int get() = cake3DetectedMajorVersion ?: state.cakeMajorVersion
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 
     private fun getAutoDetectedValues(): CakeAutoDetectedValues =
