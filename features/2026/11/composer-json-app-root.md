@@ -247,4 +247,12 @@ anchored at the composer.json directory, which is what the model takes `ROOT` to
 moved with `composer update acme/installed cakephp/plugin-installer`. `findPath` is static on
 CakePHP 3 and an instance method on 4 and 5, so the test calls it on an instance. The
 `TemplateResolutionTest` classes pass on 3, 4 and 5, and the full assumption suites on 3, 4 and 5
-pass, with the one pre-existing deprecation warning on CakePHP 4. No plugin code yet.
+pass, with the one pre-existing deprecation warning on CakePHP 4.
+
+Adding the plugin installer had a side effect: its manifest lists every directory under `plugins/`,
+so `Probe`, `Other` and `Unloaded` now resolve through `vendor/cakephp-plugins.php` and nothing on 3,
+4 or 5 exercised the `App.paths.plugins` scan that the directory-name clause for `plugins/{Name}`
+rests on. Added `testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry` on 3, 4 and 5: with
+`Configure::write('plugins', [])`, which every version takes as the manifest already loaded,
+`findPath('Probe')` still returns `ROOT/plugins/Probe/` from the scan. Passes on all three. No plugin
+code yet.

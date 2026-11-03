@@ -3,6 +3,7 @@
 namespace App\Test\TestCase;
 
 use App\Application;
+use Cake\Core\Configure;
 use Cake\Core\Exception\MissingPluginException;
 use Cake\Core\PluginCollection;
 use Cake\TestSuite\IntegrationTestTrait;
@@ -161,6 +162,15 @@ class TemplateResolutionTest extends TestCase
         $this->assertContains(
             "\$baseDir . '/vendor/acme/installed/'",
             file_get_contents(ROOT . DS . 'vendor' . DS . 'cakephp-plugins.php')
+        );
+    }
+
+    public function testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry()
+    {
+        Configure::write('plugins', []);
+        $this->assertSame(
+            ROOT . DS . 'plugins' . DS . 'Probe' . DS,
+            (new PluginCollection())->findPath('Probe')
         );
     }
 }

@@ -77,6 +77,7 @@ Relied on by view navigation, the controller action line marker and view file cr
 | A plugin loaded with an explicit `path` outside the app directory renders its own template | `testPluginLoadedWithExplicitPathRendersItsTemplate` | Same. 3: from `{path}/src/Template`. 4, 5: from `{path}/templates` |
 | A plugin whose only copy is in another plugin's `vendor` directory is not found by name, even when that directory has its own `cakephp-plugins.php` | `testPluginInsideAnotherPluginsVendorDirectoryIsNotFound` | 3, 4, 5 |
 | A plugin installed by Composer is found at `ROOT/vendor/{vendor}/{package}/` through `vendor/cakephp-plugins.php`, whose paths are built from the directory holding `composer.json` | `testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory` | 3, 4, 5 |
+| A plugin directory under `ROOT/plugins/` is found by name when the Composer manifest has no entry for it, through `App.paths.plugins` | `testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry` | 3, 4, 5 |
 
 ### `LayoutResolutionTest`
 
