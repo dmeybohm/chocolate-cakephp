@@ -201,6 +201,16 @@ nothing. Recognition never worked for the first group before #321, which is unre
   nesting, with the app inside the plugin; both belong to a third branch.
 - **Per-ROOT autodetection and several apps in one project.** The model has one `ROOT`. A monorepo
   with two apps opens as two projects, or configures one.
+- **Layout decoys such as `examples/app`.** The directory-name rules still match by walking up:
+  `appOrSrcDirectoryFromSourceFile` takes any ancestor with a child named by the app directory
+  setting, so `examples/app/Controller/PostsController.php` is still a CakePHP 2 controller,
+  `examples/app/View/Posts/index.ctp` a template, and `examples/plugins/Foo` the plugin Foo, as
+  today. This branch fixes the configured-path half of the decoy problem and leaves this half as it
+  is. With `ROOT` configured, unit roots become enumerable: the app is `ROOT`, and plugins are the
+  directories under `ROOT/plugins/` and the configured paths. A follow-up can make the walk accept a
+  source directory only when it belongs to one of those units, which drops `examples/app`. It also
+  drops a plugin that is neither under `plugins/` nor configured, which CakePHP would not load
+  either, but that is a user-visible change and needs its own feature log.
 - **Paths containing `..`.** Not resolved today and not needed under the model.
 - **Validating or migrating saved plugin paths** in `EditPluginEntryDialog`.
 
