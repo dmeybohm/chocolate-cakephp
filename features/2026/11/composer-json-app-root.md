@@ -155,3 +155,20 @@ nothing. Recognition never worked for the first group before #321, which is unre
   with two apps opens as two projects, or configures one.
 - **Paths containing `..`.** Not resolved today and not needed under the model.
 - **Validating or migrating saved plugin paths** in `EditPluginEntryDialog`.
+
+## Implementation Progress
+
+### Session #1
+
+Step 1. The two assumption tests from the superseded branch came across by cherry-pick, with their
+`Pathed` and `Nester` fixtures. Added `testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory`
+on CakePHP 3, 4 and 5: each app requires `acme/installed`, a `cakephp-plugin` package under
+`packages/Installed` served from a `path` repository, together with `cakephp/plugin-installer`. On
+every version the generated `vendor/cakephp-plugins.php` sets `$baseDir` to the directory above
+`vendor`, which is the one holding `composer.json`, and records the plugin as
+`$baseDir . '/vendor/acme/installed/'`; `PluginCollection::findPath('Acme/Installed')` returns
+`ROOT/vendor/acme/installed/`. So the paths CakePHP itself records for Composer-installed plugins are
+anchored at the composer.json directory, which is what the model takes `ROOT` to be. The lock files
+moved with `composer update acme/installed cakephp/plugin-installer`. `findPath` is static on
+CakePHP 3 and an instance method on 4 and 5, so the test calls it on an instance. The
+`TemplateResolutionTest` classes pass on 3, 4 and 5. No plugin code yet.

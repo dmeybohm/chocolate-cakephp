@@ -4,7 +4,9 @@
     "type": "project",
     "license": "MIT",
     "require": {
-        "cakephp/cakephp": "3.10.5"
+        "acme/installed": "1.0.0",
+        "cakephp/cakephp": "3.10.5",
+        "cakephp/plugin-installer": "^1.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^5.7.14|^6.0"
@@ -24,6 +26,15 @@
             "App\\Test\\": "tests/"
         }
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/Installed",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
     "config": {
         "sort-packages": true,
         "policy": {
@@ -36,6 +47,9 @@
                     "PKSA-z3gr-8qht-p93v": "Pinned end-of-life release, only run in a test container and never shipped"
                 }
             }
+        },
+        "allow-plugins": {
+            "cakephp/plugin-installer": true
         }
     }
 }
