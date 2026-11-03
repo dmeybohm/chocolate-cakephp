@@ -3,7 +3,7 @@
   <grid id="27dc6" binding="topPanel" layout-manager="GridLayoutManager" row-count="6" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="1407" height="776"/>
+      <xy x="20" y="20" width="1407" height="831"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -49,7 +49,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="&lt;html&gt;The composer.json of the CakePHP application, relative to the project directory, using forward slashes (e.g. &lt;code&gt;app/composer.json&lt;/code&gt;). CakePHP is auto-detected from it, and plugin and theme paths are relative to the directory containing it.&lt;/html&gt;"/>
+              <text value="&lt;html&gt;The composer.json of the CakePHP application, relative to the project directory (e.g. &lt;code&gt;app/composer.json&lt;/code&gt;). CakePHP is auto-detected from it, and plugin and theme paths are relative to the directory containing it.&lt;/html&gt;"/>
             </properties>
           </component>
         </children>
