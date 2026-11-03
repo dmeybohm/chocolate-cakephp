@@ -79,6 +79,25 @@ class SettingsTest() : HeavyPlatformTestCase() {
         assertFalse(detected().cake3OrLaterPresent)
     }
 
+    private fun setComposerJsonPath(path: String) {
+        val settings = Settings.getInstance(project)
+        settings.loadState(settings.state.copy(composerJsonPath = path))
+    }
+
+    // ========== Root directory tests ==========
+
+    fun `test root directory is the directory of the configured composer json`() {
+        val composerJson = writeProjectFile("app/composer.json", composerJson())
+        setComposerJsonPath("app/composer.json")
+        assertEquals(composerJson.parent, Settings.getInstance(project).rootDirectory)
+    }
+
+    fun `test root directory is the project directory when the configured composer json is missing`() {
+        writeProjectFile("composer.json", composerJson())
+        setComposerJsonPath("app/composer.json")
+        assertEquals(orCreateProjectBaseDir, Settings.getInstance(project).rootDirectory)
+    }
+
     // ========== Auto-detection tests ==========
 
     fun `test autodetect works when composer json is not present`() {

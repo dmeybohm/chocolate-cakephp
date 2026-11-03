@@ -3,6 +3,7 @@ package com.daveme.chocolateCakePHP.test.cake5
 import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.test.BaseTestCase
 import com.daveme.chocolateCakePHP.test.configureByFilePathAndText
+import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.project.guessProjectDir
 
 /**
@@ -99,5 +100,48 @@ class AutoDetectionGatingTest : BaseTestCase() {
         assertTrue("CakePHP should be detected from the fixture composer.json", settings.cake3Enabled)
         assertEquals("src", settings.appDirectory)
         assertEquals("\\App", settings.appNamespace)
+    }
+
+    private fun setComposerJsonPath(path: String) {
+        val settings = Settings.getInstance(myFixture.project)
+        settings.loadState(settings.state.copy(composerJsonPath = path))
+    }
+
+    private fun composerJsonRequiring(constraint: String) = """
+        {
+            "require": {
+                "cakephp/cakephp": "$constraint"
+            }
+        }
+    """.trimIndent()
+
+    fun `test changing the composer json path changes the detected version`() {
+        myFixture.addFileToProject("cake4app/composer.json", composerJsonRequiring("^4.0"))
+        myFixture.addFileToProject("cake2app/composer.json", composerJsonRequiring("2.10.*"))
+        val settings = Settings.getInstance(myFixture.project)
+
+        setComposerJsonPath("cake4app/composer.json")
+        assertTrue(settings.cake3Detected)
+        assertFalse(settings.cake2Detected)
+
+        setComposerJsonPath("cake2app/composer.json")
+        assertFalse(settings.cake3Detected)
+        assertTrue(settings.cake2Detected)
+    }
+
+    fun `test creating and deleting the configured composer json moves the root`() {
+        val settings = Settings.getInstance(myFixture.project)
+        val projectDir = myFixture.project.guessProjectDir()
+        setComposerJsonPath("cake5/composer.json")
+        assertFalse(settings.cake3Detected)
+        assertEquals(projectDir, settings.rootDirectory)
+
+        val composerJson = myFixture.addFileToProject("cake5/composer.json", composerJsonRequiring("^5.0")).virtualFile
+        assertTrue(settings.cake3Detected)
+        assertEquals(composerJson.parent, settings.rootDirectory)
+
+        WriteAction.runAndWait<RuntimeException> { composerJson.delete(this) }
+        assertFalse(settings.cake3Detected)
+        assertEquals(projectDir, settings.rootDirectory)
     }
 }
