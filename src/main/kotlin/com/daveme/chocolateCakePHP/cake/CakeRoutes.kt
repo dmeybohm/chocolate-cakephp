@@ -165,6 +165,12 @@ fun routeScopeOf(element: PsiElement): RouteScope {
     return RouteScope(plugin, prefixes.joinToString("/").ifEmpty { null })
 }
 
+/**
+ * Whether [closure] is the callback of a `scope()`, `prefix()` or `plugin()` call, whose
+ * parameter is a route builder.
+ */
+fun isRouteScopeClosure(closure: Function): Boolean = enclosingScopeCall(closure) != null
+
 // The closure may sit inside a wrapper expression node, so find the argument that ends with it:
 private fun enclosingScopeCall(closure: Function): MethodReference? {
     val parameterList = PsiTreeUtil.getParentOfType(closure, ParameterList::class.java) ?: return null

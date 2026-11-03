@@ -336,4 +336,19 @@ The closure of a `scope()`, `prefix()` or `plugin()` call sits inside a wrapper 
 so `routeScopeOf` finds the enclosing parameter list and takes the argument that ends where the
 closure ends, which keeps a closure nested in an array argument from counting.
 
-Next: step 3, the patterns for where the arrays are.
+### Session #3
+
+Step 3 is `routing/RouteTargetPatterns.kt`. Rather than one deep `PlatformPatterns` chain per
+call shape, `routeTargetPositionOf` classifies a string literal into an `ArrayKey` (the key, its
+array, the call and whether a route builder or a URL builder defaults it), a `StringTarget` or a
+`Resources` position, and the two `ElementPattern`s wrap that. `RouteTargetPatternsTest` (cake5)
+covers each call, the three route builder receiver forms, the `url` option of `Form->create()`,
+and the arrays and keys that are left alone.
+
+- `redirect()` is on both lists: on a route builder its second argument is a target, on a
+  controller (`$this` in a controller class, or a receiver typed as one) its first argument is a
+  URL array. The receiver decides.
+- A key or value of a hash element, like the closure of a scope call, sits inside a wrapper
+  node, so the hash element is found by ancestor and checked to report the literal as its value.
+
+Next: step 4, the completion contributor.
