@@ -16,6 +16,7 @@
 - Keep the view variables and related items of app and plugin classes with the same name apart, following how CakePHP falls back from a plugin to the app, and support templates in the app's plugin override directory
 - If both CakePHP 2 and CakePHP 3+ are enabled, check the version column in the plugin settings: an existing CakePHP 2 plugin with no namespace outside the CakePHP 2 app directory is treated as CakePHP 3+ until you select CakePHP 2 for it
 - A table locator alias without a plugin prefix now navigates only to the app's table, as CakePHP loads it, and completion inserts the `Plugin.Table` alias for plugin tables
+- Add a composer.json setting, defaulting to `composer.json`, naming the file CakePHP is detected from. Plugin and theme paths are relative to the directory containing it, so a copy of a configured plugin elsewhere in the project, such as in another package's `vendor` directory, is no longer taken for it. If your app is in a subdirectory of the project and you entered plugin paths relative to that subdirectory, point the setting at its composer.json
 
 ### Fixed
 - Label an implicitly rendered controller action with its method name in "Go to related" from a template
