@@ -552,4 +552,11 @@ class SettingsTest() : HeavyPlatformTestCase() {
         }
         assertEquals(5, Settings.getInstance(project).cakeMajorVersion)
     }
+
+    fun `test an upper bound below 3 detects CakePHP 2 and not 3`() {
+        primeDetector()
+        writeProjectFile("composer.json", composerJson(require = "\"cakephp/cakephp\": \"<3.0\""))
+        assertTrue(detected().cake2Present)
+        assertFalse(detected().cake3OrLaterPresent)
+    }
 }

@@ -52,13 +52,15 @@ private val ALTERNATIVE_SEPARATOR = Regex("""\|\|?""")
 private val LEADING_MAJOR_VERSION = Regex("""^[<>=!^~\s]*v?(\d+)""")
 
 /**
- * The major versions a Composer version constraint allows, read from the
- * lower bound of each `||` alternative. Alternatives that do not start with
- * a version number, such as `dev-master` or `*`, contribute nothing.
+ * The major versions a Composer version constraint selects, one per `||`
+ * alternative: the highest a bounded alternative allows, which is what
+ * Composer installs, and otherwise the alternative's lower bound.
+ * Alternatives that do not start with a version number, such as
+ * `dev-master` or `*`, contribute nothing.
  */
 fun constraintMajorVersions(constraint: String): Set<Int> =
     constraint.split(ALTERNATIVE_SEPARATOR)
-        .mapNotNull { leadingMajorVersion(it) }
+        .mapNotNull { alternativeHighestMajor(it) ?: leadingMajorVersion(it) }
         .toSet()
 
 private val PLAIN_CONSTRAINT = Regex("""^\s*[\^~]?v?(\d+)(?:\.(?:\d+|\*|x))*\s*$""")
