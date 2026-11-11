@@ -71,7 +71,8 @@ Checked against the vendored 3.10.5, 4.6.5 and 5.4.3 sources under
 
 - `Table::addBehavior($name, $options)` calls `BehaviorRegistry::load()`, which is
   `ObjectRegistry::load()`. The alias is the part of `$name` after the dot (`pluginSplit()`), or
-  `$name` itself when a `className` option is given. The class is
+  `$name` itself, dot included, when a `className` option is given; on 5 a `$name` equal to the
+  `className` is split as if there were no option, and on 2, 3 and 4 it is kept whole. The class is
   `App::className($class, 'Model/Behavior', 'Behavior')`, falling back to
   `App::className($class, 'ORM/Behavior', 'Behavior')`: so `Timestamp` is
   `App\Model\Behavior\TimestampBehavior` if the app has one, else
@@ -286,7 +287,9 @@ the same `hasUnread…` flags the `className` and `propertyName` options use: a 
 not readable (a variable, a constant) sets the flag and is treated as unknown, a map read
 as `[]` is an empty map, and an absent key is null. The alias is the part after the dot, as for
 every other load, except that a `className` option makes the first argument the alias
-verbatim, which `memberLoad()` already does.
+verbatim, dot included. When the first argument equals the `className`, the alias follows 5 and
+is split for `addBehavior()` and `addBehaviors()`, since the index cannot tell 3 and 4 from 5;
+`$actsAs` and `Behaviors->load()` are CakePHP 2 only, so they keep it whole as 2 does.
 
 The `$this->Behaviors->load()` form is the one source whose receiver is not `$this`; the
 indexer's `readMethodCall()` gains a branch for a `$this->Behaviors` receiver with method
@@ -892,7 +895,7 @@ flags. The options are read only on behavior loads. A map is treated as unread u
 is a string key with a string value, so a list such as `['writeAudit']` or an entry with a
 variable value sets the flag rather than giving a partial map. Association calls on
 `$this->_table`, `$this->table()` and `$this->getTable()`, `addAssociations()` included, are
-recorded with `viaTable`. The index version is 6.
+recorded with `viaTable`. The index version is 6 (7 after the alias fix below).
 
 `resolveLoad()` and `CakeTwoChainResolver` have `BEHAVIOR` branches only so they compile: the
 convention path is `Model\Behavior\{N}Behavior` for now, and step 2 replaces it with the
@@ -936,3 +939,18 @@ provider is where any caching above the member maps will be decided, measured ag
 `ViewVariablePerformanceTest` if needed. `BehaviorMembers` uses `CachedValuesManager.getCachedValue()`
 on the class instead of the map. `AttachedBehavior` lost its `alias` and `isInitializeLoad`
 fields, which repeated the load's own.
+
+**Alias fix, from review.** A PR comment found that the indexer stripped the plugin prefix from
+every alias, where `ObjectRegistry::load()` keeps the first argument whole when a `className`
+option is given: `addBehavior('Probe.Custom', ['className' => 'Audit'])` is registered as
+`Probe.Custom`. The plan said `memberLoad()` already did this; it did not. Merged under one
+alias, `addBehavior('Audit')` and `addBehavior('Probe.Audit', ['className' => 'Sluggable'])`
+lost `AuditBehavior`'s finders to the load-in-force rule. Two assumption tests now pin it,
+`testClassNameOptionKeepsADottedFirstArgumentAsTheAlias` and
+`testClassNameEqualToTheFirstArgument` (17 on 2, 42 each on 3, 4 and 5), and they showed the
+equal-name case differs: whole on 2, 3 and 4, split on 5. The indexer now keeps the first
+argument whole for behavior loads with a `className`, readable or not, except an equal name on
+the 3-to-5 sources, which follows 5. Two `ConfiguredMemberIndexerTest` cases and a
+`BehaviorFinderTest` case for the merged-alias scenario cover it; the finder case fails without
+the fix. Components and helpers go through the same registry and have the same bug from before
+this branch; that fix is a separate commit.

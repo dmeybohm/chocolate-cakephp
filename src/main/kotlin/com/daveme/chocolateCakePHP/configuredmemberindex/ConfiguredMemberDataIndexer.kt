@@ -168,7 +168,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         }
         val firstParam = call.parameters.getOrNull(0) ?: return
         val loadedName = literalString(firstParam) ?: return
-        out += LoadReader(MemberKind.BEHAVIOR, LoadSource.METHOD_CALL, methodName, null, out, associationType = null)
+        out += LoadReader(MemberKind.BEHAVIOR, LoadSource.METHOD_CALL, methodName, null, out, associationType = null, isCakeTwo = true)
             .memberLoad(loadedName, call.parameters.getOrNull(1), firstParam.startOffset, associationType = null)
     }
 
@@ -266,6 +266,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val out: MutableList<MemberLoad>,
         val associationType: AssociationType?,
         val viaTable: Boolean = false,
+        val isCakeTwo: Boolean = false,
     ) {
 
         /**
@@ -360,12 +361,16 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 ?.let { optionValue(it, "propertyName") }
             val propertyName = propertyNameNode?.let { literalString(it) }
             val isBehavior = kind == MemberKind.BEHAVIOR
+            // With a className option the first argument is the alias whole, except that
+            // CakePHP 5 splits one equal to the className. $actsAs is CakePHP 2's own:
+            val isWholeAlias = isBehavior && classNameNode != null &&
+                    (className != loadedName || isCakeTwo || source == LoadSource.PROPERTY_ARRAY)
             val methodAliases = options?.takeIf { isBehavior }?.let { AliasOption.read(it, "implementedMethods") }
             val finderAliases = options?.takeIf { isBehavior }?.let { AliasOption.read(it, "implementedFinders") }
             return MemberLoad(
                 kind = kind,
                 source = source,
-                alias = loadedName.substringAfterLast('.'),
+                alias = if (isWholeAlias) loadedName else loadedName.substringAfterLast('.'),
                 loadedName = loadedName,
                 className = className,
                 methodName = methodName,

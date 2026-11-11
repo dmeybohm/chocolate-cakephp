@@ -593,6 +593,43 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
         assertTrue(loads.all { it.methodAliases == null && it.finderAliases == null })
     }
 
+    fun `test a behavior load with a className keeps a dotted first argument as its alias`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Table;
+            class PagesTable {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->addBehavior('Probe.Custom', ['className' => 'Audit']);
+                    ${'$'}this->addBehavior('Probe.Sluggable', ['className' => 'Probe.Sluggable']);
+                    ${'$'}this->addBehavior('Probe.Unread', ['className' => ${'$'}name]);
+                    ${'$'}this->addBehaviors(['Probe.Keyed' => ['className' => 'Audit']]);
+                    ${'$'}this->loadComponent('Probe.Component', ['className' => 'Flash']);
+                }
+            }
+        """, "\\App\\Model\\Table\\PagesTable")
+
+        assertEquals(
+            listOf("Probe.Custom", "Sluggable", "Probe.Unread", "Probe.Keyed", "Component"),
+            loads.map { it.alias }
+        )
+    }
+
+    fun `test a cake2 behavior load with a className keeps its first argument as its alias`() {
+        val loads = loadsOf("""
+            <?php
+            class Page extends AppModel {
+                public ${'$'}actsAs = array('Probe.Hashable' => array('className' => 'Probe.Hashable'));
+                public function attach() {
+                    ${'$'}this->Behaviors->load('Probe.Custom', array('className' => 'Audit'));
+                    ${'$'}this->Behaviors->load('Probe.Same', array('className' => 'Probe.Same'));
+                    ${'$'}this->Behaviors->load('Probe.Plain');
+                }
+            }
+        """, "\\Page")
+
+        assertEquals(listOf("Probe.Hashable", "Probe.Custom", "Probe.Same", "Plain"), loads.map { it.alias })
+    }
+
     fun `test addBehavior implementedMethods and implementedFinders options`() {
         val loads = loadsOf("""
             <?php

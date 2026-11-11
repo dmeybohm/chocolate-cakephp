@@ -115,4 +115,26 @@ class BehaviorFinderTest : Cake5BaseTestCase() {
         assertContainsElements(result, "recent", "audited", "slugged", "children")
         assertDoesntContain(result, "latest", "oldest")
     }
+
+    fun `test a dotted alias with a className is a separate behavior`() {
+        myFixture.addFileToProject("cake5/src5/Model/Table/AliasedPagesTable.php", """
+        <?php
+        namespace App\Model\Table;
+
+        use Cake\ORM\Table;
+
+        class AliasedPagesTable extends Table
+        {
+            public function initialize(array ${'$'}config): void
+            {
+                ${'$'}this->addBehavior('Audit');
+                ${'$'}this->addBehavior('Probe.Audit', ['className' => 'Sluggable']);
+            }
+        }
+        """.trimIndent())
+
+        val result = completeFinders("\$this->AliasedPages->find('<caret>');")
+
+        assertContainsElements(result, "audited", "slugged")
+    }
 }
