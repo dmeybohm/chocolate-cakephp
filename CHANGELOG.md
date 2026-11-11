@@ -11,11 +11,20 @@
 - Support `Plugin.Table` aliases and the `className` option in `fetchTable()`, `getTableLocator()->get()` and `TableRegistry::get()`, for return types, navigation and completion
 - Resolve helpers configured from CakePHP 3 to 5 controllers, through `viewBuilder()` and CakePHP 3's `$helpers` property, in the templates and elements they render, in cells those call, and in layouts, and helpers configured from cells in their own templates
 - Type, complete and navigate entity virtual fields from their `_get` and `_set` accessors, and the properties an entity gets from its table's associations, on CakePHP 3 to 5, and stop the magic property warning on them
+- Complete and navigate the `controller`, `action`, `plugin` and `prefix` keys of route target arrays in `connect()`, the HTTP verb methods, `redirect()` and `resources()` on a route builder, following the enclosing `scope()`, `prefix()` and `plugin()` closures, and in `Router::url()`, `$this->Html->link()`, `$this->Form->postLink()`, `$this->Form->create()`'s `url` option, `$this->Url->build()` and `$this->redirect()`, following the enclosing controller or the template's rendering controllers, on CakePHP 3 to 5
+- Add a CakePHP version setting, used when composer.json does not give one, and show the detected version in the settings dialog
 
 ### Changed
 - Keep the view variables and related items of app and plugin classes with the same name apart, following how CakePHP falls back from a plugin to the app, and support templates in the app's plugin override directory
 - If both CakePHP 2 and CakePHP 3+ are enabled, check the version column in the plugin settings: an existing CakePHP 2 plugin with no namespace outside the CakePHP 2 app directory is treated as CakePHP 3+ until you select CakePHP 2 for it
 - A table locator alias without a plugin prefix now navigates only to the app's table, as CakePHP loads it, and completion inserts the `Plugin.Table` alias for plugin tables
+- Add a composer.json setting, defaulting to `composer.json`, naming the file CakePHP is detected from. Plugin and theme paths are relative to the directory containing it, so a copy of a configured plugin elsewhere in the project, such as in another package's `vendor` directory, is no longer taken for it. If your app is in a subdirectory of the project and you entered plugin paths relative to that subdirectory, point the setting at its composer.json
+- One "Auto-detect CakePHP from composer.json" checkbox, beside the composer.json setting, replaces the separate CakePHP 2 and CakePHP 3+ auto-detect checkboxes. It takes the CakePHP 3+ checkbox's saved value, so a project that had only CakePHP 2 auto-detection turned off detects CakePHP 2 again; use force enable or turn auto-detection off
+
+### Fixed
+- Label an implicitly rendered controller action with its method name in "Go to related" from a template
+- Link and navigate to the underscored template CakePHP renders for a camelCase name in `render()`, `setTemplate()`, `$this->view` and a cell's `render()`, and for a camelCase action on CakePHP 2, while keeping names with a slash as written
+- Navigate from the templates, layouts and elements of a configured CakePHP 2 plugin outside the app directory, such as one under `plugins/` or loaded from an explicit path, and complete its view variables and helpers
 
 ## [1.1.0] - 2026-04-09
 

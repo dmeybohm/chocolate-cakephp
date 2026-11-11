@@ -1,13 +1,19 @@
 package com.daveme.chocolateCakePHP.test.cake5
 
+import com.daveme.chocolateCakePHP.CakeThreePluginConfig
+import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberKind
 import com.daveme.chocolateCakePHP.lookupCompleteType
 import com.daveme.chocolateCakePHP.view.ViewHelperGotoDeclarationHandler
 import com.daveme.chocolateCakePHP.view.viewfileindex.ViewFileIndexService
 import com.intellij.codeInsight.lookup.LookupElementPresentation
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
 
 class ControllerSideHelperTest : Cake5BaseTestCase() {
@@ -73,6 +79,10 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         myFixture.addFileToProject("$templates/$path.php", code)
         myFixture.configureFromTempProjectFile("$templates/$path.php")
         myFixture.editor.caretModel.moveToOffset(code.indexOf(field) + 1)
+        return fmtTypesAtCaret()
+    }
+
+    private fun fmtTypesAtCaret(): Set<String> {
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         val fieldReference = PsiTreeUtil.getParentOfType(element, FieldReference::class.java)
         assertNotNull(fieldReference)
@@ -163,11 +173,82 @@ class ControllerSideHelperTest : Cake5BaseTestCase() {
         assertTrue(fmtTypesIn("layout/default").contains(artistHelper))
     }
 
+    /**
+     * A controller in a directory under the app attached as a library rather than in project
+     * content, as a Composer package in an excluded `vendor` directory is.
+     */
+    private fun libraryController(libraryPath: String, namespace: String, name: String, body: String) {
+        myFixture.addFileToProject("cake5/$libraryPath/src/Controller/${name}Controller.php", """
+            <?php
+            namespace $namespace\Controller;
+            class ${name}Controller extends \Cake\Controller\Controller {
+                $body
+            }
+        """.trimIndent())
+        val root = myFixture.findFileInTempDir("cake5/$libraryPath")
+        PsiTestUtil.addExcludedRoot(module, root)
+        Disposer.register(testRootDisposable) { PsiTestUtil.removeExcludedRoot(module, root) }
+        val library = PsiTestUtil.addProjectLibrary(module, libraryPath, listOf(root), emptyList())
+        Disposer.register(testRootDisposable) { PsiTestUtil.removeLibrary(module, library) }
+        assertFalse(ProjectFileIndex.getInstance(project).isInContent(root))
+        assertTrue(PhpIndex.getInstance(project).getClassesByFQN("\\$namespace\\Controller\\${name}Controller")
+            .any { it.containingFile.virtualFile.path.startsWith(root.path) })
+    }
+
+    private fun libraryPluginController(name: String, body: String) =
+        libraryController("vendor/test/test_plugin", "TestPlugin", name, body)
+
+    private fun setPluginPath(pluginPath: String) {
+        val settings = Settings.getInstance(project)
+        val state = settings.state.copy()
+        state.pluginConfigs = listOf(CakeThreePluginConfig(namespace = "\\TestPlugin", pluginPath = pluginPath))
+        settings.loadState(state)
+    }
+
+    fun `test a configured plugin's controller in a library counts in a layout`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryPluginController("Posts", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test a project controller counts in a layout when a library has a copy of it`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryController("vendor/test/copy", "App", "Movie", "public function index() {}")
+        assertEquals(setOf(movieHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test changing the plugin path drops a library controller from a layout`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        libraryPluginController("Posts", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+        setPluginPath("vendor/test/other_plugin")
+        assertEquals(setOf(movieHelper), fmtTypesAtCaret())
+        setPluginPath("vendor/test/test_plugin")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesAtCaret())
+    }
+
     fun `test controllers that only reach the framework through AppController count in a layout`() {
         appView()
         controller("App", "")
         controller("Movie", fmtIn("MovieFormatter"), parent = "AppController")
         assertTrue(fmtTypesIn("layout/default").contains(movieHelper))
+    }
+
+    fun `test a layout unions the aliases without the convention type when every project controller settles it`() {
+        appView()
+        controller("Movie", fmtInInitialize("MovieFormatter") + "\npublic function index() {}")
+        controller("Artist", fmtInInitialize("ArtistFormatter") + "\npublic function index() {}")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("layout/default"))
+    }
+
+    fun `test a helper AppController adds in initialize settles the type in a subclass's template`() {
+        appView()
+        controller("App", fmtInInitialize("MovieFormatter"))
+        controller("Movie", "public function index() {}", parent = "AppController")
+        assertEquals(setOf(movieHelper), fmtTypesIn("Movie/index"))
     }
 
     fun `test a cell template inherits the helpers of the view calling it`() {

@@ -9,5 +9,4 @@ build/
 /release/
 .intellijPlatform
 exception*.txt
-dev/qemu/vm-data/
 .*.sw[a-p]

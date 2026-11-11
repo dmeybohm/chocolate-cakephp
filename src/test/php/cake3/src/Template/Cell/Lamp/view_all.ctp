@@ -1,0 +1,1 @@
+app:cell/Lamp/view_all

@@ -78,4 +78,36 @@ class WidgetsController extends AppController
         $this->viewBuilder()->setHelpers(['Aliased' => ['className' => 'Marker']]);
         $this->set('name', $this->getRequest()->getQuery('name'));
     }
+
+    public function viewAll()
+    {
+    }
+
+    public function rendercamel()
+    {
+        $this->render('viewAll');
+    }
+
+    public function rendersub()
+    {
+        $this->render('Sub/viewAll');
+    }
+
+    public function camelelement()
+    {
+    }
+
+    public function buildercamel()
+    {
+        $this->viewBuilder()->setTemplate('viewAll');
+    }
+
+    public function builderpathcamel()
+    {
+        $this->viewBuilder()->setTemplatePath('Gadgets')->setTemplate('viewAll');
+    }
+
+    public function cellrendercamel()
+    {
+    }
 }

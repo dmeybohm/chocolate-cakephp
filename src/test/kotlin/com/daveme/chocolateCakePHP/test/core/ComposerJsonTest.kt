@@ -293,6 +293,11 @@ class ComposerJsonTest : TestCase() {
         assertEquals(setOf(2), constraintMajorVersions("v2.10.0"))
         assertEquals(setOf(4), constraintMajorVersions("4.4.*"))
         assertEquals(setOf(5), constraintMajorVersions("  >= 5.0  "))
+        // A bounded alternative counts as the highest major it allows:
+        assertEquals(setOf(2), constraintMajorVersions("<3.0"))
+        assertEquals(setOf(4), constraintMajorVersions("<5.0"))
+        assertEquals(setOf(5), constraintMajorVersions(">=2.0 <6.0"))
+        assertEquals(setOf(4), constraintMajorVersions("3.0 - 4.0"))
     }
 
     fun `test constraint major versions for multiple alternatives`() {

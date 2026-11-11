@@ -15,7 +15,7 @@ class PluginConfigSerializationTest : TestCase() {
 
     fun `test mixed plugin list round trips`() {
         val state = SettingsState(
-            cake2Enabled = true,
+            cake2ForceEnabled = true,
             pluginConfigs = listOf(
                 CakeTwoPluginConfig(pluginName = "DebugKit", pluginPath = "app/Plugin/DebugKit"),
                 CakeThreePluginConfig(
@@ -54,8 +54,26 @@ class PluginConfigSerializationTest : TestCase() {
     }
 
     fun `test empty plugin list round trips`() {
-        val state = SettingsState(cake2Enabled = true)
+        val state = SettingsState(cake2ForceEnabled = true)
         assertEquals(state, roundTrip(state))
+    }
+
+    fun `test auto-detect is saved under its old name`() {
+        val xml = JDOMUtil.write(XmlSerializer.serialize(SettingsState(autoDetect = false)))
+        assertTrue(xml, xml.contains("name=\"cake3Enabled\""))
+
+        val saved = JDOMUtil.load("""
+            <ChocolateCakePHPSettings>
+              <option name="cake3Enabled" value="false" />
+            </ChocolateCakePHPSettings>
+        """.trimIndent())
+        assertFalse(XmlSerializer.deserialize(saved, SettingsState::class.java).autoDetect)
+    }
+
+    fun `test cakephp 2 force enable is saved under its old name`() {
+        val xml = JDOMUtil.write(XmlSerializer.serialize(SettingsState(cake2ForceEnabled = true)))
+        assertTrue(xml, xml.contains("name=\"cake2Enabled\""))
+        assertTrue(XmlSerializer.deserialize(JDOMUtil.load(LEGACY_SETTINGS_XML), SettingsState::class.java).cake2ForceEnabled)
     }
 }
 

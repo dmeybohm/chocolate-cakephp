@@ -3,7 +3,7 @@
   <grid id="27dc6" binding="topPanel" layout-manager="GridLayoutManager" row-count="5" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="728" height="456"/>
+      <xy x="20" y="20" width="756" height="456"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -56,10 +56,13 @@
         <children>
           <component id="47efe" class="javax.swing.JLabel">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="0" indent="1" use-parent-layout="false">
+                <preferred-size width="750" height="-1"/>
+                <maximum-size width="750" height="-1"/>
+              </grid>
             </constraints>
             <properties>
-              <text value="&lt;html&gt;Add configuration for each plugin you want to add autocomplete for below.&lt;br&gt;&lt;br&gt;&lt;small&gt;Plugin paths are always relative to the project root (e.g. &lt;code&gt;plugins/MyPlugin&lt;/code&gt; for CakePHP 3+, &lt;code&gt;app/Plugin/MyPlugin&lt;/code&gt; for CakePHP 2).&lt;/small&gt;&lt;/html&gt;"/>
+              <text value="&lt;html&gt;Add configuration for each plugin you want to add autocomplete for below.&lt;br&gt;&lt;br&gt;&lt;small&gt;Plugin paths are relative to the directory containing composer.json (e.g. &lt;code&gt;plugins/MyPlugin&lt;/code&gt; for CakePHP 3+, &lt;code&gt;app/Plugin/MyPlugin&lt;/code&gt; for CakePHP 2).&lt;/small&gt;&lt;/html&gt;"/>
             </properties>
           </component>
           <vspacer id="93259">
@@ -98,10 +101,13 @@
           </component>
           <component id="42723" class="javax.swing.JLabel">
             <constraints>
-              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                <preferred-size width="750" height="-1"/>
+                <maximum-size width="750" height="-1"/>
+              </grid>
             </constraints>
             <properties>
-              <text value="&lt;html&gt;Add configuration for each theme you want to add navigation for below.&lt;br&gt;&lt;br&gt;&lt;small&gt;Theme paths are always relative to the project root (e.g. &lt;code&gt;app/View/Themed/MyTheme&lt;/code&gt; for CakePHP 2).&lt;/small&gt;&lt;/html&gt;"/>
+              <text value="&lt;html&gt;Add configuration for each theme you want to add navigation for below.&lt;br&gt;&lt;br&gt;&lt;small&gt;Theme paths are relative to the directory containing composer.json (e.g. &lt;code&gt;app/View/Themed/MyTheme&lt;/code&gt; for CakePHP 2).&lt;/small&gt;&lt;/html&gt;"/>
             </properties>
           </component>
           <grid id="f3546" binding="themeConfigPanel" layout-manager="BorderLayout" hgap="0" vgap="0">

@@ -13,16 +13,16 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 
 import static com.daveme.chocolateCakePHP.SettingsKt.copySettingsState;
+import static com.daveme.chocolateCakePHP.StringsKt.pathNormalize;
 
 class ConfigForm implements SearchableConfigurable {
     private final Project project;
     private JPanel topPanel;
-    private JCheckBox enableAutoDetectCake3CheckBox;
+    private JCheckBox enableAutoDetectCheckBox;
     private JCheckBox forceEnableCakePHP3CheckBox;
     private JButton appNamespaceDefaultButton;
     private JTextField templateExtensionTextField;
     private JButton templateExtensionDefaultButton;
-    private JCheckBox enableAutoDetectCake2CheckBox;
     private JCheckBox enableCake2SupportCheckBox;
     private JTextField cake2AppDirectoryTextField;
     private JButton cake2AppDirectoryDefaultButton;
@@ -37,30 +37,39 @@ class ConfigForm implements SearchableConfigurable {
     private JLabel cakeTwoTitle;
     private JLabel cake3DetectedLabel;
     private JLabel cake2DetectedLabel;
+    private JTextField composerJsonPathTextField;
+    private JButton composerJsonPathDefaultButton;
+    private JComboBox<Integer> cakeVersionComboBox;
 
     public ConfigForm(Project project) {
         this.project = project;
     }
 
     private void loadSettingsToUI(@NotNull Settings settings) {
+        composerJsonPathTextField.setText(settings.getComposerJsonPath());
+
         forceEnableCakePHP3CheckBox.setSelected(settings.getCake3ForceEnabled());
-        enableAutoDetectCake3CheckBox.setSelected(settings.getCake3AutoDetect());
-        showDetected(cake3DetectedLabel, settings.getCake3Detected());
+        enableAutoDetectCheckBox.setSelected(settings.getAutoDetect());
+        showDetected(cake3DetectedLabel, settings.getCake3Detected(), settings.getCake3DetectedMajorVersion());
         updateCake3SettingsVisibility();
+        cakeVersionComboBox.setModel(new DefaultComboBoxModel<>(new Integer[]{3, 4, 5}));
+        cakeVersionComboBox.setSelectedItem(settings.getState().getCakeMajorVersion());
         appDirectoryTextField.setText(settings.getAppDirectory());
         appNamespaceTextField.setText(settings.getAppNamespace());
         templateExtensionTextField.setText(settings.getCakeTemplateExtension());
 
-        enableAutoDetectCake2CheckBox.setSelected(settings.getCake2AutoDetect());
-        showDetected(cake2DetectedLabel, settings.getCake2Detected());
+        showDetected(cake2DetectedLabel, settings.getCake2Detected(), null);
         enableCake2SupportCheckBox.setSelected(settings.getCake2ForceEnabled());
         updateCake2SettingsVisibility();
         cake2TemplateExtensionTextField.setText(settings.getCake2TemplateExtension());
         cake2AppDirectoryTextField.setText(settings.getCake2AppDirectory());
     }
 
-    private static void showDetected(JLabel label, boolean detected) {
-        label.setText(detected ? "Detected: yes" : "Detected: no");
+    private static void showDetected(JLabel label, boolean detected, @Nullable Integer majorVersion) {
+        String text = !detected ? "Detected: no"
+                : majorVersion == null ? "Detected: yes"
+                : "Detected: CakePHP " + majorVersion;
+        label.setText(text);
         label.setIcon(detected ? AllIcons.General.InspectionsOK : AllIcons.General.Error);
     }
 
@@ -68,16 +77,21 @@ class ConfigForm implements SearchableConfigurable {
         SettingsState origState = settings.getState();
         SettingsState newState = copySettingsState(origState);
 
-        newState.setCake3Enabled(enableAutoDetectCake3CheckBox.isSelected());
+        newState.setComposerJsonPath(pathNormalize(composerJsonPathTextField.getText()));
+
+        newState.setAutoDetect(enableAutoDetectCheckBox.isSelected());
         newState.setCake3ForceEnabled(forceEnableCakePHP3CheckBox.isSelected());
-        newState.setAppDirectory(appDirectoryTextField.getText());
+        Integer version = (Integer) cakeVersionComboBox.getSelectedItem();
+        if (version != null) {
+            newState.setCakeMajorVersion(version);
+        }
+        newState.setAppDirectory(pathNormalize(appDirectoryTextField.getText()));
         newState.setCakeTemplateExtension(templateExtensionTextField.getText());
         newState.setAppNamespace(appNamespaceTextField.getText());
 
-        newState.setCake2AutoDetect(enableAutoDetectCake2CheckBox.isSelected());
-        newState.setCake2Enabled(enableCake2SupportCheckBox.isSelected());
+        newState.setCake2ForceEnabled(enableCake2SupportCheckBox.isSelected());
         newState.setCake2TemplateExtension(cake2TemplateExtensionTextField.getText());
-        newState.setCake2AppDirectory(cake2AppDirectoryTextField.getText());
+        newState.setCake2AppDirectory(pathNormalize(cake2AppDirectoryTextField.getText()));
 
         settings.loadState(newState);
     }
@@ -103,6 +117,9 @@ class ConfigForm implements SearchableConfigurable {
         loadSettingsToUI(settings);
         final Settings defaults = Settings.getDefaults(project);
 
+        composerJsonPathDefaultButton.addActionListener(e ->
+                this.composerJsonPathTextField.setText(defaults.getComposerJsonPath())
+        );
         appNamespaceDefaultButton.addActionListener(e ->
                 this.appNamespaceTextField.setText(defaults.getAppNamespace())
         );
@@ -123,13 +140,10 @@ class ConfigForm implements SearchableConfigurable {
             this.updateCake3SettingsVisibility()
         );
 
-        enableAutoDetectCake3CheckBox.addActionListener(e ->
-            this.updateCake3SettingsVisibility()
-        );
-
-        enableAutoDetectCake2CheckBox.addActionListener(e ->
-            this.updateCake2SettingsVisibility()
-        );
+        enableAutoDetectCheckBox.addActionListener(e -> {
+            this.updateCake3SettingsVisibility();
+            this.updateCake2SettingsVisibility();
+        });
 
         enableCake2SupportCheckBox.addActionListener(e ->
             this.updateCake2SettingsVisibility()
@@ -139,17 +153,15 @@ class ConfigForm implements SearchableConfigurable {
     }
 
     private void updateCake3SettingsVisibility() {
-        boolean visible = enableAutoDetectCake3CheckBox.isSelected() ||
+        boolean visible = enableAutoDetectCheckBox.isSelected() ||
                 forceEnableCakePHP3CheckBox.isSelected();
         cake3Panel.setVisible(visible);
-        enableAutoDetectCake3CheckBox.setEnabled(!forceEnableCakePHP3CheckBox.isSelected());
         updateCake3SettingEditability();
     }
 
     private void updateCake2SettingsVisibility() {
-        cake2Panel.setVisible(enableAutoDetectCake2CheckBox.isSelected() ||
+        cake2Panel.setVisible(enableAutoDetectCheckBox.isSelected() ||
                 enableCake2SupportCheckBox.isSelected());
-        enableAutoDetectCake2CheckBox.setEnabled(!enableCake2SupportCheckBox.isSelected());
     }
 
     private void updateCake3SettingEditability() {
@@ -183,11 +195,12 @@ class ConfigForm implements SearchableConfigurable {
         String oldAppDir = settings.getAppDirectory();
         String oldCake2AppDir = settings.getCake2AppDirectory();
         String oldAppNamespace = settings.getAppNamespace();
+        String oldComposerJsonPath = settings.getComposerJsonPath();
 
         // Ensure namespace starts with backslash:
         String namespace = appNamespaceTextField.getText();
         if (
-                settings.getCake3AutoDetect() &&
+                settings.getAutoDetect() &&
                 !namespace.isEmpty() &&
                 !namespace.startsWith("\\")
         ) {
@@ -213,7 +226,8 @@ class ConfigForm implements SearchableConfigurable {
                 !oldCake2TemplateExt.equals(settings.getCake2TemplateExtension()) ||
                 !oldAppDir.equals(settings.getAppDirectory()) ||
                 !oldCake2AppDir.equals(settings.getCake2AppDirectory()) ||
-                !oldAppNamespace.equals(settings.getAppNamespace())) {
+                !oldAppNamespace.equals(settings.getAppNamespace()) ||
+                !oldComposerJsonPath.equals(settings.getComposerJsonPath())) {
                 needsReindex = true;
             }
         }

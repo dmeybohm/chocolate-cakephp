@@ -7,20 +7,23 @@ import com.jetbrains.php.lang.psi.elements.FieldReference
 class ControllerSideHelperTest : Cake3BaseTestCase() {
 
     private val movieHelper = "\\App\\View\\Helper\\MovieFormatterHelper"
+    private val artistHelper = "\\App\\View\\Helper\\ArtistFormatterHelper"
+    private val conventionHelper = "\\App\\View\\Helper\\FmtHelper"
 
     override fun setUpTestFiles() {
         myFixture.addFileToProject("cake3/src/View/Helper/MovieFormatterHelper.php", """
             <?php
             namespace App\View\Helper;
             class MovieFormatterHelper extends \Cake\View\Helper {}
+            class ArtistFormatterHelper extends \Cake\View\Helper {}
         """.trimIndent())
     }
 
-    private fun controller(body: String) {
-        myFixture.addFileToProject("cake3/src/Controller/MovieController.php", """
+    private fun controller(body: String, name: String = "Movie", parent: String = "\\Cake\\Controller\\Controller") {
+        myFixture.addFileToProject("cake3/src/Controller/${name}Controller.php", """
             <?php
             namespace App\Controller;
-            class MovieController extends \Cake\Controller\Controller {
+            class ${name}Controller extends $parent {
                 $body
                 public function index() {}
             }
@@ -44,6 +47,18 @@ class ControllerSideHelperTest : Cake3BaseTestCase() {
         controller("public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];")
         assertEquals(setOf(movieHelper), fmtTypesIn("cake3/src/Template/Movie/index.ctp"))
         assertTrue(fmtTypesIn("cake3/src/Template/Layout/default.ctp").contains(movieHelper))
+    }
+
+    fun `test a helpers property on AppController settles the type in a subclass's template`() {
+        controller("public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];", name = "App")
+        controller("", parent = "AppController")
+        assertEquals(setOf(movieHelper), fmtTypesIn("cake3/src/Template/Movie/index.ctp"))
+    }
+
+    fun `test a layout unions the aliases without the convention type when every project controller settles it`() {
+        controller("public ${'$'}helpers = ['Fmt' => ['className' => 'MovieFormatter']];")
+        controller("public ${'$'}helpers = ['Fmt' => ['className' => 'ArtistFormatter']];", name = "Artist")
+        assertEquals(setOf(movieHelper, artistHelper), fmtTypesIn("cake3/src/Template/Layout/default.ctp"))
     }
 
     fun `test setHelpers on the view builder resolves in the template`() {

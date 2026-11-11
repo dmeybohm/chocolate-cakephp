@@ -55,4 +55,8 @@ class LayoutResolutionTest extends ControllerTestCase {
 	public function testAppControllerReachesPluginLayoutWithPrefix() {
 		$this->assertSame('plugin-layout:body', $this->renderedBy('/framed/pluginprefixed'));
 	}
+
+	public function testCamelCaseLayoutNameIsNotUnderscored() {
+		$this->assertSame('camel:body', $this->renderedBy('/framed/camellayout'));
+	}
 }

@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase;
 
+use App\Application;
+use Cake\Core\Configure;
+use Cake\Core\Exception\MissingPluginException;
+use Cake\Core\PluginCollection;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 use Cake\View\Exception\MissingTemplateException;
@@ -104,5 +108,69 @@ class TemplateResolutionTest extends TestCase
     {
         $this->get('/widgets/templatelayout');
         $this->assertResponseEquals('layout:app:Widgets/templatelayout');
+    }
+
+    public function testCamelCaseActionRendersImplicitTemplate(): void
+    {
+        $this->get('/widgets/view-all');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
+
+    public function testCamelCaseRenderNameRendersUnderscoredTemplate(): void
+    {
+        $this->get('/widgets/rendercamel');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
+
+    public function testRenderNameWithSlashIsNotUnderscored(): void
+    {
+        $this->get('/widgets/rendersub');
+        $this->assertResponseEquals('app:Widgets/Sub/viewAll');
+    }
+
+    public function testBuilderSetTemplateNameIsUnderscored(): void
+    {
+        $this->get('/widgets/buildercamel');
+        $this->assertResponseEquals('app:Widgets/view_all');
+    }
+
+    public function testBuilderSetTemplateAfterSetTemplatePathIsUnderscored(): void
+    {
+        $this->get('/widgets/builderpathcamel');
+        $this->assertResponseEquals('app:Gadgets/view_all');
+    }
+
+    public function testPluginLoadedWithExplicitPathRendersItsTemplate(): void
+    {
+        $this->get('/pathed/trinkets/index');
+        $this->assertResponseEquals('pathed:Trinkets/index');
+    }
+
+    public function testPluginInsideAnotherPluginsVendorDirectoryIsNotFound(): void
+    {
+        $this->expectException(MissingPluginException::class);
+        (new Application(CONFIG))->addPlugin('Acme/Nested');
+    }
+
+    public function testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory(): void
+    {
+        $this->assertFileExists(ROOT . DS . 'composer.json');
+        $this->assertSame(
+            ROOT . DS . 'vendor' . DS . 'acme' . DS . 'installed' . DS,
+            (new PluginCollection())->findPath('Acme/Installed')
+        );
+        $this->assertStringContainsString(
+            "\$baseDir . '/vendor/acme/installed/'",
+            file_get_contents(ROOT . DS . 'vendor' . DS . 'cakephp-plugins.php')
+        );
+    }
+
+    public function testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry(): void
+    {
+        Configure::write('plugins', []);
+        $this->assertSame(
+            ROOT . DS . 'plugins' . DS . 'Probe' . DS,
+            (new PluginCollection())->findPath('Probe')
+        );
     }
 }

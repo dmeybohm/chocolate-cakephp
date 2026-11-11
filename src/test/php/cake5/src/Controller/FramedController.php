@@ -86,4 +86,10 @@ class FramedController extends AppController
         $this->viewBuilder()->setLayout('Probe.plugin_only_layout');
         $this->render('body');
     }
+
+    public function camellayout(): void
+    {
+        $this->viewBuilder()->enableAutoLayout(true);
+        $this->render('body', 'camelLayout');
+    }
 }

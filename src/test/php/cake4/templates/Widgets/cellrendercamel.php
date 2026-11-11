@@ -1,0 +1,1 @@
+<?= $this->cell('Lamp::own')->render('viewAll') ?>

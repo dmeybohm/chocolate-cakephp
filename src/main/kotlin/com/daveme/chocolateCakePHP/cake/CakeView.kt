@@ -18,10 +18,7 @@ data class ControllerPath(
     val prefix: String
 ) : ViewOwnerPath {
     override val viewPath: String get() =
-        if (prefix.isEmpty())
-            "${name}/"
-        else
-            "${prefix}/${name}/"
+        listOf(prefix, name).filter { it.isNotEmpty() }.joinToString("") { "$it/" }
 }
 
 /**
@@ -216,6 +213,7 @@ fun allViewPathsFromController(
     allTemplatePaths: AllTemplatePaths,
     settings: Settings,
     actionNames: ActionNames,
+    convertDefaultCase: Boolean = true,
 ): AllViewPaths {
     // Cells render a single template, never a data view
     val dataViewExtensions = if (controllerPath is CellPath) emptyList() else settings.dataViewExtensions
@@ -234,7 +232,7 @@ fun allViewPathsFromController(
             label = it.uppercase(),
             controllerPath = controllerPath,
             actionName = actionName,
-            convertCase = true
+            convertCase = convertDefaultCase
         )
     }
     val otherViewPaths = actionNames.otherActionNames.flatMap { actionName ->
@@ -255,7 +253,7 @@ fun allViewPathsFromController(
             altLabel = actionNames.defaultActionName.path,
             controllerPath = controllerPath,
             actionName = actionNames.defaultActionName,
-            convertCase = true,
+            convertCase = convertDefaultCase,
         ),
         otherViewPaths = otherViewPaths,
         dataViewPaths = dataViewPaths,
@@ -276,6 +274,7 @@ fun allViewPathsFromPluginTemplate(
     settings: Settings,
     actionNames: ActionNames,
     pluginConfig: PluginConfig,
+    convertDefaultCase: Boolean = true,
 ): AllViewPaths? {
     val pluginTemplatePaths = allTemplatePaths.pluginTemplatePaths(pluginConfig)
         ?: return null
@@ -291,7 +290,7 @@ fun allViewPathsFromPluginTemplate(
             altLabel = actionNames.defaultActionName.path,
             controllerPath = emptyControllerPath,
             actionName = actionNames.defaultActionName,
-            convertCase = true,
+            convertCase = convertDefaultCase,
         ),
         otherViewPaths = listOf(),
         dataViewPaths = listOf(),
@@ -362,19 +361,4 @@ fun allViewPathsFromPluginElementPath(
         otherViewPaths = listOf(),
         dataViewPaths = listOf()
     )
-}
-
-fun allViewPathsToFiles(
-    project: Project,
-    allViewPaths: AllViewPaths
-): Collection<PsiFile> {
-    val projectRoot: VirtualFile = project.guessProjectDir()
-        ?: return setOf()
-    val files = allViewPaths.all.mapNotNull { viewPath ->
-        val templatePath = findRelativeFile(projectRoot, viewPath.templatePath)
-            ?: return@mapNotNull null
-        findRelativeFile(templatePath, viewPath.pathWithoutTemplate)
-    }.toList()
-
-    return virtualFilesToPsiFiles(project, files)
 }

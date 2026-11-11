@@ -24,6 +24,14 @@ scripts/run-cakephp-assumption-tests.sh check-pins                # compare pins
    file, so an assertion identifies exactly what rendered.
 3. Add a row to the catalogue below.
 
+## Composer-installed plugins
+
+`cakeN/packages/Installed` is a `cakephp-plugin` package the app requires through a `path`
+repository, so `composer install` copies it into `vendor/acme/installed` and
+`cakephp/plugin-installer` records it in `vendor/cakephp-plugins.php`, as it would for a plugin
+from Packagist. The package carries an explicit `version`, since a path repository otherwise
+offers only a dev version.
+
 ## Moving a pin
 
 Change the version in `build.gradle.kts` and in `cakeN/composer.json`, then run `composer update`
@@ -58,7 +66,18 @@ Relied on by view navigation, the controller action line marker and view file cr
 | An app controller's unprefixed `render()` does not reach a plugin's template | `testAppControllerDoesNotReachPluginTemplateUnprefixed` | Same |
 | An app controller's `Plugin.name` `render()` finds the plugin's template | `testAppControllerRendersPrefixedPluginTemplate` | Same |
 | A layout named from a template wraps that template | `testLayoutNamedFromTemplateWraps` | Same |
+| A camelCase action's implicit template is the underscored action name: `viewAll` renders `view_all` | `testCamelCaseActionRendersImplicitTemplate` | Same |
+| A camelCase name passed to `render()` is underscored: `render('viewAll')` renders `view_all` | `testCamelCaseRenderNameRendersUnderscoredTemplate` | Same |
+| A name with a slash is not underscored, and is relative to the controller's template directory: `render('Sub/viewAll')` in `Widgets` renders `Widgets/Sub/viewAll` | `testRenderNameWithSlashIsNotUnderscored` | Same |
+| The builder's `setTemplate('viewAll')` renders `view_all` | `testBuilderSetTemplateNameIsUnderscored` | 3, 4, 5 |
+| `setTemplate('viewAll')` after `setTemplatePath('Gadgets')` renders `Gadgets/view_all` | `testBuilderSetTemplateAfterSetTemplatePathIsUnderscored` | 3, 4, 5 |
+| `$this->view = 'viewAll'` renders `view_all` | `testViewPropertyNameIsUnderscored` | 2 |
 | A routing prefix selects its own template | `testRoutingPrefixResolvesToPrefixTemplate` | 3, 4, 5: `Admin/Widgets/index`. 2: `Widgets/admin_index`, with no subdirectory |
+| A plugin in the `plugins` directory beside the app directory is found, and renders its own template | `testRootPluginsDirectoryPluginRendersItsTemplate` | 2 only |
+| A plugin loaded with an explicit `path` outside the app directory renders its own template | `testPluginLoadedWithExplicitPathRendersItsTemplate` | Same. 3: from `{path}/src/Template`. 4, 5: from `{path}/templates` |
+| A plugin whose only copy is in another plugin's `vendor` directory is not found by name, even when that directory has its own `cakephp-plugins.php` | `testPluginInsideAnotherPluginsVendorDirectoryIsNotFound` | 3, 4, 5 |
+| A plugin installed by Composer is found at `ROOT/vendor/{vendor}/{package}/` through `vendor/cakephp-plugins.php`, whose paths are built from the directory holding `composer.json` | `testComposerInstalledPluginIsFoundUnderTheComposerJsonDirectory` | 3, 4, 5 |
+| A plugin directory under `ROOT/plugins/` is found by name when the Composer manifest has no entry for it, through `App.paths.plugins` | `testPluginsDirectoryPluginIsFoundByNameWithoutAManifestEntry` | 3, 4, 5 |
 
 ### `LayoutResolutionTest`
 
@@ -78,6 +97,7 @@ Relied on by layout navigation.
 | A view's `layout()` names the layout | `testViewLayoutMethodNamesLayout` | 3, deprecated |
 | A view has no `layout()` method | `testViewHasNoLayoutMethod` | 4, 5 |
 | A data view renders without a layout, even when one is named | `testDataViewRendersWithoutLayout` | Same |
+| A camelCase layout name is not underscored: `camelLayout` is `camelLayout` | `testCamelCaseLayoutNameIsNotUnderscored` | Same |
 | A layout path selects a subdirectory of the layout directory | `testLayoutPathSelectsSubdirectory` | Same |
 | A plugin controller's unprefixed layout is found in the plugin first | `testPluginControllerPrefersPluginLayout` | Same |
 | A plugin controller's layout missing from the plugin falls back to the app's | `testPluginControllerFallsBackToAppLayout` | Same |
@@ -106,6 +126,7 @@ Relied on by element navigation and element related usages.
 | An unprefixed element in an app template rendered by a plugin controller is the plugin's | `testElementInFallbackTemplateResolvesInControllerPlugin` | Same |
 | An unprefixed element in a plugin template rendered by an app controller is the app's | `testElementInPrefixedTemplateResolvesInControllerPlugin` | Same |
 | An unprefixed element in another plugin's template is the controller plugin's | `testElementInOtherPluginTemplateResolvesInControllerPlugin` | Same |
+| A camelCase element name is not underscored: `camelElement` is `camelElement` | `testCamelCaseElementNameIsNotUnderscored` | Same |
 
 ### `CellTest`
 
@@ -134,6 +155,7 @@ exist on CakePHP 2, so "Same" here means 3, 4 and 5.
 | A controller's helper reaches the template of a cell called from its view | `testControllerHelperReachesCellTemplate` | Same |
 | A controller's helper reaches an element in that cell's template | `testControllerHelperReachesElementInCellTemplate` | Same |
 | A cell template lacks a helper its caller's controller did not add | `testCellTemplateHasNoHelperItsCallerLacks` | Same |
+| A cell's `render('viewAll')` renders `view_all` | `testCellRenderNameIsUnderscored` | Same |
 
 ### `ViewHelperTest`
 
@@ -163,6 +185,65 @@ Relied on by view helper resolution. Controller-side helpers on CakePHP 2 work d
 | A `$helpers` property on a cell reaches its template | `testCellHelpersPropertyReachesItsTemplate` | 3 |
 | A `$helpers` property on a cell wins over the caller's helper of the same alias | `testCellHelpersPropertyWinsOverCallerHelper` | 3 |
 | A `$helpers` property on a cell is ignored | `testCellHelpersPropertyIsIgnored` | 4, 5 |
+
+### `RouteTargetTest`
+
+Relied on by route target completion and navigation: the `controller`, `action`, `prefix` and
+`plugin` keys of a route target array, in the route builder and in URL building. CakePHP 2 routes
+differently and will get its own table, so "Same" here means 3, 4 and 5. The app's routes use
+`DashedRoute`, as the application skeleton does; "plain route" means the base `Route` class.
+
+| Behavior | Test method | Versions |
+|---|---|---|
+| The `controller` key is the class's short name without `Controller` | `testControllerKeyIsTheClassShortName` | Same |
+| A dashed route camelizes a lowercase `controller` key when it parses the request | `testDashedRouteCamelizesTheControllerKey` | Same |
+| A lowercase `controller` key on a plain route is a missing controller | `testLowercaseControllerKeyDoesNotDispatchOnAPlainRoute` | Same |
+| The `action` key is the method name as written | `testActionKeyIsTheMethodName` | Same |
+| A dashed route camelizes an underscored `action` key when it parses the request | `testDashedRouteCamelizesTheActionKey` | Same |
+| An underscored `action` key on a plain route is a missing action | `testUnderscoredActionKeyDoesNotDispatchOnAPlainRoute` | Same |
+| An `action` key in the wrong case | `testActionKeyIsCaseSensitive`, `testActionKeyIsCaseInsensitive` | 4, 5: a missing action. 3: dispatches to the method |
+| The `prefix` key selects a sub-namespace under `Controller` | `testPrefixKeySelectsTheSubNamespace` | Same |
+| A nested `prefix` key, `Admin/Reports`, selects nested namespaces | `testNestedPrefixKeyJoinsNamespacesWithASlash` | Same |
+| A `prefix` key in another case than the namespace | `testLowercasePrefixKeyDoesNotDispatch`, `testLowercasePrefixKeyDispatchesWithADeprecation`, `testPrefixKeyIsCamelizedOnDispatch` | 5: a missing controller. 4: dispatches, with a deprecation. 3: dispatches, each segment is camelized |
+| The `plugin` key selects the plugin's `Controller` namespace | `testPluginKeySelectsThePluginNamespace` | Same |
+| A vendor-namespaced `plugin` key, `Acme/Vendored`, selects the nested namespace | `testVendorPluginKeySelectsTheNestedNamespace` | Same |
+| A public method of the app's own base controller is an action | `testInheritedActionDispatches` | Same |
+| A method of `Cake\Controller\Controller` is not an action | `testBaseControllerMethodIsNotAnAction` | Same |
+| A `prefix()` scope sets the prefix of the routes connected inside it | `testPrefixScopeAppliesToItsRoutes` | Same |
+| The name given to `prefix()` becomes the `prefix` param | `testPrefixScopeNameIsKeptAsWritten`, `testPrefixScopeNameIsUnderscored` | 4, 5: as written, `Admin`. 3: underscored, `admin`, and the `plugin` param of an app request is `false` rather than `null` |
+| Nested `prefix()` scopes join their names with a slash | `testNestedPrefixScopesJoinWithASlash` | Same |
+| A `'prefix' => null` key inside a `prefix()` scope connects an unprefixed route | `testNullPrefixKeyEscapesThePrefixScope` | Same |
+| A `'prefix' => false` key inside a `prefix()` scope | `testFalsePrefixKeyEscapesThePrefixScope`, `testFalsePrefixKeyIsRejected` | 3, 4: connects an unprefixed route. 5: `CakeException`, a prefix must be a string or null |
+| A `scope()` with a `prefix` param sets the prefix of its routes | `testScopeParamsSetThePrefix` | Same |
+| A `plugin()` scope sets the plugin of the routes connected inside it | `testPluginScopeAppliesToItsRoutes` | Same |
+| A `scope()` with a `plugin` param sets the plugin of its routes | `testScopeParamsSetThePlugin` | Same |
+| A `plugin()` scope with a vendor-namespaced name sets that plugin | `testVendorPluginScopeAppliesToItsRoutes` | Same |
+| A `'plugin' => null` key inside a `plugin()` scope connects an app route | `testNullPluginKeyInPluginScopeTargetsTheApp` | Same |
+| A `plugin` key naming another plugin inside a `plugin()` scope is rejected | `testOtherPluginKeyInPluginScopeIsRejected` | Same, `BadMethodCallException` |
+| A `'plugin' => false` key inside a `plugin()` scope is rejected | `testFalsePluginKeyInPluginScopeIsRejected` | Same, `BadMethodCallException` |
+| A string target `Controller::action` names the controller and action | `testStringTargetNamesControllerAndAction` | Same |
+| A string target `Prefix/Controller::action` takes the prefix | `testStringTargetTakesAPrefix` | Same. 3 lowercases the prefix part |
+| A string target `Plugin.Controller::action` takes the plugin | `testStringTargetTakesAPlugin` | Same |
+| A string target `Vendor/Plugin.Controller::action` takes the vendor-namespaced plugin | `testStringTargetTakesAVendorPlugin` | Same |
+| `resources()` takes the controller name | `testResourcesNameIsTheController` | Same |
+| `resources()` inside a `prefix()` scope takes the prefix | `testResourcesInPrefixScopeTakesThePrefix` | Same |
+| `Router::url()` with `controller` and `action` keys builds the route's URL | `testUrlControllerAndActionKeysBuildTheUrl` | Same |
+| `Router::url()` with only an `action` key keeps the request's controller | `testUrlActionOnlyKeepsTheRequestController` | Same |
+| `Router::url()` with no `action` key copies the request's action when the `controller` key is the request's controller name, even with another `plugin` key | `testUrlNoActionKeyCopiesTheRequestActionForTheSameController`, `testUrlNoActionKeyCopiesTheRequestActionAcrossPlugins` | Same |
+| `Router::url()` with no `action` key copies the request's action across prefixes too | `testUrlNoActionKeyCopiesTheRequestActionAcrossPrefixes` | Same |
+| `Router::url()` with no `action` key defaults to `index` for another controller | `testUrlNoActionKeyDefaultsToIndexForAnotherController` | Same |
+| `Router::url()` keeps the request's prefix when the array has no `prefix` key | `testUrlKeepsTheRequestPrefix` | Same |
+| `Router::url()` with `'prefix' => false` leaves the request's prefix | `testUrlFalsePrefixLeavesTheRequestPrefix` | Same |
+| `Router::url()` keeps the request's plugin when the array has no `plugin` key | `testUrlKeepsTheRequestPlugin` | Same |
+| `Router::url()` with `'plugin' => false` leaves the request's plugin | `testUrlFalsePluginLeavesTheRequestPlugin` | Same |
+| `Router::url()` with a `plugin` key selects the plugin's routes | `testUrlPluginKeySelectsThePlugin` | Same |
+| `Router::url()` matches the `prefix` key case-sensitively against the route | `testUrlPrefixKeyMustMatchTheRouteSpelling` | Same: `MissingRouteException`. 4, 5 for `admin`, 3 for `Admin` |
+| `Router::url()` on a dashed route matches `plugin` and `controller` keys in any case | `testUrlDashedRouteInflectsControllerAndPlugin` | Same |
+| `Html->link()`, `Form->postLink()`, `Url->build()` and `Form->create()`'s `url` option build a target array like `Router::url()`, request defaults included | `testHelpersBuildUrlsLikeRouterUrl` | Same |
+| `Controller::redirect()` builds a target array like `Router::url()` | `testControllerRedirectBuildsUrlsLikeRouterUrl` | Same |
+| Helpers in a template rendered by a plugin controller keep the request's plugin | `testHelpersInPluginTemplateKeepTheRequestPlugin` | Same |
+| Helpers in a template rendered by a prefixed controller keep the request's prefix | `testHelpersInPrefixedTemplateKeepTheRequestPrefix` | Same |
+| A URL built in a cell's template takes the calling request's plugin and controller, not the cell's | `testUrlInCellTemplateTakesTheCallingRequest` | Same |
 
 ### `TableLocatorTest`
 

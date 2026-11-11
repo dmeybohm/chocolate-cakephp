@@ -75,7 +75,7 @@ class CellGotoDeclarationHandler : GotoDeclarationHandler {
             ?: return PsiElement.EMPTY_ARRAY
         return cellNames.flatMap { cellName ->
             val allViewPaths = allViewPathsFromCellTemplate(
-                allTemplatesPaths, settings, cellName, template, convertCase = false
+                allTemplatesPaths, settings, cellName, renderedTemplateName(template), convertCase = false
             )
             TemplatePathResolution(allViewPaths, cellPluginLookupResult(settings, cellName))
                 .toFiles(project, allTemplatesPaths)

@@ -7,11 +7,13 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.ModificationTracker
+import com.intellij.openapi.util.SimpleModificationTracker
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.intellij.util.xmlb.annotations.OptionTag
 import com.intellij.util.xmlb.annotations.Property
 import com.intellij.util.xmlb.annotations.Tag
 import com.intellij.util.xmlb.annotations.XCollection
@@ -23,6 +25,10 @@ private const val DEFAULT_NAMESPACE = "\\App"
 private const val DEFAULT_APP_DIRECTORY = "src"
 
 private const val DEFAULT_CAKE3_TEMPLATE_EXTENSION = "ctp"
+
+private const val DEFAULT_CAKE3_MAJOR_VERSION = 5
+
+const val DEFAULT_COMPOSER_JSON_PATH = "composer.json"
 
 fun defaultPluginConfig(): PluginConfig {
     return CakeThreePluginConfig()
@@ -137,17 +143,23 @@ data class ThemeConfig (
 ) : ThemeOrPluginConfig
 
 data class SettingsState(
+    var composerJsonPath: String = DEFAULT_COMPOSER_JSON_PATH,
     var cakeTemplateExtension: String = DEFAULT_CAKE3_TEMPLATE_EXTENSION,
     var appDirectory: String = DEFAULT_APP_DIRECTORY,
     var appNamespace: String = DEFAULT_NAMESPACE,
     var pluginPath: String = "plugins",
     var cake2AppDirectory: String =  "app",
     var cake2TemplateExtension: String = "ctp",
-    // force enables CakePHP 2, whatever is detected:
-    var cake2Enabled: Boolean = false,
-    var cake2AutoDetect: Boolean = true,
-    var cake3Enabled: Boolean = true,
+    // Force enables CakePHP 2, whatever is detected. Saved under its old name:
+    @OptionTag("cake2Enabled")
+    var cake2ForceEnabled: Boolean = false,
+    // Auto-detects every CakePHP version from composer.json. Saved under its
+    // old name, from when it only auto-detected CakePHP 3+:
+    @OptionTag("cake3Enabled")
+    var autoDetect: Boolean = true,
     var cake3ForceEnabled: Boolean = false,
+    // The CakePHP 3+ major version to assume when composer.json does not give one:
+    var cakeMajorVersion: Int = DEFAULT_CAKE3_MAJOR_VERSION,
 
     // deprecated: superseded by pluginConfigs
     var pluginNamespaces: List<String> = listOf(),
@@ -171,6 +183,9 @@ fun copySettingsState(state: SettingsState): SettingsState = state.copy()
 data class CakeAutoDetectedValues(
     val cake2Present: Boolean = false,
     val cake3OrLaterPresent: Boolean = false,
+    // The highest CakePHP 3+ major version composer.json allows, or null when its constraint
+    // has no upper bound:
+    val cake3OrLaterMajorVersion: Int? = null,
     val namespace: String = DEFAULT_NAMESPACE,
     val appDirectory: String = DEFAULT_APP_DIRECTORY,
 )
@@ -195,13 +210,14 @@ class CakePhpAutoDetector(val project: Project)
         get() = CachedValuesManager.getManager(project).getCachedValue(project) {
             val result = autodetectCakePhp()
             val tracker = project.getService(CakePhpFilesModificationTracker::class.java)
-            CachedValueProvider.Result.create(result, tracker)
+            val settingsTracker = Settings.getInstance(project).modificationTracker
+            CachedValueProvider.Result.create(result, tracker, settingsTracker)
         }
 
     private fun autodetectCakePhp(): CakeAutoDetectedValues {
-        val topDir = project.guessProjectDir() ?: return CakeAutoDetectedValues()
-        val composerJson = topDir.findFileByRelativePath("composer.json")
+        val composerJson = Settings.getInstance(project).composerJsonFile
             ?: return CakeAutoDetectedValues()
+        val rootDir = composerJson.parent ?: return CakeAutoDetectedValues()
 
         val composerContents = try {
             String(composerJson.contentsToByteArray(), StandardCharsets.UTF_8)
@@ -209,7 +225,7 @@ class CakePhpAutoDetector(val project: Project)
             return CakeAutoDetectedValues()
         }
 
-        val namespace = checkNamespaceInAppConfig(topDir)
+        val namespace = checkNamespaceInAppConfig(rootDir)
 
         val composerInfo = parseComposerJson(composerContents, namespace)
 
@@ -220,13 +236,14 @@ class CakePhpAutoDetector(val project: Project)
             // An alternative with no version, such as a branch, is taken as CakePHP 3+:
             cake3OrLaterPresent = majorVersions != null &&
                     (composerInfo.cakePhpUnversionedAlternative || majorVersions.any { it >= 3 }),
+            cake3OrLaterMajorVersion = composerInfo.cakePhpSpecificMajorVersion?.takeIf { it >= 3 },
             namespace = namespace,
             appDirectory = composerInfo.appDirectory ?: DEFAULT_APP_DIRECTORY,
         )
     }
 
-    private fun checkNamespaceInAppConfig(topDir: VirtualFile): String {
-        val appConfig = topDir.findFileByRelativePath("config/app.php") ?: return DEFAULT_NAMESPACE
+    private fun checkNamespaceInAppConfig(rootDir: VirtualFile): String {
+        val appConfig = rootDir.findFileByRelativePath("config/app.php") ?: return DEFAULT_NAMESPACE
 
         val contents = try {
             String(appConfig.contentsToByteArray(), StandardCharsets.UTF_8)
@@ -254,12 +271,19 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
 
     private var state = SettingsState()
 
+    /**
+     * Changes whenever a settings state is loaded.
+     */
+    val modificationTracker: ModificationTracker get() = tracker
+
+    private val tracker = SimpleModificationTracker()
+
     override fun dispose() {
         // nothing here, but maybe should keep track of things to dispose that use this?
     }
 
     val cakeTemplateExtension get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled) {
+        return if (state.autoDetect && !state.cake3ForceEnabled) {
             DEFAULT_CAKE3_TEMPLATE_EXTENSION
         } else {
             state.cakeTemplateExtension
@@ -267,32 +291,64 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
     }
 
     val appDirectory get(): String {
-        return if (state.cake3Enabled && !state.cake3ForceEnabled)
+        return if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().appDirectory
         else
             state.appDirectory
     }
 
     val appNamespace get(): String {
-        val namespace = if (state.cake3Enabled && !state.cake3ForceEnabled)
+        val namespace = if (state.autoDetect && !state.cake3ForceEnabled)
             getAutoDetectedValues().namespace
         else
             state.appNamespace
         return namespace.absoluteClassName()
     }
 
+    val composerJsonPath get() = state.composerJsonPath
+
+    /**
+     * The configured composer.json, if it exists.
+     */
+    val composerJsonFile: VirtualFile?
+        get() {
+            val projectDir = project.guessProjectDir() ?: return null
+            return findRelativeFile(projectDir, composerJsonPath)?.takeIf { !it.isDirectory }
+        }
+
+    /**
+     * The directory of the CakePHP application, which configured paths are relative to: the
+     * directory of the configured composer.json, or the project directory when it is missing.
+     */
+    val rootDirectory: VirtualFile?
+        get() = composerJsonFile?.parent ?: project.guessProjectDir()
+
+    /**
+     * The directory a configured path names under [rootDirectory].
+     */
+    fun configuredDirectory(path: String): VirtualFile? =
+        configuredDirectory(rootDirectory, path)
+
+    val autoDetect get() = state.autoDetect
+
     val cake2AppDirectory get() = state.cake2AppDirectory
     val cake2TemplateExtension get() = state.cake2TemplateExtension
 
     val cake2Enabled get() = cake2ForceEnabled ||
-            (state.cake2AutoDetect && getAutoDetectedValues().cake2Present)
-    val cake2AutoDetect get() = state.cake2AutoDetect
+            (state.autoDetect && getAutoDetectedValues().cake2Present)
     val cake2Detected get() = getAutoDetectedValues().cake2Present
-    val cake2ForceEnabled get() = state.cake2Enabled
+    val cake2ForceEnabled get() = state.cake2ForceEnabled
     val cake3Enabled get() = cake3ForceEnabled ||
-            (state.cake3Enabled && getAutoDetectedValues().cake3OrLaterPresent)
-    val cake3AutoDetect get() = state.cake3Enabled
+            (state.autoDetect && getAutoDetectedValues().cake3OrLaterPresent)
     val cake3Detected get() = getAutoDetectedValues().cake3OrLaterPresent
+    val cake3DetectedMajorVersion: Int?
+        get() = if (state.autoDetect) getAutoDetectedValues().cake3OrLaterMajorVersion else null
+
+    /**
+     * The CakePHP 3+ major version the project uses: the one composer.json allows when it is
+     * auto-detected, and otherwise the configured one.
+     */
+    val cakeMajorVersion: Int get() = cake3DetectedMajorVersion ?: state.cakeMajorVersion
     val cake3ForceEnabled get() = state.cake3ForceEnabled
 
     private fun getAutoDetectedValues(): CakeAutoDetectedValues =
@@ -408,6 +464,7 @@ class Settings(val project: Project) : PersistentStateComponent<SettingsState>, 
 
     override fun loadState(newState: SettingsState) {
         XmlSerializerUtil.copyBean(newState, this.state)
+        tracker.incModificationCount()
     }
 
     companion object {

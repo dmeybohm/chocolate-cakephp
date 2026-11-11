@@ -1,0 +1,1 @@
+pathed:Trinkets/index
