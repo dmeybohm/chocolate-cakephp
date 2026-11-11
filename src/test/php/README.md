@@ -384,6 +384,8 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | `hasBehavior()` and `removeBehavior()` take the alias, not the plugin-prefixed name or the `className` | `testHasAndRemoveBehaviorTakeTheAlias` | 3, 4, 5 |
 | A removed behavior's methods and finders | `testRemovedBehaviorMethodsAreUnmapped`, `testRemovedBehaviorMethodsStayMapped` | 4, 5: unmapped. 3: still mapped in the registry |
 | Loading a loaded alias again with no options keeps the first instance and its options | `testLoadingALoadedAliasAgainKeepsTheFirstInstance` | 3, 4, 5 |
+| Loading a loaded alias again by a name that resolves to another class keeps the first class | `testLoadingALoadedAliasAgainByAnotherNameKeepsTheFirstClass` | 3, 4, 5 |
+| Loading a loaded alias again with the same options keeps the first instance | `testLoadingALoadedAliasAgainWithTheSameOptionsKeepsTheFirstInstance` | 3, 4, 5 |
 | Loading a loaded alias again with other options throws a `RuntimeException` | `testLoadingALoadedAliasWithOtherOptionsThrows` | 3, 4, 5 |
 | A behavior method called on the table raises a deprecation | `testBehaviorMethodCalledOnTableIsDeprecated` | 5 (since 5.3). 3, 4: `testBehaviorMethodCalledOnTableIsNotDeprecated` |
 | A behavior method called on its instance raises no deprecation | `testBehaviorMethodCalledOnItsInstanceIsNotDeprecated` | 3, 4, 5 |

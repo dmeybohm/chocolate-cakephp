@@ -306,22 +306,28 @@ enclosing method name as usual. The flag keeps the load out of the behavior's ow
 `ConfiguredMemberService.behaviors(project, tableFqns): List<AttachedBehavior>` reads the table
 chain's `BEHAVIOR` loads and picks the load in force for each alias itself, rather than taking
 `InitializeChainResolver`'s nearest-class rule, because a repeated behavior load does not
-replace the earlier one at runtime: the registry keeps the first instance when the later load
-has no options, and throws when it has others
-(`testLoadingALoadedAliasAgainKeepsTheFirstInstance`, `testLoadingALoadedAliasWithOtherOptionsThrows`).
-A working table therefore has at most one `initialize()` load of an alias that carries options,
-wherever it sits in the chain and whichever side of `parent::initialize()` it runs on, and that
-is the load in force. So, among the `initialize()` loads of an alias, receiver class first and
-in source order within a class:
+replace the earlier one at runtime. The registry answers a load of a loaded alias with the
+first instance: silently when the later load has no options, even when it names another class
+(`testLoadingALoadedAliasAgainKeepsTheFirstInstance`,
+`testLoadingALoadedAliasAgainByAnotherNameKeepsTheFirstClass`) or has the same options
+(`testLoadingALoadedAliasAgainWithTheSameOptionsKeepsTheFirstInstance`), and by throwing when
+its options differ (`testLoadingALoadedAliasWithOtherOptionsThrows`). So in a working table
+every `initialize()` load of an alias that carries options carries the same ones, and the
+first load to run decides the class. Which runs first is not indexed; `initialize()` calls
+`parent::initialize()` first by convention, so the ancestor's does. Among the `initialize()`
+loads of an alias:
 
-- the first that carries something the plugin reads, a `className` or an `implementedMethods`
-  or `implementedFinders` option, read or unread, is the load in force;
-- when none does, the first is, and they all name the same class anyway.
+- the one nearest the receiver that carries something the plugin reads, a `className` or an
+  `implementedMethods` or `implementedFinders` option, read or unread, is the load in force:
+  any other that carries options agrees with it, and a plain one beside it changes nothing;
+- when none does, the farthest ancestor's is, in source order within a class, since it runs
+  first: a parent's `TestPlugin.Sluggable` stays in force under a child's plain `Sluggable`.
 
-A child that re-adds its parent's alias plainly thus keeps the parent's options, and a child
-that does not call `parent::initialize()` and loads the alias with its own options gets its
-own. The one program this misreads is a child that skips `parent::initialize()` and loads the
-alias plainly while the parent's load has options, which is accepted. Loads outside
+A child that re-adds its parent's alias plainly thus keeps the parent's class and options, and
+a child that does not call `parent::initialize()` and loads the alias with its own options gets
+its own. What this misreads is a child that skips `parent::initialize()`, or loads before
+calling it, and loads plainly an alias its parent also loads, with options or as another
+class; that is accepted. Loads outside
 `initialize()` are unioned as for components: they add the alias when no `initialize()` load
 has it, and are ignored for an alias one does, since a repeat changes nothing or throws. Each
 result carries the alias, the resolved `PhpClass` list, the load (for its options and
@@ -543,7 +549,9 @@ feature's tables untouched since their tests assert exact lists:
   outside `initialize()`, so `recover` and the `children` finder are offered as a union.
 - `ChildPagesTable extends PagesTable` with no `initialize()`.
 - `RepeatPagesTable extends PagesTable`, whose `initialize()` calls `parent::initialize()` and
-  then `addBehavior('Audit')` plainly: the parent's `trail` alias stays in force.
+  then `addBehavior('Audit')` plainly: the parent's `trail` alias stays in force. A
+  `RepeatPluginPagesTable extends PluginPagesTable` does the same with `addBehavior('Sluggable')`
+  under the parent's `TestPlugin.Sluggable`.
 - `FindersMappedBehavior`, with `$_defaultConfig = ['implementedFinders' => ['recent' => 'findLatest']]`
   and public `stampIt()`, `findLatest()` and `findOldest()`, attached by `RepeatPagesTable`: the
   half-mapped case.
@@ -581,7 +589,8 @@ Finders, with `$this->Pages` in a controller unless stated:
 
 Methods:
 
-5. `$this->RepeatPages-><caret>` offers `trail` and not `audit`, and `stampIt` from the
+5. `$this->RepeatPluginPages->getBehavior('Sluggable')` is the plugin class, and `pluginSlug`
+   is offered on the table. `$this->RepeatPages-><caret>` offers `trail` and not `audit`, and `stampIt` from the
    half-mapped behavior; `find('<caret>')` on it offers `recent` and neither `latest` nor
    `oldest`. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `counted`, `recover`, `moveUp`
    and the rest of `Tree`'s map, not `audit`, not `notMixedIn`, not `writeAudit` under its own
@@ -691,7 +700,8 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
 - **Behaviors attached outside `initialize()` are unioned**, following the configured-member
   rule. For behaviors there is no convention list to fall back to, so the union only adds.
 - **A repeated load of an alias does not replace the earlier one.** The load in force is the
-  one carrying options, not the nearest to the receiver, following the registry; see step 2.
+  one carrying options, or else the farthest ancestor's, following the registry and the
+  convention of calling `parent::initialize()` first; see step 2.
   This is where behaviors part from components, whose `loadComponent()` in a child replaces the
   parent's.
 - **A behavior name resolves to one class, first match**, unlike the other kinds, because the
@@ -833,3 +843,9 @@ framework falls back for methods and finders separately; that is now pinned
 `FindersMappedBehavior` and `MethodsMappedBehavior` fixtures) and the algorithm says so. And
 the repeated-load question is settled rather than left open: `behaviors()` picks the load that
 carries options instead of using the nearest-class rule, as step 2 and the decisions now state.
+
+**Third review**: the repeated-load rule rested on two statements that were too strong. Plain
+loads of one alias can name different classes, and the first to run wins; and a table can
+repeat a load with the same options. Both are pinned now (36 tests each on 3, 4 and 5). The
+rule changed in one place, the tie between plain loads, which goes to the farthest ancestor
+instead of the receiver.

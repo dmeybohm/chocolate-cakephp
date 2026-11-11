@@ -437,4 +437,22 @@ class BehaviorTest extends TestCase
         $this->assertSame(['mark' => 'stampIt'], $behavior->implementedMethods());
         $this->assertSame(['latest' => 'findLatest', 'oldest' => 'findOldest'], $finders);
     }
+
+    public function testLoadingALoadedAliasAgainByAnotherNameKeepsTheFirstClass(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Probe.Sluggable');
+        $table->addBehavior('Sluggable');
+        $this->assertSame(['Sluggable'], $table->behaviors()->loaded());
+        $this->assertSame(ProbeSluggable::class, get_class($table->getBehavior('Sluggable')));
+    }
+
+    public function testLoadingALoadedAliasAgainWithTheSameOptionsKeepsTheFirstInstance(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']]);
+        $first = $table->getBehavior('Audit');
+        $table->addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']]);
+        $this->assertSame($first, $table->getBehavior('Audit'));
+    }
 }
