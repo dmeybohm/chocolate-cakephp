@@ -14,9 +14,10 @@ $this->addBehavior('Audit', ['className' => 'ChangeLog']);
 A behavior mixes two things into the table: methods, so that `$this->Articles->touch($entity)`
 and `$this->Articles->recover()` work, and finders, so that `find('children', for: 1)` and
 `find('treeList')` work. The plugin knows nothing about either. In a real project,
-`$this->Articles->touch($entity)` resolves through `Table::__call` and PhpStorm types it `mixed`,
-offers no behavior methods in completion, flags the call with the "method accessed via magic"
-weak warning, and cannot navigate to the behavior. `find('<caret>')` offers only the finders the
+`$this->Articles->touch($entity)` is a method the table class lacks, so PhpStorm gives it no
+type, offers no behavior methods in completion and cannot navigate to the behavior, and on a
+receiver typed as the table class it flags the call with the "Method 'touch' not found" weak
+warning. `find('<caret>')` offers only the finders the
 table class declares itself, and `addBehavior('Timestamp')` is a string with no navigation.
 
 CakePHP 2 has the same mechanism under another name: `public $actsAs = ['Containable', 'Tree']`
@@ -240,16 +241,16 @@ descriptions below follow that.
 ## What PhpStorm does today
 
 - `$table->touch($e)` is the native method signature `#M<receiver>.touch`. When
-  `findMethodsByName` finds nothing, resolution falls to `__call`, whose return type is `mixed`
-  (`: mixed` on 5, `@return mixed` on 3 and 4). As with fields, a provider on the plugin's own key
-  can only add beside `mixed`; replacing it needs a provider keyed on `PhpTypeSignatureKey.METHOD`
-  (`M`) with `interceptsNativeSignature()` false, which `fix-magic-get-type-dilution` found is a
+  `findMethodsByName` finds nothing, the signature completes to the unknown type `?`; the first
+  draft of this plan expected `__call`'s `mixed`, as `__get` gives a field, and the session 1
+  probe showed methods have no such fallback. Answering for the native signature still needs a
+  provider keyed on `PhpTypeSignatureKey.METHOD` (`M`) with `interceptsNativeSignature()` false, which `fix-magic-get-type-dilution` found is a
   sanctioned pattern (the bundled Prophecy providers key on `M`, with intercepting on). The
   entity work found `PhpIndexImpl.getTypeProviders()` logs an error for two *non-intercepting*
   providers with the same key; whether an intercepting bundled provider and a non-intercepting
   one of ours can share `M` is the first thing to check.
-- A reference gets many signatures (one per receiver encoding), each completed separately, and
-  one that falls through to `__call` puts `mixed` back. The entity log's receiver table is the
+- A reference gets many signatures (one per receiver encoding), each completed separately; one
+  the provider does not answer adds only `?`, which PhpStorm filters. The entity log's receiver table is the
   starting point; the method receivers (`$this->Articles->touch()`, `$this->fetchTable('Articles')->touch()`,
   `$table->touch()` with a typed parameter, `$this->touch()` inside the table,
   `$this->Articles->Comments->touch()`) are probed in session 1 and recorded below.
@@ -430,11 +431,18 @@ nearest-initialize rule, and which `EntityAssociations.propertiesOf()` uses for 
 Extending only the first would leave the entity property untyped.
 
 So the step first pulls the chain reading into one private function, `chainConfigurations()`,
-that returns the per-class `ClassConfiguration` list for a chain, and makes both paths use it.
-It then adds the behaviors' loads there: for each class in the chain, resolve its `BEHAVIOR`
-loads with the rule above, and for each attached behavior class, read the chain of that class
-for `ASSOCIATION` loads flagged `viaTable`, inserted into the configuration list at the position
-of the attaching table class. A behavior's load in its own `initialize()` is an initialize load
+that returns the per-class `ClassConfiguration` list for a chain as the index has it, with no
+behavior expansion, and makes both paths use it. `behaviors()` from step 2 reads through it
+too, and so does the reading of a behavior's own chain below.
+
+The behaviors' loads are added by a second function, `withBehaviorAssociations()`, which only
+the two association paths call, and `resolveChain()` only when the kinds asked for include
+`ASSOCIATION`. Keeping it out of the reader is what stops the recursion: `behaviors()` resolves
+`BEHAVIOR` loads from the plain configurations and never reaches the expansion, and the
+expansion calls `behaviors()` and the plain reader, never itself. For each class in the chain
+it resolves the `BEHAVIOR` loads with the rule above, and for each attached behavior class
+reads the chain of that class for `ASSOCIATION` loads flagged `viaTable`, inserted into the
+configuration list at the position of the attaching table class. A behavior's load in its own `initialize()` is an initialize load
 when the `addBehavior()` is one, and an other load otherwise, since the behavior's `initialize()`
 runs when the behavior is attached. The reader keeps every load paired with the class whose
 file declares it: a behavior's loads form their own entry, keyed by the behavior's FQN, placed
@@ -558,7 +566,9 @@ Methods:
    `$this->fetchTable('Pages')->slug($e)` and a `PagesTable $table` parameter's `$table->slug($e)`
    give `string` too; inside `PagesTable`, `$this->slug($e)` gives `string`.
 8. `$this->Pages->touch()` keeps the table's own declared type, proving the provider stays out.
-9. `$this->Movies->slug($e)` is not typed by the provider and stays `mixed`.
+9. `$this->Movies->slug($e)` is not typed by the provider: its completed type is the unknown
+   `?` the session 1 probe recorded for a method the table lacks, with no `string` and no
+   `mixed`. The same for `$this->Pages->notMixedIn()`.
 10. Goto declaration on `slug` reaches `SluggableBehavior::slug()`; on `trail` reaches
     `AuditBehavior::writeAudit()`; on `reslug` in a table attaching `ChildSluggable` reaches the
     child class's method and `slug` reaches the parent's.
@@ -573,7 +583,9 @@ Instance:
     is exactly `\App\Model\Behavior\SluggableBehavior`; `getBehavior('Timestamp')` is exactly
     `\Cake\ORM\Behavior\TimestampBehavior`; `getBehavior('CounterCache')` is exactly the app
     class and not the core one; `$this->PluginPages->getBehavior('Sluggable')` is the plugin
-    class.
+    class. `$this->Pages->behaviors()->get('Sluggable')->` completes `slug` and has exactly the
+    same type, and `behaviors()->get('Timestamp')` the core class; `get('Sluggable')` on a
+    receiver that is not a table's `behaviors()`, such as `getTableLocator()`, is left alone.
 13. `getBehavior('<caret>')` offers `Timestamp`, `Sluggable`, `Audit` and `Tree`; so do
     `hasBehavior()` and `removeBehavior()`. Goto declaration on the string reaches the class.
 14. `addBehavior('<caret>')` in a table offers the app and core behaviors by short name,
@@ -635,8 +647,8 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
 ## Decisions
 
 - **No strikeout for the deprecated form on 5.3.** The plugin knows the major version only
-  (`Settings.cakeMajorVersion`), so it cannot tell 5.2 from 5.3; the mixed-in methods are offered the same way on every version,
-  and the `getBehavior()` support in step 5 gives the recommended form equal footing. If minor
+  (`Settings.cakeMajorVersion`), so it cannot tell 5.2 from 5.3; the mixed-in methods are
+  offered the same way on every version, and the `getBehavior()` support in step 5 gives the recommended form equal footing. If minor
   version detection arrives, `withStrikeoutness` on the mixed-in elements is a one-line change.
 - **An unread `implementedMethods` option offers nothing** rather than falling back to
   reflection, because the option exists to restrict or rename, and offering the unrestricted
@@ -782,3 +794,10 @@ The rest confirmed what the plan assumed: the vendor-namespaced and not-loaded p
 the alias being the only name `getBehavior()`, `hasBehavior()` and `removeBehavior()` take, the
 finder name's case, and `$_defaultConfig` inheritance. One version difference turned up that the
 plugin does not depend on: `removeBehavior()` leaves the methods mapped on 3.
+
+**Review of the plan** (after the new assumption tests): three points were folded in. Step 7
+had the shared chain reader expand behaviors while `behaviors()` read through that same reader,
+which would recurse; the expansion is now a separate function only the association paths call.
+Test 12 covers `behaviors()->get()`, which step 5 promised and no test asserted. And test 9,
+the context and "What PhpStorm does today" still said an unanswered method is `mixed`, from
+before the session 1 probe found it completes to `?`; they now agree with the probe.
