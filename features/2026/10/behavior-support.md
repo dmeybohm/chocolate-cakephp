@@ -39,7 +39,27 @@ Two pieces of groundwork this plan builds on are merged, or will be before imple
   added `ConfiguredMemberService.associationLoads()`, which this feature extends so that
   associations a behavior adds reach entity properties as well as query methods.
 
-The branch starts from `main` at `1871b27d`, the #315 merge, so both pieces are in place.
+The branch starts from `main` at `1871b27d`, the #315 merge, so both pieces are in place. `main`
+was merged in again at `ddbe4ecf` on 2026-11-11, up to #324; none of that work touched
+`ConfiguredMemberIndex` or `ConfiguredMemberService`, and what they change for this plan is:
+
+- **The app root** ([composer-json-app-root](../11/composer-json-app-root.md), #323). Configured
+  plugin paths are relative to the directory of the configured composer.json, and the test base
+  classes set it to `cakeN/composer.json`. Behavior classes are resolved by namespace, never by
+  path, so the resolution rules below are unaffected; only the fixture paths are read from that
+  root.
+- **The major version** ([route-controller-action-completion](../11/route-controller-action-completion.md),
+  #324). `Settings.cakeMajorVersion` gives 3, 4 or 5, from the composer.json constraint or the
+  new setting. Nothing here needs it: every difference between 3, 4 and 5 this plan meets is
+  read from the attached sources or indexed in all its spellings. It is still a major version
+  only, which is what the deprecation decision turns on.
+- **Plugin names without a configured plugin.** `controllerClassFqn()` and `cellClassFqn()` take
+  a plugin name that is not configured as its namespace with `/` as `\`, which is how CakePHP
+  maps one, and covers vendor-namespaced plugins such as `Acme/Vendored`. Behavior resolution
+  follows it; see step 2.
+- **Completion that inserts the name a load takes.** Table locator aliases complete a plugin's
+  table as `Plugin.Table`, and `routeControllerNameFromClass()` names a controller the way a
+  route target does. `addBehavior('<caret>')` follows them; see step 5.
 
 ## How CakePHP attaches a behavior
 
@@ -117,8 +137,9 @@ starting with two underscores.
 methods on the table instance is deprecated. Use `$table->getBehavior('YourBehavior')->method()`
 instead." The finder path is not deprecated. So on 5.x the idiomatic forms are `find('children')`
 and `$table->getBehavior('Tree')->recover()`, and the plugin's support for `getBehavior()` is as
-important as the mixed-in methods. The plugin only knows the major version, so it cannot strike
-the mixed-in form out on 5.3 alone; see the decisions.
+important as the mixed-in methods. The plugin only knows the major version
+(`Settings.cakeMajorVersion`), so it cannot strike the mixed-in form out on 5.3 alone; see the
+decisions.
 
 ### Associations a behavior adds
 
@@ -270,7 +291,10 @@ which `testBareNameLoadsAppBehaviorBeforeCore` pins: the app class shadows the c
 same name, so an app `TimestampBehavior` must not show the core behavior's methods beside its
 own. The configured plugins are not candidates for a bare name, even from a plugin's own table
 (`testBareNameDoesNotReachPluginBehavior`); a plugin-dotted name resolves only under that plugin,
-and a `className` option follows the same first-match rule for its plain name. On CakePHP 2 the
+whose namespace is the configured plugin's, or the plugin name with `/` as `\` when none is
+configured, as `cellClassFqn()` does, rather than the every-namespace fallback `resolveLoad()`
+has for the other kinds; and a `className` option follows the same first-match rule for its
+plain name. On CakePHP 2 the
 class is the global `\{N}Behavior` whatever the prefix. The convention helper keeps returning
 every candidate for the other kinds, where `$this->Foo` genuinely can be any of them.
 
@@ -298,7 +322,9 @@ skip `_`-prefixed names and the nine callbacks, no finders, no options, and the 
 dropped in the presentation.
 
 The maps are cached per class and option set on `PhpFilesModificationTracker`, as the entity
-accessor tables are.
+accessor tables are. They depend on the class alone. Anything cached above them, such as a
+table's resolved behaviors, depends on the app namespace and the plugin configuration too, and
+takes `Settings.modificationTracker` as a second dependency, as `RenderingControllers` does.
 
 Two helpers the features share: `behaviorMethodsOnTables(project, tableFqns)` returns the
 mixed-in methods of every attached behavior minus the names any class in the table chain
@@ -359,7 +385,10 @@ method for a name the tables do not declare. `TableLocatorTypeProvider` already 
   `ControllerComponentsGotoDeclarationHandler` once `addbehavior` is in `methodCallSources`;
   `addBehaviors()` keys are left without navigation, as `addAssociations()` leaves are.
   Completion of behavior names inside `addBehavior('<caret>')` from the convention candidates
-  (every `*Behavior` subclass in the app, the plugins and the core) is cheap and included.
+  (every `*Behavior` subclass in the app, the plugins and the core) is cheap and included. Each
+  is inserted as the name that loads it: the short name for an app or core behavior, once when
+  the app shadows a core one, and `Plugin.Name` for a plugin's, since a bare name never reaches
+  a plugin. The plugin part is the configured plugin's name, or the namespace with `\` as `/`.
 
 ### 6. CakePHP 4 and 3
 
@@ -436,6 +465,12 @@ Under `cake5/src5/Model/Behavior/` (new directory), then the cake4 and cake3 cop
   `$this->table()->hasMany('TagLinks')`. The association case.
 - `vendor/test/test_plugin/src/Model/Behavior/SluggableBehavior.php` with
   `public function pluginSlug(): string`. The plugin case.
+- `vendor/acme/vendored/src/Model/Behavior/StampedBehavior.php` (cake5 only, beside the
+  `ThingsController` the route work added) with `public function stamp(): string`. The
+  vendor-namespaced plugin, which no test configures.
+
+The paths are under `cake5/`, the app root the base test case sets through
+`cake5/composer.json`.
 
 Tables, under `cake5/src5/Model/Table/`, leaving `MoviesTable`, `UsersTable` and the entity
 feature's tables untouched since their tests assert exact lists:
@@ -514,8 +549,10 @@ Instance:
     class.
 13. `getBehavior('<caret>')` offers `Timestamp`, `Sluggable`, `Audit` and `Tree`; so do
     `hasBehavior()` and `removeBehavior()`. Goto declaration on the string reaches the class.
-14. `addBehavior('<caret>')` in a table offers the `*Behavior` subclasses by short name, and
-    goto declaration on `addBehavior('Sluggable')` reaches the app class, on
+14. `addBehavior('<caret>')` in a table offers the app and core behaviors by short name,
+    `CounterCache` once, the plugin's as `TestPlugin.Sluggable` and the unconfigured plugin's as
+    `Acme/Vendored.Stamped`. Goto declaration on `addBehavior('Sluggable')` reaches the app
+    class, on `addBehavior('Acme/Vendored.Stamped')` the vendored class, and on
     `addBehaviors(['TestPlugin.Sluggable'])` nothing.
 
 Associations:
@@ -548,7 +585,9 @@ locally and CI runs the suite.
 ## Plan
 
 1. **Assumption tests** on 2, 3, 4 and 5, with their fixtures and catalogue rows. Fold what
-   they correct into the sections above.
+   they correct into the sections above. One more to add before step 4 of this list: that
+   `addBehavior('Acme/Vendored.Name')` loads `Acme\Vendored\Model\Behavior\NameBehavior`, using
+   the `Acme/Vendored` plugin the route tests added to the 3, 4 and 5 apps.
 2. **Platform checks**, recorded in the progress log: whether an `M`-keyed non-intercepting
    provider coexists with the bundled intercepting ones without the duplicate-provider error,
    the receiver encodings for the method references in tests 7 and 9, and whether the
@@ -570,8 +609,8 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
 
 ## Decisions
 
-- **No strikeout for the deprecated form on 5.3.** The plugin knows the major version only, so
-  it cannot tell 5.2 from 5.3; the mixed-in methods are offered the same way on every version,
+- **No strikeout for the deprecated form on 5.3.** The plugin knows the major version only
+  (`Settings.cakeMajorVersion`), so it cannot tell 5.2 from 5.3; the mixed-in methods are offered the same way on every version,
   and the `getBehavior()` support in step 5 gives the recommended form equal footing. If minor
   version detection arrives, `withStrikeoutness` on the mixed-in elements is a one-line change.
 - **An unread `implementedMethods` option offers nothing** rather than falling back to
@@ -675,3 +714,15 @@ so both now share one chain reader. A second pass caught that the reader must ke
 behavior's loads under the behavior's own FQN, because the entity navigation applies a load's
 offset to the file of the class reported with it.
 
+### Session #2
+
+`main` merged at `ddbe4ecf` (2026-11-11) with no conflicts; the assumption catalogue took both
+sides' rows. The route work changed each app's `Application.php`, routes and plugin list, so the
+behavior assumption tests were run again on the merged tree: 10 on 2 and 22 each on 3, 4 and 5,
+all passing.
+
+The plan was read against what merged and updated in place: the list under Context says what
+changed, step 2 gained the namespace rule for a plugin that is not configured and the settings
+dependency for caches above the member maps, step 5 and test 14 insert the name a load takes,
+and plan step 1 has one more assumption test to write, for a vendor-namespaced plugin name. No
+plugin code has been written yet, so nothing else needed rebasing.
