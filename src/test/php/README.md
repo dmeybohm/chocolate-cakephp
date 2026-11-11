@@ -369,6 +369,7 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | Reflection includes the public methods and finders of a trait the behavior uses, and public static methods | `testReflectionIncludesTraitAndStaticMethods` | 3, 4, 5. 2: `testMappedMethodsIncludeTraitAndStaticMethods` |
 | A reflected finder's name is the method name without `find` and with only its first letter lowered, `findTopRated` is `topRated`, and is matched in any case | `testReflectedFinderNameKeepsItsCaseAfterTheFirstLetter` | 3, 4, 5 |
 | `$_defaultConfig` maps restrict the mixed-in methods and finders to the listed aliases, for app and core behaviors | `testDefaultConfigMapsRestrictMixedInMethods` | 3, 4, 5 |
+| A `$_defaultConfig` naming only one of the two maps leaves the other to reflection | `testMethodsAndFindersFallBackToReflectionSeparately` | 3, 4, 5 |
 | A child behavior inherits its parent's `$_defaultConfig` maps, so its own public methods are not mixed in | `testChildBehaviorInheritsDefaultConfigMaps` | 3, 4, 5 |
 | A child behavior redeclaring `$_defaultConfig` without the maps is reflected, its parent's unmapped methods included | `testChildBehaviorRedeclaringDefaultConfigIsReflected` | 3, 4, 5 |
 | `implementedMethods` in the load options merges with the defaults by method name, custom alias winning, and `[]` disables them | `testLoadOptionsMergeWithDefaultMapsByMethodName` | 3, 4, 5 |

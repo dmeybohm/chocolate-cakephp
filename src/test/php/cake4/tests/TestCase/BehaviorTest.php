@@ -419,4 +419,23 @@ class BehaviorTest extends TestCase
         $this->expectException(RuntimeException::class);
         $table->addBehavior('Sluggable', ['className' => 'Probe.Sluggable']);
     }
+
+    public function testMethodsAndFindersFallBackToReflectionSeparately(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('FindersMapped');
+        $behavior = $table->getBehavior('FindersMapped');
+        $methods = $behavior->implementedMethods();
+        ksort($methods);
+        $this->assertSame(['stampIt' => 'stampIt', 'unstamp' => 'unstamp'], $methods);
+        $this->assertSame(['recent' => 'findLatest'], $behavior->implementedFinders());
+
+        $other = $this->table();
+        $other->addBehavior('MethodsMapped');
+        $behavior = $other->getBehavior('MethodsMapped');
+        $finders = $behavior->implementedFinders();
+        ksort($finders);
+        $this->assertSame(['mark' => 'stampIt'], $behavior->implementedMethods());
+        $this->assertSame(['latest' => 'findLatest', 'oldest' => 'findOldest'], $finders);
+    }
 }

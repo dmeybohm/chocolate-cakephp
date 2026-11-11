@@ -303,10 +303,28 @@ enclosing method name as usual. The flag keeps the load out of the behavior's ow
 
 ### 2. Resolve a table's behaviors
 
-`ConfiguredMemberService.behaviors(project, tableFqns): List<AttachedBehavior>` walks the table
-chain with `InitializeChainResolver`, kinds `{BEHAVIOR}`, so an `initialize()` load replaces an
-ancestor's load of the same alias and a load elsewhere is unioned, exactly as for components.
-Each result carries the alias, the resolved `PhpClass` list, the load (for its options and
+`ConfiguredMemberService.behaviors(project, tableFqns): List<AttachedBehavior>` reads the table
+chain's `BEHAVIOR` loads and picks the load in force for each alias itself, rather than taking
+`InitializeChainResolver`'s nearest-class rule, because a repeated behavior load does not
+replace the earlier one at runtime: the registry keeps the first instance when the later load
+has no options, and throws when it has others
+(`testLoadingALoadedAliasAgainKeepsTheFirstInstance`, `testLoadingALoadedAliasWithOtherOptionsThrows`).
+A working table therefore has at most one `initialize()` load of an alias that carries options,
+wherever it sits in the chain and whichever side of `parent::initialize()` it runs on, and that
+is the load in force. So, among the `initialize()` loads of an alias, receiver class first and
+in source order within a class:
+
+- the first that carries something the plugin reads, a `className` or an `implementedMethods`
+  or `implementedFinders` option, read or unread, is the load in force;
+- when none does, the first is, and they all name the same class anyway.
+
+A child that re-adds its parent's alias plainly thus keeps the parent's options, and a child
+that does not call `parent::initialize()` and loads the alias with its own options gets its
+own. The one program this misreads is a child that skips `parent::initialize()` and loads the
+alias plainly while the parent's load has options, which is accepted. Loads outside
+`initialize()` are unioned as for components: they add the alias when no `initialize()` load
+has it, and are ignored for an alias one does, since a repeat changes nothing or throws. Each
+result carries the alias, the resolved `PhpClass` list, the load (for its options and
 offset), and whether it is an initialize load. Class resolution adds the `BEHAVIOR` case to
 `resolveLoad()`, with a rule of its own rather than `conventionCandidates()`: a bare name is the
 *first existing* class of the app namespace's `Model\Behavior\{N}Behavior` and then
@@ -329,7 +347,10 @@ behavior class the way `_reflectionCache()` does, then applies the load's option
 1. Read `implementedMethods` and `implementedFinders` from the `$_defaultConfig` array literal
    of the class or the nearest ancestor that declares the property. A key that is present but
    not an array literal is unknown.
-2. If neither key is set, reflect: walk the class and its parents up to and excluding
+2. For each of the two keys that is not set, reflect, each on its own
+   (`testMethodsAndFindersFallBackToReflectionSeparately`): a behavior that maps only its
+   finders still mixes in every reflected method, and one that maps only its methods every
+   reflected finder. Reflection walks the class and its parents up to and excluding
    `\Cake\ORM\Behavior`, nearest declaration first, each with the traits it uses, taking public
    methods, static ones included, skipping names the
    base class has (looked up from `\Cake\ORM\Behavior` in `PhpIndex`, so the list follows the
@@ -343,7 +364,8 @@ behavior class the way `_reflectionCache()` does, then applies the load's option
 4. The result maps each lowercase alias to the `Method` element and the alias as written.
 
 CakePHP 2 uses the same class with the other rules: parents up to and excluding `\ModelBehavior`,
-with their traits and static methods as above, skip `_`-prefixed names and the nine callbacks, no finders, no options, and the first parameter
+with their traits and static methods as above, skip `_`-prefixed names and the nine callbacks,
+no finders, no options, and the first parameter
 dropped in the presentation.
 
 The maps are cached per class and option set on `PhpFilesModificationTracker`, as the entity
@@ -520,6 +542,11 @@ feature's tables untouched since their tests assert exact lists:
   `audit` is not (the `trail` alias replaced it, by the merge rule), and `notMixedIn` is absent. A `public function enableTree(): void` calls `addBehavior('Tree')`
   outside `initialize()`, so `recover` and the `children` finder are offered as a union.
 - `ChildPagesTable extends PagesTable` with no `initialize()`.
+- `RepeatPagesTable extends PagesTable`, whose `initialize()` calls `parent::initialize()` and
+  then `addBehavior('Audit')` plainly: the parent's `trail` alias stays in force.
+- `FindersMappedBehavior`, with `$_defaultConfig = ['implementedFinders' => ['recent' => 'findLatest']]`
+  and public `stampIt()`, `findLatest()` and `findOldest()`, attached by `RepeatPagesTable`: the
+  half-mapped case.
 - `PluginPagesTable`: `addBehaviors(['TestPlugin.Sluggable', 'Audit' => ['implementedMethods' => []]])`,
   so `pluginSlug` comes from the plugin class only, `slug` too, and no `Audit` method is offered.
 - `PhotosTable` with `addBehavior('Taggable')`, plus `TagsTable`, `TagLinksTable`, and the
@@ -554,7 +581,9 @@ Finders, with `$this->Pages` in a controller unless stated:
 
 Methods:
 
-5. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `counted`, `recover`, `moveUp`
+5. `$this->RepeatPages-><caret>` offers `trail` and not `audit`, and `stampIt` from the
+   half-mapped behavior; `find('<caret>')` on it offers `recent` and neither `latest` nor
+   `oldest`. `$this->Pages-><caret>` offers `slug`, `trail`, `timestamp`, `counted`, `recover`, `moveUp`
    and the rest of `Tree`'s map, not `audit`, not `notMixedIn`, not `writeAudit` under its own
    name, not `updateCounterCache` (the app `CounterCacheBehavior` shadows the core one), not
    `touch` from the behavior (the table's own `touch` is PhpStorm's), not `_normalize`, not
@@ -661,6 +690,10 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
   too; completion offers the alias as written in the map.
 - **Behaviors attached outside `initialize()` are unioned**, following the configured-member
   rule. For behaviors there is no convention list to fall back to, so the union only adds.
+- **A repeated load of an alias does not replace the earlier one.** The load in force is the
+  one carrying options, not the nearest to the receiver, following the registry; see step 2.
+  This is where behaviors part from components, whose `loadComponent()` in a child replaces the
+  parent's.
 - **A behavior name resolves to one class, first match**, unlike the other kinds, because the
   framework loads one class and the plugin has the assumption test to say which. Returning
   every existing candidate would show an app behavior's methods beside the core behavior's it
@@ -672,14 +705,6 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
   cheap rejections come first (a receiver class whose name does not end in `Table` or `Model`
   conventions, a method the class declares), and the behavior resolution is cached, but there is
   no timing run planned; `ViewVariablePerformanceTest` is the model if one is needed.
-- **A child table loading its parent's alias again.** `InitializeChainResolver` lets a load in a
-  child's `initialize()` replace an ancestor's load of the same alias. At runtime, after
-  `parent::initialize()`, the second `addBehavior('Audit')` with no options keeps the parent's
-  instance and its options, and one with other options throws. So for behaviors the ancestor's
-  load is the one in force whenever the child's has no options, and the child's only when it
-  does not call `parent::initialize()`. Leaning towards keeping the ancestor's load when the
-  descendant's has no options and no `className`, and the resolver's rule otherwise; to settle
-  in step 2.
 - **`$_defaultConfig` on a parent behavior** with the child overriding the property: the nearest
   declaration wins, which matches PHP property redeclaration and is now pinned both ways: a
   child without the property keeps the parent's maps, and one that redeclares it without them
@@ -801,3 +826,10 @@ which would recurse; the expansion is now a separate function only the associati
 Test 12 covers `behaviors()->get()`, which step 5 promised and no test asserted. And test 9,
 the context and "What PhpStorm does today" still said an unanswered method is `mixed`, from
 before the session 1 probe found it completes to `?`; they now agree with the probe.
+
+**Second review**: two more points. Step 2 reflected only "if neither key is set", where the
+framework falls back for methods and finders separately; that is now pinned
+(`testMethodsAndFindersFallBackToReflectionSeparately`, 34 tests each on 3, 4 and 5, with the
+`FindersMappedBehavior` and `MethodsMappedBehavior` fixtures) and the algorithm says so. And
+the repeated-load question is settled rather than left open: `behaviors()` picks the load that
+carries options instead of using the nearest-class rule, as step 2 and the decisions now state.
