@@ -8,6 +8,7 @@ enum class MemberKind {
     TABLE,
     HELPER,
     ASSOCIATION,
+    BEHAVIOR,
 }
 
 /**
@@ -46,6 +47,11 @@ data class MemberLoad(
     val associationType: AssociationType? = null,
     val propertyName: String? = null,
     val hasUnreadPropertyName: Boolean = false,
+    val methodAliases: Map<String, String>? = null,
+    val hasUnreadMethodAliases: Boolean = false,
+    val finderAliases: Map<String, String>? = null,
+    val hasUnreadFinderAliases: Boolean = false,
+    val viaTable: Boolean = false,
 ) {
     val isInitializeLoad: Boolean
         get() = source == LoadSource.PROPERTY_ARRAY ||
@@ -93,6 +99,7 @@ internal val methodCallSources: Map<String, MemberKind> = mapOf(
     "hasone" to MemberKind.ASSOCIATION,
     "hasmany" to MemberKind.ASSOCIATION,
     "belongstomany" to MemberKind.ASSOCIATION,
+    "addbehavior" to MemberKind.BEHAVIOR,
 )
 
 // By lowercase method name, array key or property name:
@@ -125,6 +132,22 @@ internal const val HELPERS_PROPERTY = "helpers"
 
 internal const val ADD_ASSOCIATIONS_METHOD = "addassociations"
 
+internal const val ADD_BEHAVIORS_METHOD = "addbehaviors"
+
+// The CakePHP 2 `$this->Behaviors->load()` receiver and method:
+internal const val BEHAVIORS_PROPERTY = "Behaviors"
+
+internal const val BEHAVIORS_LOAD_METHOD = "load"
+
+// How a behavior reaches the table it is attached to: `$this->_table`, `$this->table()`
+// and `$this->getTable()`.
+internal const val BEHAVIOR_TABLE_PROPERTY = "_table"
+
+internal val behaviorTableMethods: Set<String> = setOf(
+    "table",
+    "gettable",
+)
+
 internal const val BIND_MODEL_METHOD = "bindmodel"
 
 internal const val HABTM_PROPERTY = "hasAndBelongsToMany"
@@ -147,4 +170,5 @@ internal val propertyArraySources: Map<String, MemberKind> = mapOf(
     HELPERS_PROPERTY to MemberKind.HELPER,
     "components" to MemberKind.COMPONENT,
     "uses" to MemberKind.TABLE,
+    "actsAs" to MemberKind.BEHAVIOR,
 ) + cakeTwoAssociationTypeKeys.associateWith { MemberKind.ASSOCIATION }

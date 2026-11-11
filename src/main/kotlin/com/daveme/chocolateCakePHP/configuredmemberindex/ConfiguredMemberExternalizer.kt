@@ -23,6 +23,11 @@ object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
             out.writeInt(load.associationType?.ordinal ?: NO_ASSOCIATION_TYPE)
             writeNullableUTF(out, load.propertyName)
             out.writeBoolean(load.hasUnreadPropertyName)
+            writeNullableMap(out, load.methodAliases)
+            out.writeBoolean(load.hasUnreadMethodAliases)
+            writeNullableMap(out, load.finderAliases)
+            out.writeBoolean(load.hasUnreadFinderAliases)
+            out.writeBoolean(load.viaTable)
         }
         out.writeInt(value.declarations.size)
         for (declaration in value.declarations) {
@@ -50,6 +55,11 @@ object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
                     ?.let { AssociationType.values()[it] },
                 propertyName = readNullableUTF(input),
                 hasUnreadPropertyName = input.readBoolean(),
+                methodAliases = readNullableMap(input),
+                hasUnreadMethodAliases = input.readBoolean(),
+                finderAliases = readNullableMap(input),
+                hasUnreadFinderAliases = input.readBoolean(),
+                viaTable = input.readBoolean(),
             )
         }
         val declarations = List(input.readInt()) {
@@ -69,6 +79,28 @@ object ConfiguredMemberExternalizer : DataExternalizer<ClassConfiguration> {
         if (value != null) {
             out.writeUTF(value)
         }
+    }
+
+    private fun writeNullableMap(out: DataOutput, value: Map<String, String>?) {
+        out.writeBoolean(value != null)
+        if (value != null) {
+            out.writeInt(value.size)
+            for ((key, entry) in value) {
+                out.writeUTF(key)
+                out.writeUTF(entry)
+            }
+        }
+    }
+
+    private fun readNullableMap(input: DataInput): Map<String, String>? {
+        if (!input.readBoolean()) {
+            return null
+        }
+        val result = linkedMapOf<String, String>()
+        repeat(input.readInt()) {
+            result[input.readUTF()] = input.readUTF()
+        }
+        return result
     }
 
     private fun readNullableUTF(input: DataInput): String? =

@@ -63,7 +63,18 @@ data class TableAssociationLoad(
     val load: MemberLoad,
 )
 
+/**
+ * A behavior attached to a table class: the load in force for its alias, and the classes it
+ * resolves to.
+ */
+data class AttachedBehavior(
+    val load: MemberLoad,
+    val classes: List<PhpClass>,
+)
+
 object ConfiguredMemberService {
+
+    private const val CAKE_ORM_BEHAVIOR_NAMESPACE = "\\Cake\\ORM\\Behavior"
 
     private const val CAKE_VIEW_CLASS = "\\Cake\\View\\View"
 
@@ -156,6 +167,54 @@ object ConfiguredMemberService {
                 loads.filter { !it.isInitializeLoad || nearestInitialize[it.alias] == fqn }
                     .map { TableAssociationLoad(fqn, it) }
             }
+        }
+    }
+
+    /**
+     * The behaviors the chain of [tableFqn] attaches, one per alias for the `initialize()` loads
+     * and one per load for the others.
+     */
+    fun behaviors(project: Project, tableFqn: String): List<AttachedBehavior> {
+        val phpIndex = PhpIndex.getInstance(project)
+        val settings = Settings.getInstance(project)
+        val chain = classChain(phpIndex, tableFqn)
+        if (settings.cake2Enabled && CakeTwoBase.ofChain(phpIndex, chain) != null) {
+            return emptyList()
+        }
+        return behaviorLoadsInForce(chainConfigurations(project, chain)).map { load ->
+            AttachedBehavior(load, resolveLoad(phpIndex, settings, load).flatMap { phpIndex.getClassesByFQN(it) })
+        }
+    }
+
+    // A repeated load of an alias does not replace the first one to run, which is the farthest
+    // ancestor's by the convention of calling parent::initialize() first; a plain repeat changes
+    // nothing, so a load with options wins over an ancestor's plain one.
+    private fun behaviorLoadsInForce(configurations: List<ClassConfiguration>): List<MemberLoad> {
+        val farthestFirst = configurations.reversed()
+            .flatMap { configuration -> configuration.loads.filter { it.kind == MemberKind.BEHAVIOR } }
+        return farthestFirst.map { it.alias }.distinct().flatMap { alias ->
+            val loads = farthestFirst.filter { it.alias == alias }
+            val initializeLoads = loads.filter { it.isInitializeLoad }
+            if (initializeLoads.isEmpty()) {
+                loads
+            } else {
+                listOf(initializeLoads.firstOrNull { it.carriesOptions() } ?: initializeLoads.first())
+            }
+        }
+    }
+
+    private fun MemberLoad.carriesOptions(): Boolean =
+        className != null || hasUnreadClassName ||
+            methodAliases != null || hasUnreadMethodAliases ||
+            finderAliases != null || hasUnreadFinderAliases
+
+    // The configuration of each class in [chain] as the index has it, in the chain's order.
+    private fun chainConfigurations(project: Project, chain: List<String>): List<ClassConfiguration> {
+        val fileBasedIndex = FileBasedIndex.getInstance()
+        val scope = GlobalSearchScope.allScope(project)
+        return chain.map { fqn ->
+            val values = fileBasedIndex.getValues(CONFIGURED_MEMBER_INDEX_KEY, fqn, scope)
+            ClassConfiguration(values.flatMap { it.loads }, values.flatMap { it.declarations })
         }
     }
 
@@ -262,6 +321,9 @@ object ConfiguredMemberService {
     }
 
     private fun resolveLoad(phpIndex: PhpIndex, settings: Settings, load: MemberLoad): List<String> {
+        if (load.kind == MemberKind.BEHAVIOR) {
+            return resolveBehaviorLoad(phpIndex, settings, load)
+        }
         val className = load.className
         if (className != null && className.contains('\\')) {
             return listOf(className.absoluteClassName())
@@ -277,6 +339,31 @@ object ConfiguredMemberService {
             return conventionCandidates(phpIndex, settings, load.kind, shortName)
         }
         return conventionCandidates(phpIndex, settings, load.kind, name)
+    }
+
+    /**
+     * `App::className()`: a plugin-dotted name is only under that plugin, and a bare name is the
+     * first of the app's class and the core's that exists.
+     */
+    private fun resolveBehaviorLoad(phpIndex: PhpIndex, settings: Settings, load: MemberLoad): List<String> {
+        val className = load.className
+        if (className != null && className.contains('\\')) {
+            return listOf(className.absoluteClassName())
+        }
+        val name = className ?: load.loadedName
+        val dotIndex = name.indexOf('.')
+        if (dotIndex > 0) {
+            val plugin = name.substring(0, dotIndex)
+            val namespace = (settings.findPluginConfigByName(plugin) as? CakeThreePluginConfig)?.namespace
+                ?: ("\\" + plugin.replace('/', '\\'))
+            return listOf(classFqn(namespace, MemberKind.BEHAVIOR, name.substring(dotIndex + 1)))
+        }
+        return listOf(
+            classFqn(settings.appNamespace, MemberKind.BEHAVIOR, name),
+            "$CAKE_ORM_BEHAVIOR_NAMESPACE\\${name}Behavior",
+        ).firstOrNull { phpIndex.getClassesByFQN(it).isNotEmpty() }
+            ?.let { listOf(it) }
+            .orEmpty()
     }
 
     private fun cakeTwoPluginOfClass(project: Project, phpIndex: PhpIndex, settings: Settings, classFqn: String): String? {
@@ -317,6 +404,7 @@ object ConfiguredMemberService {
             MemberKind.COMPONENT -> "\\${name}Component"
             MemberKind.HELPER -> "\\${name}Helper"
             MemberKind.TABLE, MemberKind.ASSOCIATION -> "\\$name"
+            MemberKind.BEHAVIOR -> "\\${name}Behavior"
         }
 
     private fun classFqn(namespace: String, kind: MemberKind, name: String): String {
@@ -324,6 +412,7 @@ object ConfiguredMemberService {
             MemberKind.COMPONENT -> "Controller\\Component\\${name}Component"
             MemberKind.HELPER -> "View\\Helper\\${name}Helper"
             MemberKind.TABLE, MemberKind.ASSOCIATION -> "Model\\Table\\${name}Table"
+            MemberKind.BEHAVIOR -> "Model\\Behavior\\${name}Behavior"
         }
         return "${namespace.absoluteClassName()}\\$path"
     }

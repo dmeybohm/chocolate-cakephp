@@ -95,7 +95,7 @@ internal class CakeTwoChainResolver(
                 MemberKind.COMPONENT -> mergedWithAppController("components")
                 MemberKind.HELPER -> mergedWithAppController("helpers")
                 MemberKind.TABLE -> models()
-                MemberKind.ASSOCIATION -> null
+                MemberKind.ASSOCIATION, MemberKind.BEHAVIOR -> null
             }
             CakeTwoBase.HELPER -> if (kind == MemberKind.HELPER) ownValue("helpers") else null
             CakeTwoBase.MODEL -> if (kind == MemberKind.ASSOCIATION) associations() else null
