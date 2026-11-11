@@ -5,12 +5,7 @@ import com.daveme.chocolateCakePHP.Settings
 import com.daveme.chocolateCakePHP.absoluteClassName
 import com.daveme.chocolateCakePHP.cake.cakeTwoPluginName
 import com.daveme.chocolateCakePHP.findPluginConfigByName
-import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.util.Key
-import com.intellij.psi.util.CachedValue
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.search.GlobalSearchScope
@@ -18,7 +13,6 @@ import com.intellij.util.indexing.FileBasedIndex
 import com.jetbrains.php.PhpIndex
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The resolved type of one configured member, whether an `initialize()` load (or a property
@@ -74,19 +68,13 @@ data class TableAssociationLoad(
  * resolves to.
  */
 data class AttachedBehavior(
-    val alias: String,
     val load: MemberLoad,
     val classes: List<PhpClass>,
-    val isInitializeLoad: Boolean,
 )
 
 object ConfiguredMemberService {
 
     private const val CAKE_ORM_BEHAVIOR_NAMESPACE = "\\Cake\\ORM\\Behavior"
-
-    private val BEHAVIORS_CACHE_KEY = Key.create<CachedValue<ConcurrentHashMap<String, List<Pair<MemberLoad, Boolean>>>>>(
-        "com.daveme.chocolateCakePHP.configuredmemberindex.ConfiguredMemberService.behaviors"
-    )
 
     private const val CAKE_VIEW_CLASS = "\\Cake\\View\\View"
 
@@ -187,51 +175,30 @@ object ConfiguredMemberService {
      * and one per load for the others.
      */
     fun behaviors(project: Project, tableFqn: String): List<AttachedBehavior> {
-        val tracker = project.getService(PhpFilesModificationTracker::class.java)
-        tracker.ensureArmed()
-        val cache = CachedValuesManager.getManager(project).getCachedValue(
-            project,
-            BEHAVIORS_CACHE_KEY,
-            {
-                CachedValueProvider.Result.create(
-                    ConcurrentHashMap<String, List<Pair<MemberLoad, Boolean>>>(),
-                    tracker,
-                    Settings.getInstance(project).modificationTracker,
-                )
-            },
-            false
-        )
-        val loads = cache.getOrPut(tableFqn) { behaviorLoadsInForce(project, tableFqn) }
         val phpIndex = PhpIndex.getInstance(project)
         val settings = Settings.getInstance(project)
-        return loads.map { (load, isInitializeLoad) ->
-            AttachedBehavior(
-                alias = load.alias,
-                load = load,
-                classes = resolveLoad(phpIndex, settings, load).flatMap { phpIndex.getClassesByFQN(it) },
-                isInitializeLoad = isInitializeLoad,
-            )
+        val chain = classChain(phpIndex, tableFqn)
+        if (settings.cake2Enabled && CakeTwoBase.ofChain(phpIndex, chain) != null) {
+            return emptyList()
+        }
+        return behaviorLoadsInForce(chainConfigurations(project, chain)).map { load ->
+            AttachedBehavior(load, resolveLoad(phpIndex, settings, load).flatMap { phpIndex.getClassesByFQN(it) })
         }
     }
 
     // A repeated load of an alias does not replace the first one to run, which is the farthest
     // ancestor's by the convention of calling parent::initialize() first; a plain repeat changes
     // nothing, so a load with options wins over an ancestor's plain one.
-    private fun behaviorLoadsInForce(project: Project, tableFqn: String): List<Pair<MemberLoad, Boolean>> {
-        val phpIndex = PhpIndex.getInstance(project)
-        val chain = classChain(phpIndex, tableFqn)
-        if (Settings.getInstance(project).cake2Enabled && CakeTwoBase.ofChain(phpIndex, chain) != null) {
-            return emptyList()
-        }
-        val farthestFirst = chainConfigurations(project, chain).reversed()
+    private fun behaviorLoadsInForce(configurations: List<ClassConfiguration>): List<MemberLoad> {
+        val farthestFirst = configurations.reversed()
             .flatMap { configuration -> configuration.loads.filter { it.kind == MemberKind.BEHAVIOR } }
         return farthestFirst.map { it.alias }.distinct().flatMap { alias ->
             val loads = farthestFirst.filter { it.alias == alias }
             val initializeLoads = loads.filter { it.isInitializeLoad }
             if (initializeLoads.isEmpty()) {
-                loads.map { it to false }
+                loads
             } else {
-                listOf((initializeLoads.firstOrNull { it.carriesOptions() } ?: initializeLoads.first()) to true)
+                listOf(initializeLoads.firstOrNull { it.carriesOptions() } ?: initializeLoads.first())
             }
         }
     }

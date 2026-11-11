@@ -3,8 +3,6 @@ package com.daveme.chocolateCakePHP.behavior
 import com.daveme.chocolateCakePHP.PhpFilesModificationTracker
 import com.daveme.chocolateCakePHP.configuredmemberindex.MemberLoad
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
-import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.jetbrains.php.PhpIndex
@@ -14,7 +12,6 @@ import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A method a behavior mixes into the tables it is attached to, under the alias it is called by.
@@ -67,10 +64,6 @@ object BehaviorMembers {
         "configShallow",
     )
 
-    private val CACHE_KEY = Key.create<CachedValue<ConcurrentHashMap<String, DefaultMaps>>>(
-        "com.daveme.chocolateCakePHP.behavior.BehaviorMembers"
-    )
-
     /**
      * The members [behaviorClass] mixes in when loaded with the options of [load].
      */
@@ -91,13 +84,10 @@ object BehaviorMembers {
     private fun defaultMapsOf(project: Project, behaviorClass: PhpClass): DefaultMaps {
         val tracker = project.getService(PhpFilesModificationTracker::class.java)
         tracker.ensureArmed()
-        val cache = CachedValuesManager.getManager(project).getCachedValue(
-            project,
-            CACHE_KEY,
-            { CachedValueProvider.Result.create(ConcurrentHashMap<String, DefaultMaps>(), tracker) },
-            false
-        )
-        return cache.getOrPut(behaviorClass.fqn) { buildDefaultMaps(project, behaviorClass) }
+        // Parents and traits live in other files, so the class's own file is not enough:
+        return CachedValuesManager.getCachedValue(behaviorClass) {
+            CachedValueProvider.Result.create(buildDefaultMaps(project, behaviorClass), tracker)
+        }
     }
 
     private fun buildDefaultMaps(project: Project, behaviorClass: PhpClass): DefaultMaps {

@@ -904,8 +904,7 @@ Test 17 is eight new cases in `ConfiguredMemberIndexerTest` (28 in all, passing)
 `Configured*`, `Contain*` and `EntityAssociation*` tests on 2 to 5 still pass.
 
 **Plan step 4, the service.** `ConfiguredMemberService.behaviors(project, tableFqn)` picks the
-load in force per alias as step 2 describes, and caches the loads per table on the PHP files
-tracker and the settings tracker; classes are resolved on read. It takes one table rather than
+load in force per alias as step 2 describes. It takes one table rather than
 a list, because the shadowing rule is per table chain, and the helpers union over the receiver's
 tables. The chain reading it needs is `chainConfigurations()`, which step 7 will move the other
 two paths onto. CakePHP 2 chains return nothing until step 8. `resolveLoad()` sends `BEHAVIOR`
@@ -913,7 +912,8 @@ loads to `resolveBehaviorLoad()`, the first-match rule, which also serves `addBe
 navigation.
 
 `BehaviorMembers.of(project, behaviorClass, load)` in the new `behavior` package caches the
-default maps per class (configured from `$_defaultConfig`, or reflected) and applies the load's
+default maps on the class itself (configured from `$_defaultConfig`, or reflected), dependent on
+the PHP files tracker since parents and traits live in other files, and applies the load's
 options on each call, with `array_flip()`'s ordering for the merge. The framework's checks are
 `isset()` on 3 and 4 and `!== null` on 5, so an empty option map disables in the reflected case
 too, which the code follows. `behaviorMethodsOnTables()` and `behaviorFindersOnTables()` in
@@ -928,3 +928,11 @@ behavior class's name as tail text, and `CustomFinderGotoDeclarationHandler` add
 method beside the table's own. Tests 1 to 4 are `cake5/BehaviorFinderTest` (8 cases, passing),
 which also covers the `find()` half of test 5 through `RepeatPagesTable` and
 `FindersMappedBehavior`. The existing `CustomFinderTest` on 3, 4 and 5 still passes.
+
+**Simplification.** The first cut of `behaviors()` cached per table FQN in a project-level map,
+and `BehaviorMembers` kept a second such map keyed by class. `behaviors()` is now uncached: its
+callers so far are completion and navigation, which run once per action, and the step 4 type
+provider is where any caching above the member maps will be decided, measured against
+`ViewVariablePerformanceTest` if needed. `BehaviorMembers` uses `CachedValuesManager.getCachedValue()`
+on the class instead of the map. `AttachedBehavior` lost its `alias` and `isInitializeLoad`
+fields, which repeated the load's own.
