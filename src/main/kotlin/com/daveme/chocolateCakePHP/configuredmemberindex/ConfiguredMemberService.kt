@@ -317,6 +317,7 @@ object ConfiguredMemberService {
             MemberKind.COMPONENT -> "\\${name}Component"
             MemberKind.HELPER -> "\\${name}Helper"
             MemberKind.TABLE, MemberKind.ASSOCIATION -> "\\$name"
+            MemberKind.BEHAVIOR -> "\\${name}Behavior"
         }
 
     private fun classFqn(namespace: String, kind: MemberKind, name: String): String {
@@ -324,6 +325,7 @@ object ConfiguredMemberService {
             MemberKind.COMPONENT -> "Controller\\Component\\${name}Component"
             MemberKind.HELPER -> "View\\Helper\\${name}Helper"
             MemberKind.TABLE, MemberKind.ASSOCIATION -> "Model\\Table\\${name}Table"
+            MemberKind.BEHAVIOR -> "Model\\Behavior\\${name}Behavior"
         }
         return "${namespace.absoluteClassName()}\\$path"
     }

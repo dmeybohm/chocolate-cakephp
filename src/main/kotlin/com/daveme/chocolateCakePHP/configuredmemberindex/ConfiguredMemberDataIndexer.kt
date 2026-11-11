@@ -19,7 +19,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
 
     private val textNeedles = listOf(
         "load", "addHelper", "belongsTo", "hasOne", "hasMany", "addAssociations", "helpers",
-        "components", "uses", "bindModel",
+        "components", "uses", "bindModel", "Behavior", "actsAs",
     )
 
     override fun map(inputData: FileContent): Map<String, ClassConfiguration> {
@@ -120,17 +120,37 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
             readViewBuilderHelpers(call, methodName, out)
             return
         }
-        if (call.receiverName != "this") {
+        val receiver = call.node.firstChildNode
+        if (receiver?.thisFieldName() == BEHAVIORS_PROPERTY) {
+            readBehaviorsLoad(call, methodName, out)
+            return
+        }
+        val viaTable = receiver?.isBehaviorTable() == true
+        if (call.receiverName != "this" && !viaTable) {
             return
         }
         val calledName = call.methodName?.lowercase() ?: return
         val firstParam = call.parameters.getOrNull(0) ?: return
         if (calledName == ADD_ASSOCIATIONS_METHOD) {
-            readAssociationsByType(firstParam, associationTypeKeys, LoadSource.METHOD_CALL, methodName, out)
+            readAssociationsByType(firstParam, associationTypeKeys, LoadSource.METHOD_CALL, methodName, out, viaTable)
+            return
+        }
+        if (viaTable) {
+            val associationType = associationTypes[calledName] ?: return
+            val loadedName = literalString(firstParam) ?: return
+            out += LoadReader(MemberKind.ASSOCIATION, LoadSource.METHOD_CALL, methodName, null, out, associationType, viaTable = true)
+                .memberLoad(loadedName, call.parameters.getOrNull(1), firstParam.startOffset, associationType)
             return
         }
         if (calledName == BIND_MODEL_METHOD) {
             readAssociationsByType(firstParam, cakeTwoAssociationTypeKeys, LoadSource.BIND_MODEL, methodName, out)
+            return
+        }
+        if (calledName == ADD_BEHAVIORS_METHOD) {
+            if (firstParam.isArrayCreationExpression()) {
+                LoadReader(MemberKind.BEHAVIOR, LoadSource.METHOD_CALL, methodName, null, out, associationType = null)
+                    .readArray(firstParam)
+            }
             return
         }
         val kind = methodCallSources[calledName] ?: return
@@ -139,6 +159,45 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val associationType = associationTypes[calledName]
         out += LoadReader(kind, LoadSource.METHOD_CALL, methodName, null, out, associationType)
             .memberLoad(loadedName, options, firstParam.startOffset, associationType)
+    }
+
+    // CakePHP 2's `$this->Behaviors->load('Name', $config)`:
+    private fun readBehaviorsLoad(call: MethodCallParts, methodName: String?, out: MutableList<MemberLoad>) {
+        if (!call.methodName.equals(BEHAVIORS_LOAD_METHOD, ignoreCase = true)) {
+            return
+        }
+        val firstParam = call.parameters.getOrNull(0) ?: return
+        val loadedName = literalString(firstParam) ?: return
+        out += LoadReader(MemberKind.BEHAVIOR, LoadSource.METHOD_CALL, methodName, null, out, associationType = null)
+            .memberLoad(loadedName, call.parameters.getOrNull(1), firstParam.startOffset, associationType = null)
+    }
+
+    // The name of a `$this->name` field reference.
+    private fun ASTNode.thisFieldName(): String? {
+        if (!isFieldReference()) {
+            return null
+        }
+        var isThis = false
+        var name: String? = null
+        var child = firstChildNode
+        while (child != null) {
+            when {
+                child.isVariable() -> isThis = child.text == "\$this"
+                child.elementType == PhpTokenTypes.IDENTIFIER -> name = child.text
+            }
+            child = child.treeNext
+        }
+        return name.takeIf { isThis }
+    }
+
+    // A behavior's table: `$this->_table`, `$this->table()` or `$this->getTable()`.
+    private fun ASTNode.isBehaviorTable(): Boolean {
+        if (thisFieldName() == BEHAVIOR_TABLE_PROPERTY) {
+            return true
+        }
+        val call = readMethodCall() ?: return false
+        return call.receiverName == "this" && call.parameters.isEmpty() &&
+                call.methodName?.lowercase() in behaviorTableMethods
     }
 
     // The builder's setters return it, so it can be any number of calls back in a chain:
@@ -173,7 +232,8 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         typeKeys: Set<String>,
         source: LoadSource,
         methodName: String?,
-        out: MutableList<MemberLoad>
+        out: MutableList<MemberLoad>,
+        viaTable: Boolean = false,
     ) {
         if (!arrayNode.isArrayCreationExpression()) {
             return
@@ -187,7 +247,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 if (typeKey != null && value != null && value.isArrayCreationExpression()) {
                     // bindModel() adds to the model's association property of the same name:
                     val property = if (source == LoadSource.BIND_MODEL) typeKey else null
-                    LoadReader(MemberKind.ASSOCIATION, source, methodName, property, out, associationTypes[typeKey.lowercase()])
+                    LoadReader(MemberKind.ASSOCIATION, source, methodName, property, out, associationTypes[typeKey.lowercase()], viaTable)
                         .readArray(value)
                 }
             }
@@ -205,6 +265,7 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
         val property: String?,
         val out: MutableList<MemberLoad>,
         val associationType: AssociationType?,
+        val viaTable: Boolean = false,
     ) {
 
         /**
@@ -298,6 +359,9 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 ?.takeIf { associationType != null && source == LoadSource.METHOD_CALL }
                 ?.let { optionValue(it, "propertyName") }
             val propertyName = propertyNameNode?.let { literalString(it) }
+            val isBehavior = kind == MemberKind.BEHAVIOR
+            val methodAliases = options?.takeIf { isBehavior }?.let { AliasOption.read(it, "implementedMethods") }
+            val finderAliases = options?.takeIf { isBehavior }?.let { AliasOption.read(it, "implementedFinders") }
             return MemberLoad(
                 kind = kind,
                 source = source,
@@ -311,7 +375,48 @@ object ConfiguredMemberDataIndexer : DataIndexer<String, ClassConfiguration, Fil
                 associationType = associationType,
                 propertyName = propertyName,
                 hasUnreadPropertyName = propertyNameNode != null && propertyName == null,
+                methodAliases = methodAliases?.aliases,
+                hasUnreadMethodAliases = methodAliases?.isUnread == true,
+                finderAliases = finderAliases?.aliases,
+                hasUnreadFinderAliases = finderAliases?.isUnread == true,
+                viaTable = viaTable,
             )
+        }
+    }
+}
+
+/**
+ * A behavior's `implementedMethods` or `implementedFinders` option: a map of alias to method
+ * name, or unread when it is present but not a literal map.
+ */
+private class AliasOption(val aliases: Map<String, String>?, val isUnread: Boolean) {
+    companion object {
+        fun read(options: ASTNode, key: String): AliasOption? {
+            val value = optionValue(options, key) ?: return null
+            return aliasMap(value)?.let { AliasOption(it, false) } ?: AliasOption(null, true)
+        }
+
+        private fun aliasMap(arrayNode: ASTNode): Map<String, String>? {
+            if (!arrayNode.isArrayCreationExpression()) {
+                return null
+            }
+            val result = linkedMapOf<String, String>()
+            var child = arrayNode.firstChildNode
+            while (child != null) {
+                when {
+                    child.isHashArrayElement() -> {
+                        val alias = ViewVariableArgumentParser.hashElementKey(child)?.takeIf { it.isNotEmpty() }
+                        val method = ViewVariableArgumentParser.hashElementValueNode(child)?.let { literalString(it) }
+                        if (alias == null || method == null) {
+                            return null
+                        }
+                        result[alias] = method
+                    }
+                    child.isArrayValue() -> return null
+                }
+                child = child.treeNext
+            }
+            return result
         }
     }
 }

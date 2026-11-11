@@ -65,6 +65,7 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
                 "Profiles" to MemberKind.ASSOCIATION,
                 "Comments" to MemberKind.ASSOCIATION,
                 "Tags" to MemberKind.ASSOCIATION,
+                "Timestamp" to MemberKind.BEHAVIOR,
             ),
             loads.map { it.alias to it.kind }
         )
@@ -558,5 +559,226 @@ class ConfiguredMemberIndexerTest : BasePlatformTestCase() {
         ConfiguredMemberExternalizer.save(DataOutputStream(bytes), configuration)
         val read = ConfiguredMemberExternalizer.read(DataInputStream(ByteArrayInputStream(bytes.toByteArray())))
         assertEquals(configuration, read)
+    }
+
+    fun `test addBehavior plain, aliased, plugin-dotted and outside initialize`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Table;
+            class PagesTable {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->addBehavior('Timestamp');
+                    ${'$'}this->addBehavior('Audit', ['className' => 'ChangeLog']);
+                    ${'$'}this->addBehavior('TestPlugin.Sluggable');
+                    ${'$'}this->addBehavior('Tree', ['parent' => 'parent_id']);
+                }
+                public function enableTree(): void {
+                    ${'$'}this->addBehavior('Counter');
+                }
+            }
+        """, "\\App\\Model\\Table\\PagesTable")
+
+        assertEquals(
+            listOf(
+                listOf("Timestamp", "Timestamp", null, "initialize"),
+                listOf("Audit", "Audit", "ChangeLog", "initialize"),
+                listOf("Sluggable", "TestPlugin.Sluggable", null, "initialize"),
+                listOf("Tree", "Tree", null, "initialize"),
+                listOf("Counter", "Counter", null, "enableTree"),
+            ),
+            loads.map { listOf(it.alias, it.loadedName, it.className, it.methodName) }
+        )
+        assertTrue(loads.all { it.kind == MemberKind.BEHAVIOR && it.source == LoadSource.METHOD_CALL })
+        assertEquals(listOf(true, true, true, true, false), loads.map { it.isInitializeLoad })
+        assertTrue(loads.all { it.methodAliases == null && it.finderAliases == null })
+    }
+
+    fun `test addBehavior implementedMethods and implementedFinders options`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Table;
+            class PagesTable {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->addBehavior('Literal', [
+                        'implementedMethods' => ['trail' => 'writeAudit', 'audit' => 'writeAudit'],
+                        'implementedFinders' => ['recent' => 'findLatest'],
+                    ]);
+                    ${'$'}this->addBehavior('Empty', ['implementedMethods' => []]);
+                    ${'$'}this->addBehavior('Variable', ['implementedMethods' => ${'$'}methods]);
+                    ${'$'}this->addBehavior('Constant', ['implementedFinders' => self::FINDERS]);
+                    ${'$'}this->addBehavior('PartlyRead', ['implementedMethods' => ['a' => ${'$'}name]]);
+                    ${'$'}this->addBehavior('List', ['implementedMethods' => ['writeAudit']]);
+                }
+            }
+        """, "\\App\\Model\\Table\\PagesTable").associateBy { it.alias }
+
+        assertEquals(mapOf("trail" to "writeAudit", "audit" to "writeAudit"), loads["Literal"]!!.methodAliases)
+        assertEquals(mapOf("recent" to "findLatest"), loads["Literal"]!!.finderAliases)
+        assertFalse(loads["Literal"]!!.hasUnreadMethodAliases)
+        assertFalse(loads["Literal"]!!.hasUnreadFinderAliases)
+
+        assertEquals(emptyMap<String, String>(), loads["Empty"]!!.methodAliases)
+        assertFalse(loads["Empty"]!!.hasUnreadMethodAliases)
+        assertNull(loads["Empty"]!!.finderAliases)
+        assertFalse(loads["Empty"]!!.hasUnreadFinderAliases)
+
+        assertNull(loads["Variable"]!!.methodAliases)
+        assertTrue(loads["Variable"]!!.hasUnreadMethodAliases)
+        assertNull(loads["Constant"]!!.finderAliases)
+        assertTrue(loads["Constant"]!!.hasUnreadFinderAliases)
+        assertFalse(loads["Constant"]!!.hasUnreadMethodAliases)
+        assertTrue(loads["PartlyRead"]!!.hasUnreadMethodAliases)
+        assertTrue(loads["List"]!!.hasUnreadMethodAliases)
+    }
+
+    fun `test alias options are only read for behaviors`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Controller;
+            class PagesController {
+                public function initialize(): void {
+                    ${'$'}this->loadComponent('Flash', ['implementedMethods' => ['a' => 'b']]);
+                }
+            }
+        """, "\\App\\Controller\\PagesController")
+
+        assertNull(loads.single().methodAliases)
+        assertFalse(loads.single().hasUnreadMethodAliases)
+    }
+
+    fun `test addBehaviors plain and keyed entries`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Table;
+            class PluginPagesTable {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->addBehaviors([
+                        'TestPlugin.Sluggable',
+                        'Audit' => ['implementedMethods' => []],
+                        'Log' => ['className' => 'ChangeLog'],
+                        ${'$'}dynamic,
+                    ]);
+                }
+            }
+        """, "\\App\\Model\\Table\\PluginPagesTable")
+
+        assertEquals(
+            listOf(
+                listOf("Sluggable", "TestPlugin.Sluggable", null),
+                listOf("Audit", "Audit", null),
+                listOf("Log", "Log", "ChangeLog"),
+            ),
+            loads.map { listOf(it.alias, it.loadedName, it.className) }
+        )
+        assertTrue(loads.all { it.kind == MemberKind.BEHAVIOR && it.isInitializeLoad })
+        assertEquals(emptyMap<String, String>(), loads[1].methodAliases)
+    }
+
+    fun `test cake2 actsAs and Behaviors load`() {
+        val loads = loadsOf("""
+            <?php
+            class Page extends AppModel {
+                public ${'$'}actsAs = array('Containable', 'Sluggable', 'Audit' => array('on' => true), 'Probe.Hashable');
+                public function attachTree() {
+                    ${'$'}this->Behaviors->load('Tree');
+                    ${'$'}this->Behaviors->load('Log', array('className' => 'Audit'));
+                    ${'$'}this->Other->load('NotABehavior');
+                    ${'$'}other->Behaviors->load('NotThis');
+                }
+            }
+        """, "\\Page")
+
+        assertEquals(
+            listOf(
+                listOf("Containable", null, LoadSource.PROPERTY_ARRAY, "actsAs", null),
+                listOf("Sluggable", null, LoadSource.PROPERTY_ARRAY, "actsAs", null),
+                listOf("Audit", null, LoadSource.PROPERTY_ARRAY, "actsAs", null),
+                listOf("Hashable", null, LoadSource.PROPERTY_ARRAY, "actsAs", null),
+                listOf("Tree", null, LoadSource.METHOD_CALL, null, "attachTree"),
+                listOf("Log", "Audit", LoadSource.METHOD_CALL, null, "attachTree"),
+            ),
+            loads.map { listOf(it.alias, it.className, it.source, it.property, it.methodName) }
+        )
+        assertTrue(loads.all { it.kind == MemberKind.BEHAVIOR })
+        assertEquals(listOf(true, true, true, true, false, false), loads.map { it.isInitializeLoad })
+        val declaration = declarationsOf("""
+            <?php
+            class Page extends AppModel {
+                public ${'$'}actsAs = array('Containable');
+            }
+        """, "\\Page")["actsAs"]!!
+        assertEquals(MemberKind.BEHAVIOR, declaration.kind)
+        assertTrue(declaration.isComplete)
+    }
+
+    fun `test associations on a behavior's table are recorded via the table`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Behavior;
+            class TaggableBehavior {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->_table->belongsToMany('Tags');
+                    ${'$'}this->table()->hasMany('TagLinks', ['propertyName' => 'links']);
+                    ${'$'}this->getTable()->hasOne('Primary');
+                    ${'$'}this->_table->addAssociations(['belongsTo' => ['Owners']]);
+                    ${'$'}other->belongsTo('NotThis');
+                    ${'$'}this->_table->addBehavior('NotABehavior');
+                    ${'$'}this->other()->belongsTo('NotATable');
+                }
+                public function attach(): void {
+                    ${'$'}this->_table->belongsTo('Later');
+                }
+            }
+        """, "\\App\\Model\\Behavior\\TaggableBehavior")
+
+        assertEquals(
+            listOf(
+                Triple("Tags", AssociationType.BELONGS_TO_MANY, "initialize"),
+                Triple("TagLinks", AssociationType.HAS_MANY, "initialize"),
+                Triple("Primary", AssociationType.HAS_ONE, "initialize"),
+                Triple("Owners", AssociationType.BELONGS_TO, "initialize"),
+                Triple("Later", AssociationType.BELONGS_TO, "attach"),
+            ),
+            loads.map { Triple(it.alias, it.associationType, it.methodName) }
+        )
+        assertTrue(loads.all { it.kind == MemberKind.ASSOCIATION && it.viaTable })
+        assertEquals("links", loads[1].propertyName)
+    }
+
+    fun `test associations on this are not via the table`() {
+        val loads = loadsOf("""
+            <?php
+            namespace App\Model\Table;
+            class PhotosTable {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->belongsToMany('Tags');
+                }
+            }
+        """, "\\App\\Model\\Table\\PhotosTable")
+
+        assertFalse(loads.single().viaTable)
+    }
+
+    fun `test the externalizer round trips the behavior fields`() {
+        val configuration = configurationOf("""
+            <?php
+            namespace App\Model\Behavior;
+            class TaggableBehavior {
+                public function initialize(array ${'$'}config): void {
+                    ${'$'}this->addBehavior('Literal', [
+                        'implementedMethods' => ['trail' => 'writeAudit'],
+                        'implementedFinders' => [],
+                    ]);
+                    ${'$'}this->addBehavior('Unread', ['implementedMethods' => ${'$'}methods, 'implementedFinders' => ${'$'}finders]);
+                    ${'$'}this->_table->belongsToMany('Tags');
+                }
+            }
+        """, "\\App\\Model\\Behavior\\TaggableBehavior")
+
+        val bytes = ByteArrayOutputStream()
+        ConfiguredMemberExternalizer.save(DataOutputStream(bytes), configuration)
+        val read = ConfiguredMemberExternalizer.read(DataInputStream(ByteArrayInputStream(bytes.toByteArray())))
+        assertEquals(configuration, read)
+        assertEquals(3, read.loads.size)
     }
 }

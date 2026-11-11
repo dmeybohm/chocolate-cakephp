@@ -882,3 +882,23 @@ mapped (14 tests), which step 2's walk up to `ModelBehavior` assumed.
 `AppModel` now attaches a `BaselineBehavior`, `testActsAsMergesWithAppModel` pins the merge
 (15 tests on 2), and the six list assertions that gained `Baseline` show `AppModel`'s entries
 come first and reach `SubSubPage`, two levels down, where `Page`'s do not.
+
+### Session #3
+
+**Plan step 3, the index.** `MemberKind.BEHAVIOR` is indexed from `addBehavior()`,
+`addBehaviors()`, `$actsAs` and `$this->Behaviors->load()`, with the `implementedMethods` and
+`implementedFinders` options stored as `methodAliases` and `finderAliases` and their unread
+flags. The options are read only on behavior loads. A map is treated as unread unless every entry
+is a string key with a string value, so a list such as `['writeAudit']` or an entry with a
+variable value sets the flag rather than giving a partial map. Association calls on
+`$this->_table`, `$this->table()` and `$this->getTable()`, `addAssociations()` included, are
+recorded with `viaTable`. The index version is 6.
+
+`resolveLoad()` and `CakeTwoChainResolver` have `BEHAVIOR` branches only so they compile: the
+convention path is `Model\Behavior\{N}Behavior` for now, and step 2 replaces it with the
+first-match rule. Since `addbehavior` is in `methodCallSources`, navigation from an
+`addBehavior()` string already resolves through that interim path. The cake5 fixtures move to
+step 2, where the first tests use them.
+
+Test 17 is eight new cases in `ConfiguredMemberIndexerTest` (28 in all, passing). The existing
+`Configured*`, `Contain*` and `EntityAssociation*` tests on 2 to 5 still pass.
