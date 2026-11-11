@@ -458,4 +458,19 @@ class BehaviorTest extends TestCase
         $table->addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']]);
         $this->assertSame($first, $table->getBehavior('Audit'));
     }
+
+    public function testLoadingALoadedAliasAgainWithSomeOfItsOptionsKeepsTheFirstOptions(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Audit', [
+            'implementedMethods' => ['trail' => 'writeAudit'],
+            'implementedFinders' => ['logged' => 'findAudited'],
+        ]);
+        $first = $table->getBehavior('Audit');
+        $table->addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']]);
+        $this->assertSame($first, $table->getBehavior('Audit'));
+        $this->assertSame(['logged' => 'findAudited'], $table->getBehavior('Audit')->implementedFinders());
+        $this->assertTrue($table->hasFinder('logged'));
+        $this->assertFalse($table->hasFinder('audited'));
+    }
 }
