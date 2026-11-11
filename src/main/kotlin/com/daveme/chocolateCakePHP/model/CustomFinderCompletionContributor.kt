@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.behavior.behaviorFindersOnTables
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.project.DumbService
@@ -63,7 +64,8 @@ class CustomFinderCompletionContributor : CompletionContributor() {
 
             val project = methodReference.project
             val phpIndex = PhpIndex.getInstance(project)
-            queryReceiverTables(methodReference).asSequence()
+            val tables = queryReceiverTables(methodReference)
+            tables.asSequence()
                 .flatMap { className ->
                     phpIndex.getClassesByFQN(className)
                 }
@@ -91,6 +93,13 @@ class CustomFinderCompletionContributor : CompletionContributor() {
                 }
                 .lastOrNull()
 
+            for (finder in behaviorFindersOnTables(project, tables)) {
+                completionResultSet.addElement(
+                    LookupElementBuilder.create(finder.alias)
+                        .withTailText(" (${finder.behaviorClass.name})", true)
+                        .withTypeText("string")
+                )
+            }
         }
     }
 }

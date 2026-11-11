@@ -1,6 +1,7 @@
 package com.daveme.chocolateCakePHP.model
 
 import com.daveme.chocolateCakePHP.*
+import com.daveme.chocolateCakePHP.behavior.behaviorFindersOnTables
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -65,7 +66,11 @@ class CustomFinderGotoDeclarationHandler : GotoDeclarationHandler {
         }
 
         // Iterate each of the types looking for the findXXX method:
-        return phpIndex.customFinderMethods(tableTypes, sourceElement.text).toTypedArray()
+        val finderName = sourceElement.text
+        val behaviorFinders = behaviorFindersOnTables(sourceElement.project, tableTypes)
+            .filter { it.alias.equals(finderName, ignoreCase = true) }
+            .map { it.method }
+        return (phpIndex.customFinderMethods(tableTypes, finderName) + behaviorFinders).toTypedArray()
     }
 
     override fun getActionText(context: DataContext): String? {

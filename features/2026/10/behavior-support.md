@@ -902,3 +902,29 @@ step 2, where the first tests use them.
 
 Test 17 is eight new cases in `ConfiguredMemberIndexerTest` (28 in all, passing). The existing
 `Configured*`, `Contain*` and `EntityAssociation*` tests on 2 to 5 still pass.
+
+**Plan step 4, the service.** `ConfiguredMemberService.behaviors(project, tableFqn)` picks the
+load in force per alias as step 2 describes, and caches the loads per table on the PHP files
+tracker and the settings tracker; classes are resolved on read. It takes one table rather than
+a list, because the shadowing rule is per table chain, and the helpers union over the receiver's
+tables. The chain reading it needs is `chainConfigurations()`, which step 7 will move the other
+two paths onto. CakePHP 2 chains return nothing until step 8. `resolveLoad()` sends `BEHAVIOR`
+loads to `resolveBehaviorLoad()`, the first-match rule, which also serves `addBehavior()`
+navigation.
+
+`BehaviorMembers.of(project, behaviorClass, load)` in the new `behavior` package caches the
+default maps per class (configured from `$_defaultConfig`, or reflected) and applies the load's
+options on each call, with `array_flip()`'s ordering for the merge. The framework's checks are
+`isset()` on 3 and 4 and `!== null` on 5, so an empty option map disables in the reflected case
+too, which the code follows. `behaviorMethodsOnTables()` and `behaviorFindersOnTables()` in
+`TableBehaviors.kt` apply the shadowing rule through `findMethodByName()` on the table class,
+which covers the whole chain and `\Cake\ORM\Table`.
+
+The cake5 fixtures from the Fixtures section are in, except the step 7 tables and entities and
+the `Acme/Vendored` behavior's table use, which come with their tests.
+
+**Plan step 5, finders.** `CustomFinderCompletionContributor` adds the behavior finders with the
+behavior class's name as tail text, and `CustomFinderGotoDeclarationHandler` adds the behavior
+method beside the table's own. Tests 1 to 4 are `cake5/BehaviorFinderTest` (8 cases, passing),
+which also covers the `find()` half of test 5 through `RepeatPagesTable` and
+`FindersMappedBehavior`. The existing `CustomFinderTest` on 3, 4 and 5 still passes.
