@@ -138,6 +138,23 @@ class BehaviorTest extends TestCase
         $this->assertSame(ChildSluggableBehavior::class, get_class($fqn->getBehavior('Fqn')));
     }
 
+    public function testClassNameOptionKeepsADottedFirstArgumentAsTheAlias(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Probe.Custom', ['className' => 'Audit']);
+        $this->assertSame(['Probe.Custom'], $table->behaviors()->loaded());
+        $this->assertSame(AuditBehavior::class, get_class($table->getBehavior('Probe.Custom')));
+    }
+
+    // A first argument equal to the className is split, as it is without the option:
+    public function testClassNameEqualToTheFirstArgument(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Probe.Sluggable', ['className' => 'Probe.Sluggable']);
+        $this->assertSame(['Sluggable'], $table->behaviors()->loaded());
+        $this->assertSame(ProbeSluggable::class, get_class($table->getBehavior('Sluggable')));
+    }
+
     public function testAddBehaviorsAcceptsPlainAndKeyedEntries(): void
     {
         $table = $this->table();

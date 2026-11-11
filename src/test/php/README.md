@@ -363,6 +363,8 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | Any name of a behavior class that is already loaded uses that class, whichever app or plugin it came from, since behavior class names are global | `testAnyNameOfALoadedClassUsesItWhateverItsOrigin` | 2 |
 | A plain `className` option loads the app's behavior before the core one of the same name | `testClassNamePlainNameLoadsAppBehaviorBeforeCore` | 3, 4, 5 |
 | The `className` option accepts a plain name, plugin notation and an FQN, and the first argument is the alias | `testClassNameOptionAcceptsPlainPluginAndFqnAndKeepsAlias` | 3, 4, 5. 2: `testClassNameOptionKeepsAliasAndLoadsClass`, plain name only |
+| With a `className` option, a plugin-dotted first argument is the alias whole, dot included | `testClassNameOptionKeepsADottedFirstArgumentAsTheAlias` | 2, 3, 4, 5 |
+| A first argument equal to the `className` is the alias whole on 2, 3 and 4, and split at the dot on 5 | `testClassNameEqualToTheFirstArgument` | 2, 3, 4, 5 |
 | `addBehaviors()` accepts a plain string and an alias with options | `testAddBehaviorsAcceptsPlainAndKeyedEntries` | 3, 4, 5 |
 | Reflection mixes in the public methods, keys `find*` methods as finders by `lcfirst`, and skips protected methods, callbacks and base-class methods | `testReflectionMixesInPublicMethodsAndFinders` | 3, 4, 5 |
 | Reflection includes a parent behavior's public methods | `testReflectionIncludesParentBehaviorMethods` | 3, 4, 5 |

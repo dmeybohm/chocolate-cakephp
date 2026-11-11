@@ -65,6 +65,19 @@ class BehaviorTest extends CakeTestCase {
 		$this->assertInstanceOf('AuditBehavior', $this->Page->Behaviors->Trail);
 	}
 
+	public function testClassNameOptionKeepsADottedFirstArgumentAsTheAlias() {
+		$this->Page->Behaviors->load('Probe.Custom', array('className' => 'Audit'));
+		$this->assertContains('Probe.Custom', $this->Page->Behaviors->loaded());
+		$this->assertInstanceOf('AuditBehavior', $this->Page->Behaviors->{'Probe.Custom'});
+	}
+
+	public function testClassNameEqualToTheFirstArgument() {
+		$this->Page->Behaviors->load('Audit', array('className' => 'Audit'));
+		$this->Page->Behaviors->load('Probe.Hashable', array('className' => 'Probe.Hashable'));
+		$this->assertContains('Probe.Hashable', $this->Page->Behaviors->loaded());
+		$this->assertInstanceOf('HashableBehavior', $this->Page->Behaviors->{'Probe.Hashable'});
+	}
+
 	public function testPluginNameOfAnUnloadedClassDoesNotFallBackToAppBehavior() {
 		$this->assertFalse(class_exists('StampableBehavior', false));
 		$note = ClassRegistry::init('Note');
