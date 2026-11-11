@@ -471,4 +471,24 @@ class BehaviorTest extends TestCase
         $this->assertTrue($table->hasFinder('logged'));
         $this->assertFalse($table->hasFinder('audited'));
     }
+
+    public function testChildTableRepeatingAParentLoadKeepsTheParentOptions(): void
+    {
+        $table = TableRegistry::getTableLocator()->get('RepeatPages');
+        $this->assertSame(['Timestamp', 'Sluggable', 'Audit'], $table->behaviors()->loaded());
+        $this->assertSame(['trail' => 'writeAudit'], $table->getBehavior('Audit')->implementedMethods());
+    }
+
+    public function testChildTableThatSkipsParentInitializeHasNoneOfItsBehaviors(): void
+    {
+        $table = TableRegistry::getTableLocator()->get('DetachedPages');
+        $this->assertSame(['Sluggable'], $table->behaviors()->loaded());
+        $this->assertFalse($table->behaviors()->hasMethod('trail'));
+    }
+
+    public function testChildTableLoadingPlainlyBeforeParentInitializeThrows(): void
+    {
+        $this->expectException(RuntimeException::class);
+        TableRegistry::getTableLocator()->get('EarlyPages');
+    }
 }

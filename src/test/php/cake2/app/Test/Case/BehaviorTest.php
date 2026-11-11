@@ -121,4 +121,14 @@ class BehaviorTest extends CakeTestCase {
 		$this->assertSame('label', $subPage->label());
 	}
 
+	public function testMappedMethodsIncludeAParentBehaviorsMethods() {
+		$note = ClassRegistry::init('Note');
+		$note->Behaviors->load('ChildSluggable');
+		$methods = $note->Behaviors->methods();
+		$this->assertSame(array('ChildSluggable', 'slug'), $methods['slug']);
+		$this->assertSame(array('ChildSluggable', 'reslug'), $methods['reslug']);
+		$this->assertArrayNotHasKey('beforeSave', $methods);
+		$this->assertSame('hello-world-2', $note->reslug('Hello World'));
+	}
+
 }

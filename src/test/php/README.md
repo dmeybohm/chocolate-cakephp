@@ -379,6 +379,9 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A behavior finder is callable on the table and on a query built from it | `testBehaviorFinderIsCallableOnTableAndQuery` | 3, 4, 5 |
 | A behavior attached outside `initialize()` mixes in once that method runs | `testBehaviorAttachedOutsideInitializeMixesInOnceCalled` | 3, 4, 5. 2: `testBehaviorsLoadAttachesAtRuntime` |
 | A child table inherits its parent's `initialize()` behaviors | `testChildTableInheritsParentBehaviors` | 3, 4, 5 |
+| A child table calling `parent::initialize()` and then loading a parent's behavior again plainly keeps the parent's options | `testChildTableRepeatingAParentLoadKeepsTheParentOptions` | 3, 4, 5 |
+| A child table whose `initialize()` does not call its parent's has none of the parent's behaviors | `testChildTableThatSkipsParentInitializeHasNoneOfItsBehaviors` | 3, 4, 5 |
+| A child table loading a behavior plainly before `parent::initialize()` loads it with other options throws a `RuntimeException` when constructed | `testChildTableLoadingPlainlyBeforeParentInitializeThrows` | 3, 4, 5 |
 | `getBehavior()` returns the loaded instance and throws `InvalidArgumentException` for an unloaded alias | `testGetBehaviorReturnsLoadedInstanceAndThrowsForUnloaded` | 3, 4, 5 |
 | `getBehavior()` throws for the plugin-prefixed name of a loaded behavior | `testGetBehaviorDoesNotTakeAPluginPrefixedName` | 3, 4, 5 |
 | `hasBehavior()` and `removeBehavior()` take the alias, not the plugin-prefixed name or the `className` | `testHasAndRemoveBehaviorTakeTheAlias` | 3, 4, 5 |
@@ -395,4 +398,5 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A model's `$actsAs` is merged onto its direct parent model's, the parent's entries first | `testActsAsMergesWithTheDirectParentModel` | 2 |
 | A model's `$actsAs` is not merged with a grandparent model's | `testActsAsDoesNotMergeWithAGrandparentModel` | 2 |
 | Mapped methods exclude `_`-prefixed names, callbacks and `ModelBehavior` methods | `testMappedMethodsExcludeUnderscoredCallbacksAndModelBehaviorMethods` | 2 |
+| Mapped methods include a parent behavior class's | `testMappedMethodsIncludeAParentBehaviorsMethods` | 2 |
 | A mapped method is called without its `Model` parameter | `testMappedMethodIsCalledWithoutTheModelParameter` | 2 |

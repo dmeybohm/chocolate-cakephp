@@ -329,9 +329,19 @@ can only restate what is already in force, and where the child skips `parent::in
 is the only one that runs.
 
 A child that re-adds its parent's alias, plainly or with some of its options, thus keeps the
-parent's class and options. What this misreads is a child that skips `parent::initialize()`,
-or loads before calling it, and loads an alias its parent also loads, as another class or with
-other options than the parent's; that is accepted. Loads outside
+parent's class and options (`testChildTableRepeatingAParentLoadKeepsTheParentOptions`). Two
+programs are misread, and accepted:
+
+- a child that skips `parent::initialize()` and loads an alias its parent also loads, as
+  another class or with other options. Such a table has none of its parent's behaviors
+  (`testChildTableThatSkipsParentInitializeHasNoneOfItsBehaviors`), nor its associations, which
+  the plugin unions in regardless, as it does for every other kind;
+- a child that loads an alias plainly before `parent::initialize()` loads it plainly as another
+  class. When the parent's load has options that differ from what the child's plain load set
+  up, the table does not construct at all (`testChildTableLoadingPlainlyBeforeParentInitializeThrows`),
+  so that order is not a case to read.
+
+Loads outside
 `initialize()` are unioned as for components: they add the alias when no `initialize()` load
 has it, and are ignored for an alias one does, since a repeat changes nothing or throws. Each
 result carries the alias, the resolved `PhpClass` list, the load (for its options and
@@ -860,3 +870,10 @@ instead of the receiver.
 duplicate check compares just the keys it is given; pinned (37 tests each on 3, 4 and 5). The
 load in force among those with options is therefore the farthest ancestor's too, not the
 nearest, which makes both halves of the rule follow the one convention.
+
+**Table-chain pins**: the repeated-load rule had been pinned on one table loading twice, not on
+a parent and child, so three tests now do that with `RepeatPagesTable`, `DetachedPagesTable`
+and `EarlyPagesTable` (40 tests each on 3, 4 and 5). They narrowed the accepted misreads: a
+plain load ahead of a parent's load with options is a table that throws, not a misread. On 2,
+`testMappedMethodsIncludeAParentBehaviorsMethods` pins that a parent behavior's methods are
+mapped (14 tests), which step 2's walk up to `ModelBehavior` assumed.
