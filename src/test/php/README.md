@@ -356,6 +356,8 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A bare name loads the app's behavior before the core one of the same name | `testBareNameLoadsAppBehaviorBeforeCore` | 3, 4, 5 |
 | A bare name does not reach a plugin's behavior | `testBareNameDoesNotReachPluginBehavior` | 3, 4, 5. 2: `testBareNameOfAnUnloadedClassDoesNotReachPluginBehavior`, only while the class is not loaded |
 | A `Plugin.Name` loads the plugin's behavior under the short alias | `testPluginNameLoadsPluginBehavior` | 3, 4, 5 |
+| A `Vendor/Plugin.Name` loads from the nested namespace, `Vendor\Plugin\Model\Behavior`, under the short alias | `testVendorPluginNameLoadsFromTheNestedNamespace` | 3, 4, 5 |
+| A `Plugin.Name` loads the behavior of a plugin the application has not loaded, since only the namespace is used | `testPluginNameOfAPluginThatIsNotLoadedLoadsItsBehavior` | 3, 4, 5 |
 | A bare name in a plugin's own table loads the app's behavior, not the plugin's | `testBareNameInPluginTableLoadsAppBehavior` | 3, 4, 5 |
 | A `Plugin.Name` missing from the plugin does not fall back to the app's behavior | `testPluginNameDoesNotFallBackToAppBehavior` | 3, 4, 5. 2: `testPluginNameOfAnUnloadedClassDoesNotFallBackToAppBehavior`, only while the class is not loaded |
 | Any name of a behavior class that is already loaded uses that class, whichever app or plugin it came from, since behavior class names are global | `testAnyNameOfALoadedClassUsesItWhateverItsOrigin` | 2 |
@@ -364,7 +366,11 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | `addBehaviors()` accepts a plain string and an alias with options | `testAddBehaviorsAcceptsPlainAndKeyedEntries` | 3, 4, 5 |
 | Reflection mixes in the public methods, keys `find*` methods as finders by `lcfirst`, and skips protected methods, callbacks and base-class methods | `testReflectionMixesInPublicMethodsAndFinders` | 3, 4, 5 |
 | Reflection includes a parent behavior's public methods | `testReflectionIncludesParentBehaviorMethods` | 3, 4, 5 |
+| Reflection includes the public methods and finders of a trait the behavior uses, and public static methods | `testReflectionIncludesTraitAndStaticMethods` | 3, 4, 5. 2: `testMappedMethodsIncludeTraitAndStaticMethods` |
+| A reflected finder's name is the method name without `find` and with only its first letter lowered, `findTopRated` is `topRated`, and is matched in any case | `testReflectedFinderNameKeepsItsCaseAfterTheFirstLetter` | 3, 4, 5 |
 | `$_defaultConfig` maps restrict the mixed-in methods and finders to the listed aliases, for app and core behaviors | `testDefaultConfigMapsRestrictMixedInMethods` | 3, 4, 5 |
+| A child behavior inherits its parent's `$_defaultConfig` maps, so its own public methods are not mixed in | `testChildBehaviorInheritsDefaultConfigMaps` | 3, 4, 5 |
+| A child behavior redeclaring `$_defaultConfig` without the maps is reflected, its parent's unmapped methods included | `testChildBehaviorRedeclaringDefaultConfigIsReflected` | 3, 4, 5 |
 | `implementedMethods` in the load options merges with the defaults by method name, custom alias winning, and `[]` disables them | `testLoadOptionsMergeWithDefaultMapsByMethodName` | 3, 4, 5 |
 | `implementedMethods` in the load options with no defaults replaces reflection for that key only | `testLoadOptionsWithoutDefaultsReplaceReflection` | 3, 4, 5 |
 | The table's own method and own `findX()` win over a behavior's of the same name, although the registry still maps them | `testTableOwnMethodAndFinderWinOverBehavior` | 3, 4, 5. 2: `testModelOwnMethodWinsOverBehavior` |
@@ -373,9 +379,16 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A behavior attached outside `initialize()` mixes in once that method runs | `testBehaviorAttachedOutsideInitializeMixesInOnceCalled` | 3, 4, 5. 2: `testBehaviorsLoadAttachesAtRuntime` |
 | A child table inherits its parent's `initialize()` behaviors | `testChildTableInheritsParentBehaviors` | 3, 4, 5 |
 | `getBehavior()` returns the loaded instance and throws `InvalidArgumentException` for an unloaded alias | `testGetBehaviorReturnsLoadedInstanceAndThrowsForUnloaded` | 3, 4, 5 |
+| `getBehavior()` throws for the plugin-prefixed name of a loaded behavior | `testGetBehaviorDoesNotTakeAPluginPrefixedName` | 3, 4, 5 |
+| `hasBehavior()` and `removeBehavior()` take the alias, not the plugin-prefixed name or the `className` | `testHasAndRemoveBehaviorTakeTheAlias` | 3, 4, 5 |
+| A removed behavior's methods and finders | `testRemovedBehaviorMethodsAreUnmapped`, `testRemovedBehaviorMethodsStayMapped` | 4, 5: unmapped. 3: still mapped in the registry |
+| Loading a loaded alias again with no options keeps the first instance and its options | `testLoadingALoadedAliasAgainKeepsTheFirstInstance` | 3, 4, 5 |
+| Loading a loaded alias again with other options throws a `RuntimeException` | `testLoadingALoadedAliasWithOtherOptionsThrows` | 3, 4, 5 |
 | A behavior method called on the table raises a deprecation | `testBehaviorMethodCalledOnTableIsDeprecated` | 5 (since 5.3). 3, 4: `testBehaviorMethodCalledOnTableIsNotDeprecated` |
 | A behavior method called on its instance raises no deprecation | `testBehaviorMethodCalledOnItsInstanceIsNotDeprecated` | 3, 4, 5 |
 | An association a behavior adds through `$this->_table` or `$this->table()` (`getTable()` on 3) is an association of the table, reachable by `contain()` and as an entity property | `testAssociationAddedByBehaviorBelongsToTable` | 3, 4, 5 |
 | `$actsAs` loads behaviors plain, with settings and plugin-prefixed, in order | `testActsAsLoadsPlainConfiguredAndPluginBehaviors` | 2 |
+| A model's `$actsAs` is merged onto its direct parent model's, the parent's entries first | `testActsAsMergesWithTheDirectParentModel` | 2 |
+| A model's `$actsAs` is not merged with a grandparent model's | `testActsAsDoesNotMergeWithAGrandparentModel` | 2 |
 | Mapped methods exclude `_`-prefixed names, callbacks and `ModelBehavior` methods | `testMappedMethodsExcludeUnderscoredCallbacksAndModelBehaviorMethods` | 2 |
 | A mapped method is called without its `Model` parameter | `testMappedMethodIsCalledWithoutTheModelParameter` | 2 |

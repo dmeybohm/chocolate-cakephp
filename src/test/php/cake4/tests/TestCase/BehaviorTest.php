@@ -3,12 +3,14 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase;
 
+use Acme\Vendored\Model\Behavior\StampedBehavior;
 use App\Model\Behavior\AuditBehavior;
 use App\Model\Behavior\ChildSluggableBehavior;
 use App\Model\Behavior\CounterCacheBehavior as AppCounterCache;
 use App\Model\Behavior\SluggableBehavior as AppSluggable;
 use App\Model\Entity\Tag;
 use App\Model\Table\TagsTable;
+use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
 use Cake\ORM\Behavior\TimestampBehavior;
 use Cake\ORM\Behavior\TreeBehavior;
@@ -20,6 +22,8 @@ use Cake\TestSuite\TestCase;
 use InvalidArgumentException;
 use LogicException;
 use Probe\Model\Behavior\SluggableBehavior as ProbeSluggable;
+use RuntimeException;
+use Unloaded\Model\Behavior\MarkedBehavior;
 
 /**
  * How a table attaches behaviors and which of their methods and finders it gains, which
@@ -304,5 +308,115 @@ class BehaviorTest extends TestCase
         $this->assertInstanceOf(Tag::class, $photo->tags[0]);
         $this->assertInstanceOf(Entity::class, $photo->album);
         $this->assertSame('Holiday', $photo->album->name);
+    }
+
+    public function testVendorPluginNameLoadsFromTheNestedNamespace(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Acme/Vendored.Stamped');
+        $this->assertSame(['Stamped'], $table->behaviors()->loaded());
+        $this->assertSame(StampedBehavior::class, get_class($table->getBehavior('Stamped')));
+    }
+
+    public function testPluginNameOfAPluginThatIsNotLoadedLoadsItsBehavior(): void
+    {
+        $this->assertFalse(Plugin::isLoaded('Unloaded'));
+        $table = $this->table();
+        $table->addBehavior('Unloaded.Marked');
+        $this->assertSame(MarkedBehavior::class, get_class($table->getBehavior('Marked')));
+    }
+
+    public function testHasAndRemoveBehaviorTakeTheAlias(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Probe.Sluggable');
+        $table->addBehavior('Trail', ['className' => 'Audit']);
+        $this->assertTrue($table->hasBehavior('Sluggable'));
+        $this->assertFalse($table->hasBehavior('Probe.Sluggable'));
+        $this->assertTrue($table->hasBehavior('Trail'));
+        $this->assertFalse($table->hasBehavior('Audit'));
+
+        $table->removeBehavior('Sluggable');
+        $this->assertSame(['Trail'], $table->behaviors()->loaded());
+    }
+
+    public function testRemovedBehaviorMethodsAreUnmapped(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Sluggable');
+        $table->removeBehavior('Sluggable');
+        $this->assertFalse($table->hasBehavior('Sluggable'));
+        $this->assertFalse($table->behaviors()->hasMethod('slug'));
+        $this->assertFalse($table->behaviors()->hasFinder('slugged'));
+    }
+
+    public function testGetBehaviorDoesNotTakeAPluginPrefixedName(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Probe.Sluggable');
+        $this->expectException(InvalidArgumentException::class);
+        $table->getBehavior('Probe.Sluggable');
+    }
+
+    public function testReflectionIncludesTraitAndStaticMethods(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Labelable');
+        $behavior = $table->getBehavior('Labelable');
+        $methods = $behavior->implementedMethods();
+        ksort($methods);
+        $this->assertSame(['build' => 'build', 'label' => 'label'], $methods);
+        $this->assertFalse($table->behaviors()->hasMethod('hidden'));
+        $this->assertSame('label', $table->label());
+    }
+
+    public function testReflectedFinderNameKeepsItsCaseAfterTheFirstLetter(): void
+    {
+        $table = new Table(['alias' => 'Pages', 'table' => 'pages']);
+        $table->addBehavior('Labelable');
+        $finders = $table->getBehavior('Labelable')->implementedFinders();
+        ksort($finders);
+        $this->assertSame(['labelled' => 'findLabelled', 'topRated' => 'findTopRated'], $finders);
+        $this->assertSame('behavior:topRated', $table->find('topRated')->getOptions()['finder']);
+        $this->assertSame('behavior:topRated', $table->find('toprated')->getOptions()['finder']);
+    }
+
+    public function testChildBehaviorInheritsDefaultConfigMaps(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('ChildAudit');
+        $behavior = $table->getBehavior('ChildAudit');
+        $this->assertSame(['audit' => 'writeAudit'], $behavior->implementedMethods());
+        $this->assertSame(['audited' => 'findAudited'], $behavior->implementedFinders());
+        $this->assertFalse($table->behaviors()->hasMethod('extra'));
+    }
+
+    public function testChildBehaviorRedeclaringDefaultConfigIsReflected(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('RedeclaredAudit');
+        $behavior = $table->getBehavior('RedeclaredAudit');
+        $methods = $behavior->implementedMethods();
+        ksort($methods);
+        $this->assertSame(['extra' => 'extra', 'notMixedIn' => 'notMixedIn', 'writeAudit' => 'writeAudit'], $methods);
+        $this->assertSame(['audited' => 'findAudited'], $behavior->implementedFinders());
+    }
+
+    public function testLoadingALoadedAliasAgainKeepsTheFirstInstance(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Audit', ['implementedMethods' => ['trail' => 'writeAudit']]);
+        $first = $table->getBehavior('Audit');
+        $table->addBehavior('Audit');
+        $this->assertSame($first, $table->getBehavior('Audit'));
+        $this->assertSame(['trail' => 'writeAudit'], $table->getBehavior('Audit')->implementedMethods());
+    }
+
+    public function testLoadingALoadedAliasWithOtherOptionsThrows(): void
+    {
+        $table = $this->table();
+        $table->addBehavior('Sluggable');
+        $this->expectException(RuntimeException::class);
+        $table->addBehavior('Sluggable', ['className' => 'Probe.Sluggable']);
     }
 }

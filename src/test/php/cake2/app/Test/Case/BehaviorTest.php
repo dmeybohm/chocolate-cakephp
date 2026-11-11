@@ -99,4 +99,26 @@ class BehaviorTest extends CakeTestCase {
 		$this->assertSame($this->Page->Behaviors->Audit, $note->Behaviors->Audit);
 	}
 
+	public function testActsAsMergesWithTheDirectParentModel() {
+		$subPage = ClassRegistry::init('SubPage');
+		$this->assertSame(
+			array('Containable', 'Sluggable', 'Audit', 'Hashable', 'Labelable'),
+			$subPage->Behaviors->loaded()
+		);
+	}
+
+	public function testActsAsDoesNotMergeWithAGrandparentModel() {
+		$subSubPage = ClassRegistry::init('SubSubPage');
+		$this->assertSame(array('Labelable', 'Taggable'), $subSubPage->Behaviors->loaded());
+	}
+
+	public function testMappedMethodsIncludeTraitAndStaticMethods() {
+		$subPage = ClassRegistry::init('SubPage');
+		$methods = $subPage->Behaviors->methods();
+		$this->assertSame(array('Labelable', 'label'), $methods['label']);
+		$this->assertSame(array('Labelable', 'build'), $methods['build']);
+		$this->assertArrayNotHasKey('hidden', $methods);
+		$this->assertSame('label', $subPage->label());
+	}
+
 }

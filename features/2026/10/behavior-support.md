@@ -80,13 +80,20 @@ Checked against the vendored 3.10.5, 4.6.5 and 5.4.3 sources under
 - `Table::addBehaviors([...])` takes `['Timestamp', 'Tree' => ['parent' => ...]]`: an integer
   key is a plain load, a string key with an array value is a load with options. This is the
   shape `addAssociations()` leaves already have in the indexer.
-- `Table::removeBehavior($name)` and `Table::hasBehavior($name)` take the alias.
+- `Table::removeBehavior($name)` and `Table::hasBehavior($name)` take the alias: not the
+  plugin-dotted name it was loaded by, and not the `className`. `getBehavior('Probe.Sluggable')`
+  throws too. Removing a behavior unmaps its methods and finders on 4 and 5; on 3 the registry
+  keeps them mapped. The plugin does not follow `removeBehavior()` calls on any version.
   `Table::getBehavior($name): Behavior` (3.6+) returns the loaded instance and throws for an
   unloaded alias; its declared return type is the base class, so PhpStorm offers only the base
   class's methods on `$table->getBehavior('Tree')->`. `Table::behaviors()` returns the registry,
   whose `get($alias)` does the same.
-- Loading the same alias twice with different options throws. Loading it twice with no options
-  returns the existing instance.
+- Loading the same alias twice with different options throws, a different `className` included.
+  Loading it again with no options returns the existing instance, with the options of the first
+  load. See the open question on a child table loading its parent's alias.
+- The plugin part of a name is only a namespace: `Acme/Vendored.Stamped` is
+  `Acme\Vendored\Model\Behavior\StampedBehavior`, and a plugin the application never loads
+  still gives its behavior, as long as the class autoloads.
 
 ### Which methods are mixed in, 3 to 5
 
@@ -126,8 +133,10 @@ fixed `$eventMap`, which are `beforeMarshal`, `afterMarshal`, `beforeFind`, `bef
 `afterSave`, `afterSaveCommit`, `beforeDelete`, `afterDelete`, `afterDeleteCommit`,
 `buildValidator`, `buildRules`, `beforeRules`, `afterRules`. A remaining method whose name
 starts with `find` is a finder keyed `lcfirst(substr($name, 4))`, so `findSlugged()` is the
-`slugged` finder; any other is a method keyed by its own name. Protected and private methods are
-never taken. A magic method such as a behavior's own `__call` is public and not on the base
+`slugged` finder and `findTopRated()` is `topRated`, matched in any case; any other is a method
+keyed by its own name. Protected and private methods are never taken. Reflection sees the
+class as PHP does, so the public methods of a trait the behavior or a parent uses are taken,
+finders included, and so are public static methods. A magic method such as a behavior's own `__call` is public and not on the base
 class, so reflection would list it; no real behavior relies on that, and the plugin skips names
 starting with two underscores.
 
@@ -157,6 +166,12 @@ the property.
 `Model::__construct()` calls `$this->Behaviors->init($this->alias, $this->actsAs)`, and
 `$this->Behaviors->load('Name', $config)` attaches one at runtime. `$actsAs` is
 `['Containable', 'Tree' => ['scope' => ...], 'Plugin.Name']`, the same shape as `$components`.
+Before that, the constructor merges `$actsAs` for a subclass of `AppModel`: onto the direct
+parent class's value when the parent is not `AppModel`, and then onto `AppModel`'s, the
+ancestor's entries first. A class's value here is its default, which is the nearest declaration
+at or above it. So a model two levels below one that declares `$actsAs`, with a declaration of
+its own and one on the class between, gets the middle class's behaviors and not the top one's.
+This is not the controller rule, which merges with `AppController` only.
 The class is the global `{Name}Behavior`, found in `app/Model/Behavior/`, a plugin's
 `Model/Behavior/` or `lib/Cake/Model/Behavior/` (`Acl`, `Containable`, `Translate`, `Tree`).
 Because the names are global, the plugin prefix only says where to look when the class is not
@@ -190,13 +205,21 @@ README has one row per assumption.
   `implementedMethods` in the load options; the table's own method and finder winning; the
   duplicate-method `LogicException`; a finder on a query; a behavior attached outside
   `initialize()`; a child table's inherited behaviors; `getBehavior()`; the 5.3 deprecation
-  (and its absence on 3 and 4); and an association added through `$this->_table` and
-  `$this->table()` (`getTable()` on 3) reaching `contain()` and the entity.
+  (and its absence on 3 and 4); an association added through `$this->_table` and
+  `$this->table()` (`getTable()` on 3) reaching `contain()` and the entity; a vendor-namespaced
+  plugin name and the name of a plugin that is not loaded; trait and static methods in the
+  reflection map; the case of a reflected finder's name; a child behavior inheriting, and
+  redeclaring, `$_defaultConfig`; `hasBehavior()`, `removeBehavior()` and `getBehavior()` taking
+  the alias only; what `removeBehavior()` leaves mapped; and loading a loaded alias again, with
+  and without options.
 - **`BehaviorTest`** (2): `$actsAs` plain, with settings and plugin-prefixed; the mapped-method
   exclusions; the dropped `Model` parameter; the first behavior keeping a duplicate name; the
   model's own method winning; `Behaviors->load()` at runtime, with a `className` alias; the two
-  missing-class cases for a class not yet loaded; and an already-loaded class answering to any
-  name.
+  missing-class cases for a class not yet loaded; an already-loaded class answering to any
+  name; `$actsAs` merging with the direct parent model and not with a grandparent; and trait
+  and static methods among the mapped ones. The merge with `AppModel` itself is read from the
+  source and not pinned, since an `$actsAs` on the suite's `AppModel` would attach to every
+  model in it.
 
 Fixtures are `SluggableBehavior`, `ChildSluggableBehavior`, `AuditBehavior`,
 `CounterCacheBehavior` (an app behavior named like a core one) and `TaggableBehavior` under each
@@ -306,7 +329,8 @@ behavior class the way `_reflectionCache()` does, then applies the load's option
    of the class or the nearest ancestor that declares the property. A key that is present but
    not an array literal is unknown.
 2. If neither key is set, reflect: walk the class and its parents up to and excluding
-   `\Cake\ORM\Behavior`, nearest declaration first, taking public methods, skipping names the
+   `\Cake\ORM\Behavior`, nearest declaration first, each with the traits it uses, taking public
+   methods, static ones included, skipping names the
    base class has (looked up from `\Cake\ORM\Behavior` in `PhpIndex`, so the list follows the
    attached release), the thirteen default event names, and `__`-prefixed names. `find*` names
    go to the finder map keyed by `lcfirst` of the rest, the others to the method map keyed by
@@ -318,7 +342,7 @@ behavior class the way `_reflectionCache()` does, then applies the load's option
 4. The result maps each lowercase alias to the `Method` element and the alias as written.
 
 CakePHP 2 uses the same class with the other rules: parents up to and excluding `\ModelBehavior`,
-skip `_`-prefixed names and the nine callbacks, no finders, no options, and the first parameter
+with their traits and static methods as above, skip `_`-prefixed names and the nine callbacks, no finders, no options, and the first parameter
 dropped in the presentation.
 
 The maps are cached per class and option set on `PhpFilesModificationTracker`, as the entity
@@ -426,9 +450,12 @@ and `contain()` from the same fixture.
 
 The `$actsAs` property source, the `Behaviors->load()` source, the global class convention, the
 CakePHP 2 member rules in `BehaviorMembers`, and the model receiver (`isCakeTwoModel()`) in the
-completion contributor, the type provider and the goto handler. `CakeTwoChainResolver` already
-knows how property arrays merge down a model chain; `actsAs` joins the kinds it handles. The
-`Model` first parameter is dropped from the lookup presentation.
+completion contributor, the type provider and the goto handler. `CakeTwoChainResolver` gains a
+model rule for `actsAs`, since neither of its existing ones fits: the nearest declaration at or
+above the model, merged onto the nearest at or above its direct parent when that is not
+`AppModel`, merged onto the nearest at or above `AppModel`, a descendant's entry winning for an
+alias. `Behaviors->load()` calls anywhere in the chain are unioned on top. The `Model` first
+parameter is dropped from the lookup presentation.
 
 ## Out of scope
 
@@ -585,9 +612,7 @@ locally and CI runs the suite.
 ## Plan
 
 1. **Assumption tests** on 2, 3, 4 and 5, with their fixtures and catalogue rows. Fold what
-   they correct into the sections above. One more to add before step 4 of this list: that
-   `addBehavior('Acme/Vendored.Name')` loads `Acme\Vendored\Model\Behavior\NameBehavior`, using
-   the `Acme/Vendored` plugin the route tests added to the 3, 4 and 5 apps.
+   they correct into the sections above.
 2. **Platform checks**, recorded in the progress log: whether an `M`-keyed non-intercepting
    provider coexists with the bundled intercepting ones without the duplicate-provider error,
    the receiver encodings for the method references in tests 7 and 9, and whether the
@@ -635,8 +660,18 @@ Commit after each step. Steps 5, 6 and 7 are independent once step 4 lands.
   cheap rejections come first (a receiver class whose name does not end in `Table` or `Model`
   conventions, a method the class declares), and the behavior resolution is cached, but there is
   no timing run planned; `ViewVariablePerformanceTest` is the model if one is needed.
+- **A child table loading its parent's alias again.** `InitializeChainResolver` lets a load in a
+  child's `initialize()` replace an ancestor's load of the same alias. At runtime, after
+  `parent::initialize()`, the second `addBehavior('Audit')` with no options keeps the parent's
+  instance and its options, and one with other options throws. So for behaviors the ancestor's
+  load is the one in force whenever the child's has no options, and the child's only when it
+  does not call `parent::initialize()`. Leaning towards keeping the ancestor's load when the
+  descendant's has no options and no `className`, and the resolver's rule otherwise; to settle
+  in step 2.
 - **`$_defaultConfig` on a parent behavior** with the child overriding the property: the nearest
-  declaration wins, which matches PHP property redeclaration. A child that merges with
+  declaration wins, which matches PHP property redeclaration and is now pinned both ways: a
+  child without the property keeps the parent's maps, and one that redeclares it without them
+  is reflected. A child that merges with
   `parent::$_defaultConfig + [...]` in its constructor is not readable and gets the reflection
   map; a note in the progress log if a real behavior does this.
 
@@ -724,5 +759,26 @@ all passing.
 The plan was read against what merged and updated in place: the list under Context says what
 changed, step 2 gained the namespace rule for a plugin that is not configured and the settings
 dependency for caches above the member maps, step 5 and test 14 insert the name a load takes,
-and plan step 1 has one more assumption test to write, for a vendor-namespaced plugin name. No
+and plan step 1 had one more assumption test to write, for a vendor-namespaced plugin name. No
 plugin code has been written yet, so nothing else needed rebasing.
+
+That test was then written, with the others a second read of the plan showed it leaning on
+without a pin: 11 more on 3, 4 and 5 (33 each) and 3 more on 2 (13), all passing, with their
+catalogue rows. New fixtures are `StampedBehavior` in `Acme/Vendored`, `MarkedBehavior` in the
+`Unloaded` plugin, `LabelableBehavior` with `LabelTrait`, `ChildAuditBehavior` and
+`RedeclaredAuditBehavior`; on 2, `LabelableBehavior`, `TaggableBehavior`, `SubPage` and
+`SubSubPage`. Three of them changed the plan:
+
+- **Traits and static methods are reflected**, on every version. `BehaviorMembers` walked
+  classes only, so a behavior using `LocatorAwareTrait`, say, would have lost `fetchTable()`.
+  Step 2 now includes each class's traits.
+- **CakePHP 2 merges `$actsAs` with the direct parent and `AppModel`, not the whole chain.**
+  Step 8 said `CakeTwoChainResolver` already knew the rule; it knows the controller one, which
+  differs, so the step now describes a model rule.
+- **Loading a loaded alias again keeps the first load's options.** This is at odds with the
+  initialize-replaces rule for a child table, and is recorded as an open question.
+
+The rest confirmed what the plan assumed: the vendor-namespaced and not-loaded plugin names,
+the alias being the only name `getBehavior()`, `hasBehavior()` and `removeBehavior()` take, the
+finder name's case, and `$_defaultConfig` inheritance. One version difference turned up that the
+plugin does not depend on: `removeBehavior()` leaves the methods mapped on 3.
