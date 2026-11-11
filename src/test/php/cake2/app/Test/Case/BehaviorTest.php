@@ -19,7 +19,7 @@ class BehaviorTest extends CakeTestCase {
 	}
 
 	public function testActsAsLoadsPlainConfiguredAndPluginBehaviors() {
-		$this->assertSame(array('Containable', 'Sluggable', 'Audit', 'Hashable'), $this->Page->Behaviors->loaded());
+		$this->assertSame(array('Baseline', 'Containable', 'Sluggable', 'Audit', 'Hashable'), $this->Page->Behaviors->loaded());
 		$this->assertInstanceOf('ContainableBehavior', $this->Page->Behaviors->Containable);
 		$this->assertInstanceOf('SluggableBehavior', $this->Page->Behaviors->Sluggable);
 		$this->assertInstanceOf('HashableBehavior', $this->Page->Behaviors->Hashable);
@@ -72,7 +72,7 @@ class BehaviorTest extends CakeTestCase {
 			$note->Behaviors->load('Probe.Stampable');
 			$this->fail('Expected MissingBehaviorException');
 		} catch (MissingBehaviorException $e) {
-			$this->assertSame(array(), $note->Behaviors->loaded());
+			$this->assertSame(array('Baseline'), $note->Behaviors->loaded());
 		}
 	}
 
@@ -83,7 +83,7 @@ class BehaviorTest extends CakeTestCase {
 			$note->Behaviors->load('Trackable');
 			$this->fail('Expected MissingBehaviorException');
 		} catch (MissingBehaviorException $e) {
-			$this->assertSame(array(), $note->Behaviors->loaded());
+			$this->assertSame(array('Baseline'), $note->Behaviors->loaded());
 		}
 	}
 
@@ -93,7 +93,7 @@ class BehaviorTest extends CakeTestCase {
 		$note = ClassRegistry::init('Note');
 		$note->Behaviors->load('Probe.Audit');
 		$note->Behaviors->load('Hashable');
-		$this->assertSame(array('Audit', 'Hashable'), $note->Behaviors->loaded());
+		$this->assertSame(array('Baseline', 'Audit', 'Hashable'), $note->Behaviors->loaded());
 		$this->assertInstanceOf('AuditBehavior', $note->Behaviors->Audit);
 		$this->assertInstanceOf('HashableBehavior', $note->Behaviors->Hashable);
 		$this->assertSame($this->Page->Behaviors->Audit, $note->Behaviors->Audit);
@@ -102,14 +102,14 @@ class BehaviorTest extends CakeTestCase {
 	public function testActsAsMergesWithTheDirectParentModel() {
 		$subPage = ClassRegistry::init('SubPage');
 		$this->assertSame(
-			array('Containable', 'Sluggable', 'Audit', 'Hashable', 'Labelable'),
+			array('Baseline', 'Containable', 'Sluggable', 'Audit', 'Hashable', 'Labelable'),
 			$subPage->Behaviors->loaded()
 		);
 	}
 
 	public function testActsAsDoesNotMergeWithAGrandparentModel() {
 		$subSubPage = ClassRegistry::init('SubSubPage');
-		$this->assertSame(array('Labelable', 'Taggable'), $subSubPage->Behaviors->loaded());
+		$this->assertSame(array('Baseline', 'Labelable', 'Taggable'), $subSubPage->Behaviors->loaded());
 	}
 
 	public function testMappedMethodsIncludeTraitAndStaticMethods() {
@@ -129,6 +129,13 @@ class BehaviorTest extends CakeTestCase {
 		$this->assertSame(array('ChildSluggable', 'reslug'), $methods['reslug']);
 		$this->assertArrayNotHasKey('beforeSave', $methods);
 		$this->assertSame('hello-world-2', $note->reslug('Hello World'));
+	}
+
+	public function testActsAsMergesWithAppModel() {
+		$note = ClassRegistry::init('Note');
+		$this->assertSame(array('Baseline'), $note->Behaviors->loaded());
+		$this->assertSame('baseline', $note->baseline());
+		$this->assertSame('baseline', $this->Page->baseline());
 	}
 
 }

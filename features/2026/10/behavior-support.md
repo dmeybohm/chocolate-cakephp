@@ -218,9 +218,8 @@ README has one row per assumption.
   model's own method winning; `Behaviors->load()` at runtime, with a `className` alias; the two
   missing-class cases for a class not yet loaded; an already-loaded class answering to any
   name; `$actsAs` merging with the direct parent model and not with a grandparent; and trait
-  and static methods among the mapped ones. The merge with `AppModel` itself is read from the
-  source and not pinned, since an `$actsAs` on the suite's `AppModel` would attach to every
-  model in it.
+  and static methods among the mapped ones; and the merge with `AppModel`, which reaches a
+  model at any depth.
 
 Fixtures are `SluggableBehavior`, `ChildSluggableBehavior`, `AuditBehavior`,
 `CounterCacheBehavior` (an app behavior named like a core one) and `TaggableBehavior` under each
@@ -877,3 +876,9 @@ and `EarlyPagesTable` (40 tests each on 3, 4 and 5). They narrowed the accepted 
 plain load ahead of a parent's load with options is a table that throws, not a misread. On 2,
 `testMappedMethodsIncludeAParentBehaviorsMethods` pins that a parent behavior's methods are
 mapped (14 tests), which step 2's walk up to `ModelBehavior` assumed.
+
+**`AppModel` pin**: the merge with `AppModel` had been left unpinned on the grounds that an
+`$actsAs` there would disturb the suite. It does not: only `BehaviorTest` uses models on 2. So
+`AppModel` now attaches a `BaselineBehavior`, `testActsAsMergesWithAppModel` pins the merge
+(15 tests on 2), and the six list assertions that gained `Baseline` show `AppModel`'s entries
+come first and reach `SubSubPage`, two levels down, where `Page`'s do not.

@@ -395,8 +395,9 @@ other rules, so it has its own `BehaviorTest` with its own rows.
 | A behavior method called on its instance raises no deprecation | `testBehaviorMethodCalledOnItsInstanceIsNotDeprecated` | 3, 4, 5 |
 | An association a behavior adds through `$this->_table` or `$this->table()` (`getTable()` on 3) is an association of the table, reachable by `contain()` and as an entity property | `testAssociationAddedByBehaviorBelongsToTable` | 3, 4, 5 |
 | `$actsAs` loads behaviors plain, with settings and plugin-prefixed, in order | `testActsAsLoadsPlainConfiguredAndPluginBehaviors` | 2 |
+| A model's `$actsAs` is merged onto `AppModel`'s, whose entries come first, and a model declaring none has `AppModel`'s | `testActsAsMergesWithAppModel` | 2 |
 | A model's `$actsAs` is merged onto its direct parent model's, the parent's entries first | `testActsAsMergesWithTheDirectParentModel` | 2 |
-| A model's `$actsAs` is not merged with a grandparent model's | `testActsAsDoesNotMergeWithAGrandparentModel` | 2 |
+| A model's `$actsAs` is not merged with a grandparent model's, other than `AppModel` | `testActsAsDoesNotMergeWithAGrandparentModel` | 2 |
 | Mapped methods exclude `_`-prefixed names, callbacks and `ModelBehavior` methods | `testMappedMethodsExcludeUnderscoredCallbacksAndModelBehaviorMethods` | 2 |
 | Mapped methods include a parent behavior class's | `testMappedMethodsIncludeAParentBehaviorsMethods` | 2 |
 | A mapped method is called without its `Model` parameter | `testMappedMethodIsCalledWithoutTheModelParameter` | 2 |
